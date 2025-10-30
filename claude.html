@@ -1,0 +1,1970 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Price List — Full (Aurora Mist)</title>
+
+  <!-- Tailwind CSS via CDN - Fixed version -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root{
+      --cyan: #00d5ff;
+      --violet: #8f6bff;
+      --silver: #dfe6eb;
+      --gold: #ffd75e;
+      --card-bg: rgba(255,255,255,0.035);
+      --panel-border: rgba(130,140,180,0.06);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body { 
+      height: 100%; 
+      margin: 0; 
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    
+    body {
+      color: var(--silver);
+      background: linear-gradient(180deg, #0e1216 0%, #171d23 45%, #232a33 100%);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* aurora ribbons */
+    .aurora-layer { 
+      position: fixed; 
+      inset: 0; 
+      z-index: 0; 
+      overflow: hidden; 
+      pointer-events: none; 
+    }
+    
+    .wave {
+      position: absolute;
+      width: 160%;
+      height: 160%;
+      top: -30%;
+      left: -30%;
+      opacity: 0.14;
+      background:
+        radial-gradient(circle at 30% 50%, rgba(0,213,255,0.95) 0%, transparent 60%),
+        radial-gradient(circle at 70% 60%, rgba(143,107,255,0.92) 0%, transparent 70%);
+      filter: blur(140px);
+      animation: drift 48s linear infinite alternate;
+      mix-blend-mode: screen;
+    }
+    
+    .wave.v2 { 
+      animation-delay: 12s; 
+      transform: rotate(20deg); 
+      opacity: 0.10; 
+    }
+    
+    @keyframes drift {
+      0% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-8%) rotate(10deg); }
+      100% { transform: translateY(4%) rotate(-5deg); }
+    }
+
+    /* spark basics */
+    .spark {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: rise linear forwards;
+      will-change: transform, opacity;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,0.18));
+    }
+    
+    @keyframes rise {
+      0% { transform: translateY(0) scale(1); opacity: 0.95; }
+      100% { transform: translateY(-120px) scale(0.36); opacity: 0; }
+    }
+    
+    .spark.cyan { 
+      background: radial-gradient(circle, rgba(0,213,255,1) 0%, rgba(0,213,255,0.45) 55%, rgba(255,255,255,0) 100%); 
+      z-index: 22; 
+    }
+    
+    .spark.gold { 
+      background: radial-gradient(circle, rgba(255,215,94,1) 0%, rgba(255,215,94,0.45) 55%, rgba(255,255,255,0) 100%); 
+      z-index: 18; 
+      filter: drop-shadow(0 10px 22px rgba(255,180,60,0.10)); 
+    }
+
+    /* layout & UI */
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      padding: 40px 20px; 
+      position: relative; 
+      z-index: 10; 
+    }
+    
+    header { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 12px; 
+      margin-bottom: 22px; 
+      z-index: 11; 
+    }
+    
+    @media(min-width:640px){ 
+      header { 
+        flex-direction: row; 
+        align-items: center; 
+        justify-content: space-between; 
+      } 
+    }
+
+    .title { 
+      font-weight: 600; 
+      font-size: 28px; 
+      color: var(--violet); 
+    }
+    
+    .subtitle { 
+      color: rgba(223,230,235,0.74); 
+      font-size: 13px; 
+      margin-top: 4px; 
+    }
+
+    /* Contact Info */
+    .contact-info {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .contact-info a {
+      color: var(--cyan);
+      text-decoration: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: opacity 0.2s;
+    }
+    
+    .contact-info a:hover { 
+      opacity: 0.8; 
+    }
+
+    /* controls */
+    .controls { 
+      display: flex; 
+      gap: 10px; 
+      align-items: center; 
+      flex-wrap: wrap; 
+      width: 100%; 
+    }
+    
+    @media(min-width:640px){ 
+      .controls { 
+        width: auto; 
+      } 
+    }
+    
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+      max-width: 320px;
+    }
+    
+    .search-box input {
+      padding: 10px 36px 10px 12px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(43,51,57,0.9);
+      background: rgba(27,34,40,0.74);
+      color: var(--silver);
+      font-size: 14px;
+    }
+    
+    .search-box input:focus {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+    
+    .search-box svg { 
+      position: absolute; 
+      right: 10px; 
+      top: 50%; 
+      transform: translateY(-50%); 
+      pointer-events: none; 
+      color: rgba(223,230,235,0.6); 
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    select {
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(27,34,40,0.74);
+      border: 1px solid rgba(43,51,57,0.9);
+      color: var(--silver);
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    select:focus {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(27,34,40,0.74);
+      border: 1px solid rgba(43,51,57,0.9);
+      color: var(--silver);
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover { 
+      background: rgba(35,45,55,0.8); 
+    }
+    
+    .btn:focus {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+    
+    .btn-primary {
+      background: var(--violet);
+      color: white;
+      border-color: var(--violet);
+    }
+    
+    .btn-primary:hover { 
+      background: #7a5ee8; 
+    }
+
+    /* Cart Button with Badge */
+    .cart-btn {
+      position: relative;
+    }
+    
+    .cart-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--cyan);
+      color: #000;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    /* headings */
+    .section-heading {
+      margin: 28px 0 16px;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--violet);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .section-divider { 
+      flex: 1; 
+      height: 1px; 
+      background: linear-gradient(90deg, transparent, rgba(143,107,255,0.12), transparent); 
+    }
+
+    /* gallery grid */
+    .gallery { 
+      display: grid; 
+      grid-template-columns: 1fr; 
+      gap: 18px;
+      margin-bottom: 30px;
+    }
+    
+    @media(min-width:640px){ 
+      .gallery { 
+        grid-template-columns: repeat(2, 1fr); 
+      } 
+    }
+    
+    @media(min-width:1024px){ 
+      .gallery { 
+        grid-template-columns: repeat(3, 1fr); 
+      } 
+    }
+
+    /* cards */
+    .card {
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--panel-border);
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+      position: relative;
+      overflow: visible;
+    }
+    
+    .card:hover { 
+      transform: translateY(-6px); 
+      box-shadow: 0 14px 36px rgba(0,210,255,0.08); 
+    }
+    
+    .card.in-cart { 
+      border-color: var(--cyan); 
+    }
+
+    .card h3 { 
+      font-size: 16px; 
+      margin: 0; 
+      color: #e9eef2; 
+    }
+    
+    .card p.desc { 
+      margin: 6px 0 0; 
+      color: rgba(223,230,235,0.66); 
+      font-size: 13px; 
+    }
+    
+    .card .meta { 
+      margin-top: 12px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      gap: 8px; 
+    }
+    
+    .price { 
+      font-weight: 700; 
+      font-size: 18px; 
+      color: var(--cyan); 
+    }
+    
+    .price-note { 
+      font-size: 12px; 
+      color: rgba(223,230,235,0.64); 
+      margin-top: 4px; 
+    }
+
+    /* Quantity Controls */
+    .cart-controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .qty-selector {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .qty-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(27,34,40,0.74);
+      border: 1px solid rgba(43,51,57,0.9);
+      color: var(--silver);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    
+    .qty-btn:hover { 
+      background: rgba(35,45,55,0.8); 
+    }
+    
+    .qty-display {
+      min-width: 30px;
+      text-align: center;
+      font-size: 14px;
+    }
+    
+    .add-to-cart {
+      flex: 1;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: var(--violet);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    
+    .add-to-cart:hover { 
+      background: #7a5ee8; 
+    }
+    
+    .add-to-cart.added { 
+      background: var(--cyan); 
+      color: #000; 
+    }
+
+    /* Cart Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.8);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .modal.show { 
+      display: flex; 
+    }
+    
+    .modal-content {
+      background: #1a1f26;
+      border-radius: 16px;
+      border: 1px solid var(--panel-border);
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .modal-title {
+      font-size: 20px;
+      color: var(--violet);
+      font-weight: 600;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      color: var(--silver);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+    }
+    
+    .close-modal:hover {
+      color: var(--cyan);
+    }
+    
+    .cart-items {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .cart-item {
+      padding: 12px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .cart-total {
+      padding: 16px;
+      background: rgba(0,213,255,0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(0,213,255,0.2);
+      margin-bottom: 20px;
+    }
+    
+    .total-label {
+      font-size: 18px;
+      color: var(--silver);
+      font-weight: 600;
+    }
+    
+    .total-amount {
+      font-size: 24px;
+      color: var(--cyan);
+      font-weight: 700;
+    }
+
+    /* print-friendly */
+    @media print {
+      body { 
+        background: #fff; 
+        color: #000; 
+      }
+      
+      .aurora-layer, 
+      #spark-layer, 
+      .no-print, 
+      .cart-controls,
+      .controls { 
+        display: none !important; 
+      }
+      
+      .card { 
+        background: #fff; 
+        border: 1px solid #ddd; 
+        box-shadow: none; 
+        page-break-inside: avoid; 
+      }
+      
+      .price { 
+        color: #000; 
+      }
+      
+      .contact-info a { 
+        color: #000; 
+      }
+      
+      .section-heading {
+        color: #000;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- aurora ribbons -->
+  <div class="aurora-layer" aria-hidden="true">
+    <div class="wave"></div>
+    <div class="wave v2"></div>
+  </div>
+
+  <!-- spark layer (single instance) -->
+  <div id="spark-layer" aria-hidden="true" style="position:fixed; inset:0; pointer-events:none; z-index:8;"></div>
+
+  <div class="container">
+
+    <!-- HEADER -->
+    <header>
+      <div>
+        <div class="title">Firepower SFX Quotation Generator <span style="color:var(--cyan); font-size:14px; margin-left:8px;">2024–25</span></div>
+        <div class="subtitle">SFX Machines • Crackers • Pyro Effects</div>
+        
+        <!-- CONTACT INFO - Replace these with your actual details -->
+        <div class="contact-info">
+          <a href="tel:+919898496111" aria-label="Call us">
+            📱 +91 9898496111 -  Yogendra Bhai
+          </a><div class="contact-info">
+          <a href="tel:+917698496111" aria-label="Call us">
+            📱 +91 7698496111 - Lala Bhai
+          </a>
+          <a href="https://www.instagram.com/firepowersfx?igsh=YzljYTk1ODg3Zg==" target="_blank" rel="noopener noreferrer" aria-label="Visit our Instagram">
+            📷 @Fire Power SFX
+          </a>
+          <a href="http://www.firepowers.in/" target="_blank" rel="noopener noreferrer" aria-label="Visit our website">
+            🌐 firepowers.com
+          </a>
+        </div>
+      </div>
+
+      <div class="controls no-print">
+        <!-- Search -->
+        <div class="search-box">
+          <input id="search" type="search" placeholder="Search products..." aria-label="Search products" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"></path>
+          </svg>
+        </div>
+        
+        <!-- Filters -->
+        <div class="filter-group">
+          <select id="priceFilter" aria-label="Filter by price">
+            <option value="">All Prices</option>
+            <option value="0-5000">Under ₹5,000</option>
+            <option value="5000-10000">₹5,000 - ₹10,000</option>
+            <option value="10000-25000">₹10,000 - ₹25,000</option>
+            <option value="25000+">Above ₹25,000</option>
+          </select>
+          
+          <select id="sortFilter" aria-label="Sort products">
+            <option value="">Default Order</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="name">Name: A-Z</option>
+          </select>
+        </div>
+        
+        <!-- Actions -->
+        <button class="btn cart-btn" id="openCartBtn" aria-label="View cart">
+          🛒 Cart
+          <span class="cart-badge" id="cartCount" style="display:none;">0</span>
+        </button>
+        <button class="btn" id="printBtn" aria-label="Print price list">📄 Print</button>
+        <button class="btn" id="shareBtn" aria-label="Share price list">📤 Share</button>
+      </div>
+    </header>
+
+    <!-- SFX MACHINES SECTION -->
+    <div class="section-heading"><div>SFX Machines</div><div class="section-divider"></div></div>
+    <div id="sfx-gallery" class="gallery">
+      
+      <!-- Item 1 -->
+      <article class="card" data-name="Showven Sparkler" data-desc="200 gram powder" data-price="5000" data-category="sfx">
+        <h3>Showven Sparkler</h3>
+        <p class="desc">200 gram powder</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹5,000</div>
+            <div class="price-note">5,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 2 -->
+      <article class="card" data-name="Showven Spinner" data-desc="400 gram powder" data-price="10000" data-category="sfx">
+        <h3>Showven Spinner</h3>
+        <p class="desc">400 gram powder</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹10,000</div>
+            <div class="price-note">10,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 3 -->
+      <article class="card" data-name="Showven Cyclone" data-desc="10 mtr/400 gram powder" data-price="10000" data-category="sfx">
+        <h3>Showven Cyclone</h3>
+        <p class="desc">10 mtr/400 gram powder</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹10,000</div>
+            <div class="price-note">10,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 4 -->
+      <article class="card" data-name="Showven Sparkler 3-head" data-desc="600 gram powder" data-price="12000" data-category="sfx">
+        <h3>Showven Sparkler 3-head</h3>
+        <p class="desc">600 gram powder</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹12,000</div>
+            <div class="price-note">12,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 5 -->
+      <article class="card" data-name="Showven Waver (butterfly)" data-desc="400 gram powder" data-price="10000" data-category="sfx">
+        <h3>Showven Waver (butterfly)</h3>
+        <p class="desc">400 gram powder</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹10,000</div>
+            <div class="price-note">10,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 6 -->
+      <article class="card" data-name="Showven snow machine" data-desc="Snow effect machine" data-price="10000" data-category="sfx">
+        <h3>Showven snow machine</h3>
+        <p class="desc">Snow effect machine</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹10,000</div>
+            <div class="price-note">10,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 7 -->
+      <article class="card" data-name="Showven circle flame-moving" data-desc="10 ltr liquid (approx. 100 shot)" data-price="12500" data-category="sfx">
+        <h3>Showven circle flame-moving</h3>
+        <p class="desc">10 ltr liquid (approx. 100 shot)</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹12,500</div>
+            <div class="price-note">12,500 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 8 -->
+      <article class="card" data-name="Showven Sonic Boom (CO2 jet)" data-desc="CO2 jet effect" data-price="6000" data-category="sfx">
+        <h3>Showven Sonic Boom (CO2 jet)</h3>
+        <p class="desc">CO2 jet effect</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹6,000</div>
+            <div class="price-note">6,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 9 -->
+      <article class="card" data-name="Showven Waterfall Machine" data-desc="200 gram powder" data-price="7000" data-category="sfx">
+        <h3>Showven Waterfall Machine</h3>
+        <p class="desc">200 gram powder</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹7,000</div>
+            <div class="price-note">7,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 10 -->
+      <article class="card" data-name="Showven Curtain Power Drop" data-desc="8 machine and 50 x 25 white curtain" data-price="25000" data-category="sfx">
+        <h3>Showven Curtain Power Drop</h3>
+        <p class="desc">8 machine and 50 x 25 white curtain</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹25,000</div>
+            <div class="price-note">25,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 11 -->
+      <article class="card" data-name="Showven 5-head Flame" data-desc="5-head flame effect" data-price="50000" data-category="sfx">
+        <h3>Showven 5-head Flame</h3>
+        <p class="desc">5-head flame effect</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹50,000</div>
+            <div class="price-note">50,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 12 -->
+      <article class="card" data-name="Showven Sparkler Blaster hand gun" data-desc="200 gram powder" data-price="10000" data-category="sfx">
+        <h3>Showven Sparkler Blaster hand gun</h3>
+        <p class="desc">200 gram powder</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹10,000</div>
+            <div class="price-note">10,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 13 -->
+      <article class="card" data-name="CO2 Jet" data-desc="45 kg cylinder-approx 45 shot" data-price="6000" data-category="sfx">
+        <h3>CO2 Jet</h3>
+        <p class="desc">45 kg cylinder-approx 45 shot</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹6,000</div>
+            <div class="price-note">6,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 14 -->
+      <article class="card" data-name="Co2 Confetti blaster/Co2 Blower" data-desc="30 kg cylinder and 10 kg paper -- Sangeet" data-price="12000" data-category="sfx">
+        <h3>Co2 Confetti blaster/Co2 Blower</h3>
+        <p class="desc">30 kg cylinder and 10 kg paper -- Sangeet</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹12,000</div>
+            <div class="price-note">12,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 15 -->
+      <article class="card" data-name="DMX Confetti Blaster" data-desc="10 kg paper or 10 kg metallic paper-- Sangeet" data-price="13000" data-category="sfx">
+        <h3>DMX Confetti Blaster</h3>
+        <p class="desc">10 kg paper or 10 kg metallic paper-- Sangeet</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹13,000</div>
+            <div class="price-note">13,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 16 -->
+      <article class="card" data-name="Confetti Blaster Flower/Flower shower" data-desc="20 kg flower" data-price="15000" data-category="sfx">
+        <h3>Confetti Blaster Flower/Flower shower</h3>
+        <p class="desc">20 kg flower</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹15,000</div>
+            <div class="price-note">15,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 17 -->
+      <article class="card" data-name="Topcat Bubble Big" data-desc="Large bubble effect" data-price="8000" data-category="sfx">
+        <h3>Topcat Bubble Big</h3>
+        <p class="desc">Large bubble effect</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹8,000</div>
+            <div class="price-note">8,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 18 -->
+      <article class="card" data-name="Dry Ice Machine" data-desc="Dry ice fog effect" data-price="8000" data-category="sfx">
+        <h3>Dry Ice Machine</h3>
+        <p class="desc">Dry ice fog effect</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹8,000</div>
+            <div class="price-note">8,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 19 -->
+      <article class="card" data-name="LED CO2 Gun/Co2 gun only" data-desc="45 kg cylinder" data-price="8000" data-category="sfx">
+        <h3>LED CO2 Gun/Co2 gun only</h3>
+        <p class="desc">45 kg cylinder</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹8,000</div>
+            <div class="price-note">8,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 20 -->
+      <article class="card" data-name="CO2 Confetti Gun" data-desc="30 kg cylinder" data-price="12000" data-category="sfx">
+        <h3>CO2 Confetti Gun</h3>
+        <p class="desc">30 kg cylinder</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹12,000</div>
+            <div class="price-note">12,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 21 -->
+      <article class="card" data-name="Electric Confetti Gun/Ribbon shot" data-desc="Electric powered confetti" data-price="600" data-category="sfx">
+        <h3>Electric Confetti Gun/Ribbon shot</h3>
+        <p class="desc">Electric powered confetti</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹600</div>
+            <div class="price-note">600 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 22 -->
+      <article class="card" data-name="Magic FX Stadium Shot" data-desc="10/20 mtr streamer multicolor" data-price="10000" data-category="sfx">
+        <h3>Magic FX Stadium Shot</h3>
+        <p class="desc">10/20 mtr streamer multicolor</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹10,000</div>
+            <div class="price-note">10,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 23 -->
+      <article class="card" data-name="Baraat fireworks" data-desc="Per requirement" data-price="0" data-category="sfx">
+        <h3>Baraat fireworks</h3>
+        <p class="desc">Per requirement</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: Custom</div>
+          <div style="text-align:right">
+            <div class="price">Contact for Price</div>
+            <div class="price-note">Per requirement</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Item 24 -->
+      <article class="card" data-name="Baraat confetti blaster" data-desc="Confetti for baraat" data-price="15000" data-category="sfx">
+        <h3>Baraat confetti blaster</h3>
+        <p class="desc">Confetti for baraat</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹15,000</div>
+            <div class="price-note">15,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- CRACKERS SECTION -->
+    <div class="section-heading"><div>Crackers & Pyro Effects</div><div class="section-divider"></div></div>
+    <div id="crackers-gallery" class="gallery">
+
+      <!-- Cracker Item 1 -->
+      <article class="card" data-name="Imported cold pyro" data-desc="Cold pyrotechnics" data-price="450" data-category="crackers">
+        <h3>Imported cold pyro</h3>
+        <p class="desc">Cold pyrotechnics</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹450</div>
+            <div class="price-note">450 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 2 -->
+      <article class="card" data-name="Banquet pyro" data-desc="Pyrotechnics for banquets" data-price="600" data-category="crackers">
+        <h3>Banquet pyro</h3>
+        <p class="desc">Pyrotechnics for banquets</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹600</div>
+            <div class="price-note">600 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 3 -->
+      <article class="card" data-name="Imported 1 sec gerbs" data-desc="1 second gerbs effect" data-price="700" data-category="crackers">
+        <h3>Imported 1 sec gerbs</h3>
+        <p class="desc">1 second gerbs effect</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹700</div>
+            <div class="price-note">700 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 4 -->
+      <article class="card" data-name="Pyro dancing machine" data-desc="Rent for machine" data-price="500" data-category="crackers">
+        <h3>Pyro dancing machine</h3>
+        <p class="desc">Rent for machine</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹500</div>
+            <div class="price-note">500 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 5 -->
+      <article class="card" data-name="Pyro gun" data-desc="With pyro" data-price="500" data-category="crackers">
+        <h3>Pyro gun</h3>
+        <p class="desc">With pyro</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹500</div>
+            <div class="price-note">500 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 6 -->
+      <article class="card" data-name="Hand color smoke gun" data-desc="Colored smoke effect" data-price="450" data-category="crackers">
+        <h3>Hand color smoke gun</h3>
+        <p class="desc">Colored smoke effect</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹450</div>
+            <div class="price-note">450 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 7 -->
+      <article class="card" data-name="Fan wheel machine" data-desc="With 6 pyro" data-price="4000" data-category="crackers">
+        <h3>Fan wheel machine</h3>
+        <p class="desc">With 6 pyro</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹4,000</div>
+            <div class="price-note">4,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 8 -->
+      <article class="card" data-name="Niagra water fall cold" data-desc="40 feet" data-price="20000" data-category="crackers">
+        <h3>Niagra water fall cold</h3>
+        <p class="desc">40 feet</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹20,000</div>
+            <div class="price-note">20,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 9 -->
+      <article class="card" data-name="Confetti blast" data-desc="Confetti explosion" data-price="450" data-category="crackers">
+        <h3>Confetti blast</h3>
+        <p class="desc">Confetti explosion</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹450</div>
+            <div class="price-note">450 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 10 -->
+      <article class="card" data-name="Ariel shots" data-desc="Aerial pyro shots" data-price="650" data-category="crackers">
+        <h3>Ariel shots</h3>
+        <p class="desc">Aerial pyro shots</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹650</div>
+            <div class="price-note">650 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 11 -->
+      <article class="card" data-name="Imported comets/mines" data-desc="Imported pyro effect" data-price="650" data-category="crackers">
+        <h3>Imported comets/mines</h3>
+        <p class="desc">Imported pyro effect</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹650</div>
+            <div class="price-note">650 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 12 -->
+      <article class="card" data-name="Indian comets/mines" data-desc="Indian pyro effect" data-price="500" data-category="crackers">
+        <h3>Indian comets/mines</h3>
+        <p class="desc">Indian pyro effect</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹500</div>
+            <div class="price-note">500 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 13 -->
+      <article class="card" data-name="Crackling shots" data-desc="500-shot" data-price="25000" data-category="crackers">
+        <h3>Crackling shots</h3>
+        <p class="desc">500-shot</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹25,000</div>
+            <div class="price-note">25,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 14 -->
+      <article class="card" data-name="Day mines/Color Shots" data-desc="Daytime color effects" data-price="8000" data-category="crackers">
+        <h3>Day mines/Color Shots</h3>
+        <p class="desc">Daytime color effects</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹8,000</div>
+            <div class="price-note">8,000 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 15 -->
+      <article class="card" data-name="Helium balloon entry" data-desc="14 small balloons will come under 1 big balloon" data-price="1600" data-category="crackers">
+        <h3>Helium balloon entry</h3>
+        <p class="desc">14 small balloons will come under 1 big balloon</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹1,600</div>
+            <div class="price-note">1,600 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 16 -->
+      <article class="card" data-name="Balloon drop" data-desc="14 small balloons will come under 1 big balloon" data-price="1600" data-category="crackers">
+        <h3>Balloon drop</h3>
+        <p class="desc">14 small balloons will come under 1 big balloon</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹1,600</div>
+            <div class="price-note">1,600 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 17 -->
+      <article class="card" data-name="Loose balloons" data-desc="Individual balloons" data-price="60" data-category="crackers">
+        <h3>Loose balloons</h3>
+        <p class="desc">Individual balloons</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹60</div>
+            <div class="price-note">60 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Cracker Item 18 -->
+      <article class="card" data-name="Fire Show" data-desc="One minute" data-price="120000" data-category="crackers">
+        <h3>Fire Show</h3>
+        <p class="desc">One minute performance</p>
+        <div class="meta">
+          <div style="font-size:13px; color:rgba(223,230,235,0.72)">Qty: 1 pc</div>
+          <div style="text-align:right">
+            <div class="price">₹1,20,000</div>
+            <div class="price-note">1,20,000 / show</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+    </div>
+
+    <footer style="height:36px;"></footer>
+  </div>
+
+  <!-- Cart Modal -->
+  <div id="cartModal" class="modal" role="dialog" aria-labelledby="cart-title">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="cart-title" class="modal-title">Shopping Cart</h2>
+        <button class="close-modal" id="closeCartBtn" aria-label="Close cart">&times;</button>
+      </div>
+      <div id="cartItems" class="cart-items"></div>
+      <div class="cart-total">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="total-label">Total Amount:</span>
+          <span class="total-amount" id="totalAmount">₹0</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" style="flex:1;" id="whatsappBtn">
+          💬 Order via WhatsApp
+        </button>
+        <button class="btn" id="downloadBtn">📥 Download Quote</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Cart Management
+    let cart = [];
+    
+    // Load cart from localStorage on page load
+    function loadCart() {
+      const savedCart = localStorage.getItem('priceListCart');
+      if (savedCart) {
+        try {
+          cart = JSON.parse(savedCart);
+        } catch(e) {
+          cart = [];
+        }
+      }
+      updateCartBadge();
+    }
+    
+    // Update cart badge
+    function updateCartBadge() {
+      const badge = document.getElementById('cartCount');
+      const count = cart.reduce((sum, item) => sum + item.qty, 0);
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    
+    // Quantity controls
+    document.querySelectorAll('.qty-minus').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const display = this.nextElementSibling;
+        let qty = parseInt(display.textContent);
+        qty = Math.max(1, qty - 1);
+        display.textContent = qty;
+      });
+    });
+    
+    document.querySelectorAll('.qty-plus').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const display = this.previousElementSibling;
+        let qty = parseInt(display.textContent);
+        qty = Math.min(99, qty + 1);
+        display.textContent = qty;
+      });
+    });
+    
+    // Add to cart
+    document.querySelectorAll('.add-to-cart').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const card = this.closest('.card');
+        const qtyDisplay = card.querySelector('.qty-display');
+        const qty = parseInt(qtyDisplay.textContent);
+        
+        const item = {
+          name: card.dataset.name,
+          desc: card.dataset.desc,
+          price: parseInt(card.dataset.price) || 0,
+          qty: qty
+        };
+        
+        // Skip items without price
+        if (item.price === 0) {
+          alert('Please contact us for pricing on this item.');
+          return;
+        }
+        
+        // Check if item already in cart
+        const existingIndex = cart.findIndex(i => i.name === item.name);
+        if (existingIndex >= 0) {
+          cart[existingIndex].qty += qty;
+        } else {
+          cart.push(item);
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('priceListCart', JSON.stringify(cart));
+        
+        // Update UI
+        this.textContent = 'Added ✓';
+        this.classList.add('added');
+        card.classList.add('in-cart');
+        
+        setTimeout(() => {
+          this.textContent = 'Add to Cart';
+          this.classList.remove('added');
+        }, 1500);
+        
+        updateCartBadge();
+      });
+    });
+    
+    // Open cart modal
+    function openCart() {
+      const modal = document.getElementById('cartModal');
+      const itemsContainer = document.getElementById('cartItems');
+      const totalElement = document.getElementById('totalAmount');
+      
+      // Clear and rebuild cart display
+      itemsContainer.innerHTML = '';
+      let total = 0;
+      
+      if (cart.length === 0) {
+        itemsContainer.innerHTML = '<p style="text-align:center; color:rgba(223,230,235,0.6);">Your cart is empty</p>';
+      } else {
+        cart.forEach((item, index) => {
+          const itemTotal = item.price * item.qty;
+          total += itemTotal;
+          
+          const cartItem = document.createElement('div');
+          cartItem.className = 'cart-item';
+          cartItem.innerHTML = `
+            <div>
+              <div style="color:#e9eef2; font-weight:500;">${item.name}</div>
+              <div style="color:rgba(223,230,235,0.6); font-size:12px;">${item.desc}</div>
+              <div style="color:var(--cyan); margin-top:4px;">₹${item.price.toLocaleString('en-IN')} × ${item.qty}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="color:var(--cyan); font-weight:600;">₹${itemTotal.toLocaleString('en-IN')}</div>
+              <button class="btn" style="padding:4px 8px; font-size:12px; margin-top:8px;" onclick="removeFromCart(${index})">Remove</button>
+            </div>
+          `;
+          itemsContainer.appendChild(cartItem);
+        });
+      }
+      
+      totalElement.textContent = `₹${total.toLocaleString('en-IN')}`;
+      modal.classList.add('show');
+    }
+    
+    // Close cart modal
+    function closeCart() {
+      document.getElementById('cartModal').classList.remove('show');
+    }
+    
+    // Remove from cart
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      localStorage.setItem('priceListCart', JSON.stringify(cart));
+      updateCartBadge();
+      openCart(); // Refresh cart display
+    }
+    
+    // WhatsApp order
+    function initiateWhatsApp() {
+      if (cart.length === 0) {
+        alert('Your cart is empty!');
+        return;
+      }
+      
+      let message = "Hello! I'd like to order:\n\n";
+      let total = 0;
+      
+      cart.forEach(item => {
+        const itemTotal = item.price * item.qty;
+        total += itemTotal;
+        message += `• ${item.name} (${item.desc})\n  Qty: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n\n`;
+      });
+      
+      message += `*Total: ₹${total.toLocaleString('en-IN')}*\n\nPlease confirm availability and delivery details.`;
+      
+      // Replace with your WhatsApp number (without + or spaces)
+      const phoneNumber = "919876543210"; // CHANGE THIS TO YOUR WHATSAPP NUMBER
+      const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+    }
+    
+    // Download quote
+    function downloadQuote() {
+      if (cart.length === 0) {
+        alert('Your cart is empty!');
+        return;
+      }
+      
+      let content = "PRICE QUOTATION\n";
+      content += "=".repeat(50) + "\n\n";
+      content += "Date: " + new Date().toLocaleDateString('en-IN') + "\n\n";
+      content += "ITEMS:\n";
+      content += "-".repeat(50) + "\n";
+      
+      let total = 0;
+      cart.forEach(item => {
+        const itemTotal = item.price * item.qty;
+        total += itemTotal;
+        content += `${item.name}\n`;
+        content += `${item.desc}\n`;
+        content += `Qty: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n`;
+        content += "-".repeat(50) + "\n";
+      });
+      
+      content += `\nTOTAL AMOUNT: ₹${total.toLocaleString('en-IN')}\n`;
+      content += "=".repeat(50) + "\n";
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quote_${new Date().getTime()}.txt`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+    
+    // Share functionality
+    function shareList() {
+      const url = window.location.href;
+      const text = "Check out our SFX and Pyro Effects price list for 2024-25!";
+      
+      if (navigator.share) {
+        navigator.share({
+          title: 'Price List 2024-25',
+          text: text,
+          url: url
+        }).catch(() => {});
+      } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(url).then(() => {
+          alert('Link copied to clipboard!');
+        }).catch(() => {
+          alert('Unable to copy link. Please copy manually: ' + url);
+        });
+      }
+    }
+    
+    // Search functionality
+    const searchInput = document.getElementById('search');
+    const priceFilter = document.getElementById('priceFilter');
+    const sortFilter = document.getElementById('sortFilter');
+    const allCards = Array.from(document.querySelectorAll('.card'));
+    
+    function filterCards() {
+      const searchQuery = (searchInput.value || '').toLowerCase().trim();
+      const priceRange = priceFilter.value;
+      const sortBy = sortFilter.value;
+      
+      // Filter cards
+      let visibleCards = allCards.filter(card => {
+        // Search filter
+        if (searchQuery) {
+          const searchText = `${card.dataset.name} ${card.dataset.desc} ${card.dataset.price}`.toLowerCase();
+          if (!searchText.includes(searchQuery)) return false;
+        }
+        
+        // Price filter
+        if (priceRange) {
+          const price = parseInt(card.dataset.price) || 0;
+          if (priceRange === '0-5000' && price >= 5000) return false;
+          if (priceRange === '5000-10000' && (price < 5000 || price > 10000)) return false;
+          if (priceRange === '10000-25000' && (price < 10000 || price > 25000)) return false;
+          if (priceRange === '25000+' && price < 25000) return false;
+        }
+        
+        return true;
+      });
+      
+      // Sort cards
+      if (sortBy) {
+        visibleCards.sort((a, b) => {
+          const priceA = parseInt(a.dataset.price) || 0;
+          const priceB = parseInt(b.dataset.price) || 0;
+          
+          if (sortBy === 'price-low') {
+            return priceA - priceB;
+          } else if (sortBy === 'price-high') {
+            return priceB - priceA;
+          } else if (sortBy === 'name') {
+            return a.dataset.name.localeCompare(b.dataset.name);
+          }
+        });
+      }
+      
+      // Update display
+      allCards.forEach(card => {
+        card.style.display = 'none';
+        card.style.order = '';
+      });
+      
+      visibleCards.forEach((card, index) => {
+        card.style.display = '';
+        if (sortBy) card.style.order = index;
+      });
+    }
+    
+    // Event listeners for filters
+    searchInput.addEventListener('input', filterCards);
+    priceFilter.addEventListener('change', filterCards);
+    sortFilter.addEventListener('change', filterCards);
+    
+    // Event listeners for buttons
+    document.getElementById('openCartBtn').addEventListener('click', openCart);
+    document.getElementById('closeCartBtn').addEventListener('click', closeCart);
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+    document.getElementById('shareBtn').addEventListener('click', shareList);
+    document.getElementById('whatsappBtn').addEventListener('click', initiateWhatsApp);
+    document.getElementById('downloadBtn').addEventListener('click', downloadQuote);
+    
+    // Spark Effects
+    const sparkContainer = document.getElementById('spark-layer');
+    
+    function createSparkElement(x, y, size, duration, colorClass) {
+      const el = document.createElement('div');
+      el.className = 'spark ' + colorClass;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.opacity = (colorClass === 'cyan') ? (0.45 + Math.random()*0.5) : (0.35 + Math.random()*0.45);
+      el.style.animationDuration = duration + 'ms';
+      const drift = (Math.random() - 0.5) * 40;
+      el.style.transform = `translateX(${drift}px)`;
+      return el;
+    }
+    
+    // Background sparks
+    let blueTimer, goldTimer;
+    
+    function startSparks() {
+      // Blue sparks
+      function spawnBlue() {
+        const w = window.innerWidth, h = window.innerHeight;
+        const x = Math.random() * w;
+        const y = h * (0.74 + Math.random()*0.22);
+        const size = 4 + Math.random()*6;
+        const dur = 1600 + Math.random()*1500;
+        const s = createSparkElement(x,y,size,dur,'cyan');
+        sparkContainer.appendChild(s);
+        setTimeout(() => s.remove(), dur + 300);
+      }
+      
+      // Gold sparks
+      function spawnGold() {
+        const w = window.innerWidth, h = window.innerHeight;
+        const x = Math.random() * w;
+        const y = h * (0.78 + Math.random()*0.18);
+        const size = 5 + Math.random()*6;
+        const dur = 2000 + Math.random()*1700;
+        const s = createSparkElement(x,y,size,dur,'gold');
+        if (sparkContainer.firstChild) {
+          sparkContainer.insertBefore(s, sparkContainer.firstChild);
+        } else {
+          sparkContainer.appendChild(s);
+        }
+        setTimeout(() => s.remove(), dur + 400);
+      }
+      
+      blueTimer = setInterval(spawnBlue, 480);
+      goldTimer = setInterval(spawnGold, 900);
+    }
+    
+    // Hover burst effect
+    function spawnHoverBurst(card) {
+      const rect = card.getBoundingClientRect();
+      
+      // Create blue sparks
+      for (let i = 0; i < 6; i++) {
+        const x = rect.left + rect.width * (0.25 + Math.random()*0.5);
+        const y = rect.top + rect.height * (0.78 + Math.random()*0.18);
+        const size = 4 + Math.random()*6;
+        const dur = 900 + Math.random()*1100;
+        const el = createSparkElement(x,y,size,dur,'cyan');
+        sparkContainer.appendChild(el);
+        setTimeout(() => el.remove(), dur + 300);
+      }
+      
+      // Create gold sparks
+      for (let i = 0; i < 3; i++) {
+        const x = rect.left + rect.width * (0.25 + Math.random()*0.5) + (Math.random()*20-10);
+        const y = rect.top + rect.height * (0.82 + Math.random()*0.12);
+        const size = 5 + Math.random()*6;
+        const dur = 1100 + Math.random()*1200;
+        const el = createSparkElement(x,y,size,dur,'gold');
+        sparkContainer.appendChild(el);
+        setTimeout(() => el.remove(), dur + 300);
+      }
+    }
+    
+    // Attach hover listeners
+    allCards.forEach(card => {
+      let hoverInterval = null;
+      
+      card.addEventListener('mouseenter', () => {
+        spawnHoverBurst(card);
+        hoverInterval = setInterval(() => spawnHoverBurst(card), 700);
+      });
+      
+      card.addEventListener('mouseleave', () => {
+        if (hoverInterval) {
+          clearInterval(hoverInterval);
+          hoverInterval = null;
+        }
+      });
+    });
+    
+    // Performance optimization
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (blueTimer) clearInterval(blueTimer);
+        if (goldTimer) clearInterval(goldTimer);
+      } else {
+        startSparks();
+      }
+    });
+    
+    // Cleanup on unload
+    window.addEventListener('beforeunload', () => {
+      if (blueTimer) clearInterval(blueTimer);
+      if (goldTimer) clearInterval(goldTimer);
+    });
+    
+    // Initialize everything
+    loadCart();
+    startSparks();
+  </script>
+</body>
+</html>
