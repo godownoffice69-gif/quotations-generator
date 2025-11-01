@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>FirepowerSFX — Price List 2024–25</title>
 
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-R7SXFLHW48"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-R7SXFLHW48'); // REPLACE 'GA_MEASUREMENT_ID' WITH YOUR ACTUAL GOOGLE ANALYTICS ID
+  </script>
+  <!-- End Google Analytics -->
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -75,7 +85,7 @@
       100% { transform: translateY(4%) rotate(-5deg); }
     }
 
-    /* spark basics - UPDATED TO REACH TOP */
+    /* spark basics */
     .spark {
       position: absolute;
       width: 6px;
@@ -286,6 +296,16 @@
       background: #7a5ee8; 
     }
 
+    .btn-danger {
+      background: #ff4444;
+      color: white;
+      border-color: #ff4444;
+    }
+
+    .btn-danger:hover {
+      background: #cc0000;
+    }
+
     /* Floating Cart Button */
     .floating-cart {
       position: fixed;
@@ -293,6 +313,13 @@
       right: 30px;
       z-index: 999;
       animation: floatIn 0.4s ease-out;
+      transition: opacity 0.3s, visibility 0.3s;
+    }
+
+    .floating-cart.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
     
     @keyframes floatIn {
@@ -339,7 +366,7 @@
       background: rgba(20,25,31,0.98);
       backdrop-filter: blur(12px);
       border-left: 1px solid var(--panel-border);
-      z-index: 998;
+      z-index: 1000;
       transform: translateX(100%);
       transition: transform 0.3s ease;
       overflow-y: auto;
@@ -435,27 +462,26 @@
       background: linear-gradient(90deg, transparent, rgba(143,107,255,0.12), transparent); 
     }
 
-    /* gallery grid */
+    /* MASONRY LAYOUT */
     .gallery { 
-      display: grid; 
-      grid-template-columns: 1fr; 
-      gap: 20px;
+      column-count: 1;
+      column-gap: 20px;
       margin-bottom: 35px;
     }
     
     @media(min-width:640px){ 
       .gallery { 
-        grid-template-columns: repeat(2, 1fr); 
+        column-count: 2;
       } 
     }
     
     @media(min-width:1024px){ 
       .gallery { 
-        grid-template-columns: repeat(3, 1fr); 
+        column-count: 3;
       } 
     }
 
-    /* cards - UPDATED WITH AUTO HEIGHT AND LARGER TEXT */
+    /* cards */
     .card {
       padding: 18px;
       border-radius: 12px;
@@ -465,8 +491,10 @@
       transition: transform 0.22s ease, box-shadow 0.22s ease;
       position: relative;
       overflow: visible;
-      min-height: auto;
-      height: auto;
+      break-inside: avoid;
+      margin-bottom: 20px;
+      display: inline-block;
+      width: 100%;
     }
     
     .card:hover { 
@@ -600,6 +628,12 @@
       overflow-y: auto;
       padding: 28px;
     }
+
+    .modal-content.wide {
+      max-width: 95vw;
+      width: 95vw;
+      max-height: 90vh;
+    }
     
     .modal-header {
       display: flex;
@@ -667,121 +701,159 @@
       font-weight: 700;
     }
 
-    /* Package Builder Wizard */
-    .wizard-step {
-      display: none;
-      animation: fadeIn 0.3s ease;
-    }
-    
-    .wizard-step.active {
-      display: block;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .wizard-progress {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-    
-    .wizard-progress-step {
-      flex: 1;
-      height: 4px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 2px;
-      transition: background 0.3s;
-    }
-    
-    .wizard-progress-step.completed {
-      background: var(--cyan);
-    }
-    
-    .form-group {
-      margin-bottom: 18px;
-    }
-    
-    .form-label {
-      display: block;
-      margin-bottom: 8px;
-      color: var(--silver);
-      font-size: 14px;
-      font-weight: 500;
-    }
-    
-    .form-input {
-      width: 100%;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(43,51,57,0.9);
-      background: rgba(27,34,40,0.74);
-      color: var(--silver);
-      font-size: 14px;
-    }
-    
-    .form-input:focus {
-      outline: 2px solid var(--cyan);
-      outline-offset: 2px;
+    /* PACKAGE BUILDER STYLES */
+    .builder-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
     }
 
-    .event-day {
-      padding: 14px;
+    .builder-panel {
       background: rgba(255,255,255,0.02);
       border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 20px;
+      height: 60vh;
+      overflow-y: auto;
+    }
+
+    .builder-panel h3 {
+      color: var(--violet);
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .day-item {
+      background: rgba(0,213,255,0.05);
+      border: 1px solid rgba(0,213,255,0.2);
       border-radius: 8px;
+      padding: 15px;
       margin-bottom: 12px;
     }
 
-    /* Time Slot Picker */
-    .time-slots {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 10px;
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
     }
-    
-    .time-slot {
-      padding: 12px;
-      border: 2px solid rgba(43,51,57,0.9);
-      border-radius: 8px;
-      background: rgba(27,34,40,0.74);
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.2s;
-      font-size: 13px;
-    }
-    
-    .time-slot:hover {
-      border-color: var(--cyan);
-    }
-    
-    .time-slot.selected {
-      border-color: var(--cyan);
-      background: rgba(0,213,255,0.1);
+
+    .day-title {
+      font-weight: 600;
       color: var(--cyan);
+      font-size: 16px;
     }
 
-    /* Budget Ranges */
-    .budget-range {
-      padding: 16px;
-      border: 2px solid rgba(43,51,57,0.9);
-      border-radius: 10px;
-      background: rgba(27,34,40,0.74);
+    .function-item {
+      background: rgba(143,107,255,0.05);
+      border: 1px solid rgba(143,107,255,0.2);
+      border-radius: 6px;
+      padding: 12px;
+      margin: 8px 0;
       cursor: pointer;
       transition: all 0.2s;
-      margin-bottom: 12px;
     }
-    
-    .budget-range:hover {
-      border-color: var(--violet);
-    }
-    
-    .budget-range.selected {
-      border-color: var(--violet);
+
+    .function-item:hover {
       background: rgba(143,107,255,0.1);
+    }
+
+    .function-item.active {
+      border-color: var(--violet);
+      background: rgba(143,107,255,0.15);
+    }
+
+    .product-checkbox {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .product-checkbox:hover {
+      background: rgba(255,255,255,0.04);
+    }
+
+    .product-checkbox input[type="checkbox"] {
+      margin-top: 3px;
+      cursor: pointer;
+    }
+
+    .product-search {
+      margin-bottom: 15px;
+    }
+
+    .summary-section {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .summary-day {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .summary-day:last-child {
+      border-bottom: none;
+    }
+
+    .summary-function {
+      margin: 10px 0;
+      padding-left: 15px;
+    }
+
+    .summary-item {
+      font-size: 13px;
+      color: rgba(223,230,235,0.8);
+      margin: 5px 0;
+      padding-left: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .summary-item-qty {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    .summary-item-qty button {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      background: rgba(27,34,40,0.74);
+      border: 1px solid rgba(43,51,57,0.9);
+      color: var(--silver);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .summary-item-qty button:hover {
+      background: rgba(35,45,55,0.8);
+    }
+
+    .summary-item-qty span {
+      min-width: 24px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
     }
 
     /* Checkbox */
@@ -921,6 +993,62 @@
       color: #ff4444;
     }
 
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--silver);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(43,51,57,0.9);
+      background: rgba(27,34,40,0.74);
+      color: var(--silver);
+      font-size: 14px;
+    }
+
+    .form-input:focus {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+
+    /* Time Slot Picker */
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .time-slot {
+      padding: 12px;
+      border: 2px solid rgba(43,51,57,0.9);
+      border-radius: 8px;
+      background: rgba(27,34,40,0.74);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+    
+    .time-slot:hover {
+      border-color: var(--cyan);
+    }
+    
+    .time-slot.selected {
+      border-color: var(--cyan);
+      background: rgba(0,213,255,0.1);
+      color: var(--cyan);
+    }
+
     @media print {
       body { background: #fff; color: #000; }
       .aurora-layer, #spark-layer, .no-print, .cart-controls, .controls, .floating-cart, .mini-cart { display: none !important; }
@@ -941,6 +1069,19 @@
       .floating-cart {
         bottom: 20px;
         right: 20px;
+      }
+
+      .builder-container {
+        grid-template-columns: 1fr;
+      }
+
+      .builder-panel {
+        height: 50vh;
+      }
+
+      .modal-content.wide {
+        max-width: 100%;
+        width: 100%;
       }
     }
   </style>
@@ -965,10 +1106,10 @@
         
         <div class="contact-info">
           <a href="tel:+919898496111" aria-label="Call us">
-            📱 +91 98984 96111
+            📱 +91 98984 96111 -  Yogendra Bhai
           </a>
           <a href="tel:+917698496111" aria-label="Call us">
-            📱 +91 76984 96111
+            📱 +91 76984 96111 - Lala Bhai
           </a>
           <a href="https://www.instagram.com/firepowersfx?igsh=YzljYTk1ODg3Zg==" target="_blank" rel="noopener noreferrer" aria-label="Visit our Instagram">
             📷 @firepowersfx
@@ -1923,7 +2064,7 @@
   </div>
 
   <!-- Floating Cart Button -->
-  <div class="floating-cart no-print">
+  <div class="floating-cart no-print" id="floatingCart">
     <button class="btn btn-primary cart-btn" id="openCartBtn" aria-label="View cart">
       🛒 Cart
       <span class="cart-badge" id="cartCount" style="display:none;">0</span>
@@ -1970,134 +2111,81 @@
     </div>
   </div>
 
-  <!-- Package Builder Wizard Modal -->
-  <div id="wizardModal" class="modal no-print" role="dialog">
-    <div class="modal-content" style="max-width:800px;">
+  <!-- PACKAGE BUILDER MODAL -->
+  <div id="builderModal" class="modal no-print" role="dialog">
+    <div class="modal-content wide">
       <div class="modal-header">
-        <h2 class="modal-title">Package Builder Wizard</h2>
-        <button class="close-modal" id="closeWizardBtn">&times;</button>
+        <h2 class="modal-title">Package Builder</h2>
+        <button class="close-modal" id="closeBuilderBtn">&times;</button>
       </div>
 
-      <div class="wizard-progress">
-        <div class="wizard-progress-step completed"></div>
-        <div class="wizard-progress-step"></div>
-        <div class="wizard-progress-step"></div>
-        <div class="wizard-progress-step"></div>
-      </div>
-
-      <!-- Step 1: Customer Info -->
-      <div class="wizard-step active" data-step="1">
-        <h3 style="color:var(--violet); margin-bottom:20px;">Step 1: Customer Information</h3>
-        <div class="form-group">
-          <label class="form-label">Client Name *</label>
-          <input type="text" class="form-input" id="clientName" placeholder="Enter client name" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Phone Number *</label>
-          <input type="tel" class="form-input" id="clientPhone" placeholder="Enter phone number" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Venue *</label>
-          <input type="text" class="form-input" id="venue" placeholder="Enter venue name" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Location *</label>
-          <input type="text" class="form-input" id="location" placeholder="Enter location" required>
-        </div>
-        <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="nextStep()">Next →</button>
-      </div>
-
-      <!-- Step 2: Event Days -->
-      <div class="wizard-step" data-step="2">
-        <h3 style="color:var(--violet); margin-bottom:20px;">Step 2: Event Days</h3>
-        <div class="form-group">
-          <label class="form-label">Number of Event Days</label>
-          <select class="form-input" id="numDays" onchange="generateEventDays()">
-            <option value="1">1 Day</option>
-            <option value="2">2 Days</option>
-            <option value="3">3 Days</option>
-            <option value="4">4 Days</option>
-            <option value="5">5 Days</option>
-          </select>
-        </div>
-        <div id="eventDaysContainer"></div>
-        <div style="display:flex; gap:10px; margin-top:20px;">
-          <button class="btn" style="flex:1;" onclick="prevStep()">← Back</button>
-          <button class="btn btn-primary" style="flex:1;" onclick="nextStep()">Next →</button>
-        </div>
-      </div>
-
-      <!-- Step 3: Budget & Time -->
-      <div class="wizard-step" data-step="3">
-        <h3 style="color:var(--violet); margin-bottom:20px;">Step 3: Budget & Timing</h3>
-        <div class="form-group">
-          <label class="form-label">Budget Range</label>
-          <div id="budgetRanges">
-            <div class="budget-range" data-budget="0-10000">
-              <div style="font-weight:600;">Budget Friendly</div>
-              <div style="font-size:12px; color:rgba(223,230,235,0.6);">Under ₹10,000</div>
-            </div>
-            <div class="budget-range" data-budget="10000-25000">
-              <div style="font-weight:600;">Standard Package</div>
-              <div style="font-size:12px; color:rgba(223,230,235,0.6);">₹10,000 - ₹25,000</div>
-            </div>
-            <div class="budget-range" data-budget="25000-50000">
-              <div style="font-weight:600;">Premium Package</div>
-              <div style="font-size:12px; color:rgba(223,230,235,0.6);">₹25,000 - ₹50,000</div>
-            </div>
-            <div class="budget-range" data-budget="50000-100000">
-              <div style="font-weight:600;">Luxury Package</div>
-              <div style="font-size:12px; color:rgba(223,230,235,0.6);">₹50,000 - ₹1,00,000</div>
-            </div>
-            <div class="budget-range" data-budget="100000+">
-              <div style="font-weight:600;">Ultra Premium</div>
-              <div style="font-size:12px; color:rgba(223,230,235,0.6);">Above ₹1,00,000</div>
-            </div>
-            <div class="budget-range" data-budget="custom">
-              <div style="font-weight:600;">Custom Budget</div>
-              <div style="font-size:12px; color:rgba(223,230,235,0.6);">Enter your own range</div>
-            </div>
+      <!-- Customer Info -->
+      <div style="margin-bottom:20px;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px;">
+          <div class="form-group">
+            <label class="form-label">Client Name *</label>
+            <input type="text" class="form-input" id="builderClientName" placeholder="Enter name" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone *</label>
+            <input type="tel" class="form-input" id="builderPhone" placeholder="Enter phone" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Venue</label>
+            <input type="text" class="form-input" id="builderVenue" placeholder="Enter venue">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <input type="text" class="form-input" id="builderLocation" placeholder="Enter location">
           </div>
         </div>
-        <div class="form-group" id="customBudgetField" style="display:none;">
-          <label class="form-label">Enter Custom Budget (₹)</label>
-          <input type="number" class="form-input" id="customBudget" placeholder="Enter amount">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Preferred Time Slot</label>
-          <div class="time-slots">
-            <div class="time-slot" data-time="morning">🌅 Morning<br><small>6 AM - 12 PM</small></div>
-            <div class="time-slot" data-time="afternoon">☀️ Afternoon<br><small>12 PM - 6 PM</small></div>
-            <div class="time-slot" data-time="evening">🌆 Evening<br><small>6 PM - 10 PM</small></div>
-            <div class="time-slot" data-time="night">🌙 Night<br><small>10 PM - 2 AM</small></div>
-            <div class="time-slot" data-time="full-day">⏰ Full Day<br><small>All day</small></div>
-            <div class="time-slot" data-time="custom">✏️ Custom<br><small>Specify time</small></div>
-          </div>
-        </div>
-        <div style="display:flex; gap:10px; margin-top:20px;">
-          <button class="btn" style="flex:1;" onclick="prevStep()">← Back</button>
-          <button class="btn btn-primary" style="flex:1;" onclick="nextStep()">Next →</button>
-        </div>
       </div>
 
-      <!-- Step 4: Review & Checkout -->
-      <div class="wizard-step" data-step="4">
-        <h3 style="color:var(--violet); margin-bottom:20px;">Step 4: Review & Checkout</h3>
-        <div id="packageSummary" style="background:rgba(255,255,255,0.02); padding:20px; border-radius:10px; margin-bottom:20px;"></div>
-        
-        <div class="checkbox-wrapper">
-          <input type="checkbox" id="termsCheckbox">
-          <label for="termsCheckbox">
-            I agree that by placing this order, I am acknowledging and accepting terms and conditions.
-          </label>
-        </div>
-
-        <div style="display:flex; gap:10px; margin-top:20px;">
-          <button class="btn" style="flex:1;" onclick="prevStep()">← Back</button>
-          <button class="btn btn-primary" style="flex:1;" id="finalCheckoutBtn" disabled>
-            📱 Send via WhatsApp
+      <!-- Split Screen Builder -->
+      <div class="builder-container">
+        <!-- Left Panel: Days & Functions -->
+        <div class="builder-panel">
+          <h3>Event Schedule</h3>
+          <button class="btn btn-primary" style="width:100%; margin-bottom:15px;" id="addDayBtn">
+            ➕ Add Day
           </button>
+          <div id="daysContainer"></div>
         </div>
+
+        <!-- Right Panel: Products -->
+        <div class="builder-panel">
+          <h3>Select Items <span id="selectedFunctionName" style="color:var(--cyan); font-size:14px;"></span></h3>
+          <div class="product-search">
+            <input type="search" class="form-input" id="productSearch" placeholder="Search products...">
+          </div>
+          <div id="productsContainer"></div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="summary-section">
+        <h3 style="color:var(--violet); margin-bottom:15px;">Package Summary</h3>
+        <div id="builderSummary"></div>
+        <div style="margin-top:15px; padding-top:15px; border-top:2px solid var(--cyan);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:18px; font-weight:600;">Grand Total:</span>
+            <span id="builderGrandTotal" style="font-size:24px; color:var(--cyan); font-weight:700;">₹0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="checkbox-wrapper">
+        <input type="checkbox" id="builderTerms">
+        <label for="builderTerms">I agree to the terms and conditions</label>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="btn btn-primary" style="flex:1;" id="builderWhatsAppBtn" disabled>
+          📱 Send via WhatsApp
+        </button>
+        <button class="btn" style="flex:1;" id="builderDownloadBtn" disabled>
+          📥 Download Image
+        </button>
       </div>
     </div>
   </div>
@@ -2167,27 +2255,22 @@
     // Global Variables
     let cart = [];
     let wishlist = [];
-    let wizardData = {
+    let checkoutData = {};
+    
+    // Package Builder Data
+    let builderData = {
       clientName: '',
       phone: '',
       venue: '',
       location: '',
-      eventDays: [],
-      budget: '',
-      timeSlot: ''
+      days: []
     };
-    let currentWizardStep = 1;
-    let checkoutData = {
-      clientName: '',
-      phone: '',
-      venue: '',
-      location: '',
-      function: '',
-      dates: '',
-      timeSlot: ''
-    };
+    let dayCounter = 0;
+    let functionCounter = 0;
+    let selectedFunctionId = null;
+    let allProducts = [];
 
-    // Load data from localStorage
+    // Load/Save Data
     function loadData() {
       const savedCart = localStorage.getItem('priceListCart');
       const savedWishlist = localStorage.getItem('priceListWishlist');
@@ -2210,7 +2293,6 @@
       updateMiniCart();
     }
 
-    // Save data to localStorage
     function saveCart() {
       localStorage.setItem('priceListCart', JSON.stringify(cart));
     }
@@ -2219,7 +2301,6 @@
       localStorage.setItem('priceListWishlist', JSON.stringify(wishlist));
     }
 
-    // Update cart badge
     function updateCartBadge() {
       const badge = document.getElementById('cartCount');
       const count = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -2231,7 +2312,6 @@
       }
     }
 
-    // Update mini cart
     function updateMiniCart() {
       const miniCartItems = document.getElementById('miniCartItems');
       const miniCartTotal = document.getElementById('miniCartTotal');
@@ -2266,71 +2346,6 @@
       setTimeout(() => miniCartTotal.classList.remove('count-animate'), 400);
     }
 
-    // Quantity controls
-    document.querySelectorAll('.qty-minus').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const display = this.nextElementSibling;
-        let qty = parseInt(display.textContent);
-        qty = Math.max(1, qty - 1);
-        display.textContent = qty;
-      });
-    });
-
-    document.querySelectorAll('.qty-plus').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const display = this.previousElementSibling;
-        let qty = parseInt(display.textContent);
-        qty = Math.min(99, qty + 1);
-        display.textContent = qty;
-      });
-    });
-
-    // Add to cart with particle explosion
-    document.querySelectorAll('.add-to-cart').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const card = this.closest('.card');
-        const qtyDisplay = card.querySelector('.qty-display');
-        const qty = parseInt(qtyDisplay.textContent);
-        
-        const item = {
-          name: card.dataset.name,
-          desc: card.dataset.desc,
-          price: parseInt(card.dataset.price) || 0,
-          qty: qty
-        };
-        
-        if (item.price === 0) {
-          alert('Please contact us for pricing on this item.');
-          return;
-        }
-        
-        const existingIndex = cart.findIndex(i => i.name === item.name);
-        if (existingIndex >= 0) {
-          cart[existingIndex].qty += qty;
-        } else {
-          cart.push(item);
-        }
-        
-        saveCart();
-        
-        this.textContent = 'Added ✓';
-        this.classList.add('added');
-        card.classList.add('in-cart');
-        
-        // Particle explosion effect
-        createParticleExplosion(card);
-        
-        setTimeout(() => {
-          this.textContent = 'Add to Cart';
-          this.classList.remove('added');
-        }, 1500);
-        
-        updateCartBadge();
-        updateMiniCart();
-      });
-    });
-
-    // Particle explosion function
     function createParticleExplosion(element) {
       const rect = element.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
@@ -2364,7 +2379,68 @@
       }
     }
 
-    // Wishlist functionality
+    // Cart Functionality
+    document.querySelectorAll('.qty-minus').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const display = this.nextElementSibling;
+        let qty = parseInt(display.textContent);
+        qty = Math.max(1, qty - 1);
+        display.textContent = qty;
+      });
+    });
+
+    document.querySelectorAll('.qty-plus').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const display = this.previousElementSibling;
+        let qty = parseInt(display.textContent);
+        qty = Math.min(99, qty + 1);
+        display.textContent = qty;
+      });
+    });
+
+    document.querySelectorAll('.add-to-cart').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const card = this.closest('.card');
+        const qtyDisplay = card.querySelector('.qty-display');
+        const qty = parseInt(qtyDisplay.textContent);
+        
+        const item = {
+          name: card.dataset.name,
+          desc: card.dataset.desc,
+          price: parseInt(card.dataset.price) || 0,
+          qty: qty
+        };
+        
+        if (item.price === 0) {
+          alert('Please contact us for pricing on this item.');
+          return;
+        }
+        
+        const existingIndex = cart.findIndex(i => i.name === item.name);
+        if (existingIndex >= 0) {
+          cart[existingIndex].qty += qty;
+        } else {
+          cart.push(item);
+        }
+        
+        saveCart();
+        
+        this.textContent = 'Added ✓';
+        this.classList.add('added');
+        card.classList.add('in-cart');
+        
+        createParticleExplosion(card);
+        
+        setTimeout(() => {
+          this.textContent = 'Add to Cart';
+          this.classList.remove('added');
+        }, 1500);
+        
+        updateCartBadge();
+        updateMiniCart();
+      });
+    });
+
     document.querySelectorAll('.wishlist-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -2396,7 +2472,6 @@
       });
     }
 
-    // Open cart modal
     function openCart() {
       const modal = document.getElementById('cartModal');
       const itemsContainer = document.getElementById('cartItems');
@@ -2433,12 +2508,10 @@
       modal.classList.add('show');
     }
 
-    // Close cart modal
     function closeCart() {
       document.getElementById('cartModal').classList.remove('show');
     }
 
-    // Remove from cart
     function removeFromCart(index) {
       cart.splice(index, 1);
       saveCart();
@@ -2447,7 +2520,6 @@
       openCart();
     }
 
-    // Clear cart
     document.getElementById('clearCartBtn').addEventListener('click', function() {
       if (confirm('Are you sure you want to clear your cart?')) {
         cart = [];
@@ -2458,248 +2530,498 @@
       }
     });
 
-    // Toggle mini cart
+    // Toggle Mini Cart and hide Floating Cart
     document.getElementById('toggleMiniCart').addEventListener('click', function() {
       const miniCart = document.getElementById('miniCart');
-      miniCart.classList.toggle('show');
+      const floatingCart = document.getElementById('floatingCart');
+      
+      if (miniCart.classList.contains('show')) {
+        miniCart.classList.remove('show');
+        floatingCart.classList.remove('hidden');
+      } else {
+        miniCart.classList.add('show');
+        floatingCart.classList.add('hidden');
+      }
     });
 
     document.getElementById('closeMiniCart').addEventListener('click', function() {
-      document.getElementById('miniCart').classList.remove('show');
+      const miniCart = document.getElementById('miniCart');
+      const floatingCart = document.getElementById('floatingCart');
+      miniCart.classList.remove('show');
+      floatingCart.classList.remove('hidden');
     });
 
-    // Package Builder Wizard
-    document.getElementById('packageBuilderBtn').addEventListener('click', function() {
-      document.getElementById('wizardModal').classList.add('show');
-      currentWizardStep = 1;
-      updateWizardProgress();
-      generateEventDays();
-    });
+    document.getElementById('openCartBtn').addEventListener('click', openCart);
+    document.getElementById('closeCartBtn').addEventListener('click', closeCart);
 
-    document.getElementById('closeWizardBtn').addEventListener('click', function() {
-      document.getElementById('wizardModal').classList.remove('show');
-    });
-
-    function nextStep() {
-      if (currentWizardStep === 1) {
-        const clientName = document.getElementById('clientName').value;
-        const clientPhone = document.getElementById('clientPhone').value;
-        const venue = document.getElementById('venue').value;
-        const location = document.getElementById('location').value;
-        
-        if (!clientName || !clientPhone || !venue || !location) {
-          alert('Please fill all required fields');
-          return;
-        }
-        
-        wizardData.clientName = clientName;
-        wizardData.phone = clientPhone;
-        wizardData.venue = venue;
-        wizardData.location = location;
-      }
-      
-      if (currentWizardStep === 2) {
-        const eventDays = [];
-        document.querySelectorAll('.event-day').forEach(day => {
-          const date = day.querySelector('input[type="date"]').value;
-          const func = day.querySelector('input[type="text"]').value;
-          if (date && func) {
-            eventDays.push({ date, function: func });
-          }
+    // PACKAGE BUILDER
+    function initializeBuilder() {
+      allProducts = [];
+      document.querySelectorAll('.card').forEach(card => {
+        allProducts.push({
+          name: card.dataset.name,
+          desc: card.dataset.desc,
+          price: parseInt(card.dataset.price) || 0,
+          category: card.dataset.category
         });
-        
-        if (eventDays.length === 0) {
-          alert('Please add at least one event day');
-          return;
-        }
-        
-        wizardData.eventDays = eventDays;
-      }
-      
-      if (currentWizardStep === 3) {
-        const selectedBudget = document.querySelector('.budget-range.selected');
-        const selectedTime = document.querySelector('.time-slot.selected');
-        
-        if (!selectedBudget || !selectedTime) {
-          alert('Please select both budget range and time slot');
-          return;
-        }
-        
-        wizardData.budget = selectedBudget.dataset.budget;
-        wizardData.timeSlot = selectedTime.dataset.time;
-        
-        generatePackageSummary();
-      }
-      
-      if (currentWizardStep < 4) {
-        currentWizardStep++;
-        updateWizardSteps();
-        updateWizardProgress();
-      }
-    }
-
-    function prevStep() {
-      if (currentWizardStep > 1) {
-        currentWizardStep--;
-        updateWizardSteps();
-        updateWizardProgress();
-      }
-    }
-
-    function updateWizardSteps() {
-      document.querySelectorAll('.wizard-step').forEach((step, index) => {
-        step.classList.remove('active');
-        if (index + 1 === currentWizardStep) {
-          step.classList.add('active');
-        }
       });
+      
+      renderProducts();
     }
 
-    function updateWizardProgress() {
-      document.querySelectorAll('.wizard-progress-step').forEach((step, index) => {
-        if (index < currentWizardStep) {
-          step.classList.add('completed');
-        } else {
-          step.classList.remove('completed');
-        }
-      });
-    }
-
-    function generateEventDays() {
-      const numDays = parseInt(document.getElementById('numDays').value);
-      const container = document.getElementById('eventDaysContainer');
+    function renderProducts(searchTerm = '') {
+      const container = document.getElementById('productsContainer');
       container.innerHTML = '';
       
-      for (let i = 1; i <= numDays; i++) {
-        const dayDiv = document.createElement('div');
-        dayDiv.className = 'event-day';
-        dayDiv.innerHTML = `
-          <h4 style="color:var(--cyan); margin-bottom:10px;">Day ${i}</h4>
-          <div class="form-group">
-            <label class="form-label">Date</label>
-            <input type="date" class="form-input" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Function</label>
-            <input type="text" class="form-input" placeholder="e.g., Mehendi, Sangeet, Wedding" required>
-          </div>
+      const filtered = allProducts.filter(p => 
+        searchTerm === '' || 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.desc.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      filtered.forEach((product, index) => {
+        const div = document.createElement('div');
+        div.className = 'product-checkbox';
+        div.innerHTML = `
+          <input type="checkbox" id="prod-${index}" data-product-index="${index}">
+          <label for="prod-${index}" style="flex:1;">
+            <div style="font-weight:500; margin-bottom:2px;">${product.name}</div>
+            <div style="font-size:12px; color:rgba(223,230,235,0.6);">${product.desc}</div>
+            <div style="color:var(--cyan); margin-top:4px; font-weight:600;">₹${product.price.toLocaleString('en-IN')}</div>
+          </label>
         `;
-        container.appendChild(dayDiv);
-      }
-    }
-
-    // Budget range selection
-    document.getElementById('budgetRanges').addEventListener('click', function(e) {
-      const budgetRange = e.target.closest('.budget-range');
-      if (budgetRange) {
-        document.querySelectorAll('.budget-range').forEach(r => r.classList.remove('selected'));
-        budgetRange.classList.add('selected');
         
-        const customField = document.getElementById('customBudgetField');
-        if (budgetRange.dataset.budget === 'custom') {
-          customField.style.display = 'block';
-        } else {
-          customField.style.display = 'none';
-        }
-      }
-    });
-
-    // Time slot selection
-    document.querySelectorAll('.time-slots').forEach(container => {
-      container.addEventListener('click', function(e) {
-        const timeSlot = e.target.closest('.time-slot');
-        if (timeSlot) {
-          container.querySelectorAll('.time-slot').forEach(t => t.classList.remove('selected'));
-          timeSlot.classList.add('selected');
-        }
-      });
-    });
-
-    function generatePackageSummary() {
-      const summary = document.getElementById('packageSummary');
-      let html = `
-        <h4 style="color:var(--cyan); margin-bottom:15px;">Package Summary</h4>
-        <div style="margin-bottom:10px;"><strong>Client:</strong> ${wizardData.clientName}</div>
-        <div style="margin-bottom:10px;"><strong>Phone:</strong> ${wizardData.phone}</div>
-        <div style="margin-bottom:10px;"><strong>Venue:</strong> ${wizardData.venue}</div>
-        <div style="margin-bottom:10px;"><strong>Location:</strong> ${wizardData.location}</div>
-        <div style="margin-bottom:10px;"><strong>Budget:</strong> ${wizardData.budget}</div>
-        <div style="margin-bottom:10px;"><strong>Time Slot:</strong> ${wizardData.timeSlot}</div>
-        <h4 style="color:var(--cyan); margin:15px 0 10px;">Event Days:</h4>
-      `;
-      
-      wizardData.eventDays.forEach((day, index) => {
-        html += `<div style="margin-bottom:8px;"><strong>Day ${index + 1}:</strong> ${day.date} - ${day.function}</div>`;
-      });
-      
-      if (cart.length > 0) {
-        html += '<h4 style="color:var(--cyan); margin:15px 0 10px;">Selected Items:</h4>';
-        let total = 0;
-        cart.forEach(item => {
-          const itemTotal = item.price * item.qty;
-          total += itemTotal;
-          html += `<div style="margin-bottom:6px;">${item.name} × ${item.qty} = ₹${itemTotal.toLocaleString('en-IN')}</div>`;
+        const checkbox = div.querySelector('input');
+        checkbox.addEventListener('change', function() {
+          if (selectedFunctionId === null) {
+            this.checked = false;
+            alert('Please select a function first!');
+            return;
+          }
+          toggleProductInFunction(filtered[index], this.checked);
         });
-        html += `<div style="margin-top:15px; padding-top:15px; border-top:1px solid var(--panel-border);"><strong style="font-size:18px; color:var(--cyan);">Total: ₹${total.toLocaleString('en-IN')}</strong></div>`;
-      }
-      
-      summary.innerHTML = html;
+        
+        if (selectedFunctionId !== null) {
+          const day = builderData.days.find(d => d.functions.some(f => f.id === selectedFunctionId));
+          if (day) {
+            const func = day.functions.find(f => f.id === selectedFunctionId);
+            if (func && func.items.some(item => item.name === product.name)) {
+              checkbox.checked = true;
+            }
+          }
+        }
+        
+        container.appendChild(div);
+      });
     }
 
-    // Terms checkbox
-    document.getElementById('termsCheckbox').addEventListener('change', function() {
-      document.getElementById('finalCheckoutBtn').disabled = !this.checked;
+    function toggleProductInFunction(product, add) {
+      const day = builderData.days.find(d => d.functions.some(f => f.id === selectedFunctionId));
+      if (!day) return;
+      
+      const func = day.functions.find(f => f.id === selectedFunctionId);
+      if (!func) return;
+      
+      if (add) {
+        if (!func.items.some(item => item.name === product.name)) {
+          func.items.push({...product, qty: 1});
+        }
+      } else {
+        func.items = func.items.filter(item => item.name !== product.name);
+      }
+      
+      renderDays();
+      updateBuilderSummary();
+    }
+
+    // QUANTITY CONTROLS IN PACKAGE BUILDER
+    function updateItemQty(dayId, funcId, itemName, delta) {
+      const day = builderData.days.find(d => d.id === dayId);
+      if (!day) return;
+      
+      const func = day.functions.find(f => f.id === funcId);
+      if (!func) return;
+      
+      const item = func.items.find(i => i.name === itemName);
+      if (!item) return;
+      
+      item.qty = Math.max(1, Math.min(99, item.qty + delta));
+      
+      updateBuilderSummary();
+    }
+
+    function addDay() {
+      dayCounter++;
+      builderData.days.push({
+        id: dayCounter,
+        date: '',
+        functions: []
+      });
+      renderDays();
+    }
+
+    function removeDay(dayId) {
+      if (confirm('Remove this day and all its functions?')) {
+        builderData.days = builderData.days.filter(d => d.id !== dayId);
+        if (selectedFunctionId) {
+          const stillExists = builderData.days.some(d => d.functions.some(f => f.id === selectedFunctionId));
+          if (!stillExists) {
+            selectedFunctionId = null;
+            document.getElementById('selectedFunctionName').textContent = '';
+            renderProducts();
+          }
+        }
+        renderDays();
+        updateBuilderSummary();
+      }
+    }
+
+    function addFunction(dayId) {
+      const funcName = prompt('Enter function name (e.g., Mehendi, Sangeet, Wedding):');
+      if (!funcName) return;
+      
+      functionCounter++;
+      const day = builderData.days.find(d => d.id === dayId);
+      if (day) {
+        day.functions.push({
+          id: functionCounter,
+          name: funcName,
+          items: []
+        });
+        renderDays();
+      }
+    }
+
+    function removeFunction(dayId, funcId) {
+      if (confirm('Remove this function and all its items?')) {
+        const day = builderData.days.find(d => d.id === dayId);
+        if (day) {
+          day.functions = day.functions.filter(f => f.id !== funcId);
+          if (selectedFunctionId === funcId) {
+            selectedFunctionId = null;
+            document.getElementById('selectedFunctionName').textContent = '';
+            renderProducts();
+          }
+          renderDays();
+          updateBuilderSummary();
+        }
+      }
+    }
+
+    function selectFunction(funcId, funcName) {
+      selectedFunctionId = funcId;
+      document.getElementById('selectedFunctionName').textContent = `(${funcName})`;
+      
+      document.querySelectorAll('.function-item').forEach(f => f.classList.remove('active'));
+      document.querySelector(`[data-function-id="${funcId}"]`)?.classList.add('active');
+      
+      renderProducts();
+    }
+
+    function renderDays() {
+      const container = document.getElementById('daysContainer');
+      container.innerHTML = '';
+      
+      builderData.days.forEach(day => {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'day-item';
+        
+        let functionsHTML = '';
+        day.functions.forEach(func => {
+          const itemCount = func.items.length;
+          functionsHTML += `
+            <div class="function-item ${selectedFunctionId === func.id ? 'active' : ''}" data-function-id="${func.id}" onclick="selectFunction(${func.id}, '${func.name}')">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight:500;">${func.name}</div>
+                  <div style="font-size:12px; color:rgba(223,230,235,0.6);">${itemCount} items selected</div>
+                </div>
+                <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="event.stopPropagation(); removeFunction(${day.id}, ${func.id})">✕</button>
+              </div>
+            </div>
+          `;
+        });
+        
+        dayDiv.innerHTML = `
+          <div class="day-header">
+            <span class="day-title">Day ${builderData.days.indexOf(day) + 1}</span>
+            <button class="btn btn-danger" style="padding:6px 12px; font-size:13px;" onclick="removeDay(${day.id})">Remove Day</button>
+          </div>
+          <div class="form-group">
+            <input type="date" class="form-input" value="${day.date}" onchange="updateDayDate(${day.id}, this.value)">
+          </div>
+          <button class="btn" style="width:100%; margin-bottom:10px;" onclick="addFunction(${day.id})">➕ Add Function</button>
+          ${functionsHTML}
+        `;
+        
+        container.appendChild(dayDiv);
+      });
+    }
+
+    function updateDayDate(dayId, date) {
+      const day = builderData.days.find(d => d.id === dayId);
+      if (day) {
+        day.date = date;
+        updateBuilderSummary();
+      }
+    }
+
+    function updateBuilderSummary() {
+      const container = document.getElementById('builderSummary');
+      let grandTotal = 0;
+      let html = '';
+      
+      builderData.days.forEach((day, dayIndex) => {
+        let dayTotal = 0;
+        html += `
+          <div class="summary-day">
+            <div style="font-size:16px; font-weight:600; color:var(--cyan); margin-bottom:8px;">
+              Day ${dayIndex + 1} ${day.date ? `- ${new Date(day.date).toLocaleDateString('en-IN')}` : ''}
+            </div>
+        `;
+        
+        day.functions.forEach(func => {
+          let funcTotal = 0;
+          html += `<div class="summary-function"><strong>${func.name}</strong></div>`;
+          
+          func.items.forEach(item => {
+            const itemTotal = item.price * item.qty;
+            funcTotal += itemTotal;
+            html += `
+              <div class="summary-item">
+                <span>• ${item.name}</span>
+                <div class="summary-item-qty">
+                  <button onclick="updateItemQty(${day.id}, ${func.id}, '${item.name}', -1)">−</button>
+                  <span>${item.qty}</span>
+                  <button onclick="updateItemQty(${day.id}, ${func.id}, '${item.name}', 1)">+</button>
+                  <span style="margin-left:8px; color:var(--cyan); font-weight:600;">₹${itemTotal.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            `;
+          });
+          
+          if (funcTotal > 0) {
+            html += `<div style="margin-left:15px; color:var(--violet); font-weight:600; margin-top:5px;">Subtotal: ₹${funcTotal.toLocaleString('en-IN')}</div>`;
+          }
+          
+          dayTotal += funcTotal;
+        });
+        
+        if (dayTotal > 0) {
+          html += `<div style="margin-top:10px; font-size:15px; font-weight:600; color:var(--cyan);">Day Total: ₹${dayTotal.toLocaleString('en-IN')}</div>`;
+        }
+        
+        html += `</div>`;
+        grandTotal += dayTotal;
+      });
+      
+      container.innerHTML = html || '<p style="color:rgba(223,230,235,0.6); text-align:center;">No items selected yet</p>';
+      document.getElementById('builderGrandTotal').textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
+    }
+
+    document.getElementById('packageBuilderBtn').addEventListener('click', function() {
+      document.getElementById('builderModal').classList.add('show');
+      if (builderData.days.length === 0) {
+        addDay();
+      }
     });
 
-    document.getElementById('checkoutTermsCheckbox').addEventListener('change', function() {
-      const whatsappBtn = document.getElementById('whatsappShareBtn');
-      const downloadBtn = document.getElementById('downloadImageBtn');
+    document.getElementById('closeBuilderBtn').addEventListener('click', function() {
+      document.getElementById('builderModal').classList.remove('show');
+    });
+
+    document.getElementById('addDayBtn').addEventListener('click', addDay);
+
+    document.getElementById('productSearch').addEventListener('input', function(e) {
+      renderProducts(e.target.value);
+    });
+
+    document.getElementById('builderTerms').addEventListener('change', function() {
+      const whatsappBtn = document.getElementById('builderWhatsAppBtn');
+      const downloadBtn = document.getElementById('builderDownloadBtn');
       whatsappBtn.disabled = !this.checked;
       downloadBtn.disabled = !this.checked;
     });
 
-    // Final checkout from wizard
-    document.getElementById('finalCheckoutBtn').addEventListener('click', function() {
-      sendWizardToWhatsApp();
-    });
-
-    function sendWizardToWhatsApp() {
-      let message = `*FirepowerSFX - Package Quotation*\n\n`;
-      message += `*Client Details:*\n`;
-      message += `Name: ${wizardData.clientName}\n`;
-      message += `Phone: ${wizardData.phone}\n`;
-      message += `Venue: ${wizardData.venue}\n`;
-      message += `Location: ${wizardData.location}\n`;
-      message += `Budget: ${wizardData.budget}\n`;
-      message += `Time Slot: ${wizardData.timeSlot}\n\n`;
+    document.getElementById('builderWhatsAppBtn').addEventListener('click', function() {
+      const clientName = document.getElementById('builderClientName').value;
+      const phone = document.getElementById('builderPhone').value;
+      const venue = document.getElementById('builderVenue').value;
+      const location = document.getElementById('builderLocation').value;
       
-      message += `*Event Schedule:*\n`;
-      wizardData.eventDays.forEach((day, index) => {
-        message += `Day ${index + 1}: ${day.date} - ${day.function}\n`;
-      });
-      
-      if (cart.length > 0) {
-        message += `\n*Selected Items:*\n`;
-        let total = 0;
-        cart.forEach(item => {
-          const itemTotal = item.price * item.qty;
-          total += itemTotal;
-          message += `• ${item.name}\n  Qty: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n\n`;
-        });
-        message += `*Total Amount: ₹${total.toLocaleString('en-IN')}*\n\n`;
+      if (!clientName || !phone) {
+        alert('Please fill in client name and phone!');
+        return;
       }
       
-      message += `_By placing this order, you are acknowledging and accepting terms and conditions._\n\n`;
-      message += `Contact us:\n📱 +91 98765 43210\n📱 +91 98765 43211\n🌐 www.firepowers.in`;
+      let message = `*FirepowerSFX - Package Quotation*\n\n`;
+      message += `*Client Details:*\n`;
+      message += `Name: ${clientName}\n`;
+      message += `Phone: ${phone}\n`;
+      if (venue) message += `Venue: ${venue}\n`;
+      if (location) message += `Location: ${location}\n\n`;
       
-      // Open WhatsApp with share intent
+      let grandTotal = 0;
+      
+      builderData.days.forEach((day, dayIndex) => {
+        message += `*Day ${dayIndex + 1}*`;
+        if (day.date) message += ` - ${new Date(day.date).toLocaleDateString('en-IN')}`;
+        message += `\n`;
+        
+        day.functions.forEach(func => {
+          message += `\n_${func.name}_\n`;
+          func.items.forEach(item => {
+            const itemTotal = item.price * item.qty;
+            grandTotal += itemTotal;
+            message += `• ${item.name}\n  Qty: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n`;
+          });
+        });
+        message += `\n`;
+      });
+      
+      message += `*Grand Total: ₹${grandTotal.toLocaleString('en-IN')}*\n\n`;
+      message += `_By placing this order, you are acknowledging and accepting terms and conditions._\n\n`;
+      message += `Contact us:\n📱 +91 98984 96111\n📱 +91 76984 96111\n🌐 www.firepowers.in`;
+      
       const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
+    });
+
+    // FIXED DOWNLOAD IMAGE FUNCTION
+    document.getElementById('builderDownloadBtn').addEventListener('click', function() {
+      generateBuilderQuoteImage();
+    });
+
+    function generateBuilderQuoteImage() {
+      const clientName = document.getElementById('builderClientName').value;
+      const phone = document.getElementById('builderPhone').value;
+      const venue = document.getElementById('builderVenue').value;
+      const location = document.getElementById('builderLocation').value;
       
-      document.getElementById('wizardModal').classList.remove('show');
+      if (!clientName || !phone) {
+        alert('Please fill in client name and phone!');
+        return;
+      }
+      
+      let grandTotal = 0;
+      let itemsHTML = '';
+      let itemIndex = 0;
+      
+      builderData.days.forEach((day, dayIndex) => {
+        itemsHTML += `<tr><td colspan="5" style="background:#f0f0f0; font-weight:bold; padding:10px;">Day ${dayIndex + 1} ${day.date ? `- ${new Date(day.date).toLocaleDateString('en-IN')}` : ''}</td></tr>`;
+        
+        day.functions.forEach(func => {
+          itemsHTML += `<tr><td colspan="5" style="background:#f9f9f9; font-weight:600; padding:8px; padding-left:20px;">${func.name}</td></tr>`;
+          
+          func.items.forEach(item => {
+            itemIndex++;
+            const itemTotal = item.price * item.qty;
+            grandTotal += itemTotal;
+            itemsHTML += `
+              <tr>
+                <td style="padding-left:30px;">${itemIndex}</td>
+                <td>${item.name}<br><small style="color:#666;">${item.desc}</small></td>
+                <td style="text-align:center;">${item.qty}</td>
+                <td style="text-align:right;">₹${item.price.toLocaleString('en-IN')}</td>
+                <td style="text-align:right; font-weight:600;">₹${itemTotal.toLocaleString('en-IN')}</td>
+              </tr>
+            `;
+          });
+        });
+      });
+      
+      const quoteHTML = `
+        <div style="background: white; color: #000; padding: 40px; border-radius: 12px; max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif;">
+          <div style="text-align: center; border-bottom: 3px solid #8f6bff; padding-bottom: 20px; margin-bottom: 30px;">
+            <div style="font-size: 32px; font-weight: bold; color: #8f6bff; margin-bottom: 5px;">FIREPOWERSFX</div>
+            <div style="font-size: 14px; color: #666;">SFX Machines • Crackers • Pyro Effects</div>
+            <div style="margin-top:10px; font-size:12px; color:#666;">
+              📱 +91 98984 96111 | 📱 +91 76984 96111<br>
+              🌐 www.firepowers.in | 📷 @firepowersfx
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <div style="font-size: 16px; font-weight: bold; color: #8f6bff; margin-bottom: 10px; border-bottom: 2px solid #00d5ff; padding-bottom: 5px;">CLIENT INFORMATION</div>
+            <table style="width:100%; font-size:13px;">
+              <tr><td style="width:30%; padding:5px 0;"><strong>Client Name:</strong></td><td>${clientName}</td></tr>
+              <tr><td style="padding:5px 0;"><strong>Phone:</strong></td><td>${phone}</td></tr>
+              ${venue ? `<tr><td style="padding:5px 0;"><strong>Venue:</strong></td><td>${venue}</td></tr>` : ''}
+              ${location ? `<tr><td style="padding:5px 0;"><strong>Location:</strong></td><td>${location}</td></tr>` : ''}
+              <tr><td style="padding:5px 0;"><strong>Quote Date:</strong></td><td>${new Date().toLocaleDateString('en-IN')}</td></tr>
+            </table>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <div style="font-size: 16px; font-weight: bold; color: #8f6bff; margin-bottom: 10px; border-bottom: 2px solid #00d5ff; padding-bottom: 5px;">PACKAGE DETAILS</div>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <thead>
+                <tr>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: left; font-size: 14px; width:5%;">#</th>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: left; font-size: 14px; width:40%;">Item Description</th>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: center; font-size: 14px; width:10%;">Qty</th>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: right; font-size: 14px; width:20%;">Rate</th>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: right; font-size: 14px; width:25%;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHTML}
+                <tr style="background: #f5f5f5; font-weight: bold;">
+                  <td colspan="4" style="text-align:right; font-size:16px; padding: 10px 12px;">GRAND TOTAL:</td>
+                  <td style="text-align:right; font-size:18px; color:#8f6bff; padding: 10px 12px;">₹${grandTotal.toLocaleString('en-IN')}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; font-size: 12px; color: #666; text-align: center;">
+            <strong>Thank you for choosing FirepowerSFX!</strong><br>
+            We look forward to making your event spectacular.
+            <div style="font-size: 11px; color: #999; margin-top: 15px; font-style: italic;">
+              By placing this order, you are acknowledging and accepting terms and conditions.
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Create element directly in body instead of using detached container
+      const quoteElement = document.createElement('div');
+      quoteElement.innerHTML = quoteHTML;
+      quoteElement.style.position = 'absolute';
+      quoteElement.style.left = '-10000px';
+      quoteElement.style.top = '0';
+      document.body.appendChild(quoteElement);
+      
+      setTimeout(() => {
+        html2canvas(quoteElement.firstChild, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: false
+        }).then(canvas => {
+          document.body.removeChild(quoteElement);
+          
+          canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `FirepowerSFX_Package_${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 'image/png', 1.0);
+        }).catch(err => {
+          document.body.removeChild(quoteElement);
+          console.error('Error generating image:', err);
+          alert('Error generating image. Please try again.');
+        });
+      }, 100);
     }
 
-    // Checkout button
+    // CHECKOUT MODAL
     document.getElementById('checkoutBtn').addEventListener('click', function() {
       if (cart.length === 0) {
         alert('Your cart is empty!');
@@ -2713,7 +3035,20 @@
       document.getElementById('checkoutModal').classList.remove('show');
     });
 
-    // WhatsApp share
+    document.querySelectorAll('.checkout-time').forEach(slot => {
+      slot.addEventListener('click', function() {
+        document.querySelectorAll('.checkout-time').forEach(s => s.classList.remove('selected'));
+        this.classList.add('selected');
+      });
+    });
+
+    document.getElementById('checkoutTermsCheckbox').addEventListener('change', function() {
+      const whatsappBtn = document.getElementById('whatsappShareBtn');
+      const downloadBtn = document.getElementById('downloadImageBtn');
+      whatsappBtn.disabled = !this.checked;
+      downloadBtn.disabled = !this.checked;
+    });
+
     document.getElementById('whatsappShareBtn').addEventListener('click', function() {
       const clientName = document.getElementById('checkoutClientName').value;
       const phone = document.getElementById('checkoutPhone').value;
@@ -2753,13 +3088,12 @@
       
       message += `*Total Amount: ₹${total.toLocaleString('en-IN')}*\n\n`;
       message += `_By placing this order, you are acknowledging and accepting terms and conditions._\n\n`;
-      message += `Contact us:\n📱 +91 98765 43210\n📱 +91 98765 43211\n🌐 www.firepowers.in`;
+      message += `Contact us:\n📱 +91 98984 96111\n📱 +91 76984 96111\n🌐 www.firepowers.in`;
       
       const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
     });
 
-    // Download quote as image
     document.getElementById('downloadImageBtn').addEventListener('click', function() {
       const clientName = document.getElementById('checkoutClientName').value;
       const phone = document.getElementById('checkoutPhone').value;
@@ -2779,70 +3113,40 @@
         timeSlot: document.querySelector('.checkout-time.selected')?.dataset.time || ''
       };
       
-      generateQuoteImage();
+      generateCheckoutQuoteImage();
     });
 
-    function generateQuoteImage() {
-      const quoteHTML = createQuoteHTML();
-      
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = quoteHTML;
-      tempDiv.style.position = 'fixed';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.top = '0';
-      document.body.appendChild(tempDiv);
-      
-      html2canvas(tempDiv.firstChild, {
-        scale: 3,
-        backgroundColor: '#ffffff',
-        logging: false
-      }).then(canvas => {
-        document.body.removeChild(tempDiv);
-        
-        canvas.toBlob(blob => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `FirepowerSFX_Quote_${Date.now()}.png`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }, 'image/png', 1.0);
-      });
-    }
-
-    function createQuoteHTML() {
+    function generateCheckoutQuoteImage() {
       let total = 0;
-      cart.forEach(item => {
-        total += item.price * item.qty;
-      });
-      
       let itemsHTML = '';
+      
       cart.forEach((item, index) => {
         const itemTotal = item.price * item.qty;
+        total += itemTotal;
         itemsHTML += `
           <tr>
-            <td>${index + 1}</td>
-            <td>${item.name}<br><small style="color:#666;">${item.desc}</small></td>
-            <td style="text-align:center;">${item.qty}</td>
-            <td style="text-align:right;">₹${item.price.toLocaleString('en-IN')}</td>
-            <td style="text-align:right; font-weight:600;">₹${itemTotal.toLocaleString('en-IN')}</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px;">${index + 1}</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px;">${item.name}<br><small style="color:#666;">${item.desc}</small></td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; text-align:center;">${item.qty}</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; text-align:right;">₹${item.price.toLocaleString('en-IN')}</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; text-align:right; font-weight:600;">₹${itemTotal.toLocaleString('en-IN')}</td>
           </tr>
         `;
       });
       
-      return `
-        <div id="quotePreview">
-          <div class="quote-header">
-            <div class="quote-logo">FIREPOWERSFX</div>
-            <div class="quote-tagline">SFX Machines • Crackers • Pyro Effects</div>
+      const quoteHTML = `
+        <div style="background: white; color: #000; padding: 40px; border-radius: 12px; max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif;">
+          <div style="text-align: center; border-bottom: 3px solid #8f6bff; padding-bottom: 20px; margin-bottom: 30px;">
+            <div style="font-size: 32px; font-weight: bold; color: #8f6bff; margin-bottom: 5px;">FIREPOWERSFX</div>
+            <div style="font-size: 14px; color: #666;">SFX Machines • Crackers • Pyro Effects</div>
             <div style="margin-top:10px; font-size:12px; color:#666;">
-              📱 +91 98765 43210 | 📱 +91 98765 43211<br>
+              📱 +91 98984 96111 | 📱 +91 76984 96111<br>
               🌐 www.firepowers.in | 📷 @firepowersfx
             </div>
           </div>
           
-          <div class="quote-section">
-            <div class="quote-section-title">CLIENT INFORMATION</div>
+          <div style="margin-bottom: 25px;">
+            <div style="font-size: 16px; font-weight: bold; color: #8f6bff; margin-bottom: 10px; border-bottom: 2px solid #00d5ff; padding-bottom: 5px;">CLIENT INFORMATION</div>
             <table style="width:100%; font-size:13px;">
               <tr><td style="width:30%; padding:5px 0;"><strong>Client Name:</strong></td><td>${checkoutData.clientName}</td></tr>
               <tr><td style="padding:5px 0;"><strong>Phone:</strong></td><td>${checkoutData.phone}</td></tr>
@@ -2855,40 +3159,75 @@
             </table>
           </div>
           
-          <div class="quote-section">
-            <div class="quote-section-title">ITEM DETAILS</div>
-            <table class="quote-table">
+          <div style="margin-bottom: 25px;">
+            <div style="font-size: 16px; font-weight: bold; color: #8f6bff; margin-bottom: 10px; border-bottom: 2px solid #00d5ff; padding-bottom: 5px;">ITEM DETAILS</div>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
               <thead>
                 <tr>
-                  <th style="width:5%;">#</th>
-                  <th style="width:40%;">Item Description</th>
-                  <th style="width:10%; text-align:center;">Qty</th>
-                  <th style="width:20%; text-align:right;">Rate</th>
-                  <th style="width:25%; text-align:right;">Amount</th>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: left; font-size: 14px; width:5%;">#</th>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: left; font-size: 14px; width:40%;">Item Description</th>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: center; font-size: 14px; width:10%;">Qty</th>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: right; font-size: 14px; width:20%;">Rate</th>
+                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: right; font-size: 14px; width:25%;">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 ${itemsHTML}
-                <tr class="quote-total-row">
-                  <td colspan="4" style="text-align:right; font-size:16px;">TOTAL AMOUNT:</td>
-                  <td style="text-align:right; font-size:18px; color:#8f6bff;">₹${total.toLocaleString('en-IN')}</td>
+                <tr style="background: #f5f5f5; font-weight: bold;">
+                  <td colspan="4" style="text-align:right; font-size:16px; padding: 10px 12px;">TOTAL AMOUNT:</td>
+                  <td style="text-align:right; font-size:18px; color:#8f6bff; padding: 10px 12px;">₹${total.toLocaleString('en-IN')}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           
-          <div class="quote-footer">
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; font-size: 12px; color: #666; text-align: center;">
             <strong>Thank you for choosing FirepowerSFX!</strong><br>
             We look forward to making your event spectacular.
-            <div class="quote-terms">
+            <div style="font-size: 11px; color: #999; margin-top: 15px; font-style: italic;">
               By placing this order, you are acknowledging and accepting terms and conditions.
             </div>
           </div>
         </div>
       `;
+      
+      const quoteElement = document.createElement('div');
+      quoteElement.innerHTML = quoteHTML;
+      quoteElement.style.position = 'absolute';
+      quoteElement.style.left = '-10000px';
+      quoteElement.style.top = '0';
+      document.body.appendChild(quoteElement);
+      
+      setTimeout(() => {
+        html2canvas(quoteElement.firstChild, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: false
+        }).then(canvas => {
+          document.body.removeChild(quoteElement);
+          
+          canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `FirepowerSFX_Quote_${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 'image/png', 1.0);
+        }).catch(err => {
+          document.body.removeChild(quoteElement);
+          console.error('Error generating image:', err);
+          alert('Error generating image. Please try again.');
+        });
+      }, 100);
     }
 
-    // Search functionality
+    // SEARCH & FILTER
     const searchInput = document.getElementById('search');
     const budgetFilter = document.getElementById('budgetFilter');
     const sortFilter = document.getElementById('sortFilter');
@@ -2947,20 +3286,7 @@
     budgetFilter.addEventListener('change', filterCards);
     sortFilter.addEventListener('change', filterCards);
 
-    // Event listeners
-    document.getElementById('openCartBtn').addEventListener('click', openCart);
-    document.getElementById('closeCartBtn').addEventListener('click', closeCart);
-
-    // Close modals on backdrop click
-    document.querySelectorAll('.modal').forEach(modal => {
-      modal.addEventListener('click', function(e) {
-        if (e.target === this) {
-          this.classList.remove('show');
-        }
-      });
-    });
-
-    // Spark Effects
+    // SPARK EFFECTS
     const sparkContainer = document.getElementById('spark-layer');
     
     function createSparkElement(x, y, size, duration, colorClass) {
@@ -3063,10 +3389,20 @@
       if (blueTimer) clearInterval(blueTimer);
       if (goldTimer) clearInterval(goldTimer);
     });
+
+    // Close modals on backdrop click
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+          this.classList.remove('show');
+        }
+      });
+    });
     
-    // Initialize
+    // INITIALIZE
     loadData();
     startSparks();
+    initializeBuilder();
   </script>
 </body>
 </html>
