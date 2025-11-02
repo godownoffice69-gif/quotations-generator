@@ -13,10 +13,9 @@
     gtag('js', new Date());
     gtag('config', 'G-R7SXFLHW48');
   </script>
-  <!-- End Google Analytics -->
 
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
     :root{
@@ -49,13 +48,66 @@
       min-height: 100vh;
     }
 
-    /* aurora ribbons */
-    .aurora-layer { 
-      position: fixed; 
-      inset: 0; 
-      z-index: 0; 
-      overflow: hidden; 
-      pointer-events: none; 
+    /* ROTATING BACKGROUND ANIMATIONS */
+    .animation-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+      transition: opacity 2s ease-in-out;
+    }
+    
+    .animation-layer.fade-out {
+      opacity: 0;
+    }
+
+    /* Style A: Fireworks */
+    .fireworks-bg {
+      position: absolute;
+      inset: 0;
+    }
+    
+    .firework {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      animation: fireworkExplode 2s ease-out forwards;
+    }
+    
+    @keyframes fireworkExplode {
+      0% { transform: translateY(100vh) scale(1); opacity: 1; }
+      50% { opacity: 1; }
+      100% { transform: translateY(var(--target-y)) translateX(var(--target-x)) scale(0); opacity: 0; }
+    }
+
+    /* Style B: Particle Network */
+    .network-bg {
+      position: absolute;
+      inset: 0;
+    }
+    
+    .network-particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: var(--cyan);
+      border-radius: 50%;
+      opacity: 0.4;
+      animation: float 20s infinite ease-in-out;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      33% { transform: translate(100px, -100px); }
+      66% { transform: translate(-100px, 50px); }
+    }
+
+    /* Style C: Aurora (existing) */
+    .aurora-bg {
+      position: absolute;
+      inset: 0;
     }
     
     .wave {
@@ -83,6 +135,41 @@
       0% { transform: translateY(0) rotate(0deg); }
       50% { transform: translateY(-8%) rotate(10deg); }
       100% { transform: translateY(4%) rotate(-5deg); }
+    }
+
+    /* Style D: Geometric Shapes */
+    .geometric-bg {
+      position: absolute;
+      inset: 0;
+    }
+    
+    .geo-shape {
+      position: absolute;
+      border: 2px solid rgba(0,213,255,0.2);
+      animation: rotate3d 30s infinite linear;
+      opacity: 0.3;
+    }
+    
+    @keyframes rotate3d {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(1.2); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    /* Style E: Gradient Mesh */
+    .mesh-bg {
+      position: absolute;
+      inset: 0;
+      background: 
+        radial-gradient(at 20% 30%, rgba(0,213,255,0.15) 0%, transparent 50%),
+        radial-gradient(at 80% 70%, rgba(143,107,255,0.15) 0%, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(255,215,94,0.1) 0%, transparent 50%);
+      animation: meshMove 20s ease-in-out infinite;
+    }
+    
+    @keyframes meshMove {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(50px, -50px) scale(1.1); }
     }
 
     /* spark basics */
@@ -113,7 +200,7 @@
       filter: drop-shadow(0 10px 22px rgba(255,180,60,0.10)); 
     }
 
-    /* Particle Explosion Effect */
+    /* Particle Explosion */
     .particle {
       position: absolute;
       pointer-events: none;
@@ -122,14 +209,45 @@
     }
     
     @keyframes explode {
-      0% { 
-        transform: translate(0, 0) scale(1); 
-        opacity: 1; 
-      }
-      100% { 
-        transform: translate(var(--tx), var(--ty)) scale(0); 
-        opacity: 0; 
-      }
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+    }
+
+    /* Celebration Confetti */
+    .celebration-confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: var(--cyan);
+      animation: confettiFall 3s ease-in forwards;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    
+    @keyframes confettiFall {
+      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* Popular Badge */
+    .popular-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+      color: #000;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(255,107,107,0.4);
+      animation: popularPulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes popularPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
     }
 
     /* layout & UI */
@@ -170,7 +288,7 @@
       margin-top: 6px; 
     }
 
-    /* Contact Info - MORE PROMINENT */
+    /* Contact Info */
     .contact-info {
       display: flex;
       gap: 18px;
@@ -206,6 +324,35 @@
       background: rgba(0,213,255,0.15);
       border: 2px solid var(--cyan);
       font-size: 18px;
+    }
+
+    /* Sticky WhatsApp Button */
+    .sticky-whatsapp {
+      position: fixed;
+      bottom: 90px;
+      right: 30px;
+      z-index: 999;
+      animation: floatIn 0.4s ease-out;
+    }
+    
+    .sticky-whatsapp a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #25D366;
+      color: white;
+      padding: 14px 20px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      box-shadow: 0 8px 24px rgba(37,211,102,0.4);
+      transition: all 0.3s;
+    }
+    
+    .sticky-whatsapp a:hover {
+      transform: scale(1.05);
+      box-shadow: 0 12px 32px rgba(37,211,102,0.6);
     }
 
     /* controls */
@@ -319,6 +466,16 @@
 
     .btn-danger:hover {
       background: #cc0000;
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+
+    .btn-success:hover {
+      background: #059669;
     }
 
     /* Floating Cart Button */
@@ -779,16 +936,16 @@
       background: rgba(143,107,255,0.15);
     }
 
+    /* UPDATED: Product checkbox with quantity controls */
     .product-checkbox {
       display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
       background: rgba(255,255,255,0.02);
       border: 1px solid var(--panel-border);
       border-radius: 6px;
       margin-bottom: 8px;
-      cursor: pointer;
       transition: all 0.2s;
     }
 
@@ -796,9 +953,62 @@
       background: rgba(255,255,255,0.04);
     }
 
+    .product-checkbox-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+    }
+
     .product-checkbox input[type="checkbox"] {
       margin-top: 3px;
       cursor: pointer;
+    }
+
+    .product-qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-left: 30px;
+      opacity: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .product-qty-controls.visible {
+      opacity: 1;
+      max-height: 50px;
+      padding-top: 8px;
+    }
+
+    .product-qty-controls button {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      background: var(--violet);
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+
+    .product-qty-controls button:hover {
+      background: #7a5ee8;
+      transform: scale(1.1);
+    }
+
+    .product-qty-controls span {
+      min-width: 30px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cyan);
     }
 
     .product-search {
@@ -838,7 +1048,6 @@
       gap: 10px;
     }
 
-    /* FIXED QUANTITY CONTROLS IN PACKAGE BUILDER */
     .summary-item-qty {
       display: flex;
       align-items: center;
@@ -901,94 +1110,6 @@
       color: rgba(223,230,235,0.8);
     }
 
-    /* Quote Preview */
-    #quotePreview {
-      background: white;
-      color: #000;
-      padding: 40px;
-      border-radius: 12px;
-      max-width: 800px;
-      margin: 0 auto;
-      font-family: Arial, sans-serif;
-    }
-    
-    .quote-header {
-      text-align: center;
-      border-bottom: 3px solid #8f6bff;
-      padding-bottom: 20px;
-      margin-bottom: 30px;
-    }
-    
-    .quote-logo {
-      font-size: 32px;
-      font-weight: bold;
-      color: #8f6bff;
-      margin-bottom: 5px;
-    }
-    
-    .quote-tagline {
-      font-size: 14px;
-      color: #666;
-    }
-    
-    .quote-section {
-      margin-bottom: 25px;
-    }
-    
-    .quote-section-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #8f6bff;
-      margin-bottom: 10px;
-      border-bottom: 2px solid #00d5ff;
-      padding-bottom: 5px;
-    }
-    
-    .quote-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    
-    .quote-table th {
-      background: #8f6bff;
-      color: white;
-      padding: 12px;
-      text-align: left;
-      font-size: 14px;
-    }
-    
-    .quote-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #e0e0e0;
-      font-size: 13px;
-    }
-    
-    .quote-table tr:last-child td {
-      border-bottom: none;
-    }
-    
-    .quote-total-row {
-      background: #f5f5f5;
-      font-weight: bold;
-    }
-    
-    .quote-footer {
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 2px solid #e0e0e0;
-      font-size: 12px;
-      color: #666;
-      text-align: center;
-    }
-    
-    .quote-terms {
-      font-size: 11px;
-      color: #999;
-      margin-top: 15px;
-      font-style: italic;
-    }
-
     /* Wishlist Heart */
     .wishlist-btn {
       position: absolute;
@@ -1005,6 +1126,7 @@
       cursor: pointer;
       font-size: 18px;
       transition: all 0.2s;
+      z-index: 5;
     }
     
     .wishlist-btn:hover {
@@ -1074,7 +1196,7 @@
 
     @media print {
       body { background: #fff; color: #000; }
-      .aurora-layer, #spark-layer, .no-print, .cart-controls, .controls, .floating-cart, .mini-cart { display: none !important; }
+      .animation-layer, #spark-layer, .no-print, .cart-controls, .controls, .floating-cart, .mini-cart, .sticky-whatsapp { display: none !important; }
       .card { background: #fff; border: 1px solid #ddd; box-shadow: none; page-break-inside: avoid; }
       .price { color: #000; }
     }
@@ -1091,6 +1213,11 @@
       
       .floating-cart {
         bottom: 20px;
+        right: 20px;
+      }
+
+      .sticky-whatsapp {
+        bottom: 80px;
         right: 20px;
       }
 
@@ -1116,17 +1243,53 @@
         justify-content: center;
       }
     }
+
+    /* Draft saved notification */
+    .draft-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--violet);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10000;
+      animation: slideInRight 0.3s ease-out;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .draft-notification.show {
+      opacity: 1;
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(400px); }
+      to { transform: translateX(0); }
+    }
   </style>
 </head>
 <body>
-  <!-- aurora ribbons -->
-  <div class="aurora-layer" aria-hidden="true">
-    <div class="wave"></div>
-    <div class="wave v2"></div>
-  </div>
+  <!-- ROTATING BACKGROUND ANIMATIONS -->
+  <div id="animationContainer"></div>
 
   <!-- spark layer -->
   <div id="spark-layer" aria-hidden="true" style="position:fixed; inset:0; pointer-events:none; z-index:8;"></div>
+
+  <!-- Draft Notification -->
+  <div id="draftNotification" class="draft-notification">
+    💾 Draft saved automatically
+  </div>
+
+  <!-- Sticky WhatsApp -->
+  <div class="sticky-whatsapp no-print">
+    <a href="https://wa.me/919898496111" target="_blank" rel="noopener">
+      <span style="font-size:24px;">💬</span>
+      <span>Chat on WhatsApp</span>
+    </a>
+  </div>
 
   <div class="container">
 
@@ -1138,10 +1301,10 @@
         
         <div class="contact-info">
           <a href="tel:+919898496111" class="phone-link" aria-label="Call Yogendra Bhai">
-            📱 9898 496 111 (Yogendra bhai)
+            📱 9898 496 111 (Yogendra)
           </a>
           <a href="tel:+917698496111" class="phone-link" aria-label="Call Lala Bhai">
-            📱 7698 496 111 (Lala bhai)
+            📱 7698 496 111 (Lala)
           </a>
           <a href="https://www.instagram.com/firepowersfx?igsh=YzljYTk1ODg3Zg==" target="_blank" rel="noopener noreferrer" aria-label="Visit our Instagram">
             📷 @firepowersfx
@@ -1198,7 +1361,8 @@
     </div>
     <div id="sfx-gallery" class="gallery">
       
-      <article class="card" data-name="Showven Sparkler" data-desc="200 gram powder" data-price="5000" data-category="sfx">
+      <article class="card" data-name="Showven Sparkler" data-desc="200 gram powder" data-price="5000" data-category="sfx" data-popular="true">
+        <div class="popular-badge">🔥 POPULAR</div>
         <button class="wishlist-btn">♡</button>
         <h3>Showven Sparkler</h3>
         <p class="desc">200 gram powder</p>
@@ -1345,7 +1509,8 @@
         </div>
       </article>
 
-      <article class="card" data-name="Showven Sonic Boom (CO2 jet)" data-desc="CO2 jet effect" data-price="6000" data-category="sfx">
+      <article class="card" data-name="Showven Sonic Boom (CO2 jet)" data-desc="CO2 jet effect" data-price="6000" data-category="sfx" data-popular="true">
+        <div class="popular-badge">🔥 POPULAR</div>
         <button class="wishlist-btn">♡</button>
         <h3>Showven Sonic Boom (CO2 jet)</h3>
         <p class="desc">CO2 jet effect</p>
@@ -1534,7 +1699,8 @@
         </div>
       </article>
 
-      <article class="card" data-name="Topcat Bubble Big" data-desc="Large bubble effect" data-price="8000" data-category="sfx">
+      <article class="card" data-name="Topcat Bubble Big" data-desc="Large bubble effect" data-price="8000" data-category="sfx" data-popular="true">
+        <div class="popular-badge">🔥 POPULAR</div>
         <button class="wishlist-btn">♡</button>
         <h3>Topcat Bubble Big</h3>
         <p class="desc">Large bubble effect</p>
@@ -1555,7 +1721,8 @@
         </div>
       </article>
 
-      <article class="card" data-name="Dry Ice Machine" data-desc="Dry ice fog effect" data-price="8000" data-category="sfx">
+      <article class="card" data-name="Dry Ice Machine" data-desc="Dry ice fog effect" data-price="8000" data-category="sfx" data-popular="true">
+        <div class="popular-badge">🔥 POPULAR</div>
         <button class="wishlist-btn">♡</button>
         <h3>Dry Ice Machine</h3>
         <p class="desc">Dry ice fog effect</p>
@@ -1712,7 +1879,8 @@
     </div>
     <div id="crackers-gallery" class="gallery">
 
-      <article class="card" data-name="Imported cold pyro" data-desc="Cold pyrotechnics" data-price="450" data-category="crackers">
+      <article class="card" data-name="Imported cold pyro" data-desc="Cold pyrotechnics" data-price="450" data-category="crackers" data-popular="true">
+        <div class="popular-badge">🔥 POPULAR</div>
         <button class="wishlist-btn">♡</button>
         <h3>Imported cold pyro</h3>
         <p class="desc">Cold pyrotechnics</p>
@@ -2069,7 +2237,8 @@
         </div>
       </article>
 
-      <article class="card" data-name="Fire Show" data-desc="One minute performance" data-price="130000" data-category="crackers">
+      <article class="card" data-name="Fire Show" data-desc="One minute performance" data-price="130000" data-category="crackers" data-popular="true">
+        <div class="popular-badge">🔥 POPULAR</div>
         <button class="wishlist-btn">♡</button>
         <h3>Fire Show</h3>
         <p class="desc">One minute performance</p>
@@ -2211,12 +2380,18 @@
         <label for="builderTerms">I agree to the terms and conditions</label>
       </div>
 
-      <div style="display:flex; gap:10px; margin-top:20px;">
-        <button class="btn btn-primary" style="flex:1;" id="builderWhatsAppBtn" disabled>
-          📱 Send via WhatsApp
+      <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
+        <button class="btn btn-success" style="flex:1; min-width:150px;" id="builderSaveDraftBtn">
+          💾 Save Draft
         </button>
-        <button class="btn" style="flex:1;" id="builderDownloadBtn" disabled>
-          📥 Download Image
+        <button class="btn" style="flex:1; min-width:150px;" id="builderLoadDraftBtn">
+          📂 Load Draft
+        </button>
+        <button class="btn btn-primary" style="flex:1; min-width:150px;" id="builderWhatsAppBtn" disabled>
+          📱 WhatsApp
+        </button>
+        <button class="btn" style="flex:1; min-width:150px;" id="builderDownloadBtn" disabled>
+          📥 Download PDF
         </button>
       </div>
     </div>
@@ -2276,20 +2451,149 @@
         <button class="btn btn-primary" style="flex:1;" id="whatsappShareBtn" disabled>
           📱 Share via WhatsApp
         </button>
-        <button class="btn" style="flex:1;" id="downloadImageBtn" disabled>
-          📥 Download Quote Image
+        <button class="btn" style="flex:1;" id="downloadPDFBtn" disabled>
+          📥 Download PDF
         </button>
       </div>
     </div>
   </div>
 
   <script>
-    // Global Variables
+    // ============================================
+    // ROTATING BACKGROUND ANIMATIONS SYSTEM
+    // ============================================
+    const animationContainer = document.getElementById('animationContainer');
+    let currentAnimationIndex = 0;
+    let animationInterval;
+    
+    const animations = [
+      {
+        name: 'fireworks',
+        create: () => {
+          const layer = document.createElement('div');
+          layer.className = 'animation-layer fireworks-bg';
+          
+          function createFirework() {
+            const x = Math.random() * window.innerWidth;
+            const fw = document.createElement('div');
+            fw.className = 'firework';
+            fw.style.left = x + 'px';
+            fw.style.bottom = '0';
+            fw.style.background = ['#00d5ff', '#8f6bff', '#ffd75e'][Math.floor(Math.random() * 3)];
+            
+            const targetY = -(Math.random() * 300 + 200);
+            const targetX = (Math.random() - 0.5) * 200;
+            fw.style.setProperty('--target-y', targetY + 'px');
+            fw.style.setProperty('--target-x', targetX + 'px');
+            
+            layer.appendChild(fw);
+            setTimeout(() => fw.remove(), 2000);
+          }
+          
+          const interval = setInterval(createFirework, 800);
+          layer.dataset.interval = interval;
+          return layer;
+        }
+      },
+      {
+        name: 'network',
+        create: () => {
+          const layer = document.createElement('div');
+          layer.className = 'animation-layer network-bg';
+          
+          for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'network-particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            layer.appendChild(particle);
+          }
+          
+          return layer;
+        }
+      },
+      {
+        name: 'aurora',
+        create: () => {
+          const layer = document.createElement('div');
+          layer.className = 'animation-layer aurora-bg';
+          
+          const wave1 = document.createElement('div');
+          wave1.className = 'wave';
+          layer.appendChild(wave1);
+          
+          const wave2 = document.createElement('div');
+          wave2.className = 'wave v2';
+          layer.appendChild(wave2);
+          
+          return layer;
+        }
+      },
+      {
+        name: 'geometric',
+        create: () => {
+          const layer = document.createElement('div');
+          layer.className = 'animation-layer geometric-bg';
+          
+          for (let i = 0; i < 6; i++) {
+            const shape = document.createElement('div');
+            shape.className = 'geo-shape';
+            const size = Math.random() * 100 + 50;
+            shape.style.width = size + 'px';
+            shape.style.height = size + 'px';
+            shape.style.left = Math.random() * 100 + '%';
+            shape.style.top = Math.random() * 100 + '%';
+            shape.style.animationDelay = Math.random() * 30 + 's';
+            shape.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+            layer.appendChild(shape);
+          }
+          
+          return layer;
+        }
+      },
+      {
+        name: 'mesh',
+        create: () => {
+          const layer = document.createElement('div');
+          layer.className = 'animation-layer mesh-bg';
+          return layer;
+        }
+      }
+    ];
+    
+    function switchAnimation() {
+      // Fade out current
+      const current = animationContainer.querySelector('.animation-layer');
+      if (current) {
+        current.classList.add('fade-out');
+        setTimeout(() => {
+          if (current.dataset.interval) {
+            clearInterval(parseInt(current.dataset.interval));
+          }
+          current.remove();
+        }, 2000);
+      }
+      
+      // Create next
+      currentAnimationIndex = (currentAnimationIndex + 1) % animations.length;
+      const newLayer = animations[currentAnimationIndex].create();
+      animationContainer.appendChild(newLayer);
+    }
+    
+    // Initialize first animation
+    switchAnimation();
+    
+    // Switch every 15 seconds
+    animationInterval = setInterval(switchAnimation, 15000);
+
+    // ============================================
+    // CORE FUNCTIONALITY
+    // ============================================
     let cart = [];
     let wishlist = [];
     let checkoutData = {};
     
-    // Package Builder Data
     let builderData = {
       clientName: '',
       phone: '',
@@ -2302,24 +2606,14 @@
     let selectedFunctionId = null;
     let allProducts = [];
 
-    // Load/Save Data
     function loadData() {
       const savedCart = localStorage.getItem('priceListCart');
       const savedWishlist = localStorage.getItem('priceListWishlist');
       if (savedCart) {
-        try {
-          cart = JSON.parse(savedCart);
-        } catch(e) {
-          cart = [];
-        }
+        try { cart = JSON.parse(savedCart); } catch(e) { cart = []; }
       }
       if (savedWishlist) {
-        try {
-          wishlist = JSON.parse(savedWishlist);
-          updateWishlistUI();
-        } catch(e) {
-          wishlist = [];
-        }
+        try { wishlist = JSON.parse(savedWishlist); updateWishlistUI(); } catch(e) { wishlist = []; }
       }
       updateCartBadge();
       updateMiniCart();
@@ -2359,7 +2653,7 @@
           total += itemTotal;
           
           const itemDiv = document.createElement('div');
-          itemDiv.className = 'mini-cart-item shimmer';
+          itemDiv.className = 'mini-cart-item';
           itemDiv.innerHTML = `
             <div style="font-weight:500; margin-bottom:3px;">${item.name}</div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -2368,14 +2662,10 @@
             </div>
           `;
           miniCartItems.appendChild(itemDiv);
-          
-          setTimeout(() => itemDiv.classList.remove('shimmer'), 100);
         });
       }
       
       miniCartTotal.textContent = `₹${total.toLocaleString('en-IN')}`;
-      miniCartTotal.classList.add('count-animate');
-      setTimeout(() => miniCartTotal.classList.remove('count-animate'), 400);
     }
 
     function createParticleExplosion(element) {
@@ -2384,9 +2674,8 @@
       const centerY = rect.top + rect.height / 2;
       
       const colors = ['#00d5ff', '#8f6bff', '#ffd75e'];
-      const particleCount = 20;
       
-      for (let i = 0; i < particleCount; i++) {
+      for (let i = 0; i < 20; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
         particle.style.position = 'fixed';
@@ -2397,17 +2686,28 @@
         particle.style.background = colors[Math.floor(Math.random() * colors.length)];
         particle.style.zIndex = '9999';
         
-        const angle = (Math.PI * 2 * i) / particleCount;
+        const angle = (Math.PI * 2 * i) / 20;
         const velocity = Math.random() * 100 + 50;
-        const tx = Math.cos(angle) * velocity;
-        const ty = Math.sin(angle) * velocity;
-        
-        particle.style.setProperty('--tx', tx + 'px');
-        particle.style.setProperty('--ty', ty + 'px');
+        particle.style.setProperty('--tx', Math.cos(angle) * velocity + 'px');
+        particle.style.setProperty('--ty', Math.sin(angle) * velocity + 'px');
         
         document.body.appendChild(particle);
-        
         setTimeout(() => particle.remove(), 800);
+      }
+    }
+
+    function createCelebrationConfetti() {
+      const colors = ['#00d5ff', '#8f6bff', '#ffd75e', '#ff6b6b'];
+      for (let i = 0; i < 50; i++) {
+        setTimeout(() => {
+          const confetti = document.createElement('div');
+          confetti.className = 'celebration-confetti';
+          confetti.style.left = Math.random() * 100 + '%';
+          confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+          confetti.style.animationDelay = Math.random() * 0.5 + 's';
+          document.body.appendChild(confetti);
+          setTimeout(() => confetti.remove(), 3000);
+        }, i * 30);
       }
     }
 
@@ -2416,8 +2716,7 @@
       btn.addEventListener('click', function() {
         const display = this.nextElementSibling;
         let qty = parseInt(display.textContent);
-        qty = Math.max(1, qty - 1);
-        display.textContent = qty;
+        display.textContent = Math.max(1, qty - 1);
       });
     });
 
@@ -2425,16 +2724,14 @@
       btn.addEventListener('click', function() {
         const display = this.previousElementSibling;
         let qty = parseInt(display.textContent);
-        qty = Math.min(99, qty + 1);
-        display.textContent = qty;
+        display.textContent = Math.min(99, qty + 1);
       });
     });
 
     document.querySelectorAll('.add-to-cart').forEach(btn => {
       btn.addEventListener('click', function() {
         const card = this.closest('.card');
-        const qtyDisplay = card.querySelector('.qty-display');
-        const qty = parseInt(qtyDisplay.textContent);
+        const qty = parseInt(card.querySelector('.qty-display').textContent);
         
         const item = {
           name: card.dataset.name,
@@ -2456,11 +2753,9 @@
         }
         
         saveCart();
-        
         this.textContent = 'Added ✓';
         this.classList.add('added');
         card.classList.add('in-cart');
-        
         createParticleExplosion(card);
         
         setTimeout(() => {
@@ -2496,8 +2791,7 @@
     function updateWishlistUI() {
       document.querySelectorAll('.wishlist-btn').forEach(btn => {
         const card = btn.closest('.card');
-        const itemName = card.dataset.name;
-        if (wishlist.includes(itemName)) {
+        if (wishlist.includes(card.dataset.name)) {
           btn.classList.add('active');
           btn.textContent = '♥';
         }
@@ -2552,6 +2846,8 @@
       openCart();
     }
 
+    window.removeFromCart = removeFromCart;
+
     document.getElementById('clearCartBtn').addEventListener('click', function() {
       if (confirm('Are you sure you want to clear your cart?')) {
         cart = [];
@@ -2562,7 +2858,6 @@
       }
     });
 
-    // Toggle Mini Cart and hide Floating Cart
     document.getElementById('toggleMiniCart').addEventListener('click', function() {
       const miniCart = document.getElementById('miniCart');
       const floatingCart = document.getElementById('floatingCart');
@@ -2577,16 +2872,16 @@
     });
 
     document.getElementById('closeMiniCart').addEventListener('click', function() {
-      const miniCart = document.getElementById('miniCart');
-      const floatingCart = document.getElementById('floatingCart');
-      miniCart.classList.remove('show');
-      floatingCart.classList.remove('hidden');
+      document.getElementById('miniCart').classList.remove('show');
+      document.getElementById('floatingCart').classList.remove('hidden');
     });
 
     document.getElementById('openCartBtn').addEventListener('click', openCart);
     document.getElementById('closeCartBtn').addEventListener('click', closeCart);
 
+    // ============================================
     // PACKAGE BUILDER
+    // ============================================
     function initializeBuilder() {
       allProducts = [];
       document.querySelectorAll('.card').forEach(card => {
@@ -2597,7 +2892,6 @@
           category: card.dataset.category
         });
       });
-      
       renderProducts();
     }
 
@@ -2614,40 +2908,82 @@
       filtered.forEach((product, index) => {
         const div = document.createElement('div');
         div.className = 'product-checkbox';
+        
+        // Check if product is in current function
+        let currentQty = 1;
+        let isChecked = false;
+        
+        if (selectedFunctionId !== null) {
+          const day = builderData.days.find(d => d.functions.some(f => f.id === selectedFunctionId));
+          if (day) {
+            const func = day.functions.find(f => f.id === selectedFunctionId);
+            if (func) {
+              const existingItem = func.items.find(item => item.name === product.name);
+              if (existingItem) {
+                isChecked = true;
+                currentQty = existingItem.qty;
+              }
+            }
+          }
+        }
+        
         div.innerHTML = `
-          <input type="checkbox" id="prod-${index}" data-product-index="${index}">
-          <label for="prod-${index}" style="flex:1;">
-            <div style="font-weight:500; margin-bottom:2px;">${product.name}</div>
-            <div style="font-size:12px; color:rgba(223,230,235,0.6);">${product.desc}</div>
-            <div style="color:var(--cyan); margin-top:4px; font-weight:600;">₹${product.price.toLocaleString('en-IN')}</div>
-          </label>
+          <div class="product-checkbox-header">
+            <input type="checkbox" id="prod-${index}" data-product-index="${index}" ${isChecked ? 'checked' : ''}>
+            <label for="prod-${index}" style="flex:1;">
+              <div style="font-weight:500; margin-bottom:2px;">${product.name}</div>
+              <div style="font-size:12px; color:rgba(223,230,235,0.6);">${product.desc}</div>
+              <div style="color:var(--cyan); margin-top:4px; font-weight:600;">₹${product.price.toLocaleString('en-IN')}</div>
+            </label>
+          </div>
+          <div class="product-qty-controls ${isChecked ? 'visible' : ''}" data-product-name="${product.name}">
+            <button class="product-qty-minus">−</button>
+            <span class="product-qty-value">${currentQty}</span>
+            <button class="product-qty-plus">+</button>
+          </div>
         `;
         
         const checkbox = div.querySelector('input');
+        const qtyControls = div.querySelector('.product-qty-controls');
+        const qtyValue = qtyControls.querySelector('.product-qty-value');
+        const minusBtn = qtyControls.querySelector('.product-qty-minus');
+        const plusBtn = qtyControls.querySelector('.product-qty-plus');
+        
         checkbox.addEventListener('change', function() {
           if (selectedFunctionId === null) {
             this.checked = false;
             alert('Please select a function first!');
             return;
           }
-          toggleProductInFunction(filtered[index], this.checked);
+          
+          if (this.checked) {
+            qtyControls.classList.add('visible');
+            toggleProductInFunction(filtered[index], true, parseInt(qtyValue.textContent));
+          } else {
+            qtyControls.classList.remove('visible');
+            toggleProductInFunction(filtered[index], false);
+          }
         });
         
-        if (selectedFunctionId !== null) {
-          const day = builderData.days.find(d => d.functions.some(f => f.id === selectedFunctionId));
-          if (day) {
-            const func = day.functions.find(f => f.id === selectedFunctionId);
-            if (func && func.items.some(item => item.name === product.name)) {
-              checkbox.checked = true;
-            }
-          }
-        }
+        minusBtn.addEventListener('click', function() {
+          let qty = parseInt(qtyValue.textContent);
+          qty = Math.max(1, qty - 1);
+          qtyValue.textContent = qty;
+          updateProductQtyInFunction(product.name, qty);
+        });
+        
+        plusBtn.addEventListener('click', function() {
+          let qty = parseInt(qtyValue.textContent);
+          qty = Math.min(99, qty + 1);
+          qtyValue.textContent = qty;
+          updateProductQtyInFunction(product.name, qty);
+        });
         
         container.appendChild(div);
       });
     }
 
-    function toggleProductInFunction(product, add) {
+    function toggleProductInFunction(product, add, qty = 1) {
       const day = builderData.days.find(d => d.functions.some(f => f.id === selectedFunctionId));
       if (!day) return;
       
@@ -2656,7 +2992,7 @@
       
       if (add) {
         if (!func.items.some(item => item.name === product.name)) {
-          func.items.push({...product, qty: 1});
+          func.items.push({...product, qty: qty});
         }
       } else {
         func.items = func.items.filter(item => item.name !== product.name);
@@ -2664,9 +3000,24 @@
       
       renderDays();
       updateBuilderSummary();
+      saveDraftAuto();
     }
 
-    // QUANTITY CONTROLS IN PACKAGE BUILDER
+    function updateProductQtyInFunction(productName, qty) {
+      const day = builderData.days.find(d => d.functions.some(f => f.id === selectedFunctionId));
+      if (!day) return;
+      
+      const func = day.functions.find(f => f.id === selectedFunctionId);
+      if (!func) return;
+      
+      const item = func.items.find(i => i.name === productName);
+      if (item) {
+        item.qty = qty;
+        updateBuilderSummary();
+        saveDraftAuto();
+      }
+    }
+
     function updateItemQty(dayId, funcId, itemName, delta) {
       const day = builderData.days.find(d => d.id === dayId);
       if (!day) return;
@@ -2679,8 +3030,17 @@
       
       item.qty = Math.max(1, Math.min(99, item.qty + delta));
       
+      // Update the product qty controls if visible
+      const qtyControl = document.querySelector(`.product-qty-controls[data-product-name="${itemName}"] .product-qty-value`);
+      if (qtyControl) {
+        qtyControl.textContent = item.qty;
+      }
+      
       updateBuilderSummary();
+      saveDraftAuto();
     }
+
+    window.updateItemQty = updateItemQty;
 
     function addDay() {
       dayCounter++;
@@ -2690,6 +3050,7 @@
         functions: []
       });
       renderDays();
+      saveDraftAuto();
     }
 
     function removeDay(dayId) {
@@ -2705,8 +3066,11 @@
         }
         renderDays();
         updateBuilderSummary();
+        saveDraftAuto();
       }
     }
+
+    window.removeDay = removeDay;
 
     function addFunction(dayId) {
       const funcName = prompt('Enter function name (e.g., Mehendi, Sangeet, Wedding):');
@@ -2721,8 +3085,11 @@
           items: []
         });
         renderDays();
+        saveDraftAuto();
       }
     }
+
+    window.addFunction = addFunction;
 
     function removeFunction(dayId, funcId) {
       if (confirm('Remove this function and all its items?')) {
@@ -2736,9 +3103,12 @@
           }
           renderDays();
           updateBuilderSummary();
+          saveDraftAuto();
         }
       }
     }
+
+    window.removeFunction = removeFunction;
 
     function selectFunction(funcId, funcName) {
       selectedFunctionId = funcId;
@@ -2750,6 +3120,8 @@
       renderProducts();
     }
 
+    window.selectFunction = selectFunction;
+
     function renderDays() {
       const container = document.getElementById('daysContainer');
       container.innerHTML = '';
@@ -2760,13 +3132,12 @@
         
         let functionsHTML = '';
         day.functions.forEach(func => {
-          const itemCount = func.items.length;
           functionsHTML += `
             <div class="function-item ${selectedFunctionId === func.id ? 'active' : ''}" data-function-id="${func.id}" onclick="selectFunction(${func.id}, '${func.name}')">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                   <div style="font-weight:500;">${func.name}</div>
-                  <div style="font-size:12px; color:rgba(223,230,235,0.6);">${itemCount} items selected</div>
+                  <div style="font-size:12px; color:rgba(223,230,235,0.6);">${func.items.length} items</div>
                 </div>
                 <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="event.stopPropagation(); removeFunction(${day.id}, ${func.id})">✕</button>
               </div>
@@ -2777,7 +3148,7 @@
         dayDiv.innerHTML = `
           <div class="day-header">
             <span class="day-title">Day ${builderData.days.indexOf(day) + 1}</span>
-            <button class="btn btn-danger" style="padding:6px 12px; font-size:13px;" onclick="removeDay(${day.id})">Remove Day</button>
+            <button class="btn btn-danger" style="padding:6px 12px; font-size:13px;" onclick="removeDay(${day.id})">Remove</button>
           </div>
           <div class="form-group">
             <input type="date" class="form-input" value="${day.date}" onchange="updateDayDate(${day.id}, this.value)">
@@ -2795,8 +3166,11 @@
       if (day) {
         day.date = date;
         updateBuilderSummary();
+        saveDraftAuto();
       }
     }
+
+    window.updateDayDate = updateDayDate;
 
     function updateBuilderSummary() {
       const container = document.getElementById('builderSummary');
@@ -2826,7 +3200,7 @@
                   <button onclick="updateItemQty(${day.id}, ${func.id}, '${item.name.replace(/'/g, "\\'")}', -1)">−</button>
                   <span>${item.qty}</span>
                   <button onclick="updateItemQty(${day.id}, ${func.id}, '${item.name.replace(/'/g, "\\'")}', 1)">+</button>
-                  <span style="margin-left:8px; color:var(--cyan); font-weight:600;">₹${itemTotal.toLocaleString('en-IN')}</span>
+                  <span style="margin-left:8px;">₹${itemTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             `;
@@ -2851,6 +3225,81 @@
       document.getElementById('builderGrandTotal').textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
     }
 
+    // Save/Load Draft
+    let draftSaveTimeout;
+    
+    function saveDraftAuto() {
+      clearTimeout(draftSaveTimeout);
+      draftSaveTimeout = setTimeout(() => {
+        saveDraft(true);
+      }, 2000);
+    }
+    
+    function saveDraft(isAuto = false) {
+      const draft = {
+        ...builderData,
+        clientName: document.getElementById('builderClientName').value,
+        phone: document.getElementById('builderPhone').value,
+        venue: document.getElementById('builderVenue').value,
+        location: document.getElementById('builderLocation').value
+      };
+      
+      localStorage.setItem('builderDraft', JSON.stringify(draft));
+      localStorage.setItem('builderCounters', JSON.stringify({ dayCounter, functionCounter }));
+      
+      if (!isAuto) {
+        showDraftNotification();
+        createCelebrationConfetti();
+      }
+    }
+    
+    function loadDraft() {
+      const draft = localStorage.getItem('builderDraft');
+      const counters = localStorage.getItem('builderCounters');
+      
+      if (!draft) {
+        alert('No saved draft found!');
+        return;
+      }
+      
+      if (confirm('Load saved draft? This will replace current data.')) {
+        const data = JSON.parse(draft);
+        const counts = counters ? JSON.parse(counters) : { dayCounter: 0, functionCounter: 0 };
+        
+        builderData = {
+          clientName: data.clientName || '',
+          phone: data.phone || '',
+          venue: data.venue || '',
+          location: data.location || '',
+          days: data.days || []
+        };
+        
+        dayCounter = counts.dayCounter;
+        functionCounter = counts.functionCounter;
+        
+        document.getElementById('builderClientName').value = builderData.clientName;
+        document.getElementById('builderPhone').value = builderData.phone;
+        document.getElementById('builderVenue').value = builderData.venue;
+        document.getElementById('builderLocation').value = builderData.location;
+        
+        selectedFunctionId = null;
+        document.getElementById('selectedFunctionName').textContent = '';
+        
+        renderDays();
+        updateBuilderSummary();
+        renderProducts();
+        
+        showDraftNotification('Draft loaded successfully!');
+      }
+    }
+    
+    function showDraftNotification(message = '💾 Draft saved automatically') {
+      const notification = document.getElementById('draftNotification');
+      notification.textContent = message;
+      notification.classList.add('show');
+      setTimeout(() => notification.classList.remove('show'), 2000);
+    }
+
     document.getElementById('packageBuilderBtn').addEventListener('click', function() {
       document.getElementById('builderModal').classList.add('show');
       if (builderData.days.length === 0) {
@@ -2863,10 +3312,10 @@
     });
 
     document.getElementById('addDayBtn').addEventListener('click', addDay);
+    document.getElementById('productSearch').addEventListener('input', (e) => renderProducts(e.target.value));
 
-    document.getElementById('productSearch').addEventListener('input', function(e) {
-      renderProducts(e.target.value);
-    });
+    document.getElementById('builderSaveDraftBtn').addEventListener('click', () => saveDraft(false));
+    document.getElementById('builderLoadDraftBtn').addEventListener('click', loadDraft);
 
     document.getElementById('builderTerms').addEventListener('change', function() {
       const whatsappBtn = document.getElementById('builderWhatsAppBtn');
@@ -2878,8 +3327,6 @@
     document.getElementById('builderWhatsAppBtn').addEventListener('click', function() {
       const clientName = document.getElementById('builderClientName').value;
       const phone = document.getElementById('builderPhone').value;
-      const venue = document.getElementById('builderVenue').value;
-      const location = document.getElementById('builderLocation').value;
       
       if (!clientName || !phone) {
         alert('Please fill in client name and phone!');
@@ -2887,175 +3334,50 @@
       }
       
       let message = `*FirepowerSFX - Package Quotation*\n\n`;
-      message += `*Client Details:*\n`;
-      message += `Name: ${clientName}\n`;
-      message += `Phone: ${phone}\n`;
-      if (venue) message += `Venue: ${venue}\n`;
-      if (location) message += `Location: ${location}\n\n`;
+      message += `*Client:* ${clientName}\n*Phone:* ${phone}\n`;
+      if (builderData.venue) message += `*Venue:* ${builderData.venue}\n`;
+      if (builderData.location) message += `*Location:* ${builderData.location}\n\n`;
       
       let grandTotal = 0;
       
-      builderData.days.forEach((day, dayIndex) => {
-        message += `*Day ${dayIndex + 1}*`;
-        if (day.date) message += ` - ${new Date(day.date).toLocaleDateString('en-IN')}`;
-        message += `\n`;
-        
+      builderData.days.forEach((day, idx) => {
+        message += `*Day ${idx + 1}*${day.date ? ` - ${new Date(day.date).toLocaleDateString('en-IN')}` : ''}\n`;
         day.functions.forEach(func => {
           message += `\n_${func.name}_\n`;
           func.items.forEach(item => {
             const itemTotal = item.price * item.qty;
             grandTotal += itemTotal;
-            message += `• ${item.name}\n  Qty: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n`;
+            message += `• ${item.name}: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n`;
           });
         });
         message += `\n`;
       });
       
       message += `*Grand Total: ₹${grandTotal.toLocaleString('en-IN')}*\n\n`;
-      message += `_By placing this order, you are acknowledging and accepting terms and conditions._\n\n`;
-      message += `Contact us:\n📱 9898 496 111 (Yogendra)\n📱 7698 496 111 (Lala)\n🌐 www.firepowers.in`;
+      message += `📱 9898 496 111 (Yogendra) | 7698 496 111 (Lala)\n🌐 www.firepowers.in`;
       
-      const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank');
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     });
 
-    // FIXED DOWNLOAD IMAGE FUNCTION
+    // PDF Download for Builder
     document.getElementById('builderDownloadBtn').addEventListener('click', function() {
-      generateBuilderQuoteImage();
-    });
-
-    function generateBuilderQuoteImage() {
       const clientName = document.getElementById('builderClientName').value;
       const phone = document.getElementById('builderPhone').value;
-      const venue = document.getElementById('builderVenue').value;
-      const location = document.getElementById('builderLocation').value;
       
       if (!clientName || !phone) {
         alert('Please fill in client name and phone!');
         return;
       }
       
-      let grandTotal = 0;
-      let itemsHTML = '';
-      let itemIndex = 0;
-      
-      builderData.days.forEach((day, dayIndex) => {
-        itemsHTML += `<tr><td colspan="5" style="background:#f0f0f0; font-weight:bold; padding:10px;">Day ${dayIndex + 1} ${day.date ? `- ${new Date(day.date).toLocaleDateString('en-IN')}` : ''}</td></tr>`;
-        
-        day.functions.forEach(func => {
-          itemsHTML += `<tr><td colspan="5" style="background:#f9f9f9; font-weight:600; padding:8px; padding-left:20px;">${func.name}</td></tr>`;
-          
-          func.items.forEach(item => {
-            itemIndex++;
-            const itemTotal = item.price * item.qty;
-            grandTotal += itemTotal;
-            itemsHTML += `
-              <tr>
-                <td style="padding-left:30px;">${itemIndex}</td>
-                <td>${item.name}<br><small style="color:#666;">${item.desc}</small></td>
-                <td style="text-align:center;">${item.qty}</td>
-                <td style="text-align:right;">₹${item.price.toLocaleString('en-IN')}</td>
-                <td style="text-align:right; font-weight:600;">₹${itemTotal.toLocaleString('en-IN')}</td>
-              </tr>
-            `;
-          });
-        });
+      generatePDF('builder', {
+        clientName,
+        phone,
+        venue: document.getElementById('builderVenue').value,
+        location: document.getElementById('builderLocation').value
       });
-      
-      const quoteHTML = `
-        <div style="background: white; color: #000; padding: 40px; border-radius: 12px; max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif;">
-          <div style="text-align: center; border-bottom: 3px solid #8f6bff; padding-bottom: 20px; margin-bottom: 30px;">
-            <div style="font-size: 32px; font-weight: bold; color: #8f6bff; margin-bottom: 5px;">FIREPOWERSFX</div>
-            <div style="font-size: 14px; color: #666;">SFX Machines • Crackers • Pyro Effects</div>
-            <div style="margin-top:10px; font-size:12px; color:#666;">
-              📱 9898 496 111 (Yogendra) | 📱 7698 496 111 (Lala)<br>
-              🌐 www.firepowers.in | 📷 @firepowersfx
-            </div>
-          </div>
-          
-          <div style="margin-bottom: 25px;">
-            <div style="font-size: 16px; font-weight: bold; color: #8f6bff; margin-bottom: 10px; border-bottom: 2px solid #00d5ff; padding-bottom: 5px;">CLIENT INFORMATION</div>
-            <table style="width:100%; font-size:13px;">
-              <tr><td style="width:30%; padding:5px 0;"><strong>Client Name:</strong></td><td>${clientName}</td></tr>
-              <tr><td style="padding:5px 0;"><strong>Phone:</strong></td><td>${phone}</td></tr>
-              ${venue ? `<tr><td style="padding:5px 0;"><strong>Venue:</strong></td><td>${venue}</td></tr>` : ''}
-              ${location ? `<tr><td style="padding:5px 0;"><strong>Location:</strong></td><td>${location}</td></tr>` : ''}
-              <tr><td style="padding:5px 0;"><strong>Quote Date:</strong></td><td>${new Date().toLocaleDateString('en-IN')}</td></tr>
-            </table>
-          </div>
-          
-          <div style="margin-bottom: 25px;">
-            <div style="font-size: 16px; font-weight: bold; color: #8f6bff; margin-bottom: 10px; border-bottom: 2px solid #00d5ff; padding-bottom: 5px;">PACKAGE DETAILS</div>
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-              <thead>
-                <tr>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: left; font-size: 14px; width:5%;">#</th>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: left; font-size: 14px; width:40%;">Item Description</th>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: center; font-size: 14px; width:10%;">Qty</th>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: right; font-size: 14px; width:20%;">Rate</th>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: right; font-size: 14px; width:25%;">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${itemsHTML}
-                <tr style="background: #f5f5f5; font-weight: bold;">
-                  <td colspan="4" style="text-align:right; font-size:16px; padding: 10px 12px;">GRAND TOTAL:</td>
-                  <td style="text-align:right; font-size:18px; color:#8f6bff; padding: 10px 12px;">₹${grandTotal.toLocaleString('en-IN')}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; font-size: 12px; color: #666; text-align: center;">
-            <strong>Thank you for choosing FirepowerSFX!</strong><br>
-            We look forward to making your event spectacular.
-            <div style="font-size: 11px; color: #999; margin-top: 15px; font-style: italic;">
-              By placing this order, you are acknowledging and accepting terms and conditions.
-            </div>
-          </div>
-        </div>
-      `;
-      
-      // Create a container and render
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'fixed';
-      tempDiv.style.left = '0';
-      tempDiv.style.top = '0';
-      tempDiv.style.width = '850px';
-      tempDiv.style.zIndex = '-1';
-      tempDiv.style.background = 'white';
-      tempDiv.innerHTML = quoteHTML;
-      document.body.appendChild(tempDiv);
-      
-      setTimeout(() => {
-        html2canvas(tempDiv.firstChild, {
-          scale: 2,
-          backgroundColor: '#ffffff',
-          logging: false,
-          useCORS: true,
-          windowWidth: 850
-        }).then(canvas => {
-          document.body.removeChild(tempDiv);
-          
-          canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `FirepowerSFX_Package_${Date.now()}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          }, 'image/png', 1.0);
-        }).catch(err => {
-          document.body.removeChild(tempDiv);
-          console.error('Error generating image:', err);
-          alert('Error generating image. Please try again.');
-        });
-      }, 500);
-    }
+    });
 
-    // CHECKOUT MODAL
+    // Checkout Modal
     document.getElementById('checkoutBtn').addEventListener('click', function() {
       if (cart.length === 0) {
         alert('Your cart is empty!');
@@ -3077,24 +3399,14 @@
     });
 
     document.getElementById('checkoutTermsCheckbox').addEventListener('change', function() {
-      const whatsappBtn = document.getElementById('whatsappShareBtn');
-      const downloadBtn = document.getElementById('downloadImageBtn');
-      whatsappBtn.disabled = !this.checked;
-      downloadBtn.disabled = !this.checked;
+      document.getElementById('whatsappShareBtn').disabled = !this.checked;
+      document.getElementById('downloadPDFBtn').disabled = !this.checked;
     });
 
     document.getElementById('whatsappShareBtn').addEventListener('click', function() {
-      const clientName = document.getElementById('checkoutClientName').value;
-      const phone = document.getElementById('checkoutPhone').value;
-      
-      if (!clientName || !phone) {
-        alert('Please fill in at least client name and phone number');
-        return;
-      }
-      
       checkoutData = {
-        clientName: clientName,
-        phone: phone,
+        clientName: document.getElementById('checkoutClientName').value,
+        phone: document.getElementById('checkoutPhone').value,
         venue: document.getElementById('checkoutVenue').value,
         location: document.getElementById('checkoutLocation').value,
         function: document.getElementById('checkoutFunction').value,
@@ -3102,44 +3414,36 @@
         timeSlot: document.querySelector('.checkout-time.selected')?.dataset.time || ''
       };
       
-      let message = `*FirepowerSFX - Quotation*\n\n`;
-      message += `*Client Details:*\n`;
-      message += `Name: ${checkoutData.clientName}\n`;
-      message += `Phone: ${checkoutData.phone}\n`;
-      if (checkoutData.venue) message += `Venue: ${checkoutData.venue}\n`;
-      if (checkoutData.location) message += `Location: ${checkoutData.location}\n`;
-      if (checkoutData.function) message += `Function: ${checkoutData.function}\n`;
-      if (checkoutData.dates) message += `Date(s): ${checkoutData.dates}\n`;
-      if (checkoutData.timeSlot) message += `Time Slot: ${checkoutData.timeSlot}\n`;
+      if (!checkoutData.clientName || !checkoutData.phone) {
+        alert('Please fill in name and phone!');
+        return;
+      }
       
-      message += `\n*Order Details:*\n`;
+      let message = `*FirepowerSFX - Quotation*\n\n*Client:* ${checkoutData.clientName}\n*Phone:* ${checkoutData.phone}\n`;
+      if (checkoutData.venue) message += `*Venue:* ${checkoutData.venue}\n`;
+      if (checkoutData.location) message += `*Location:* ${checkoutData.location}\n`;
+      if (checkoutData.function) message += `*Function:* ${checkoutData.function}\n`;
+      if (checkoutData.dates) message += `*Dates:* ${checkoutData.dates}\n`;
+      if (checkoutData.timeSlot) message += `*Time:* ${checkoutData.timeSlot}\n`;
+      
+      message += `\n*Items:*\n`;
       let total = 0;
       cart.forEach(item => {
         const itemTotal = item.price * item.qty;
         total += itemTotal;
-        message += `• ${item.name}\n  ${item.desc}\n  Qty: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n\n`;
+        message += `• ${item.name}: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n`;
       });
       
-      message += `*Total Amount: ₹${total.toLocaleString('en-IN')}*\n\n`;
-      message += `_By placing this order, you are acknowledging and accepting terms and conditions._\n\n`;
-      message += `Contact us:\n📱 9898 496 111 (Yogendra)\n📱 7698 496 111 (Lala)\n🌐 www.firepowers.in`;
+      message += `\n*Total: ₹${total.toLocaleString('en-IN')}*\n\n`;
+      message += `📱 9898 496 111 | 7698 496 111\n🌐 www.firepowers.in`;
       
-      const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank');
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     });
 
-    document.getElementById('downloadImageBtn').addEventListener('click', function() {
-      const clientName = document.getElementById('checkoutClientName').value;
-      const phone = document.getElementById('checkoutPhone').value;
-      
-      if (!clientName || !phone) {
-        alert('Please fill in at least client name and phone number');
-        return;
-      }
-      
+    document.getElementById('downloadPDFBtn').addEventListener('click', function() {
       checkoutData = {
-        clientName: clientName,
-        phone: phone,
+        clientName: document.getElementById('checkoutClientName').value,
+        phone: document.getElementById('checkoutPhone').value,
         venue: document.getElementById('checkoutVenue').value,
         location: document.getElementById('checkoutLocation').value,
         function: document.getElementById('checkoutFunction').value,
@@ -3147,123 +3451,164 @@
         timeSlot: document.querySelector('.checkout-time.selected')?.dataset.time || ''
       };
       
-      generateCheckoutQuoteImage();
+      if (!checkoutData.clientName || !checkoutData.phone) {
+        alert('Please fill in name and phone!');
+        return;
+      }
+      
+      generatePDF('checkout', checkoutData);
     });
 
-    function generateCheckoutQuoteImage() {
-      let total = 0;
-      let itemsHTML = '';
+    // PDF Generation Function
+    function generatePDF(type, data) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
       
-      cart.forEach((item, index) => {
-        const itemTotal = item.price * item.qty;
-        total += itemTotal;
-        itemsHTML += `
-          <tr>
-            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px;">${index + 1}</td>
-            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px;">${item.name}<br><small style="color:#666;">${item.desc}</small></td>
-            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; text-align:center;">${item.qty}</td>
-            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; text-align:right;">₹${item.price.toLocaleString('en-IN')}</td>
-            <td style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; text-align:right; font-weight:600;">₹${itemTotal.toLocaleString('en-IN')}</td>
-          </tr>
-        `;
-      });
+      // Header
+      doc.setFontSize(24);
+      doc.setTextColor(143, 107, 255);
+      doc.text('FIREPOWERSFX', 105, 20, { align: 'center' });
       
-      const quoteHTML = `
-        <div style="background: white; color: #000; padding: 40px; border-radius: 12px; max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif;">
-          <div style="text-align: center; border-bottom: 3px solid #8f6bff; padding-bottom: 20px; margin-bottom: 30px;">
-            <div style="font-size: 32px; font-weight: bold; color: #8f6bff; margin-bottom: 5px;">FIREPOWERSFX</div>
-            <div style="font-size: 14px; color: #666;">SFX Machines • Crackers • Pyro Effects</div>
-            <div style="margin-top:10px; font-size:12px; color:#666;">
-              📱 9898 496 111 (Yogendra) | 📱 7698 496 111 (Lala)<br>
-              🌐 www.firepowers.in | 📷 @firepowersfx
-            </div>
-          </div>
-          
-          <div style="margin-bottom: 25px;">
-            <div style="font-size: 16px; font-weight: bold; color: #8f6bff; margin-bottom: 10px; border-bottom: 2px solid #00d5ff; padding-bottom: 5px;">CLIENT INFORMATION</div>
-            <table style="width:100%; font-size:13px;">
-              <tr><td style="width:30%; padding:5px 0;"><strong>Client Name:</strong></td><td>${checkoutData.clientName}</td></tr>
-              <tr><td style="padding:5px 0;"><strong>Phone:</strong></td><td>${checkoutData.phone}</td></tr>
-              ${checkoutData.venue ? `<tr><td style="padding:5px 0;"><strong>Venue:</strong></td><td>${checkoutData.venue}</td></tr>` : ''}
-              ${checkoutData.location ? `<tr><td style="padding:5px 0;"><strong>Location:</strong></td><td>${checkoutData.location}</td></tr>` : ''}
-              ${checkoutData.function ? `<tr><td style="padding:5px 0;"><strong>Function:</strong></td><td>${checkoutData.function}</td></tr>` : ''}
-              ${checkoutData.dates ? `<tr><td style="padding:5px 0;"><strong>Date(s):</strong></td><td>${checkoutData.dates}</td></tr>` : ''}
-              ${checkoutData.timeSlot ? `<tr><td style="padding:5px 0;"><strong>Time Slot:</strong></td><td>${checkoutData.timeSlot}</td></tr>` : ''}
-              <tr><td style="padding:5px 0;"><strong>Quote Date:</strong></td><td>${new Date().toLocaleDateString('en-IN')}</td></tr>
-            </table>
-          </div>
-          
-          <div style="margin-bottom: 25px;">
-            <div style="font-size: 16px; font-weight: bold; color: #8f6bff; margin-bottom: 10px; border-bottom: 2px solid #00d5ff; padding-bottom: 5px;">ITEM DETAILS</div>
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-              <thead>
-                <tr>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: left; font-size: 14px; width:5%;">#</th>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: left; font-size: 14px; width:40%;">Item Description</th>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: center; font-size: 14px; width:10%;">Qty</th>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: right; font-size: 14px; width:20%;">Rate</th>
-                  <th style="background: #8f6bff; color: white; padding: 12px; text-align: right; font-size: 14px; width:25%;">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${itemsHTML}
-                <tr style="background: #f5f5f5; font-weight: bold;">
-                  <td colspan="4" style="text-align:right; font-size:16px; padding: 10px 12px;">TOTAL AMOUNT:</td>
-                  <td style="text-align:right; font-size:18px; color:#8f6bff; padding: 10px 12px;">₹${total.toLocaleString('en-IN')}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; font-size: 12px; color: #666; text-align: center;">
-            <strong>Thank you for choosing FirepowerSFX!</strong><br>
-            We look forward to making your event spectacular.
-            <div style="font-size: 11px; color: #999; margin-top: 15px; font-style: italic;">
-              By placing this order, you are acknowledging and accepting terms and conditions.
-            </div>
-          </div>
-        </div>
-      `;
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('SFX Machines • Crackers • Pyro Effects', 105, 28, { align: 'center' });
+      doc.text('📱 9898 496 111 (Yogendra) | 7698 496 111 (Lala)', 105, 34, { align: 'center' });
+      doc.text('🌐 www.firepowers.in | 📷 @firepowersfx', 105, 40, { align: 'center' });
       
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'fixed';
-      tempDiv.style.left = '0';
-      tempDiv.style.top = '0';
-      tempDiv.style.width = '850px';
-      tempDiv.style.zIndex = '-1';
-      tempDiv.style.background = 'white';
-      tempDiv.innerHTML = quoteHTML;
-      document.body.appendChild(tempDiv);
+      doc.setDrawColor(143, 107, 255);
+      doc.line(20, 45, 190, 45);
       
-      setTimeout(() => {
-        html2canvas(tempDiv.firstChild, {
-          scale: 2,
-          backgroundColor: '#ffffff',
-          logging: false,
-          useCORS: true,
-          windowWidth: 850
-        }).then(canvas => {
-          document.body.removeChild(tempDiv);
+      // Client Info
+      let yPos = 55;
+      doc.setFontSize(14);
+      doc.setTextColor(143, 107, 255);
+      doc.text('CLIENT INFORMATION', 20, yPos);
+      
+      yPos += 8;
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Name: ${data.clientName}`, 20, yPos);
+      yPos += 6;
+      doc.text(`Phone: ${data.phone}`, 20, yPos);
+      
+      if (data.venue) {
+        yPos += 6;
+        doc.text(`Venue: ${data.venue}`, 20, yPos);
+      }
+      if (data.location) {
+        yPos += 6;
+        doc.text(`Location: ${data.location}`, 20, yPos);
+      }
+      if (data.function) {
+        yPos += 6;
+        doc.text(`Function: ${data.function}`, 20, yPos);
+      }
+      if (data.dates) {
+        yPos += 6;
+        doc.text(`Dates: ${data.dates}`, 20, yPos);
+      }
+      if (data.timeSlot) {
+        yPos += 6;
+        doc.text(`Time: ${data.timeSlot}`, 20, yPos);
+      }
+      
+      yPos += 6;
+      doc.text(`Quote Date: ${new Date().toLocaleDateString('en-IN')}`, 20, yPos);
+      
+      yPos += 12;
+      doc.setFontSize(14);
+      doc.setTextColor(143, 107, 255);
+      doc.text(type === 'builder' ? 'PACKAGE DETAILS' : 'ITEM DETAILS', 20, yPos);
+      
+      yPos += 8;
+      let grandTotal = 0;
+      
+      if (type === 'builder') {
+        builderData.days.forEach((day, dayIdx) => {
+          doc.setFontSize(12);
+          doc.setTextColor(0, 213, 255);
+          doc.text(`Day ${dayIdx + 1}${day.date ? ` - ${new Date(day.date).toLocaleDateString('en-IN')}` : ''}`, 20, yPos);
+          yPos += 6;
           
-          canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `FirepowerSFX_Quote_${Date.now()}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          }, 'image/png', 1.0);
-        }).catch(err => {
-          document.body.removeChild(tempDiv);
-          console.error('Error generating image:', err);
-          alert('Error generating image. Please try again.');
+          day.functions.forEach(func => {
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'bold');
+            doc.text(func.name, 25, yPos);
+            doc.setFont(undefined, 'normal');
+            yPos += 5;
+            
+            func.items.forEach(item => {
+              const itemTotal = item.price * item.qty;
+              grandTotal += itemTotal;
+              
+              const text = `• ${item.name} (${item.qty} × ₹${item.price.toLocaleString('en-IN')})`;
+              const price = `₹${itemTotal.toLocaleString('en-IN')}`;
+              
+              doc.text(text, 30, yPos);
+              doc.text(price, 190, yPos, { align: 'right' });
+              yPos += 5;
+              
+              if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+              }
+            });
+            yPos += 2;
+          });
+          yPos += 3;
         });
-      }, 500);
+      } else {
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        
+        cart.forEach(item => {
+          const itemTotal = item.price * item.qty;
+          grandTotal += itemTotal;
+          
+          const text = `• ${item.name} (${item.qty} × ₹${item.price.toLocaleString('en-IN')})`;
+          const price = `₹${itemTotal.toLocaleString('en-IN')}`;
+          
+          doc.text(text, 20, yPos);
+          doc.text(price, 190, yPos, { align: 'right' });
+          yPos += 6;
+          
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+        });
+      }
+      
+      // Total
+      yPos += 5;
+      doc.setDrawColor(0, 213, 255);
+      doc.line(20, yPos, 190, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(0, 213, 255);
+      doc.text('GRAND TOTAL:', 20, yPos);
+      doc.text(`₹${grandTotal.toLocaleString('en-IN')}`, 190, yPos, { align: 'right' });
+      
+      // Footer
+      yPos += 15;
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text('Thank you for choosing FirepowerSFX!', 105, yPos, { align: 'center' });
+      yPos += 5;
+      doc.text('We look forward to making your event spectacular.', 105, yPos, { align: 'center' });
+      
+      // Save
+      const filename = `FirepowerSFX_${type === 'builder' ? 'Package' : 'Quote'}_${Date.now()}.pdf`;
+      doc.save(filename);
+      
+      createCelebrationConfetti();
     }
 
-    // SEARCH & FILTER
+    // Search & Filter
     const searchInput = document.getElementById('search');
     const budgetFilter = document.getElementById('budgetFilter');
     const sortFilter = document.getElementById('sortFilter');
@@ -3276,7 +3621,7 @@
       
       let visibleCards = allCards.filter(card => {
         if (searchQuery) {
-          const searchText = `${card.dataset.name} ${card.dataset.desc} ${card.dataset.price}`.toLowerCase();
+          const searchText = `${card.dataset.name} ${card.dataset.desc}`.toLowerCase();
           if (!searchText.includes(searchQuery)) return false;
         }
         
@@ -3297,13 +3642,9 @@
           const priceA = parseInt(a.dataset.price) || 0;
           const priceB = parseInt(b.dataset.price) || 0;
           
-          if (sortBy === 'price-low') {
-            return priceA - priceB;
-          } else if (sortBy === 'price-high') {
-            return priceB - priceA;
-          } else if (sortBy === 'name') {
-            return a.dataset.name.localeCompare(b.dataset.name);
-          }
+          if (sortBy === 'price-low') return priceA - priceB;
+          if (sortBy === 'price-high') return priceB - priceA;
+          if (sortBy === 'name') return a.dataset.name.localeCompare(b.dataset.name);
         });
       }
       
@@ -3322,8 +3663,9 @@
     budgetFilter.addEventListener('change', filterCards);
     sortFilter.addEventListener('change', filterCards);
 
-    // SPARK EFFECTS
+    // Spark Effects
     const sparkContainer = document.getElementById('spark-layer');
+    let blueTimer, goldTimer;
     
     function createSparkElement(x, y, size, duration, colorClass) {
       const el = document.createElement('div');
@@ -3332,99 +3674,35 @@
       el.style.top = y + 'px';
       el.style.width = size + 'px';
       el.style.height = size + 'px';
-      el.style.opacity = (colorClass === 'cyan') ? (0.5 + Math.random()*0.5) : (0.4 + Math.random()*0.5);
       el.style.animationDuration = duration + 'ms';
-      const drift = (Math.random() - 0.5) * 50;
-      el.style.transform = `translateX(${drift}px)`;
       return el;
     }
     
-    let blueTimer, goldTimer;
-    
     function startSparks() {
-      function spawnBlue() {
-        const w = window.innerWidth;
-        const x = Math.random() * w;
-        const y = window.innerHeight - 20;
-        const size = 5 + Math.random()*7;
-        const dur = 3000 + Math.random()*2000;
-        const s = createSparkElement(x,y,size,dur,'cyan');
+      blueTimer = setInterval(() => {
+        const s = createSparkElement(
+          Math.random() * window.innerWidth,
+          window.innerHeight - 20,
+          5 + Math.random() * 7,
+          3000 + Math.random() * 2000,
+          'cyan'
+        );
         sparkContainer.appendChild(s);
-        setTimeout(() => s.remove(), dur + 300);
-      }
+        setTimeout(() => s.remove(), 5300);
+      }, 350);
       
-      function spawnGold() {
-        const w = window.innerWidth;
-        const x = Math.random() * w;
-        const y = window.innerHeight - 30;
-        const size = 6 + Math.random()*7;
-        const dur = 3500 + Math.random()*2500;
-        const s = createSparkElement(x,y,size,dur,'gold');
-        if (sparkContainer.firstChild) {
-          sparkContainer.insertBefore(s, sparkContainer.firstChild);
-        } else {
-          sparkContainer.appendChild(s);
-        }
-        setTimeout(() => s.remove(), dur + 400);
-      }
-      
-      blueTimer = setInterval(spawnBlue, 350);
-      goldTimer = setInterval(spawnGold, 700);
+      goldTimer = setInterval(() => {
+        const s = createSparkElement(
+          Math.random() * window.innerWidth,
+          window.innerHeight - 30,
+          6 + Math.random() * 7,
+          3500 + Math.random() * 2500,
+          'gold'
+        );
+        sparkContainer.appendChild(s);
+        setTimeout(() => s.remove(), 6400);
+      }, 700);
     }
-    
-    function spawnHoverBurst(card) {
-      const rect = card.getBoundingClientRect();
-      
-      for (let i = 0; i < 8; i++) {
-        const x = rect.left + rect.width * (0.2 + Math.random()*0.6);
-        const y = rect.top + rect.height * (0.7 + Math.random()*0.25);
-        const size = 5 + Math.random()*7;
-        const dur = 1000 + Math.random()*1200;
-        const el = createSparkElement(x,y,size,dur,'cyan');
-        sparkContainer.appendChild(el);
-        setTimeout(() => el.remove(), dur + 300);
-      }
-      
-      for (let i = 0; i < 4; i++) {
-        const x = rect.left + rect.width * (0.2 + Math.random()*0.6) + (Math.random()*30-15);
-        const y = rect.top + rect.height * (0.75 + Math.random()*0.2);
-        const size = 6 + Math.random()*7;
-        const dur = 1200 + Math.random()*1400;
-        const el = createSparkElement(x,y,size,dur,'gold');
-        sparkContainer.appendChild(el);
-        setTimeout(() => el.remove(), dur + 400);
-      }
-    }
-    
-    allCards.forEach(card => {
-      let hoverInterval = null;
-      
-      card.addEventListener('mouseenter', () => {
-        spawnHoverBurst(card);
-        hoverInterval = setInterval(() => spawnHoverBurst(card), 600);
-      });
-      
-      card.addEventListener('mouseleave', () => {
-        if (hoverInterval) {
-          clearInterval(hoverInterval);
-          hoverInterval = null;
-        }
-      });
-    });
-    
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        if (blueTimer) clearInterval(blueTimer);
-        if (goldTimer) clearInterval(goldTimer);
-      } else {
-        startSparks();
-      }
-    });
-    
-    window.addEventListener('beforeunload', () => {
-      if (blueTimer) clearInterval(blueTimer);
-      if (goldTimer) clearInterval(goldTimer);
-    });
 
     // Close modals on backdrop click
     document.querySelectorAll('.modal').forEach(modal => {
@@ -3435,7 +3713,7 @@
       });
     });
     
-    // INITIALIZE
+    // Initialize
     loadData();
     startSparks();
     initializeBuilder();
