@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>FirepowerSFX — Price List 2024–25</title>
 
-  <!-- Google Analytics -->
+  <!-- Google Analytics GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-R7SXFLHW48"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-R7SXFLHW48'); // REPLACE 'GA_MEASUREMENT_ID' WITH YOUR ACTUAL GOOGLE ANALYTICS ID
+    gtag('config', 'G-R7SXFLHW48');
   </script>
   <!-- End Google Analytics -->
 
@@ -170,27 +170,42 @@
       margin-top: 6px; 
     }
 
-    /* Contact Info */
+    /* Contact Info - MORE PROMINENT */
     .contact-info {
       display: flex;
       gap: 18px;
       align-items: center;
-      margin-top: 10px;
+      margin-top: 12px;
       flex-wrap: wrap;
+      background: rgba(0,213,255,0.08);
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,213,255,0.2);
     }
     
     .contact-info a {
       color: var(--cyan);
       text-decoration: none;
-      font-size: 15px;
+      font-size: 16px;
+      font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 6px;
-      transition: opacity 0.2s;
+      gap: 8px;
+      transition: all 0.2s;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: rgba(0,213,255,0.05);
     }
     
     .contact-info a:hover { 
-      opacity: 0.8; 
+      background: rgba(0,213,255,0.15);
+      transform: translateY(-2px);
+    }
+    
+    .contact-info a.phone-link {
+      background: rgba(0,213,255,0.15);
+      border: 2px solid var(--cyan);
+      font-size: 18px;
     }
 
     /* controls */
@@ -823,37 +838,45 @@
       gap: 10px;
     }
 
+    /* FIXED QUANTITY CONTROLS IN PACKAGE BUILDER */
     .summary-item-qty {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       margin-left: auto;
+      background: rgba(0,213,255,0.08);
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(0,213,255,0.2);
     }
 
     .summary-item-qty button {
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
       border-radius: 4px;
-      background: rgba(27,34,40,0.74);
-      border: 1px solid rgba(43,51,57,0.9);
-      color: var(--silver);
+      background: var(--violet);
+      border: none;
+      color: white;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 16px;
+      font-weight: 700;
+      transition: all 0.2s;
     }
 
     .summary-item-qty button:hover {
-      background: rgba(35,45,55,0.8);
+      background: #7a5ee8;
+      transform: scale(1.1);
     }
 
     .summary-item-qty span {
-      min-width: 24px;
+      min-width: 28px;
       text-align: center;
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cyan);
     }
 
     /* Checkbox */
@@ -1083,6 +1106,15 @@
         max-width: 100%;
         width: 100%;
       }
+      
+      .contact-info {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .contact-info a {
+        justify-content: center;
+      }
     }
   </style>
 </head>
@@ -1105,11 +1137,11 @@
         <div class="subtitle">SFX Machines • Crackers • Pyro Effects</div>
         
         <div class="contact-info">
-          <a href="tel:+919898496111" aria-label="Call us">
-            📱 +91 98984 96111 -  Yogendra Bhai
+          <a href="tel:+919898496111" class="phone-link" aria-label="Call Yogendra Bhai">
+            📱 9898 496 111 (Yogendra bhai)
           </a>
-          <a href="tel:+917698496111" aria-label="Call us">
-            📱 +91 76984 96111 - Lala Bhai
+          <a href="tel:+917698496111" class="phone-link" aria-label="Call Lala Bhai">
+            📱 7698 496 111 (Lala bhai)
           </a>
           <a href="https://www.instagram.com/firepowersfx?igsh=YzljYTk1ODg3Zg==" target="_blank" rel="noopener noreferrer" aria-label="Visit our Instagram">
             📷 @firepowersfx
@@ -2791,9 +2823,9 @@
               <div class="summary-item">
                 <span>• ${item.name}</span>
                 <div class="summary-item-qty">
-                  <button onclick="updateItemQty(${day.id}, ${func.id}, '${item.name}', -1)">−</button>
+                  <button onclick="updateItemQty(${day.id}, ${func.id}, '${item.name.replace(/'/g, "\\'")}', -1)">−</button>
                   <span>${item.qty}</span>
-                  <button onclick="updateItemQty(${day.id}, ${func.id}, '${item.name}', 1)">+</button>
+                  <button onclick="updateItemQty(${day.id}, ${func.id}, '${item.name.replace(/'/g, "\\'")}', 1)">+</button>
                   <span style="margin-left:8px; color:var(--cyan); font-weight:600;">₹${itemTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
@@ -2881,7 +2913,7 @@
       
       message += `*Grand Total: ₹${grandTotal.toLocaleString('en-IN')}*\n\n`;
       message += `_By placing this order, you are acknowledging and accepting terms and conditions._\n\n`;
-      message += `Contact us:\n📱 +91 98984 96111\n📱 +91 76984 96111\n🌐 www.firepowers.in`;
+      message += `Contact us:\n📱 9898 496 111 (Yogendra)\n📱 7698 496 111 (Lala)\n🌐 www.firepowers.in`;
       
       const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
@@ -2936,7 +2968,7 @@
             <div style="font-size: 32px; font-weight: bold; color: #8f6bff; margin-bottom: 5px;">FIREPOWERSFX</div>
             <div style="font-size: 14px; color: #666;">SFX Machines • Crackers • Pyro Effects</div>
             <div style="margin-top:10px; font-size:12px; color:#666;">
-              📱 +91 98984 96111 | 📱 +91 76984 96111<br>
+              📱 9898 496 111 (Yogendra) | 📱 7698 496 111 (Lala)<br>
               🌐 www.firepowers.in | 📷 @firepowersfx
             </div>
           </div>
@@ -2984,24 +3016,26 @@
         </div>
       `;
       
-      // Create element directly in body instead of using detached container
-      const quoteElement = document.createElement('div');
-      quoteElement.innerHTML = quoteHTML;
-      quoteElement.style.position = 'absolute';
-      quoteElement.style.left = '-10000px';
-      quoteElement.style.top = '0';
-      document.body.appendChild(quoteElement);
+      // Create a container and render
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.left = '0';
+      tempDiv.style.top = '0';
+      tempDiv.style.width = '850px';
+      tempDiv.style.zIndex = '-1';
+      tempDiv.style.background = 'white';
+      tempDiv.innerHTML = quoteHTML;
+      document.body.appendChild(tempDiv);
       
       setTimeout(() => {
-        html2canvas(quoteElement.firstChild, {
+        html2canvas(tempDiv.firstChild, {
           scale: 2,
           backgroundColor: '#ffffff',
           logging: false,
           useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: false
+          windowWidth: 850
         }).then(canvas => {
-          document.body.removeChild(quoteElement);
+          document.body.removeChild(tempDiv);
           
           canvas.toBlob(blob => {
             const url = URL.createObjectURL(blob);
@@ -3014,11 +3048,11 @@
             URL.revokeObjectURL(url);
           }, 'image/png', 1.0);
         }).catch(err => {
-          document.body.removeChild(quoteElement);
+          document.body.removeChild(tempDiv);
           console.error('Error generating image:', err);
           alert('Error generating image. Please try again.');
         });
-      }, 100);
+      }, 500);
     }
 
     // CHECKOUT MODAL
@@ -3088,7 +3122,7 @@
       
       message += `*Total Amount: ₹${total.toLocaleString('en-IN')}*\n\n`;
       message += `_By placing this order, you are acknowledging and accepting terms and conditions._\n\n`;
-      message += `Contact us:\n📱 +91 98984 96111\n📱 +91 76984 96111\n🌐 www.firepowers.in`;
+      message += `Contact us:\n📱 9898 496 111 (Yogendra)\n📱 7698 496 111 (Lala)\n🌐 www.firepowers.in`;
       
       const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
@@ -3140,7 +3174,7 @@
             <div style="font-size: 32px; font-weight: bold; color: #8f6bff; margin-bottom: 5px;">FIREPOWERSFX</div>
             <div style="font-size: 14px; color: #666;">SFX Machines • Crackers • Pyro Effects</div>
             <div style="margin-top:10px; font-size:12px; color:#666;">
-              📱 +91 98984 96111 | 📱 +91 76984 96111<br>
+              📱 9898 496 111 (Yogendra) | 📱 7698 496 111 (Lala)<br>
               🌐 www.firepowers.in | 📷 @firepowersfx
             </div>
           </div>
@@ -3191,23 +3225,25 @@
         </div>
       `;
       
-      const quoteElement = document.createElement('div');
-      quoteElement.innerHTML = quoteHTML;
-      quoteElement.style.position = 'absolute';
-      quoteElement.style.left = '-10000px';
-      quoteElement.style.top = '0';
-      document.body.appendChild(quoteElement);
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.left = '0';
+      tempDiv.style.top = '0';
+      tempDiv.style.width = '850px';
+      tempDiv.style.zIndex = '-1';
+      tempDiv.style.background = 'white';
+      tempDiv.innerHTML = quoteHTML;
+      document.body.appendChild(tempDiv);
       
       setTimeout(() => {
-        html2canvas(quoteElement.firstChild, {
+        html2canvas(tempDiv.firstChild, {
           scale: 2,
           backgroundColor: '#ffffff',
           logging: false,
           useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: false
+          windowWidth: 850
         }).then(canvas => {
-          document.body.removeChild(quoteElement);
+          document.body.removeChild(tempDiv);
           
           canvas.toBlob(blob => {
             const url = URL.createObjectURL(blob);
@@ -3220,11 +3256,11 @@
             URL.revokeObjectURL(url);
           }, 'image/png', 1.0);
         }).catch(err => {
-          document.body.removeChild(quoteElement);
+          document.body.removeChild(tempDiv);
           console.error('Error generating image:', err);
           alert('Error generating image. Please try again.');
         });
-      }, 100);
+      }, 500);
     }
 
     // SEARCH & FILTER
