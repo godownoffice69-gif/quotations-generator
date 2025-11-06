@@ -39,6 +39,84 @@
     window.firebaseApp = app;
     window.firebaseDB = db;
   </script>
+  <!-- 🔍 TRACKING SYSTEM - Round 2 🔍 -->
+  <script type="module">
+    import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    const db = window.firebaseDB;
+    let sessionData = {
+      sessionId: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      startTime: Date.now(),
+      userInfo: {}
+    };
+
+    // Get user location & device info
+    async function getUserInfo() {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        sessionData.userInfo = {
+          ip: data.ip, city: data.city, region: data.region, country: data.country_name,
+          device: /mobile/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+          browser: navigator.userAgent.split(')')[0].split('(')[1],
+          screen: window.screen.width + 'x' + window.screen.height
+        };
+        console.log('📍 User tracked:', data.city, data.country);
+      } catch (error) {
+        sessionData.userInfo = { device: /mobile/i.test(navigator.userAgent) ? 'mobile' : 'desktop' };
+      }
+    }
+
+    // Track page view
+    async function trackPageView() {
+      await addDoc(collection(db, 'tracking'), {
+        type: 'page_view',
+        sessionId: sessionData.sessionId,
+        timestamp: serverTimestamp(),
+        url: window.location.href,
+        userInfo: sessionData.userInfo
+      });
+      console.log('👁️ Page view tracked');
+    }
+
+    // Track add to cart
+    window.trackAddToCart = async function(itemName, itemPrice, qty) {
+      await addDoc(collection(db, 'tracking'), {
+        type: 'add_to_cart',
+        sessionId: sessionData.sessionId,
+        timestamp: serverTimestamp(),
+        itemName, itemPrice, quantity: qty,
+        userInfo: sessionData.userInfo
+      });
+      console.log('🛒 Tracked:', itemName);
+    };
+
+    // Track WhatsApp share
+    window.trackWhatsApp = async function() {
+      await addDoc(collection(db, 'tracking'), {
+        type: 'whatsapp_share',
+        sessionId: sessionData.sessionId,
+        timestamp: serverTimestamp(),
+        userInfo: sessionData.userInfo
+      });
+      console.log('📱 WhatsApp share tracked');
+    };
+
+    // Track PDF download
+    window.trackPDFDownload = async function() {
+      await addDoc(collection(db, 'tracking'), {
+        type: 'pdf_download',
+        sessionId: sessionData.sessionId,
+        timestamp: serverTimestamp(),
+        userInfo: sessionData.userInfo
+      });
+      console.log('📥 PDF download tracked');
+    };
+
+    // Initialize
+    getUserInfo().then(() => trackPageView());
+    console.log('✅ Tracking active');
+  </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -2766,6 +2844,8 @@
           price: parseInt(card.dataset.price) || 0,
           qty: qty
         };
+        // Track add to cart
+    if (window.trackAddToCart) window.trackAddToCart(item.name, item.price, qty);
         
         if (item.price === 0) {
           alert('Please contact us for pricing on this item.');
@@ -3359,6 +3439,8 @@
         alert('Please fill in client name and phone!');
         return;
       }
+      // Track WhatsApp share
+      if (window.trackWhatsApp) window.trackWhatsApp();
       
       let message = `*FirepowerSFX - Package Quotation*\n\n`;
       message += `*Client:* ${clientName}\n*Phone:* ${phone}\n`;
@@ -3395,6 +3477,8 @@
         alert('Please fill in client name and phone!');
         return;
       }
+      // Track PDF download
+      if (window.trackPDFDownload) window.trackPDFDownload();
       
       generatePDF('builder', {
         clientName,
@@ -3445,6 +3529,8 @@
         alert('Please fill in name and phone!');
         return;
       }
+      // Track WhatsApp share
+      if (window.trackWhatsApp) window.trackWhatsApp();
       
       let message = `*FirepowerSFX - Quotation*\n\n*Client:* ${checkoutData.clientName}\n*Phone:* ${checkoutData.phone}\n`;
       if (checkoutData.venue) message += `*Venue:* ${checkoutData.venue}\n`;
@@ -3482,6 +3568,8 @@
         alert('Please fill in name and phone!');
         return;
       }
+      // Track PDF download
+      if (window.trackPDFDownload) window.trackPDFDownload();
       
       generatePDF('checkout', checkoutData);
     });
