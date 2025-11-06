@@ -13,6 +13,32 @@
     gtag('js', new Date());
     gtag('config', 'G-R7SXFLHW48');
   </script>
+  <!-- ⚡ FIREBASE CONNECTION - Round 1 ⚡ -->
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
+      authDomain: "firepowersfx-2558.firebaseapp.com",
+      projectId: "firepowersfx-2558",
+      storageBucket: "firepowersfx-2558.firebasestorage.app",
+      messagingSenderId: "723483292867",
+      appId: "1:723483292867:web:d6d83a79ba87cd2dee5e76"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    console.log('✅ Firebase Connected!');
+    
+    // Make available globally
+    window.firebaseApp = app;
+    window.firebaseDB = db;
+  </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
