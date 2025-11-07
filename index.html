@@ -117,6 +117,94 @@
     getUserInfo().then(() => trackPageView());
     console.log('✅ Tracking active');
   </script>
+  <!-- 📦 ORDER SYSTEM - Round 3 📦 -->
+  <script type="module">
+    import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    
+    const db = window.firebaseDB;
+    
+    // Generate Order ID
+    function generateOrderId() {
+      const timestamp = Date.now().toString().slice(-6);
+      const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+      return `ORD-${timestamp}-${random}`;
+    }
+    
+    // Place Order Function
+    window.placeOrder = async function(orderData) {
+      try {
+        console.log('📦 Placing order...');
+        
+        const order = {
+          orderId: generateOrderId(),
+          timestamp: serverTimestamp(),
+          status: 'pending',
+          customer: {
+            name: orderData.clientName,
+            phone: orderData.phone,
+            venue: orderData.venue || '',
+            location: orderData.location || '',
+            functionType: orderData.function || '',
+            dates: orderData.dates || '',
+            timeSlot: orderData.timeSlot || ''
+          },
+          items: orderData.items || [],
+          totalAmount: orderData.totalAmount || 0,
+          itemCount: orderData.items.length,
+          sessionId: sessionData.sessionId,
+          userInfo: sessionData.userInfo,
+          source: 'quotation_website',
+          createdAt: new Date().toISOString()
+        };
+        
+        const docRef = await addDoc(collection(db, 'orders'), order);
+        console.log('✅ Order saved!', order.orderId);
+        
+        // Track order
+        await addDoc(collection(db, 'tracking'), {
+          type: 'order_placed',
+          sessionId: sessionData.sessionId,
+          orderId: order.orderId,
+          timestamp: serverTimestamp(),
+          totalAmount: order.totalAmount,
+          userInfo: sessionData.userInfo
+        });
+        
+        return { success: true, orderId: order.orderId };
+      } catch (error) {
+        console.error('❌ Error:', error);
+        return { success: false, error: error.message };
+      }
+    };
+    
+    // Show confirmation
+    window.showOrderConfirmation = function(orderId) {
+      const modal = document.createElement('div');
+      modal.className = 'modal show';
+      modal.style.zIndex = '10000';
+      modal.innerHTML = `
+        <div class="modal-content" style="text-align:center; max-width:500px;">
+          <h2 style="color:var(--cyan); margin-bottom:20px;">🎉 Order Placed!</h2>
+          <div style="background:rgba(0,213,255,0.1); padding:20px; border-radius:10px; margin:20px 0;">
+            <div style="font-size:14px; color:var(--silver); margin-bottom:10px;">Order ID</div>
+            <div style="font-size:28px; font-weight:bold; color:var(--cyan);">${orderId}</div>
+          </div>
+          <p style="color:var(--silver); line-height:1.6;">
+            Thank you! We'll contact you shortly on your registered phone number.
+          </p>
+          <div style="background:rgba(143,107,255,0.1); padding:15px; border-radius:8px; margin:15px 0;">
+            <div style="font-size:14px; color:var(--silver);">📱 9898 496 111 | 7698 496 111</div>
+          </div>
+          <button class="btn btn-primary" onclick="this.closest('.modal').remove(); location.reload();" style="width:100%;">
+            Close
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    };
+    
+    console.log('✅ Order system ready');
+  </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -2552,16 +2640,17 @@
         </label>
       </div>
 
-      <div style="display:flex; gap:10px; margin-top:20px;">
-        <button class="btn btn-primary" style="flex:1;" id="whatsappShareBtn" disabled>
+      <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
+        <button class="btn btn-success" style="flex:1; min-width:200px;" id="placeOrderBtn" disabled>
+          ✅ Place Order
+        </button>
+        <button class="btn btn-primary" style="flex:1; min-width:200px;" id="whatsappShareBtn" disabled>
           📱 Share via WhatsApp
         </button>
-        <button class="btn" style="flex:1;" id="downloadPDFBtn" disabled>
+        <button class="btn" style="flex:1; min-width:200px;" id="downloadPDFBtn" disabled>
           📥 Download PDF
         </button>
       </div>
-    </div>
-  </div>
 
   <script>
     // ============================================
@@ -3510,8 +3599,53 @@
     });
 
     document.getElementById('checkoutTermsCheckbox').addEventListener('change', function() {
+      document.getElementById('placeOrderBtn').disabled = !this.checked;
       document.getElementById('whatsappShareBtn').disabled = !this.checked;
       document.getElementById('downloadPDFBtn').disabled = !this.checked;
+    });
+    // Place Order Handler
+    document.getElementById('placeOrderBtn').addEventListener('click', async function() {
+      const checkoutData = {
+        clientName: document.getElementById('checkoutClientName').value,
+        phone: document.getElementById('checkoutPhone').value,
+        venue: document.getElementById('checkoutVenue').value,
+        location: document.getElementById('checkoutLocation').value,
+        function: document.getElementById('checkoutFunction').value,
+        dates: document.getElementById('checkoutDates').value,
+        timeSlot: document.querySelector('.checkout-time.selected')?.dataset.time || ''
+      };
+      
+      if (!checkoutData.clientName || !checkoutData.phone) {
+        alert('Please fill in name and phone!');
+        return;
+      }
+      
+      // Calculate total
+      let totalAmount = 0;
+      cart.forEach(item => {
+        totalAmount += item.price * item.qty;
+      });
+      
+      // Place order
+      const result = await window.placeOrder({
+        ...checkoutData,
+        items: cart,
+        totalAmount: totalAmount
+      });
+      
+      if (result.success) {
+        // Clear cart
+        cart = [];
+        saveCart();
+        
+        // Close checkout modal
+        document.getElementById('checkoutModal').classList.remove('show');
+        
+        // Show confirmation
+        window.showOrderConfirmation(result.orderId);
+      } else {
+        alert('Error placing order: ' + result.error);
+      }
     });
 
     document.getElementById('whatsappShareBtn').addEventListener('click', function() {
