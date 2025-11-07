@@ -49,6 +49,8 @@
       startTime: Date.now(),
       userInfo: {}
     };
+    // Make sessionData globally accessible
+    window.sessionDataGlobal = sessionData;
 
     // Get user location & device info
     async function getUserInfo() {
@@ -61,6 +63,7 @@
           browser: navigator.userAgent.split(')')[0].split('(')[1],
           screen: window.screen.width + 'x' + window.screen.height
         };
+        window.sessionDataGlobal = sessionData;
         console.log('📍 User tracked:', data.city, data.country);
       } catch (error) {
         sessionData.userInfo = { device: /mobile/i.test(navigator.userAgent) ? 'mobile' : 'desktop' };
@@ -135,6 +138,10 @@
       try {
         console.log('📦 Placing order...');
         
+        // Get session data safely
+        const sessionId = window.sessionDataGlobal?.sessionId || 'session_' + Date.now();
+        const userInfo = window.sessionDataGlobal?.userInfo || {};
+        
         const order = {
           orderId: generateOrderId(),
           timestamp: serverTimestamp(),
@@ -151,8 +158,8 @@
           items: orderData.items || [],
           totalAmount: orderData.totalAmount || 0,
           itemCount: orderData.items.length,
-          sessionId: sessionData.sessionId,
-          userInfo: sessionData.userInfo,
+          sessionId: sessionId,
+          userInfo: userInfo,
           source: 'quotation_website',
           createdAt: new Date().toISOString()
         };
@@ -163,16 +170,17 @@
         // Track order
         await addDoc(collection(db, 'tracking'), {
           type: 'order_placed',
-          sessionId: sessionData.sessionId,
+          sessionId: sessionId,
           orderId: order.orderId,
           timestamp: serverTimestamp(),
           totalAmount: order.totalAmount,
-          userInfo: sessionData.userInfo
+          userInfo: userInfo
         });
         
         return { success: true, orderId: order.orderId };
       } catch (error) {
         console.error('❌ Error:', error);
+        alert('Error placing order: ' + error.message);
         return { success: false, error: error.message };
       }
     };
