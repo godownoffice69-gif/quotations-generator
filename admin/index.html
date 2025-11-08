@@ -1,0 +1,3095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Management System - Enhanced</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --light: #f8fafc;
+            --white: #ffffff;
+            --text-dark: #1f2937;
+            --text-gray: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --radius: 8px;
+            --transition: all 0.3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', 'Noto Sans Gujarati', sans-serif;
+            background: var(--light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        /* Layout */
+        .app-container { min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .app-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--white);
+            padding: 1rem 0;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .company-name { font-size: 1.8rem; font-weight: 700; }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .search-global {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-global input {
+            width: 100%;
+            padding: 0.5rem 2.5rem 0.5rem 1rem;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+        }
+
+        .search-global-icon {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--white);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 2000;
+            display: none;
+            margin-top: 0.25rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .search-results.show { display: block; }
+
+        .search-result-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .search-result-item:hover { background: var(--light); }
+
+        .search-result-type {
+            font-size: 0.75rem;
+            color: var(--text-gray);
+            text-transform: uppercase;
+        }
+
+        /* Navigation */
+        .nav-tabs {
+            background: var(--white);
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            padding: 0 1rem;
+        }
+
+        .nav-tab {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-gray);
+            border-bottom: 3px solid transparent;
+            transition: var(--transition);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-tab:hover { color: var(--primary); background: rgba(102, 126, 234, 0.05); }
+        .nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: rgba(102, 126, 234, 0.05); }
+
+        .main-content {
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            width: 100%;
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .card-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+
+        .form-label.required::after { content: ' *'; color: var(--danger); }
+
+        .form-input, .form-select, .form-textarea {
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: var(--transition);
+            background: var(--white);
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: 'Noto Sans Gujarati', sans-serif;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            justify-content: center;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: var(--white); }
+        .btn-secondary { background: var(--white); color: var(--primary); border: 2px solid var(--primary); }
+        .btn-success { background: var(--success); color: var(--white); }
+        .btn-warning { background: var(--warning); color: var(--white); }
+        .btn-danger { background: var(--danger); color: var(--white); }
+        .btn-info { background: var(--info); color: var(--white); }
+        .btn-small { padding: 0.5rem 1rem; font-size: 0.85rem; }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.warning { border-left-color: var(--warning); }
+        .stat-card.danger { border-left-color: var(--danger); }
+        .stat-card.info { border-left-color: var(--info); }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-gray);
+            font-weight: 500;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--white);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th, .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .table tr:hover { background: rgba(102, 126, 234, 0.05); }
+        .table tr:last-child td { border-bottom: none; }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-confirmed { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-completed { background: rgba(102, 126, 234, 0.1); color: var(--primary); }
+        .status-cancelled { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            overflow: auto;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 2rem;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-gray);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--white);
+            border-left: 4px solid var(--success);
+            padding: 1rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 3000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-width: 300px;
+        }
+
+        .toast.show { transform: translateX(0); }
+        .toast.error { border-left-color: var(--danger); }
+        .toast-actions { display: flex; gap: 0.5rem; }
+        .toast-btn { background: none; border: none; color: var(--primary); cursor: pointer; font-weight: 500; }
+
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--white);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 3000;
+            text-align: center;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--light);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-top: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Calendar */
+        .calendar-container {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .calendar-day-header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .calendar-day {
+            background: var(--white);
+            min-height: 100px;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .calendar-day:hover { background: var(--light); }
+        .calendar-day.today { background: rgba(102, 126, 234, 0.1); }
+        .calendar-day.has-orders { border-left: 4px solid var(--success); }
+        .calendar-day.has-tasks { border-right: 4px solid var(--warning); }
+        .calendar-day.has-festival { border-top: 4px solid var(--danger); }
+
+        .calendar-day-number {
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .calendar-day-content {
+            font-size: 0.8rem;
+            color: var(--text-gray);
+        }
+
+        .festival-text {
+            color: var(--danger);
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .order-count {
+            background: var(--success);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+        }
+
+        /* Quantity Controls */
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quantity-btn {
+            width: 30px;
+            height: 30px;
+            border: 1px solid var(--border);
+            background: var(--white);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Search Dropdown */
+        .search-container { position: relative; margin-bottom: 1rem; }
+
+        .search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--white);
+            border: 2px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 var(--radius) var(--radius);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .search-dropdown.show { display: block; }
+
+        .search-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .search-item:hover { background: var(--light); }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            transition: width 0.3s ease;
+        }
+
+        /* Order ID Highlight */
+        .order-id-highlight {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        /* Print Template */
+        .print-template {
+            display: none;
+            width: 2480px;
+            min-height: 3508px;
+            background: white;
+            padding: 354px 118px 118px 590px;
+            font-family: 'Noto Sans Gujarati', Arial, sans-serif;
+            font-size: 32px;
+            line-height: 1.4;
+        }
+
+        /* Undo Bar */
+        .undo-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--text-dark);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .undo-bar.show { transform: translateX(-50%) translateY(0); }
+
+        .undo-btn {
+            background: var(--white);
+            color: var(--text-dark);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Quick Action Menu */
+        .quick-menu {
+            position: absolute;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            padding: 0.5rem 0;
+            z-index: 1500;
+            min-width: 180px;
+            display: none;
+        }
+
+        .quick-menu.show { display: block; }
+
+        .quick-menu-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quick-menu-item:hover { background: var(--light); }
+
+        /* Keyboard Shortcuts Panel */
+        .shortcuts-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--white);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 2500;
+            max-width: 600px;
+            display: none;
+        }
+
+        .shortcuts-panel.show { display: block; }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .shortcut-key {
+            background: var(--light);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        /* Drag Drop Zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .calendar-day { min-height: 80px; }
+            .search-global { width: 200px; }
+            .header-content { flex-direction: column; gap: 1rem; }
+        }
+
+        /* Utility Classes */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .mt-1 { margin-top: 0.5rem; }
+        .mb-1 { margin-bottom: 0.5rem; }
+    </style>
+    <!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 3rem; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+            <h1 style="text-align: center; color: #667eea; margin-bottom: 2rem; font-size: 2rem;">🔐 Admin Login</h1>
+            
+            <form id="loginForm">
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Email</label>
+                    <input type="email" id="loginEmail" required style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;">
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Password</label>
+                    <input type="password" id="loginPassword" required style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;">
+                </div>
+                
+                <div id="loginError" style="display: none; background: #fee; color: #c00; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;"></div>
+                
+                <button type="submit" id="loginBtn" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">
+                    Login
+                </button>
+            </form>
+            
+            <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: #666;">
+                Admin or Owner access only
+            </div>
+        </div>
+    </div>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="company-name">Order Management System</h1>
+                <div class="header-controls">
+                    <div class="search-global">
+                        <input type="text" id="globalSearch" placeholder="🔍 Search everything..." autocomplete="off">
+                        <div class="search-results" id="globalSearchResults"></div>
+                    </div>
+                    <span id="currentOrderId" style="font-weight: bold;">Next: FP001</span>
+                    <button class="btn btn-secondary btn-small" onclick="OMS.showShortcuts()">⌨️</button>
+                    <button class="btn btn-danger btn-small" onclick="auth.signOut()">🚪 Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <div class="nav-container">
+                <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
+                <button class="nav-tab" data-tab="orders">📝 Orders</button>
+                <button class="nav-tab" data-tab="inventory">📦 Inventory</button>
+                <button class="nav-tab" data-tab="customers">👥 Customers</button>
+                <button class="nav-tab" data-tab="calendar">🗓️ Calendar</button>
+                <button class="nav-tab" data-tab="history">📚 History</button>
+                <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
+                <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-content active">
+                <div class="stats-grid" id="dashboardStats"></div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🍕 Recent Orders</h2>
+                    </div>
+                    <div class="table-container" id="recentOrdersContainer"></div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Top Customer</h3>
+                    <div id="topCustomerInfo"></div>
+                </div>
+            </div>
+
+            <!-- Orders Tab -->
+            <div id="orders" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📝 Create New Order</h2>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="orderProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <form id="orderForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label required">Order ID</label>
+                                <input type="text" id="orderId" class="form-input" required>
+                                <small style="color: var(--text-gray);">Manual edit enabled - check for duplicates</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Date</label>
+                                <input type="date" id="orderDate" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Ready Time</label>
+                                <select id="readyTime" class="form-select" required></select>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label required">Client Name</label>
+                                <div class="search-container">
+                                    <input type="text" id="clientName" class="form-input" placeholder="Start typing..." required>
+                                    <div id="clientSearchDropdown" class="search-dropdown"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Contact</label>
+                                <input type="tel" id="contact" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Venue</label>
+                                <input type="text" id="venue" class="form-input" required>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Event Type</label>
+                                <input type="text" id="eventType" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Transport</label>
+                                <select id="transport" class="form-select" required>
+                                    <option value="">Select</option>
+                                    <option value="Bolero">Bolero</option>
+                                    <option value="Isuzu">Isuzu</option>
+                                    <option value="Porter">Porter</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group hidden" id="customTransportGroup">
+                                <label class="form-label">Custom Transport</label>
+                                <input type="text" id="customTransport" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Driver</label>
+                                <input type="text" id="driverName" class="form-input">
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Operator</label>
+                                <input type="text" id="operator" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Status</label>
+                                <select id="orderStatus" class="form-select" required>
+                                    <option value="Confirmed">Confirmed</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Helper</label>
+                                <input type="text" id="helper" class="form-input">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Notes</label>
+                            <textarea id="orderNotes" class="form-textarea"></textarea>
+                        </div>
+
+                        <div class="card">
+                            <h3 class="card-title">📦 Order Items</h3>
+                            <div class="search-container">
+                                <input type="text" id="itemSearch" class="form-input" placeholder="🔍 Search items..." autocomplete="off">
+                                <div id="itemSearchDropdown" class="search-dropdown"></div>
+                            </div>
+                            <div class="table-container" id="orderItemsContainer"></div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="submit" class="btn btn-primary">💾 Save Order (Ctrl+S)</button>
+                            <button type="button" class="btn btn-secondary" data-action="preview">👁️ Preview</button>
+                            <button type="button" class="btn btn-info" data-action="duplicate">📋 Duplicate Last</button>
+                            <button type="button" class="btn btn-warning" data-action="sameDay">📅 Same Day</button>
+                            <button type="button" class="btn btn-danger" data-action="clear">🗑️ Clear (Ctrl+D)</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Other tabs will be dynamically populated -->
+            <div id="inventory" class="tab-content"></div>
+            <div id="customers" class="tab-content"></div>
+            <div id="calendar" class="tab-content"></div>
+            <div id="history" class="tab-content"></div>
+            <div id="analytics" class="tab-content"></div>
+            <div id="settings" class="tab-content"></div>
+        </main>
+    </div>
+
+    <!-- Modals Container -->
+    <div id="modalsContainer"></div>
+
+    <!-- Print Template -->
+    <div id="printTemplate" class="print-template"></div>
+
+    <!-- Undo Bar -->
+    <div id="undoBar" class="undo-bar">
+        <span id="undoMessage"></span>
+        <button class="undo-btn" onclick="OMS.undo()">Undo</button>
+    </div>
+
+    <!-- Shortcuts Panel -->
+    <div id="shortcutsPanel" class="shortcuts-panel">
+        <button class="modal-close" onclick="OMS.hideShortcuts()">×</button>
+        <h2>⌨️ Keyboard Shortcuts</h2>
+        <div style="margin-top: 1rem;">
+            <div class="shortcut-item">
+                <span>Save Order</span>
+                <span class="shortcut-key">Ctrl + S</span>
+            </div>
+            <div class="shortcut-item">
+                <span>New Order</span>
+                <span class="shortcut-key">Ctrl + N</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Clear Form</span>
+                <span class="shortcut-key">Ctrl + D</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Global Search</span>
+                <span class="shortcut-key">Ctrl + K</span>
+            </div>
+            <div class="shortcut-item">
+                <span>Show Shortcuts</span>
+                <span class="shortcut-key">Ctrl + /</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        // ============ UTILITIES ============
+        const Utils = {
+            get: (id, defaultValue = '') => {
+                const el = document.getElementById(id);
+                return el ? (el.value || '').toString().trim() : defaultValue;
+            },
+
+            set: (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.value = value;
+            },
+
+            elem: (tag, props = {}, children = []) => {
+                const el = document.createElement(tag);
+                Object.entries(props).forEach(([key, val]) => {
+                    if (key === 'class') el.className = val;
+                    else if (key === 'style') Object.assign(el.style, val);
+                    else if (key.startsWith('on')) el.addEventListener(key.slice(2), val);
+                    else if (key.startsWith('data-')) el.dataset[key.slice(5)] = val;
+                    else el[key] = val;
+                });
+                children.forEach(child => {
+                    el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+                });
+                return el;
+            },
+
+            formatDate: (dateStr) => {
+                if (!dateStr) return 'N/A';
+                try {
+                    const date = new Date(dateStr + 'T00:00:00');
+                    return date.toLocaleDateString('en-GB');
+                } catch {
+                    return dateStr;
+                }
+            },
+
+            // Fixed: Use local date without timezone conversion
+            getLocalDate: (dateStr) => {
+                if (!dateStr) return new Date();
+                const [year, month, day] = dateStr.split('-').map(Number);
+                return new Date(year, month - 1, day);
+            },
+
+            toDateString: (date) => {
+                const d = date instanceof Date ? date : new Date(date);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            },
+
+            generateId: () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+
+            debounce: (func, wait) => {
+                let timeout;
+                return (...args) => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            },
+
+            validateRequired: (fields) => {
+                const errors = [];
+                fields.forEach(field => {
+                    const value = Utils.get(field);
+                    if (!value) errors.push(field);
+                });
+                return errors;
+            }
+        };
+
+        // ============ MAIN APP ============
+        const OMS = {
+            data: {
+                orders: [],
+                customers: [],
+                inventory: { categories: [], items: [] },
+                tasks: [],
+                deletedOrders: [],
+                undoStack: [],
+                settings: {
+                    printFontSize: 32,
+                    orderIdCounter: 1,
+                    invoicePrefix: 'FP',
+                    language: 'en',
+                    defaultOrderStatus: 'Confirmed',
+                    lowStockThreshold: 5,
+                    tableSettings: {
+                        columnWidthSr: 8,
+                        columnWidthItem: 40,
+                        columnWidthQty: 12,
+                        columnWidthRemarks: 40,
+                        leftMargin: 50
+                    },
+                    printColors: {
+                        headerBg: '#667eea',
+                        headerText: '#ffffff',
+                        tableHeaderBg: '#f8f9fa',
+                        tableHeaderText: '#333333',
+                        tableBorder: '#333333',
+                        notesBg: '#f9f9f9',
+                        orderIdBg: '#667eea',
+                        orderIdText: '#ffffff'
+                    }
+                }
+            },
+
+            currentOrderItems: [],
+            currentTab: 'dashboard',
+            
+            festivals: {
+                "2025-01-14": ["मकर संक्रांति", "Makar Sankranti"],
+                "2025-01-26": ["गणतंत्र दिवस", "Republic Day"],
+                "2025-02-13": ["महा शिवरात्रि", "Maha Shivratri"],
+                "2025-03-13": ["होली", "Holi"],
+                "2025-03-14": ["धुलेटी", "Dhuleti"],
+                "2025-04-06": ["राम नवमी", "Ram Navami"],
+                "2025-08-15": ["स्वतंत्रता दिवस", "Independence Day"],
+                "2025-08-19": ["जन्माष्टमी", "Janmashtami"],
+                "2025-10-02": ["गांधी जयंती", "Gandhi Jayanti"],
+                "2025-11-01": ["धनतेरस", "Dhanteras"],
+                "2025-11-02": ["दीवाली", "Diwali"]
+            },
+
+            init() {
+                this.loadFromStorage();
+                this.setupEventDelegation();
+                this.setupKeyboardShortcuts();
+                this.setupAutoSave();
+                this.setupDragDrop();
+                this.populateTimeDropdown();
+                this.loadDemoData();
+                this.updateAllDisplays();
+                this.initGlobalSearch();
+            },
+
+            // ============ EVENT DELEGATION ============
+            setupEventDelegation() {
+                document.addEventListener('click', (e) => {
+                    const action = e.target.closest('[data-action]')?.dataset.action;
+                    const id = e.target.closest('[data-id]')?.dataset.id;
+                    const type = e.target.closest('[data-type]')?.dataset.type;
+
+                    if (!action) return;
+
+                    e.preventDefault();
+                    const handlers = {
+                        'preview': () => this.previewOrder(),
+                        'duplicate': () => this.duplicateLastOrder(),
+                        'sameDay': () => this.downloadSameDayOrders(),
+                        'clear': () => this.clearForm(),
+                        'edit': () => this.editItem(type, id),
+                        'delete': () => this.deleteItem(type, id),
+                        'print': () => this.downloadOrderImage(id),
+                        'quickAction': () => this.showQuickMenu(e.target, id),
+                        'undo': () => this.undo(),
+                        'exportData': () => this.exportData(),
+                        'importData': () => this.importData()
+                    };
+
+                    handlers[action]?.();
+                });
+
+                // Navigation - use event delegation on parent
+                document.querySelector('.nav-container')?.addEventListener('click', (e) => {
+                    const tab = e.target.closest('.nav-tab');
+                    if (tab && tab.dataset.tab) {
+                        this.switchTab(tab.dataset.tab);
+                    }
+                });
+
+                // Close dropdowns on outside click
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.search-container')) {
+                        document.querySelectorAll('.search-dropdown').forEach(d => d.classList.remove('show'));
+                    }
+                });
+            },
+
+            // ============ KEYBOARD SHORTCUTS ============
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        const shortcuts = {
+                            's': () => { e.preventDefault(); this.saveOrder(); },
+                            'n': () => { e.preventDefault(); this.switchTab('orders'); this.clearForm(); },
+                            'd': () => { e.preventDefault(); this.clearForm(); },
+                            'k': () => { e.preventDefault(); document.getElementById('globalSearch').focus(); },
+                            '/': () => { e.preventDefault(); this.showShortcuts(); },
+                            'z': () => { e.preventDefault(); this.undo(); }
+                        };
+                        shortcuts[e.key]?.();
+                    }
+                });
+            },
+
+            showShortcuts() {
+                document.getElementById('shortcutsPanel').classList.add('show');
+            },
+
+            hideShortcuts() {
+                document.getElementById('shortcutsPanel').classList.remove('show');
+            },
+
+            // ============ AUTO-SAVE ============
+            setupAutoSave() {
+                setInterval(() => {
+                    const form = document.getElementById('orderForm');
+                    if (form && this.hasUnsavedChanges()) {
+                        localStorage.setItem('oms_draft', JSON.stringify(this.collectFormData()));
+                    }
+                }, 30000); // Auto-save every 30 seconds
+            },
+
+            hasUnsavedChanges() {
+                return Utils.get('clientName') || this.currentOrderItems.length > 0;
+            },
+
+            // ============ DRAG & DROP ============
+            setupDragDrop() {
+                const dropZone = document.createElement('div');
+                dropZone.className = 'drop-zone hidden';
+                dropZone.innerHTML = '<h2>Drop JSON backup file here</h2>';
+                document.body.appendChild(dropZone);
+
+                ['dragenter', 'dragover'].forEach(event => {
+                    document.addEventListener(event, (e) => {
+                        e.preventDefault();
+                        dropZone.classList.remove('hidden');
+                        dropZone.classList.add('dragover');
+                    });
+                });
+
+                ['dragleave', 'drop'].forEach(event => {
+                    document.addEventListener(event, (e) => {
+                        e.preventDefault();
+                        dropZone.classList.add('hidden');
+                        dropZone.classList.remove('dragover');
+                    });
+                });
+
+                document.addEventListener('drop', (e) => {
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.name.endsWith('.json')) {
+                        this.handleImportFile(file);
+                    }
+                });
+            },
+
+            // ============ GLOBAL SEARCH ============
+            initGlobalSearch() {
+                const input = document.getElementById('globalSearch');
+                const results = document.getElementById('globalSearchResults');
+
+                input.addEventListener('input', Utils.debounce((e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    if (query.length < 2) {
+                        results.classList.remove('show');
+                        return;
+                    }
+
+                    const searchResults = this.performGlobalSearch(query);
+                    this.displayGlobalSearchResults(searchResults);
+                }, 300));
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        results.classList.remove('show');
+                        input.value = '';
+                    }
+                });
+            },
+
+            performGlobalSearch(query) {
+                const results = [];
+
+                // Search orders
+                this.data.orders.forEach(order => {
+                    if (order.orderId.toLowerCase().includes(query) ||
+                        order.clientName.toLowerCase().includes(query) ||
+                        order.venue.toLowerCase().includes(query)) {
+                        results.push({ type: 'order', data: order });
+                    }
+                });
+
+                // Search customers
+                this.data.customers.forEach(customer => {
+                    if (customer.name.toLowerCase().includes(query) ||
+                        customer.contact.includes(query)) {
+                        results.push({ type: 'customer', data: customer });
+                    }
+                });
+
+                // Search inventory
+                this.data.inventory.items.forEach(item => {
+                    if (item.name.toLowerCase().includes(query)) {
+                        results.push({ type: 'item', data: item });
+                    }
+                });
+
+                return results.slice(0, 10);
+            },
+
+            displayGlobalSearchResults(results) {
+                const container = document.getElementById('globalSearchResults');
+                if (results.length === 0) {
+                    container.innerHTML = '<div class="search-result-item">No results found</div>';
+                } else {
+                    container.innerHTML = results.map(r => `
+                        <div class="search-result-item" onclick="OMS.navigateToResult('${r.type}', '${r.data.id || r.data.orderId}')">
+                            <div>
+                                <div class="search-result-type">${r.type}</div>
+                                <div>${r.type === 'order' ? r.data.orderId + ' - ' + r.data.clientName : 
+                                       r.type === 'customer' ? r.data.name : r.data.name}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                container.classList.add('show');
+            },
+
+            navigateToResult(type, id) {
+                const tabMap = { order: 'history', customer: 'customers', item: 'inventory' };
+                this.switchTab(tabMap[type]);
+                document.getElementById('globalSearchResults').classList.remove('show');
+                document.getElementById('globalSearch').value = '';
+            },
+
+            // ============ CRUD OPERATIONS ============
+            createItem(type, data) {
+                const handlers = {
+                    order: () => {
+                        const isDuplicate = this.data.orders.some(o => o.orderId === data.orderId);
+                        if (isDuplicate) {
+                            this.showToast('Order ID already exists!', 'error');
+                            return false;
+                        }
+                        
+                        this.addToUndoStack('create', 'order', data);
+                        this.data.orders.push(data);
+                        this.updateCustomerDatabase(data);
+                        this.incrementOrderCounter();
+                        return true;
+                    },
+                    category: () => {
+                        this.data.inventory.categories.push(data);
+                        return true;
+                    },
+                    item: () => {
+                        this.data.inventory.items.push(data);
+                        return true;
+                    },
+                    task: () => {
+                        this.data.tasks.push(data);
+                        return true;
+                    }
+                };
+                return handlers[type]?.() || false;
+            },
+
+            updateItem(type, id, newData) {
+                const handlers = {
+                    order: () => {
+                        const index = this.data.orders.findIndex(o => o.orderId === id);
+                        if (index === -1) return false;
+                        
+                        this.addToUndoStack('update', 'order', this.data.orders[index]);
+                        this.data.orders[index] = newData;
+                        this.updateCustomerDatabase(newData);
+                        return true;
+                    },
+                    task: () => {
+                        const index = this.data.tasks.findIndex(t => t.id === id);
+                        if (index === -1) return false;
+                        this.data.tasks[index] = { ...this.data.tasks[index], ...newData };
+                        return true;
+                    }
+                };
+                return handlers[type]?.() || false;
+            },
+
+            deleteItem(type, id) {
+                const confirmations = {
+                    order: 'Delete this order?',
+                    category: 'Delete category and all items?',
+                    item: 'Delete this item?',
+                    task: 'Delete this task?'
+                };
+
+                if (!confirm(confirmations[type])) return false;
+
+                const handlers = {
+                    order: () => {
+                        const index = this.data.orders.findIndex(o => o.orderId === id);
+                        if (index === -1) return false;
+                        
+                        const deleted = this.data.orders.splice(index, 1)[0];
+                        this.addToUndoStack('delete', 'order', deleted);
+                        this.data.deletedOrders.push({
+                            ...deleted,
+                            deletedAt: new Date().toISOString(),
+                            deleteReason: 'Manual deletion'
+                        });
+                        return true;
+                    },
+                    category: () => {
+                        this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
+                        this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
+                        return true;
+                    },
+                    item: () => {
+                        this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
+                        return true;
+                    },
+                    task: () => {
+                        const index = this.data.tasks.findIndex(t => t.id === id);
+                        if (index === -1) return false;
+                        const deleted = this.data.tasks.splice(index, 1)[0];
+                        this.addToUndoStack('delete', 'task', deleted);
+                        return true;
+                    }
+                };
+
+                const success = handlers[type]?.() || false;
+                if (success) {
+                    this.saveToStorage();
+                    this.updateAllDisplays();
+                    this.showToast(`${type} deleted successfully`);
+                    this.showUndoBar(`${type} deleted`);
+                }
+                return success;
+            },
+
+            editItem(type, id) {
+                const handlers = {
+                    order: () => {
+                        const order = this.data.orders.find(o => o.orderId === id);
+                        if (!order) return;
+                        this.switchTab('orders');
+                        this.loadOrderToForm(order);
+                    },
+                    task: () => {
+                        const task = this.data.tasks.find(t => t.id === id);
+                        if (!task) return;
+                        this.showTaskEditModal(task);
+                    }
+                };
+                handlers[type]?.();
+            },
+
+            // ============ UNDO FUNCTIONALITY ============
+            addToUndoStack(action, type, data) {
+                this.data.undoStack.push({ action, type, data, timestamp: Date.now() });
+                if (this.data.undoStack.length > 10) this.data.undoStack.shift();
+            },
+
+            undo() {
+                const lastAction = this.data.undoStack.pop();
+                if (!lastAction) {
+                    this.showToast('Nothing to undo', 'error');
+                    return;
+                }
+
+                const { action, type, data } = lastAction;
+                
+                if (action === 'delete' && type === 'order') {
+                    this.data.orders.push(data);
+                    this.data.deletedOrders = this.data.deletedOrders.filter(o => o.orderId !== data.orderId);
+                } else if (action === 'create' && type === 'order') {
+                    this.data.orders = this.data.orders.filter(o => o.orderId !== data.orderId);
+                } else if (action === 'update' && type === 'order') {
+                    const index = this.data.orders.findIndex(o => o.orderId === data.orderId);
+                    if (index !== -1) this.data.orders[index] = data;
+                }
+
+                this.hideUndoBar();
+                this.saveToStorage();
+                this.updateAllDisplays();
+                this.showToast('Action undone');
+            },
+
+            showUndoBar(message) {
+                const bar = document.getElementById('undoBar');
+                document.getElementById('undoMessage').textContent = message;
+                bar.classList.add('show');
+                
+                setTimeout(() => this.hideUndoBar(), 5000);
+            },
+
+            hideUndoBar() {
+                document.getElementById('undoBar').classList.remove('show');
+            },
+
+            // ============ ORDER FORM ============
+            populateTimeDropdown() {
+                const select = document.getElementById('readyTime');
+                select.innerHTML = '<option value="">Select Time</option>';
+                
+                for (let h = 1; h <= 12; h++) {
+                    for (let m = 0; m < 60; m += 30) {
+                        ['AM', 'PM'].forEach(period => {
+                            const time = `${h}:${m.toString().padStart(2, '0')} ${period}`;
+                            select.add(new Option(time, time));
+                        });
+                    }
+                }
+            },
+
+            refreshOrderId() {
+                const nextId = this.getNextOrderId();
+                Utils.set('orderId', nextId);
+                document.getElementById('currentOrderId').textContent = `Next: ${nextId}`;
+            },
+
+            getNextOrderId() {
+                const prefix = this.data.settings.invoicePrefix || 'FP';
+                const counter = this.data.settings.orderIdCounter || 1;
+                return `${prefix}${String(counter).padStart(3, '0')}`;
+            },
+
+            incrementOrderCounter() {
+                this.data.settings.orderIdCounter = (this.data.settings.orderIdCounter || 1) + 1;
+                this.refreshOrderId();
+            },
+
+            collectFormData() {
+                const transport = Utils.get('transport');
+                return {
+                    orderId: Utils.get('orderId'),
+                    date: Utils.get('orderDate'),
+                    readyTime: Utils.get('readyTime'),
+                    clientName: Utils.get('clientName'),
+                    contact: Utils.get('contact'),
+                    venue: Utils.get('venue'),
+                    eventType: Utils.get('eventType'),
+                    transport: transport === 'Other' ? Utils.get('customTransport') : transport,
+                    driverName: Utils.get('driverName'),
+                    operator: Utils.get('operator'),
+                    helper: Utils.get('helper'),
+                    status: Utils.get('orderStatus'),
+                    notes: Utils.get('orderNotes'),
+                    items: [...this.currentOrderItems],
+                    createdAt: new Date().toISOString()
+                };
+            },
+
+            saveOrder() {
+                const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
+                if (errors.length > 0) {
+                    this.showToast('Please fill all required fields', 'error');
+                    return;
+                }
+
+                const orderData = this.collectFormData();
+                const existingIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
+
+                if (existingIndex !== -1) {
+                    this.updateItem('order', orderData.orderId, orderData);
+                    this.showToast('Order updated!');
+                } else {
+                    if (this.createItem('order', orderData)) {
+                        this.showToast('Order saved!');
+                        this.refreshOrderId();
+                    }
+                }
+
+                this.saveToStorage();
+                this.updateAllDisplays();
+                localStorage.removeItem('oms_draft');
+            },
+
+            loadOrderToForm(order) {
+                Object.entries({
+                    orderId: order.orderId,
+                    clientName: order.clientName,
+                    contact: order.contact,
+                    venue: order.venue,
+                    orderDate: order.date,
+                    readyTime: order.readyTime,
+                    eventType: order.eventType,
+                    transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
+                    customTransport: !['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : '',
+                    driverName: order.driverName,
+                    operator: order.operator,
+                    helper: order.helper,
+                    orderStatus: order.status,
+                    orderNotes: order.notes
+                }).forEach(([key, value]) => Utils.set(key, value));
+
+                if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
+                    document.getElementById('customTransportGroup').classList.remove('hidden');
+                }
+
+                this.currentOrderItems = order.items ? [...order.items] : [];
+                this.updateOrderItemsTable();
+            },
+
+            clearForm() {
+                if (this.hasUnsavedChanges() && !confirm('Clear all data?')) return;
+                
+                document.getElementById('orderForm').reset();
+                this.currentOrderItems = [];
+                this.updateOrderItemsTable();
+                this.refreshOrderId();
+                Utils.set('orderDate', Utils.toDateString(new Date()));
+                document.getElementById('customTransportGroup').classList.add('hidden');
+                this.showToast('Form cleared');
+            },
+
+            duplicateLastOrder() {
+                if (this.data.orders.length === 0) {
+                    this.showToast('No orders to duplicate', 'error');
+                    return;
+                }
+                
+                const lastOrder = this.data.orders[this.data.orders.length - 1];
+                this.loadOrderToForm(lastOrder);
+                this.refreshOrderId();
+                this.showToast('Last order duplicated');
+            },
+
+            previewOrder() {
+                const errors = Utils.validateRequired(['clientName', 'contact', 'venue', 'orderDate']);
+                if (errors.length > 0) {
+                    this.showToast('Fill required fields first', 'error');
+                    return;
+                }
+                
+                const orderData = this.collectFormData();
+                this.showModal('Order Preview', this.generatePreviewHTML(orderData));
+            },
+
+            generatePreviewHTML(order) {
+    return `
+        ...
+        <div>
+            <strong>Time:</strong> ${order.readyTime}<br>
+            <strong>Transport:</strong> ${order.transport}<br>
+            <strong>Event:</strong> ${order.eventType || ''}
+        </div>
+        <div>
+            <strong>Operator:</strong> ${order.operator || ''}<br>
+            <strong>Status:</strong> ${order.status}
+        </div>
+
+                        ${order.items.length > 0 ? `
+                            <table class="table">
+                                <thead><tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th></tr></thead>
+                                <tbody>
+                                    ${order.items.map((item, i) => `
+                                        <tr>
+                                            <td>${i + 1}</td>
+                                            <td>${item.name}</td>
+                                            <td>${item.quantity}</td>
+                                            <td>${item.remarks || ''}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        ` : '<p>No items added</p>'}
+
+                        ${order.notes ? `<div style="margin-top: 20px;"><strong>Notes:</strong><br>${order.notes}</div>` : ''}
+                    </div>
+                `;
+            },
+
+            downloadSameDayOrders() {
+                const date = Utils.get('orderDate');
+                if (!date) {
+                    this.showToast('Select date first', 'error');
+                    return;
+                }
+                
+                const orders = this.data.orders.filter(o => o.date === date);
+                if (orders.length === 0) {
+                    this.showToast('No orders for this date', 'error');
+                    return;
+                }
+                
+                this.generateMultiOrderImage(orders, date);
+            },
+
+            downloadOrderImage(orderId) {
+                const order = this.data.orders.find(o => o.orderId === orderId);
+                if (!order) return;
+                this.generateSingleOrderImage(order);
+            },
+
+            // ============ IMAGE GENERATION ============
+            async generateSingleOrderImage(order) {
+                const loading = this.showLoading('Generating image...');
+                
+                try {
+                    const template = document.getElementById('printTemplate');
+                    const colors = this.data.settings.printColors;
+                    const fontSize = this.data.settings.printFontSize || 32;
+                    
+                    template.innerHTML = this.buildOrderHTML(order, fontSize, colors);
+                    template.style.display = 'block';
+                    
+                    await new Promise(r => setTimeout(r, 1000));
+                    
+                    const canvas = await html2canvas(template, {
+                        scale: 2,
+                        backgroundColor: '#ffffff',
+                        width: 2480
+                    });
+                    
+                    template.style.display = 'none';
+                    
+                    canvas.toBlob(blob => {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `Order_${order.orderId}.png`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                        
+                        this.hideLoading(loading);
+                        this.showToast('Image downloaded!');
+                    });
+                } catch (error) {
+                    this.hideLoading(loading);
+                    this.showToast('Error: ' + error.message, 'error');
+                }
+            },
+
+            async generateMultiOrderImage(orders, date) {
+                const loading = this.showLoading('Generating multi-order image...');
+                
+                try {
+                    const template = document.getElementById('printTemplate');
+                    const colors = this.data.settings.printColors;
+                    
+                    let html = `
+                        <div style="text-align: center; margin-bottom: 40px;">
+                            <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px;">
+                                Orders for ${Utils.formatDate(date)}
+                            </h1>
+                        </div>
+                    `;
+                    
+                    orders.forEach((order, i) => {
+                        html += this.buildOrderHTML(order, 28, colors, true);
+                        if (i < orders.length - 1) {
+                            html += '<div style="page-break-before: always;"></div>';
+                        }
+                    });
+                    
+                    template.innerHTML = html;
+                    template.style.display = 'block';
+                    
+                    await new Promise(r => setTimeout(r, 2000));
+                    
+                    const canvas = await html2canvas(template, {
+                        scale: 2,
+                        backgroundColor: '#ffffff',
+                        width: 2480
+                    });
+                    
+                    template.style.display = 'none';
+                    
+                    canvas.toBlob(blob => {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `Orders_${date}.png`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                        
+                        this.hideLoading(loading);
+                        this.showToast(`${orders.length} orders downloaded!`);
+                    });
+                } catch (error) {
+                    this.hideLoading(loading);
+                    this.showToast('Error: ' + error.message, 'error');
+                }
+            },
+
+            buildOrderHTML(order, fontSize, colors, compact = false) {
+                const ts = this.data.settings.tableSettings;
+                const orderIdBg = colors.orderIdBg || '#667eea';
+                const orderIdText = colors.orderIdText || '#ffffff';
+                
+                return `
+                    <div style="margin-bottom: ${compact ? '40px' : '60px'}; ${compact ? 'border: 2px solid ' + colors.tableBorder + '; padding: 20px;' : ''}">
+                        ${!compact ? `<div style="text-align: center; margin-bottom: 40px;">
+                            <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px;">
+                                Order Management
+                            </h1>
+                            <h2 style="margin-top: 20px;">
+                                <span style="background: ${orderIdBg}; color: ${orderIdText}; padding: 10px 20px; border-radius: 8px;">
+                                    ${order.orderId}
+                                </span>
+                            </h2>
+                        </div>` : `<h3 style="text-align: center;">
+                            <span style="background: ${orderIdBg}; color: ${orderIdText}; padding: 8px 15px; border-radius: 6px;">
+                                ${order.orderId}
+                            </span>
+                        </h3>`}
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; font-size: ${fontSize}px; margin-bottom: 20px;">
+                            <div>
+                                <strong>Date:</strong> ${Utils.formatDate(order.date)}<br>
+                                <strong>Client:</strong> ${order.clientName}<br>
+                                <strong>Contact:</strong> ${order.contact}<br>
+                                <strong>Venue:</strong> ${order.venue}
+                            </div>
+                            <div>
+                                <strong>Time:</strong> ${order.readyTime}<br>
+                                <strong>Transport:</strong> ${order.transport}<br>
+                                <strong>Event:</strong> ${order.eventType || ''}<br>
+                                <strong>Driver:</strong> ${order.driverName || ''}
+                            </div>
+                            <div>
+                                <strong>Operator:</strong> ${order.operator || ''}<br>
+                                <strong>Status:</strong> ${order.status}<br>
+                                <strong>Helper:</strong> ${order.helper || ''}
+                            </div>
+                        </div>
+
+                        ${order.items.length > 0 ? `
+                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px;">
+                                <thead>
+                                    <tr style="background: ${colors.tableHeaderBg}; color: ${colors.tableHeaderText};">
+                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthSr}%;">Sr</th>
+                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthItem}%;">Item</th>
+                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthQty}%;">Qty</th>
+                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthRemarks}%;">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${order.items.map((item, i) => `
+                                        <tr>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center;">${i + 1}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px;">${item.name}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center;">${item.quantity}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px;">${item.remarks || ''}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        ` : ''}
+
+                        ${order.notes ? `
+                            <div style="margin-top: 20px; font-size: ${fontSize}px;">
+                                <strong>Notes:</strong><br>
+                                <div style="background: ${colors.notesBg}; padding: 15px; border: 1px solid ${colors.tableBorder};">
+                                    ${order.notes}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            },
+
+            // ============ CUSTOMER MANAGEMENT ============
+            updateCustomerDatabase(orderData) {
+                let customer = this.data.customers.find(c => 
+                    c.contact === orderData.contact || c.name.toLowerCase() === orderData.clientName.toLowerCase()
+                );
+                
+                if (customer) {
+                    customer.name = orderData.clientName;
+                    customer.lastVenue = orderData.venue;
+                    customer.lastOrderDate = orderData.date;
+                    customer.lastOrderId = orderData.orderId;
+                    customer.totalOrders = this.data.orders.filter(o => 
+                        o.contact === customer.contact
+                    ).length;
+                } else {
+                    customer = {
+                        id: Utils.generateId(),
+                        name: orderData.clientName,
+                        contact: orderData.contact,
+                        firstOrderDate: orderData.date,
+                        lastOrderDate: orderData.date,
+                        lastOrderId: orderData.orderId,
+                        lastVenue: orderData.venue,
+                        totalOrders: 1,
+                        createdAt: new Date().toISOString()
+                    };
+                    this.data.customers.push(customer);
+                }
+            },
+
+            mergeCustomers(id1, id2) {
+                const c1 = this.data.customers.find(c => c.id === id1);
+                const c2 = this.data.customers.find(c => c.id === id2);
+                if (!c1 || !c2) return;
+
+                // Merge into c1
+                c1.totalOrders += c2.totalOrders;
+                if (new Date(c2.lastOrderDate) > new Date(c1.lastOrderDate)) {
+                    c1.lastOrderDate = c2.lastOrderDate;
+                    c1.lastOrderId = c2.lastOrderId;
+                }
+
+                // Update orders
+                this.data.orders.forEach(o => {
+                    if (o.contact === c2.contact) {
+                        o.contact = c1.contact;
+                        o.clientName = c1.name;
+                    }
+                });
+
+                // Remove c2
+                this.data.customers = this.data.customers.filter(c => c.id !== id2);
+                this.saveToStorage();
+                this.updateAllDisplays();
+                this.showToast('Customers merged');
+            },
+
+            // ============ CALENDAR & TASKS ============
+            renderCalendar(date = new Date()) {
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                   'July', 'August', 'September', 'October', 'November', 'December'];
+                
+                let html = `
+                    <div class="calendar-container">
+                        <div class="calendar-header">
+                            <div class="calendar-nav">
+                                <button class="btn btn-primary btn-small" onclick="OMS.changeMonth(-1)">←</button>
+                                <h3>${monthNames[month]} ${year}</h3>
+                                <button class="btn btn-primary btn-small" onclick="OMS.changeMonth(1)">→</button>
+                            </div>
+                            <button class="btn btn-secondary btn-small" onclick="OMS.showToday()">Today</button>
+                        </div>
+                        <div class="calendar-grid">
+                            ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => 
+                                `<div class="calendar-day-header">${day}</div>`
+                            ).join('')}
+                            ${Array(firstDay).fill('').map(() => '<div class="calendar-day"></div>').join('')}
+                            ${Array.from({length: daysInMonth}, (_, i) => {
+                                const day = i + 1;
+                                const dateStr = Utils.toDateString(new Date(year, month, day));
+                                const today = Utils.toDateString(new Date());
+                                const orders = this.data.orders.filter(o => o.date === dateStr);
+                                const tasks = this.data.tasks.filter(t => t.date === dateStr);
+                                const festival = this.festivals[dateStr];
+                                
+                                let classes = 'calendar-day';
+                                if (dateStr === today) classes += ' today';
+                                if (orders.length) classes += ' has-orders';
+                                if (tasks.length) classes += ' has-tasks';
+                                if (festival) classes += ' has-festival';
+                                
+                                return `
+                                    <div class="${classes}" onclick="OMS.showDayDetails('${dateStr}')">
+                                        <div class="calendar-day-number">${day}</div>
+                                        ${festival ? `<div class="festival-text">${festival[1]}</div>` : ''}
+                                        ${orders.length ? `<div class="order-count">${orders.length}</div>` : ''}
+                                        ${tasks.length ? `<div class="calendar-day-content">${tasks.length} task${tasks.length > 1 ? 's' : ''}</div>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">📝 Add Task</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <input type="date" id="taskDate" class="form-input" value="${Utils.toDateString(new Date())}">
+                            </div>
+                            <div class="form-group">
+                                <input type="text" id="taskDescription" class="form-input" placeholder="Task description">
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-primary" onclick="OMS.addTask()">➕ Add</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                return html;
+            },
+
+            changeMonth(delta) {
+                this.currentCalendarDate = this.currentCalendarDate || new Date();
+                this.currentCalendarDate.setMonth(this.currentCalendarDate.getMonth() + delta);
+                this.switchTab('calendar');
+            },
+
+            showToday() {
+                this.currentCalendarDate = new Date();
+                this.switchTab('calendar');
+            },
+
+            // Fixed: Use local date without timezone issues
+            showDayDetails(dateStr) {
+                const date = Utils.getLocalDate(dateStr);
+                const orders = this.data.orders.filter(o => o.date === dateStr);
+                const tasks = this.data.tasks.filter(t => t.date === dateStr);
+                const festival = this.festivals[dateStr];
+                
+                let content = `<h3>Details for ${Utils.formatDate(dateStr)}</h3>`;
+                
+                if (festival) {
+                    content += `<div class="festival-text" style="font-size: 1.2rem; margin: 1rem 0;">🎉 ${festival[1]} (${festival[0]})</div>`;
+                }
+                
+                if (orders.length > 0) {
+                    content += `<h4>📋 Orders (${orders.length})</h4><ul>`;
+                    orders.forEach(o => {
+                        content += `<li>${o.orderId} - ${o.clientName} (${o.status})</li>`;
+                    });
+                    content += '</ul>';
+                }
+                
+                if (tasks.length > 0) {
+                    content += `<h4>📝 Tasks (${tasks.length})</h4><ul>`;
+                    tasks.forEach(t => {
+                        content += `<li>
+                            ${t.description}
+                            <button class="btn btn-secondary btn-small" data-action="edit" data-type="task" data-id="${t.id}">Edit</button>
+                            <button class="btn btn-danger btn-small" data-action="delete" data-type="task" data-id="${t.id}">Delete</button>
+                        </li>`;
+                    });
+                    content += '</ul>';
+                }
+                
+                content += `
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="OMS.addTaskForDate('${dateStr}')">Add Task</button>
+                        <button class="btn btn-secondary" onclick="OMS.createOrderForDate('${dateStr}')">New Order</button>
+                    </div>
+                `;
+                
+                this.showModal('Day Details', content);
+            },
+
+            addTask() {
+                const date = Utils.get('taskDate');
+                const description = Utils.get('taskDescription');
+                
+                if (!date || !description) {
+                    this.showToast('Enter date and description', 'error');
+                    return;
+                }
+                
+                const task = {
+                    id: Utils.generateId(),
+                    date: date,
+                    description: description,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+                
+                this.createItem('task', task);
+                this.saveToStorage();
+                this.switchTab('calendar');
+                Utils.set('taskDescription', '');
+                this.showToast('Task added!');
+            },
+
+            addTaskForDate(date) {
+                this.switchTab('calendar');
+                setTimeout(() => {
+                    Utils.set('taskDate', date);
+                    document.getElementById('taskDescription').focus();
+                }, 100);
+            },
+
+            createOrderForDate(date) {
+                this.switchTab('orders');
+                Utils.set('orderDate', date);
+            },
+
+            showTaskEditModal(task) {
+                const content = `
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" id="editTaskDate" class="form-input" value="${task.date}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <input type="text" id="editTaskDescription" class="form-input" value="${task.description}">
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="OMS.saveTaskEdit('${task.id}')">Save</button>
+                        <button class="btn btn-secondary" onclick="OMS.closeModal()">Cancel</button>
+                    </div>
+                `;
+                this.showModal('Edit Task', content);
+            },
+
+            saveTaskEdit(taskId) {
+                const newData = {
+                    date: Utils.get('editTaskDate'),
+                    description: Utils.get('editTaskDescription')
+                };
+                
+                if (this.updateItem('task', taskId, newData)) {
+                    this.saveToStorage();
+                    this.switchTab('calendar');
+                    this.closeModal();
+                    this.showToast('Task updated!');
+                }
+            },
+
+            // ============ INVENTORY BATCH OPERATIONS ============
+            batchUpdateInventory() {
+                const content = `
+                    <h3>Batch Update Inventory</h3>
+                    <div class="form-group">
+                        <label class="form-label">Select Operation</label>
+                        <select id="batchOp" class="form-select">
+                            <option value="increase">Increase All Stock</option>
+                            <option value="decrease">Decrease All Stock</option>
+                            <option value="set">Set All Stock</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount</label>
+                        <input type="number" id="batchAmount" class="form-input" min="0">
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="OMS.executeBatchInventory()">Execute</button>
+                        <button class="btn btn-secondary" onclick="OMS.closeModal()">Cancel</button>
+                    </div>
+                `;
+                this.showModal('Batch Operations', content);
+            },
+
+            executeBatchInventory() {
+                const op = Utils.get('batchOp');
+                const amount = parseInt(Utils.get('batchAmount')) || 0;
+                
+                this.data.inventory.items.forEach(item => {
+                    if (op === 'increase') item.quantity += amount;
+                    else if (op === 'decrease') item.quantity = Math.max(0, item.quantity - amount);
+                    else if (op === 'set') item.quantity = amount;
+                });
+                
+                this.saveToStorage();
+                this.updateAllDisplays();
+                this.closeModal();
+                this.showToast('Inventory updated!');
+            },
+
+            // ============ DATA EXPORT ============
+            exportData(format = 'json') {
+                try {
+                    let dataStr, filename, mimeType;
+                    
+                    if (format === 'json') {
+                        dataStr = JSON.stringify(this.data, null, 2);
+                        filename = `oms_backup_${Utils.toDateString(new Date())}.json`;
+                        mimeType = 'application/json';
+                    } else if (format === 'csv') {
+                        // Export orders as CSV
+                        const headers = ['Order ID', 'Date', 'Client', 'Contact', 'Venue', 'Status', 'Total Items'];
+                        const rows = this.data.orders.map(o => [
+                            o.orderId, o.date, o.clientName, o.contact, o.venue, o.status, o.items.length
+                        ]);
+                        dataStr = [headers, ...rows].map(row => row.join(',')).join('\n');
+                        filename = `orders_${Utils.toDateString(new Date())}.csv`;
+                        mimeType = 'text/csv';
+                    }
+                    
+                    const blob = new Blob([dataStr], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    
+                    this.showToast('Data exported!');
+                } catch (error) {
+                    this.showToast('Export error: ' + error.message, 'error');
+                }
+            },
+
+            importData() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) this.handleImportFile(file);
+                };
+                input.click();
+            },
+
+            handleImportFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        if (imported.orders && imported.inventory) {
+                            if (confirm('This will replace all data. Continue?')) {
+                                this.data = imported;
+                                this.saveToStorage();
+                                this.showToast('Data imported! Reloading...');
+                                setTimeout(() => location.reload(), 1000);
+                            }
+                        } else {
+                            this.showToast('Invalid file format', 'error');
+                        }
+                    } catch (error) {
+                        this.showToast('Import error: ' + error.message, 'error');
+                    }
+                };
+                reader.readAsText(file);
+            },
+
+            // ============ ORDER HISTORY & TIMELINE ============
+            showOrderHistory(orderId) {
+                const order = this.data.orders.find(o => o.orderId === orderId);
+                if (!order) return;
+                
+                const timeline = [
+                    { date: order.createdAt, event: 'Order Created', status: order.status }
+                ];
+                
+                const content = `
+                    <h3>Order Timeline: ${orderId}</h3>
+                    <div style="margin-top: 1rem;">
+                        ${timeline.map(t => `
+                            <div style="border-left: 3px solid var(--primary); padding-left: 1rem; margin-bottom: 1rem;">
+                                <div style="font-weight: bold;">${t.event}</div>
+                                <div style="color: var(--text-gray);">${new Date(t.date).toLocaleString()}</div>
+                                <div>Status: ${t.status}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                this.showModal('Order History', content);
+            },
+
+            // ============ UI HELPERS ============
+            renderTable(containerId, columns, data, actions) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                
+                if (data.length === 0) {
+                    container.innerHTML = `<table class="table"><tbody><tr><td colspan="${columns.length + 1}" class="text-center">No data available</td></tr></tbody></table>`;
+                    return;
+                }
+                
+                const html = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                ${columns.map(col => `<th>${col.label}</th>`).join('')}
+                                ${actions ? '<th>Actions</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.map(row => `
+                                <tr>
+                                    ${columns.map(col => `<td>${col.render ? col.render(row) : row[col.key]}</td>`).join('')}
+                                    ${actions ? `<td>${actions(row)}</td>` : ''}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                
+                container.innerHTML = html;
+            },
+
+            showModal(title, content) {
+                const existing = document.getElementById('dynamicModal');
+                if (existing) existing.remove();
+                
+                const modal = Utils.elem('div', { id: 'dynamicModal', class: 'modal show' }, [
+                    Utils.elem('div', { class: 'modal-content' }, [
+                        Utils.elem('button', { 
+                            class: 'modal-close', 
+                            onclick: () => this.closeModal() 
+                        }, ['×']),
+                        Utils.elem('h2', {}, [title]),
+                        Utils.elem('div', { innerHTML: content })
+                    ])
+                ]);
+                
+                document.getElementById('modalsContainer').appendChild(modal);
+            },
+
+            closeModal() {
+                const modal = document.getElementById('dynamicModal');
+                if (modal) modal.remove();
+            },
+
+            showToast(message, type = 'success', actions = []) {
+                const toast = Utils.elem('div', { class: `toast show ${type === 'error' ? 'error' : ''}` }, [
+                    Utils.elem('div', {}, [message]),
+                    actions.length > 0 ? Utils.elem('div', { class: 'toast-actions' }, 
+                        actions.map(a => Utils.elem('button', { class: 'toast-btn', onclick: a.handler }, [a.label]))
+                    ) : null
+                ].filter(Boolean));
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            },
+
+            showLoading(message) {
+                const loading = Utils.elem('div', { class: 'loading' }, [
+                    Utils.elem('div', {}, [message]),
+                    Utils.elem('div', { class: 'spinner' })
+                ]);
+                document.body.appendChild(loading);
+                return loading;
+            },
+
+            hideLoading(loading) {
+                if (loading) loading.remove();
+            },
+
+            // ============ NAVIGATION ============
+            switchTab(tabName) {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+                
+                this.currentTab = tabName;
+                
+                // Render tab content
+                setTimeout(() => {
+                    if (tabName === 'dashboard') this.renderDashboard();
+                    else if (tabName === 'inventory') this.renderInventory();
+                    else if (tabName === 'customers') this.renderCustomers();
+                    else if (tabName === 'calendar') this.renderCalendarTab();
+                    else if (tabName === 'history') this.renderHistory();
+                    else if (tabName === 'analytics') this.renderAnalytics();
+                    else if (tabName === 'settings') this.renderSettings();
+                    else if (tabName === 'orders') this.initItemSearch();
+                }, 50);
+            },
+
+            // ============ TAB RENDERERS ============
+            renderDashboard() {
+                const stats = [
+                    { label: 'Total Orders', value: this.data.orders.length, class: '' },
+                    { label: 'Confirmed', value: this.data.orders.filter(o => o.status === 'Confirmed').length, class: 'success' },
+                    { label: 'Completed', value: this.data.orders.filter(o => o.status === 'Completed').length, class: 'info' },
+                    { label: 'Customers', value: this.data.customers.length, class: '' },
+                    { label: 'Low Stock', value: this.data.inventory.items.filter(i => i.quantity <= this.data.settings.lowStockThreshold).length, class: 'warning' },
+                    { label: 'Today', value: this.data.orders.filter(o => o.date === Utils.toDateString(new Date())).length, class: 'danger' }
+                ];
+                
+                document.getElementById('dashboardStats').innerHTML = stats.map(s => `
+                    <div class="stat-card ${s.class}">
+                        <div class="stat-value">${s.value}</div>
+                        <div class="stat-label">${s.label}</div>
+                    </div>
+                `).join('');
+                
+                const recentOrders = this.data.orders.slice(-5).reverse();
+                this.renderTable('recentOrdersContainer', [
+                    { key: 'orderId', label: 'Order ID', render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
+                    { key: 'clientName', label: 'Client' },
+                    { key: 'eventType', label: 'Event', render: o => o.eventType || 'N/A' },
+                    { key: 'date', label: 'Date', render: o => Utils.formatDate(o.date) },
+                    { key: 'status', label: 'Status', render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span>` }
+                ], recentOrders, (row) => `
+                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.orderId}">View</button>
+                    <button class="btn btn-success btn-small" data-action="print" data-id="${row.orderId}">Print</button>
+                `);
+                
+                // Top customer
+                if (this.data.customers.length > 0) {
+                    const top = this.data.customers.reduce((prev, curr) => 
+                        (prev.totalOrders > curr.totalOrders) ? prev : curr
+                    );
+                    document.getElementById('topCustomerInfo').innerHTML = `
+                        <div style="background: var(--light); padding: 1rem; border-radius: var(--radius);">
+                            <strong>${top.name}</strong><br>
+                            ${top.contact}<br>
+                            <strong>${top.totalOrders} orders</strong>
+                        </div>
+                    `;
+                }
+            },
+
+            renderInventory() {
+                const container = document.getElementById('inventory');
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📦 Inventory Management</h2>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-warning" onclick="OMS.batchUpdateInventory()">⚡ Batch Update</button>
+                        </div>
+                        <div class="card">
+                            <h3>Categories</h3>
+                            <div class="form-row">
+                                <input type="text" id="categoryName" class="form-input" placeholder="Category name">
+                                <button class="btn btn-primary" onclick="OMS.addCategory()">Add</button>
+                            </div>
+                            <div id="categoriesContainer"></div>
+                        </div>
+                        <div class="card">
+                            <h3>Items</h3>
+                            <div class="form-row">
+                                <select id="itemCategory" class="form-select"></select>
+                                <input type="text" id="itemName" class="form-input" placeholder="Item name">
+                                <input type="number" id="itemQuantity" class="form-input" placeholder="Quantity" min="0">
+                                <button class="btn btn-primary" onclick="OMS.addItem()">Add</button>
+                            </div>
+                            <div id="itemsContainer"></div>
+                        </div>
+                    </div>
+                `;
+                
+                this.updateInventoryDisplay();
+            },
+
+            updateInventoryDisplay() {
+                // Populate category dropdown
+                const select = document.getElementById('itemCategory');
+                if (select) {
+                    select.innerHTML = '<option value="">Select category</option>' +
+                        this.data.inventory.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                }
+                
+                // Render categories table
+                this.renderTable('categoriesContainer', [
+                    { key: 'name', label: 'Category' },
+                    { key: 'id', label: 'Items', render: c => this.data.inventory.items.filter(i => i.categoryId === c.id).length }
+                ], this.data.inventory.categories, (row) => `
+                    <button class="btn btn-danger btn-small" data-action="delete" data-type="category" data-id="${row.id}">Delete</button>
+                `);
+                
+                // Render items table
+                this.renderTable('itemsContainer', [
+                    { key: 'name', label: 'Item' },
+                    { key: 'categoryId', label: 'Category', render: i => this.data.inventory.categories.find(c => c.id === i.categoryId)?.name || 'N/A' },
+                    { key: 'quantity', label: 'Stock' }
+                ], this.data.inventory.items, (row) => `
+                    <button class="btn btn-danger btn-small" data-action="delete" data-type="item" data-id="${row.id}">Delete</button>
+                `);
+            },
+
+            addCategory() {
+                const name = Utils.get('categoryName');
+                if (!name) return;
+                
+                this.createItem('category', {
+                    id: Utils.generateId(),
+                    name: name,
+                    createdAt: new Date().toISOString()
+                });
+                
+                Utils.set('categoryName', '');
+                this.saveToStorage();
+                this.updateInventoryDisplay();
+                this.showToast('Category added!');
+            },
+
+            addItem() {
+                const categoryId = Utils.get('itemCategory');
+                const name = Utils.get('itemName');
+                const quantity = parseInt(Utils.get('itemQuantity')) || 0;
+                
+                if (!categoryId || !name) {
+                    this.showToast('Select category and enter name', 'error');
+                    return;
+                }
+                
+                this.createItem('item', {
+                    id: Utils.generateId(),
+                    categoryId: categoryId,
+                    name: name,
+                    quantity: quantity,
+                    createdAt: new Date().toISOString()
+                });
+                
+                Utils.set('itemName', '');
+                Utils.set('itemQuantity', '');
+                this.saveToStorage();
+                this.updateInventoryDisplay();
+                this.showToast('Item added!');
+            },
+
+            renderCustomers() {
+                const container = document.getElementById('customers');
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">👥 Customer Database</h2>
+                        </div>
+                        <div class="form-row">
+                            <input type="text" id="customerSearch" class="form-input" placeholder="Search customers...">
+                            <button class="btn btn-primary" onclick="OMS.refreshCustomerDatabase()">🔄 Refresh</button>
+                        </div>
+                        <div id="customersContainer"></div>
+                    </div>
+                `;
+                
+                this.renderTable('customersContainer', [
+                    { key: 'name', label: 'Name' },
+                    { key: 'contact', label: 'Contact' },
+                    { key: 'totalOrders', label: 'Orders' },
+                    { key: 'lastOrderDate', label: 'Last Order', render: c => Utils.formatDate(c.lastOrderDate) }
+                ], this.data.customers, (row) => `
+                    <button class="btn btn-secondary btn-small" onclick="OMS.viewCustomerOrders('${row.id}')">Orders</button>
+                    <button class="btn btn-primary btn-small" onclick="OMS.createOrderForCustomer('${row.id}')">New Order</button>
+                `);
+            },
+
+            refreshCustomerDatabase() {
+                // Rebuild customer database from orders
+                this.data.customers = [];
+                this.data.orders.forEach(order => {
+                    this.updateCustomerDatabase(order);
+                });
+                this.saveToStorage();
+                this.renderCustomers();
+                this.showToast('Customer database refreshed!');
+            },
+
+            viewCustomerOrders(customerId) {
+                const customer = this.data.customers.find(c => c.id === customerId);
+                if (!customer) return;
+                
+                this.switchTab('history');
+                // Filter logic would go here
+            },
+
+            createOrderForCustomer(customerId) {
+                const customer = this.data.customers.find(c => c.id === customerId);
+                if (!customer) return;
+                
+                this.switchTab('orders');
+                Utils.set('clientName', customer.name);
+                Utils.set('contact', customer.contact);
+                if (customer.lastVenue) Utils.set('venue', customer.lastVenue);
+            },
+
+            renderCalendarTab() {
+                document.getElementById('calendar').innerHTML = this.renderCalendar(this.currentCalendarDate || new Date());
+            },
+
+            renderHistory() {
+                const container = document.getElementById('history');
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📚 Order History</h2>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-success" data-action="exportData">📥 Export</button>
+                        </div>
+                        <div id="historyContainer"></div>
+                    </div>
+                `;
+                
+                this.renderTable('historyContainer', [
+                    { key: 'orderId', label: 'Order ID', render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
+                    { key: 'clientName', label: 'Client' },
+                    { key: 'venue', label: 'Venue' },
+                    { key: 'date', label: 'Date', render: o => Utils.formatDate(o.date) },
+                    { key: 'status', label: 'Status', render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span>` }
+                ], this.data.orders, (row) => `
+                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.orderId}">Edit</button>
+                    <button class="btn btn-success btn-small" data-action="print" data-id="${row.orderId}">Print</button>
+                    <button class="btn btn-danger btn-small" data-action="delete" data-type="order" data-id="${row.orderId}">Delete</button>
+                `);
+            },
+
+            renderAnalytics() {
+                const container = document.getElementById('analytics');
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📈 Business Analytics</h2>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value">${this.data.orders.length}</div>
+                                <div class="stat-label">Total Orders</div>
+                            </div>
+                            <div class="stat-card success">
+                                <div class="stat-value">${this.data.customers.filter(c => c.totalOrders > 1).length}</div>
+                                <div class="stat-label">Repeat Customers</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderSettings() {
+                const container = document.getElementById('settings');
+                const s = this.data.settings;
+                const ts = s.tableSettings;
+                const colors = s.printColors;
+                
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">⚙️ System Settings</h2>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>📋 Table Layout Settings</h3>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Sr.No Column Width: <span id="srWidthValue">${ts.columnWidthSr}%</span></label>
+                                    <input type="range" id="columnWidthSr" class="form-input" min="5" max="25" value="${ts.columnWidthSr}" 
+                                           oninput="document.getElementById('srWidthValue').textContent = this.value + '%'">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Item Name Width: <span id="itemWidthValue">${ts.columnWidthItem}%</span></label>
+                                    <input type="range" id="columnWidthItem" class="form-input" min="15" max="60" value="${ts.columnWidthItem}" 
+                                           oninput="document.getElementById('itemWidthValue').textContent = this.value + '%'">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Quantity Width: <span id="qtyWidthValue">${ts.columnWidthQty}%</span></label>
+                                    <input type="range" id="columnWidthQty" class="form-input" min="5" max="30" value="${ts.columnWidthQty}" 
+                                           oninput="document.getElementById('qtyWidthValue').textContent = this.value + '%'">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Remarks Width: <span id="remarksWidthValue">${ts.columnWidthRemarks}%</span></label>
+                                    <input type="range" id="columnWidthRemarks" class="form-input" min="15" max="60" value="${ts.columnWidthRemarks}" 
+                                           oninput="document.getElementById('remarksWidthValue').textContent = this.value + '%'">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Left Margin (filing): <span id="leftMarginValue">${ts.leftMargin}mm</span></label>
+                                    <input type="range" id="leftMargin" class="form-input" min="30" max="100" value="${ts.leftMargin}" 
+                                           oninput="document.getElementById('leftMarginValue').textContent = this.value + 'mm'">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>🎨 Color Customization</h3>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Header Background</label>
+                                    <input type="color" id="printHeaderBg" class="form-input" value="${colors.headerBg}" style="height: 50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Header Text</label>
+                                    <input type="color" id="printHeaderText" class="form-input" value="${colors.headerText}" style="height: 50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Order ID Background</label>
+                                    <input type="color" id="printOrderIdBg" class="form-input" value="${colors.orderIdBg || '#667eea'}" style="height: 50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Order ID Text</label>
+                                    <input type="color" id="printOrderIdText" class="form-input" value="${colors.orderIdText || '#ffffff'}" style="height: 50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Table Header Background</label>
+                                    <input type="color" id="printTableHeaderBg" class="form-input" value="${colors.tableHeaderBg}" style="height: 50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Table Header Text</label>
+                                    <input type="color" id="printTableHeaderText" class="form-input" value="${colors.tableHeaderText}" style="height: 50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Table Border</label>
+                                    <input type="color" id="printTableBorder" class="form-input" value="${colors.tableBorder}" style="height: 50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Notes Background</label>
+                                    <input type="color" id="printNotesBg" class="form-input" value="${colors.notesBg}" style="height: 50px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>🖨️ Print Settings</h3>
+                            <div class="form-group">
+                                <label class="form-label">Default Font Size: <span id="fontSizeValue">${s.printFontSize}px</span></label>
+                                <input type="range" id="printFontSize" class="form-input" min="16" max="80" value="${s.printFontSize}" 
+                                       oninput="document.getElementById('fontSizeValue').textContent = this.value + 'px'">
+                                <small style="color: var(--text-gray);">Note: Multi-order images use smart auto-sizing</small>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>🔧 System Preferences</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Default Order Status</label>
+                                    <select id="defaultOrderStatus" class="form-select">
+                                        <option value="Confirmed" ${s.defaultOrderStatus === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
+                                        <option value="Completed" ${s.defaultOrderStatus === 'Completed' ? 'selected' : ''}>Completed</option>
+                                        <option value="Cancelled" ${s.defaultOrderStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Low Stock Threshold</label>
+                                    <input type="number" id="lowStockThreshold" class="form-input" value="${s.lowStockThreshold}" min="1">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Language</label>
+                                    <select id="appLanguage" class="form-select">
+                                        <option value="en" ${s.language === 'en' ? 'selected' : ''}>English</option>
+                                        <option value="gu" ${s.language === 'gu' ? 'selected' : ''}>ગુજરાતી</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Invoice Number Format</label>
+                                    <select id="invoiceFormat" class="form-select">
+                                        <option value="FP" ${s.invoicePrefix === 'FP' ? 'selected' : ''}>FP001</option>
+                                        <option value="ORD" ${s.invoicePrefix === 'ORD' ? 'selected' : ''}>ORD001</option>
+                                        <option value="INV" ${s.invoicePrefix === 'INV' ? 'selected' : ''}>INV001</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="OMS.saveSettings()">💾 Save All Settings</button>
+                            <button class="btn btn-secondary" onclick="OMS.resetSettings()">🔄 Reset to Defaults</button>
+                        </div>
+
+                        <div class="card">
+                            <h3>📊 Data Management</h3>
+                            <div class="btn-group">
+                                <button class="btn btn-info" data-action="exportData">📤 Export JSON</button>
+                                <button class="btn btn-success" onclick="OMS.exportData('csv')">📊 Export CSV</button>
+                                <button class="btn btn-warning" data-action="importData">📥 Import Backup</button>
+                                <button class="btn btn-danger" onclick="OMS.resetAllData()">🗑️ Reset All Data</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            saveSettings() {
+                // Save table settings
+                this.data.settings.tableSettings = {
+                    columnWidthSr: parseInt(Utils.get('columnWidthSr')) || 8,
+                    columnWidthItem: parseInt(Utils.get('columnWidthItem')) || 40,
+                    columnWidthQty: parseInt(Utils.get('columnWidthQty')) || 12,
+                    columnWidthRemarks: parseInt(Utils.get('columnWidthRemarks')) || 40,
+                    leftMargin: parseInt(Utils.get('leftMargin')) || 50
+                };
+
+                // Save colors
+                this.data.settings.printColors = {
+                    headerBg: Utils.get('printHeaderBg') || '#667eea',
+                    headerText: Utils.get('printHeaderText') || '#ffffff',
+                    orderIdBg: Utils.get('printOrderIdBg') || '#667eea',
+                    orderIdText: Utils.get('printOrderIdText') || '#ffffff',
+                    tableHeaderBg: Utils.get('printTableHeaderBg') || '#f8f9fa',
+                    tableHeaderText: Utils.get('printTableHeaderText') || '#333333',
+                    tableBorder: Utils.get('printTableBorder') || '#333333',
+                    notesBg: Utils.get('printNotesBg') || '#f9f9f9'
+                };
+
+                // Save other settings
+                this.data.settings.printFontSize = parseInt(Utils.get('printFontSize')) || 32;
+                this.data.settings.defaultOrderStatus = Utils.get('defaultOrderStatus') || 'Confirmed';
+                this.data.settings.lowStockThreshold = parseInt(Utils.get('lowStockThreshold')) || 5;
+                this.data.settings.language = Utils.get('appLanguage') || 'en';
+                this.data.settings.invoicePrefix = Utils.get('invoiceFormat') || 'FP';
+                
+                this.saveToStorage();
+                this.refreshOrderId();
+                this.showToast('All settings saved successfully!');
+            },
+
+            resetAllData() {
+                if (!confirm('⚠️ This will delete ALL data permanently. Are you absolutely sure?')) return;
+                if (!confirm('Last chance! This action CANNOT be undone. Confirm data reset?')) return;
+                
+                localStorage.removeItem('oms_data');
+                this.showToast('Data reset! Reloading...');
+                setTimeout(() => location.reload(), 1000);
+            },
+
+            resetSettings() {
+                if (!confirm('Reset all settings?')) return;
+                
+                this.data.settings = {
+                    printFontSize: 32,
+                    orderIdCounter: this.data.settings.orderIdCounter,
+                    invoicePrefix: 'FP',
+                    lowStockThreshold: 5,
+                    language: 'en',
+                    defaultOrderStatus: 'Confirmed',
+                    tableSettings: {
+                        columnWidthSr: 8,
+                        columnWidthItem: 40,
+                        columnWidthQty: 12,
+                        columnWidthRemarks: 40,
+                        leftMargin: 50
+                    },
+                    printColors: {
+                        headerBg: '#667eea',
+                        headerText: '#ffffff',
+                        orderIdBg: '#667eea',
+                        orderIdText: '#ffffff',
+                        tableHeaderBg: '#f8f9fa',
+                        tableHeaderText: '#333333',
+                        tableBorder: '#333333',
+                        notesBg: '#f9f9f9'
+                    }
+                };
+                
+                this.saveToStorage();
+                this.renderSettings();
+                this.showToast('Settings reset!');
+            },
+
+            // ============ ITEM SEARCH ============
+            initItemSearch() {
+                const itemSearch = document.getElementById('itemSearch');
+                const dropdown = document.getElementById('itemSearchDropdown');
+                
+                if (!itemSearch || !dropdown) return;
+
+                itemSearch.addEventListener('input', Utils.debounce((e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    
+                    if (query.length > 0) {
+                        const items = this.data.inventory.items.filter(i => 
+                            i.name.toLowerCase().includes(query)
+                        );
+                        
+                        if (items.length > 0) {
+                            dropdown.innerHTML = items.map(i => `
+                                <div class="search-item" onclick="OMS.addItemToOrder('${i.id}')">
+                                    <span>${i.name}</span>
+                                    <span>${i.quantity} in stock</span>
+                                </div>
+                            `).join('');
+                            dropdown.classList.add('show');
+                        } else {
+                            dropdown.classList.remove('show');
+                        }
+                    } else {
+                        dropdown.classList.remove('show');
+                    }
+                }, 300));
+            },
+
+            addItemToOrder(itemId) {
+                const item = this.data.inventory.items.find(i => i.id === itemId);
+                if (!item) return;
+                
+                const existing = this.currentOrderItems.find(oi => oi.itemId === itemId);
+                if (existing) {
+                    existing.quantity++;
+                } else {
+                    this.currentOrderItems.push({
+                        itemId: itemId,
+                        name: item.name,
+                        quantity: 1,
+                        remarks: ''
+                    });
+                }
+                
+                this.updateOrderItemsTable();
+                document.getElementById('itemSearchDropdown').classList.remove('show');
+                Utils.set('itemSearch', '');
+            },
+
+            updateOrderItemsTable() {
+                const container = document.getElementById('orderItemsContainer');
+                if (!container) return;
+                
+                if (this.currentOrderItems.length === 0) {
+                    container.innerHTML = '<table class="table"><tbody><tr><td colspan="5" class="text-center">No items added</td></tr></tbody></table>';
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            ${this.currentOrderItems.map((item, i) => `
+                                <tr>
+                                    <td>${i + 1}</td>
+                                    <td>${item.name}</td>
+                                    <td>
+                                        <div class="quantity-controls">
+                                            <button class="quantity-btn" onclick="OMS.adjustItemQty(${i}, -1)">-</button>
+                                            <input type="number" value="${item.quantity}" onchange="OMS.setItemQty(${i}, this.value)" 
+                                                   style="width: 60px; text-align: center;" min="1">
+                                            <button class="quantity-btn" onclick="OMS.adjustItemQty(${i}, 1)">+</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-input" value="${item.remarks || ''}" 
+                                               onchange="OMS.setItemRemarks(${i}, this.value)" placeholder="Remarks">
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger btn-small" onclick="OMS.removeOrderItem(${i})">🗑️</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            },
+
+            adjustItemQty(index, delta) {
+                const item = this.currentOrderItems[index];
+                if (item) {
+                    item.quantity = Math.max(1, item.quantity + delta);
+                    this.updateOrderItemsTable();
+                }
+            },
+
+            setItemQty(index, qty) {
+                const item = this.currentOrderItems[index];
+                if (item) {
+                    item.quantity = Math.max(1, parseInt(qty) || 1);
+                }
+            },
+
+            setItemRemarks(index, remarks) {
+                const item = this.currentOrderItems[index];
+                if (item) {
+                    item.remarks = remarks;
+                }
+            },
+
+            removeOrderItem(index) {
+                this.currentOrderItems.splice(index, 1);
+                this.updateOrderItemsTable();
+            },
+
+            // ============ STORAGE ============
+            saveToStorage() {
+                try {
+                    localStorage.setItem('oms_data', JSON.stringify(this.data));
+                    return true;
+                } catch (error) {
+                    this.showToast('Storage error: ' + error.message, 'error');
+                    return false;
+                }
+            },
+
+            loadFromStorage() {
+                try {
+                    const saved = localStorage.getItem('oms_data');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        this.data = {
+                            orders: parsed.orders || [],
+                            customers: parsed.customers || [],
+                            inventory: parsed.inventory || { categories: [], items: [] },
+                            tasks: parsed.tasks || [],
+                            deletedOrders: parsed.deletedOrders || [],
+                            undoStack: [],
+                            settings: { ...this.data.settings, ...parsed.settings }
+                        };
+                    }
+                } catch (error) {
+                    console.error('Load error:', error);
+                }
+            },
+
+            loadDemoData() {
+                if (this.data.orders.length === 0) {
+                    this.data.inventory.categories = [
+                        { id: 'cat-1', name: 'Sparklers', createdAt: new Date().toISOString() },
+                        { id: 'cat-2', name: 'Fountains', createdAt: new Date().toISOString() }
+                    ];
+                    
+                    this.data.inventory.items = [
+                        { id: 'item-1', categoryId: 'cat-1', name: '7 cm Electric Sparkler', quantity: 50, createdAt: new Date().toISOString() },
+                        { id: 'item-2', categoryId: 'cat-2', name: 'Golden Fountain', quantity: 5, createdAt: new Date().toISOString() }
+                    ];
+                    
+                    const demoOrder = {
+                        orderId: 'FP001',
+                        date: Utils.toDateString(new Date()),
+                        readyTime: '6:00 PM',
+                        clientName: 'Rajesh Patel',
+                        contact: '+91 98765 43210',
+                        venue: 'Rajkot Palace',
+                        eventType: 'Wedding',
+                        transport: 'Bolero',
+                        driverName: 'Ramesh',
+                        operator: 'Kiran',
+                        helper: 'Vijay',
+                        status: 'Confirmed',
+                        notes: 'Special display',
+                        items: [
+                            { itemId: 'item-1', name: '7 cm Electric Sparkler', quantity: 10, remarks: 'For entrance' }
+                        ],
+                        createdAt: new Date().toISOString()
+                    };
+                    
+                    this.data.orders.push(demoOrder);
+                    this.updateCustomerDatabase(demoOrder);
+                    this.data.settings.orderIdCounter = 2;
+                    this.saveToStorage();
+                }
+            },
+
+            updateAllDisplays() {
+                if (this.currentTab === 'dashboard') this.renderDashboard();
+                else if (this.currentTab === 'inventory') this.updateInventoryDisplay();
+                else if (this.currentTab === 'customers') this.renderCustomers();
+                else if (this.currentTab === 'calendar') this.renderCalendarTab();
+                else if (this.currentTab === 'history') this.renderHistory();
+                else if (this.currentTab === 'analytics') this.renderAnalytics();
+            }
+        };
+
+        // ============ INITIALIZATION ============
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Firebase
+            const firebaseConfig = {
+                apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
+                authDomain: "firepowersfx-2558.firebaseapp.com",
+                projectId: "firepowersfx-2558",
+                storageBucket: "firepowersfx-2558.firebasestorage.app",
+                messagingSenderId: "723483292867",
+                appId: "1:723483292867:web:d6d83a79ba87cd2dee5e76"
+            };
+
+            firebase.initializeApp(firebaseConfig);
+            window.auth = firebase.auth();
+            window.db = firebase.firestore();
+            console.log('✅ Firebase initialized successfully!');
+
+            // Check if user is logged in
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    // User is logged in
+                    console.log('✅ User logged in:', user.email);
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.querySelector('.app-container').style.display = 'flex';
+                    OMS.init();
+                } else {
+                    // User is logged out
+                    console.log('❌ User not logged in');
+                    document.getElementById('loginScreen').style.display = 'flex';
+                    document.querySelector('.app-container').style.display = 'none';
+                }
+            });
+
+            // Handle login form
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                const loginBtn = document.getElementById('loginBtn');
+                const loginError = document.getElementById('loginError');
+                
+                loginBtn.textContent = 'Logging in...';
+                loginBtn.disabled = true;
+                loginError.style.display = 'none';
+                
+                try {
+                    await auth.signInWithEmailAndPassword(email, password);
+                    console.log('✅ Login successful!');
+                } catch (error) {
+                    console.error('❌ Login error:', error);
+                    loginError.textContent = 'Invalid email or password. Please try again.';
+                    loginError.style.display = 'block';
+                    loginBtn.textContent = 'Login';
+                    loginBtn.disabled = false;
+                }
+            });
+            
+            // Setup order form
+            const form = document.getElementById('orderForm');
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                OMS.saveOrder();
+            });
+
+            // Transport custom field
+            document.getElementById('transport').addEventListener('change', (e) => {
+                const group = document.getElementById('customTransportGroup');
+                if (e.target.value === 'Other') {
+                    group.classList.remove('hidden');
+                } else {
+                    group.classList.add('hidden');
+                }
+            });
+
+            // Set initial date
+            Utils.set('orderDate', Utils.toDateString(new Date()));
+        });
+    </script>
+</body>
+</html>
