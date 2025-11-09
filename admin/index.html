@@ -2996,7 +2996,7 @@ async loadOrdersFromFirestore() {
             
             this.data.orders.push({
                 orderId: orderData.orderId || doc.id,
-                date: customer.dates || '',
+                date: Utils.convertDateFormat(customer.dates) || '',
                 readyTime: customer.timeSlot || '',
                 clientName: customer.name || '',
                 contact: customer.phone || '',
