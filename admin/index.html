@@ -2672,14 +2672,22 @@ debounce: (func, wait) => {
                         </tr>
                     </thead>
                     <tbody>
-                        ${trackingData.slice(0, 10).map(t => `
-                            <tr>
-                                <td>${new Date(t.timestamp).toLocaleString()}</td>
-                                <td><span class="status-badge">${t.type}</span></td>
-                                <td>${t.userInfo?.device || 'N/A'}</td>
-                                <td>${t.userInfo?.city || 'N/A'}, ${t.userInfo?.country || 'N/A'}</td>
-                            </tr>
-                        `).join('')}
+                        ${trackingData.slice(0, 10).map(t => {
+    const date = new Date(t.timestamp);
+    const formattedDate = date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB');
+    const formattedType = t.type.replace(/_/g, ' ').split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+    
+    return `
+        <tr>
+            <td>${formattedDate}</td>
+            <td><span class="status-badge">${formattedType}</span></td>
+            <td>${t.userInfo?.device || 'N/A'}</td>
+            <td>${t.userInfo?.city || 'N/A'}, ${t.userInfo?.country || 'N/A'}</td>
+        </tr>
+    `;
+}).join('')}
                     </tbody>
                 </table>
             </div>
