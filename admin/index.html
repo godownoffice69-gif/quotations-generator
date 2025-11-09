@@ -3008,45 +3008,43 @@ async loadOrdersFromFirestore() {
 },
 
 loadDemoData() {
-
-            loadDemoData() {
-                if (this.data.orders.length === 0) {
-                    this.data.inventory.categories = [
-                        { id: 'cat-1', name: 'Sparklers', createdAt: new Date().toISOString() },
-                        { id: 'cat-2', name: 'Fountains', createdAt: new Date().toISOString() }
-                    ];
-                    
-                    this.data.inventory.items = [
-                        { id: 'item-1', categoryId: 'cat-1', name: '7 cm Electric Sparkler', quantity: 50, createdAt: new Date().toISOString() },
-                        { id: 'item-2', categoryId: 'cat-2', name: 'Golden Fountain', quantity: 5, createdAt: new Date().toISOString() }
-                    ];
-                    
-                    const demoOrder = {
-                        orderId: 'FP001',
-                        date: Utils.toDateString(new Date()),
-                        readyTime: '6:00 PM',
-                        clientName: 'Rajesh Patel',
-                        contact: '+91 98765 43210',
-                        venue: 'Rajkot Palace',
-                        eventType: 'Wedding',
-                        transport: 'Bolero',
-                        driverName: 'Ramesh',
-                        operator: 'Kiran',
-                        helper: 'Vijay',
-                        status: 'Confirmed',
-                        notes: 'Special display',
-                        items: [
-                            { itemId: 'item-1', name: '7 cm Electric Sparkler', quantity: 10, remarks: 'For entrance' }
-                        ],
-                        createdAt: new Date().toISOString()
-                    };
-                    
-                    this.data.orders.push(demoOrder);
-                    this.updateCustomerDatabase(demoOrder);
-                    this.data.settings.orderIdCounter = 2;
-                    this.saveToStorage();
-                }
-            },
+    if (this.data.orders.length === 0) {
+        this.data.inventory.categories = [
+            { id: 'cat-1', name: 'Sparklers', createdAt: new Date().toISOString() },
+            { id: 'cat-2', name: 'Fountains', createdAt: new Date().toISOString() }
+        ];
+        
+        this.data.inventory.items = [
+            { id: 'item-1', categoryId: 'cat-1', name: '7 cm Electric Sparkler', quantity: 50, createdAt: new Date().toISOString() },
+            { id: 'item-2', categoryId: 'cat-2', name: 'Golden Fountain', quantity: 5, createdAt: new Date().toISOString() }
+        ];
+        
+        const demoOrder = {
+            orderId: 'FP001',
+            date: Utils.toDateString(new Date()),
+            readyTime: '6:00 PM',
+            clientName: 'Rajesh Patel',
+            contact: '+91 98765 43210',
+            venue: 'Rajkot Palace',
+            eventType: 'Wedding',
+            transport: 'Bolero',
+            driverName: 'Ramesh',
+            operator: 'Kiran',
+            helper: 'Vijay',
+            status: 'Confirmed',
+            notes: 'Special display',
+            items: [
+                { itemId: 'item-1', name: '7 cm Electric Sparkler', quantity: 10, remarks: 'For entrance' }
+            ],
+            createdAt: new Date().toISOString()
+        };
+        
+        this.data.orders.push(demoOrder);
+        this.updateCustomerDatabase(demoOrder);
+        this.data.settings.orderIdCounter = 2;
+        this.saveToStorage();
+    }
+},
 
             updateAllDisplays() {
                 if (this.currentTab === 'dashboard') this.renderDashboard();
