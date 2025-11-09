@@ -1018,33 +1018,33 @@
             },
 
             formatDate: (dateStr) => {
-                if (!dateStr) return 'N/A';
-                try {
-                    const date = new Date(dateStr + 'T00:00:00');
-                    return date.toLocaleDateString('en-GB');
-                } catch {
-                    return dateStr;
-                }
-            },
-            // Add this NEW function here
-    convertDateFormat: (dateStr) => {
-        if (!dateStr) return '';
-        try {
-            // Convert DD/MM/YYYY to YYYY-MM-DD
-            const parts = dateStr.split('/');
-            if (parts.length === 3) {
-                const day = parts[0].padStart(2, '0');
-                const month = parts[1].padStart(2, '0');
-                const year = parts[2];
-                return `${year}-${month}-${day}`;
-            }
-            return dateStr;
-        } catch {
-            return dateStr;
-        }
-    },
+    if (!dateStr) return 'N/A';
+    try {
+        const date = new Date(dateStr + 'T00:00:00');
+        return date.toLocaleDateString('en-GB');
+    } catch {
+        return dateStr;
+    }
+},
 
-    getLocalDate: (dateStr) => {
+convertDateFormat: (dateStr) => {
+    if (!dateStr) return '';
+    try {
+        // Convert DD/MM/YYYY to YYYY-MM-DD
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+            const day = parts[0].padStart(2, '0');
+            const month = parts[1].padStart(2, '0');
+            const year = parts[2];
+            return `${year}-${month}-${day}`;
+        }
+        return dateStr;
+    } catch {
+        return dateStr;
+    }
+},
+
+getLocalDate: (dateStr) => {
     if (!dateStr) return new Date();
     const [year, month, day] = dateStr.split('-').map(Number);
     return new Date(year, month - 1, day);
@@ -1058,15 +1058,15 @@ toDateString: (date) => {
     return `${year}-${month}-${day}`;
 },
 
-            generateId: () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+generateId: () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 
-            debounce: (func, wait) => {
-                let timeout;
-                return (...args) => {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => func.apply(this, args), wait);
-                };
-            },
+debounce: (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+},
 
             validateRequired: (fields) => {
                 const errors = [];
