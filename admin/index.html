@@ -1134,6 +1134,8 @@ debounce: (func, wait) => {
             async init() {
     await this.loadFromStorage();
     await this.loadTrackingFromFirestore();
+    this.setupRealtimeListeners();
+    this.setupEventDelegation();
                 this.setupEventDelegation();
                 this.setupKeyboardShortcuts();
                 this.setupAutoSave();
@@ -3150,6 +3152,57 @@ async loadTrackingFromFirestore() {
         console.error('❌ Error loading tracking data:', error);
         this.data.trackingData = [];
     }
+},
+
+setupRealtimeListeners() {
+    console.log('🔄 Setting up real-time listeners...');
+    
+    // Listen for new orders
+    db.collection('orders').onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added') {
+                const orderData = change.doc.data();
+                const customer = orderData.customer || {};
+                
+                // Check if order already exists
+                const exists = this.data.orders.some(o => o.orderId === orderData.orderId);
+                if (!exists) {
+                    console.log('🆕 New order detected:', orderData.orderId);
+                    
+                    const newOrder = {
+                        orderId: orderData.orderId || change.doc.id,
+                        date: Utils.convertDateFormat(customer.dates) || '',
+                        readyTime: customer.timeSlot || '',
+                        clientName: customer.name || '',
+                        contact: customer.phone || '',
+                        venue: customer.venue || '',
+                        eventType: orderData.functionType || customer.functionType || '',
+                        transport: '',
+                        driverName: '',
+                        operator: '',
+                        helper: '',
+                        status: orderData.status || 'Confirmed',
+                        notes: '',
+                        items: (orderData.items || []).map(item => ({
+                            name: item.name || '',
+                            quantity: item.qty || 0,
+                            remarks: item.desc || '',
+                            price: item.price || 0
+                        })),
+                        createdAt: orderData.createdAt || new Date().toISOString(),
+                        totalAmount: orderData.totalAmount || 0
+                    };
+                    
+                    this.data.orders.unshift(newOrder); // Add to beginning
+                    this.updateCustomerDatabase(newOrder);
+                    this.updateAllDisplays();
+                    this.showToast(`🆕 New order received: ${newOrder.orderId}!`, 'success');
+                }
+            }
+        });
+    });
+    
+    console.log('✅ Real-time listeners active');
 },
 
 loadDemoData() {
