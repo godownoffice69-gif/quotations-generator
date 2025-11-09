@@ -1080,6 +1080,7 @@ debounce: (func, wait) => {
 
         // ============ MAIN APP ============
         const OMS = {
+            initialized: false,
             realtimeListenerActive: false,
     ordersUnsubscribe: null,
             data: {
@@ -1134,6 +1135,14 @@ debounce: (func, wait) => {
             },
 
             async init() {
+                // Prevent duplicate initialization
+    if (this.initialized) {
+        console.log('⚠️ Already initialized - skipping duplicate init');
+        return;
+    }
+    
+    console.log('🚀 Initializing OMS...');
+    this.initialized = true;
     await this.loadFromStorage();
     await this.loadTrackingFromFirestore();
     this.setupRealtimeListeners();
