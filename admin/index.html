@@ -2983,7 +2983,36 @@ debounce: (func, wait) => {
         console.error('Load error:', error);
     }
 },
-async loadOrdersFromFirestore() {
+async loadOrdersFromFirestore()
+async loadTrackingFromFirestore() {
+    try {
+        console.log('📊 Loading tracking data from Firestore...');
+        
+        const trackingSnapshot = await db.collection('tracking')
+            .orderBy('timestamp', 'desc')
+            .limit(100)
+            .get();
+        
+        this.data.trackingData = [];
+        trackingSnapshot.forEach(doc => {
+            const data = doc.data();
+            this.data.trackingData.push({
+                id: doc.id,
+                sessionId: data.sessionId,
+                type: data.type,
+                timestamp: data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : data.timestamp,
+                url: data.url,
+                userInfo: data.userInfo || {}
+            });
+        });
+        
+        console.log(`✅ Loaded ${this.data.trackingData.length} tracking events`);
+        
+    } catch (error) {
+        console.error('❌ Error loading tracking data:', error);
+        this.data.trackingData = [];
+    }
+},{
     try {
         console.log('📥 Loading orders from Firestore...');
         
