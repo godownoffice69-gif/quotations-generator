@@ -1133,6 +1133,7 @@ debounce: (func, wait) => {
 
             async init() {
     await this.loadFromStorage();
+    await this.loadTrackingFromFirestore();
                 this.setupEventDelegation();
                 this.setupKeyboardShortcuts();
                 this.setupAutoSave();
