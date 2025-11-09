@@ -1115,8 +1115,8 @@
                 "2025-11-02": ["दीवाली", "Diwali"]
             },
 
-            init() {
-                this.loadFromStorage();
+            async init() {
+    await this.loadFromStorage();
                 this.setupEventDelegation();
                 this.setupKeyboardShortcuts();
                 this.setupAutoSave();
@@ -2943,25 +2943,71 @@
                 }
             },
 
-            loadFromStorage() {
-                try {
-                    const saved = localStorage.getItem('oms_data');
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        this.data = {
-                            orders: parsed.orders || [],
-                            customers: parsed.customers || [],
-                            inventory: parsed.inventory || { categories: [], items: [] },
-                            tasks: parsed.tasks || [],
-                            deletedOrders: parsed.deletedOrders || [],
-                            undoStack: [],
-                            settings: { ...this.data.settings, ...parsed.settings }
-                        };
-                    }
-                } catch (error) {
-                    console.error('Load error:', error);
-                }
-            },
+            async loadFromStorage() {
+    try {
+        // Load from localStorage for settings and inventory
+        const saved = localStorage.getItem('oms_data');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            this.data = {
+                orders: [], // Will load from Firestore
+                customers: parsed.customers || [],
+                inventory: parsed.inventory || { categories: [], items: [] },
+                tasks: parsed.tasks || [],
+                deletedOrders: parsed.deletedOrders || [],
+                undoStack: [],
+                settings: { ...this.data.settings, ...parsed.settings }
+            };
+        }
+        
+        // Load orders from Firestore
+        await this.loadOrdersFromFirestore();
+        
+    } catch (error) {
+        console.error('Load error:', error);
+    }
+},
+async loadOrdersFromFirestore() {
+    try {
+        console.log('📥 Loading orders from Firestore...');
+        
+        const ordersSnapshot = await db.collection('orders').get();
+        
+        this.data.orders = [];
+        ordersSnapshot.forEach(doc => {
+            const orderData = doc.data();
+            this.data.orders.push({
+                orderId: orderData.orderId || doc.id,
+                date: orderData.date || orderData.eventDate,
+                readyTime: orderData.readyTime || orderData.eventTime || '',
+                clientName: orderData.clientName || orderData.customerName,
+                contact: orderData.contact || orderData.phone,
+                venue: orderData.venue,
+                eventType: orderData.eventType || '',
+                transport: orderData.transport || '',
+                driverName: orderData.driverName || '',
+                operator: orderData.operator || '',
+                helper: orderData.helper || '',
+                status: orderData.status || 'Confirmed',
+                notes: orderData.notes || '',
+                items: orderData.items || [],
+                createdAt: orderData.createdAt || new Date().toISOString()
+            });
+        });
+        
+        console.log(`✅ Loaded ${this.data.orders.length} orders from Firestore`);
+        
+        // Update customer database from orders
+        this.data.orders.forEach(order => {
+            this.updateCustomerDatabase(order);
+        });
+        
+    } catch (error) {
+        console.error('❌ Error loading orders from Firestore:', error);
+    }
+}
+
+loadDemoData() {
 
             loadDemoData() {
                 if (this.data.orders.length === 0) {
@@ -3036,7 +3082,7 @@
                     console.log('✅ User logged in:', user.email);
                     document.getElementById('loginScreen').style.display = 'none';
                     document.querySelector('.app-container').style.display = 'flex';
-                    OMS.init();
+                    OMS.init().then(() => OMS.updateAllDisplays());
                 } else {
                     // User is logged out
                     console.log('❌ User not logged in');
