@@ -2587,25 +2587,105 @@ debounce: (func, wait) => {
             },
 
             renderAnalytics() {
-                const container = document.getElementById('analytics');
-                container.innerHTML = `
-                    <div class="card">
-                        <div class="card-header">
-                            <h2 class="card-title">📈 Business Analytics</h2>
-                        </div>
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-value">${this.data.orders.length}</div>
-                                <div class="stat-label">Total Orders</div>
-                            </div>
-                            <div class="stat-card success">
-                                <div class="stat-value">${this.data.customers.filter(c => c.totalOrders > 1).length}</div>
-                                <div class="stat-label">Repeat Customers</div>
-                            </div>
-                        </div>
+    const container = document.getElementById('analytics');
+    const trackingData = this.data.trackingData || [];
+    
+    // Calculate stats
+    const pageViews = trackingData.filter(t => t.type === 'page_view').length;
+    const cartActions = trackingData.filter(t => t.type === 'cart_add' || t.type === 'cart_remove').length;
+    const uniqueSessions = [...new Set(trackingData.map(t => t.sessionId))].length;
+    
+    // Get device breakdown
+    const devices = {};
+    trackingData.forEach(t => {
+        const device = t.userInfo?.device || 'unknown';
+        devices[device] = (devices[device] || 0) + 1;
+    });
+    
+    // Get location breakdown
+    const locations = {};
+    trackingData.forEach(t => {
+        const city = t.userInfo?.city || 'Unknown';
+        locations[city] = (locations[city] || 0) + 1;
+    });
+    
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📈 Business Analytics</h2>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">${this.data.orders.length}</div>
+                    <div class="stat-label">Total Orders</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value">${this.data.customers.filter(c => c.totalOrders > 1).length}</div>
+                    <div class="stat-label">Repeat Customers</div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-value">${pageViews}</div>
+                    <div class="stat-label">Page Views</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value">${uniqueSessions}</div>
+                    <div class="stat-label">Unique Visitors</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="card-title">📱 Device Breakdown</h3>
+            <div class="stats-grid">
+                ${Object.entries(devices).map(([device, count]) => `
+                    <div class="stat-card">
+                        <div class="stat-value">${count}</div>
+                        <div class="stat-label">${device.charAt(0).toUpperCase() + device.slice(1)}</div>
                     </div>
-                `;
-            },
+                `).join('')}
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="card-title">📍 Visitor Locations</h3>
+            <div class="stats-grid">
+                ${Object.entries(locations).slice(0, 6).map(([city, count]) => `
+                    <div class="stat-card">
+                        <div class="stat-value">${count}</div>
+                        <div class="stat-label">${city}</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="card-title">🕐 Recent Activity</h3>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Type</th>
+                            <th>Device</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${trackingData.slice(0, 10).map(t => `
+                            <tr>
+                                <td>${new Date(t.timestamp).toLocaleString()}</td>
+                                <td><span class="status-badge">${t.type}</span></td>
+                                <td>${t.userInfo?.device || 'N/A'}</td>
+                                <td>${t.userInfo?.city || 'N/A'}, ${t.userInfo?.country || 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
 
             renderSettings() {
                 const container = document.getElementById('settings');
