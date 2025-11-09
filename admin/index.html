@@ -1080,6 +1080,8 @@ debounce: (func, wait) => {
 
         // ============ MAIN APP ============
         const OMS = {
+            realtimeListenerActive: false,
+    ordersUnsubscribe: null,
             data: {
                 orders: [],
                 customers: [],
@@ -3249,23 +3251,36 @@ async loadTrackingFromFirestore() {
 },
 
 setupRealtimeListeners() {
-    // Prevent duplicate listeners
-    if (this.realtimeListenerActive) {
-        console.log('⚠️ Real-time listener already active, skipping...');
+    // CRITICAL: Prevent duplicate listeners
+    if (OMS.realtimeListenerActive) {
+        console.log('⚠️ Listener already active - preventing duplicate!');
         return;
     }
     
-    console.log('🔄 Setting up real-time listeners...');
-    this.realtimeListenerActive = true;
+    // Unsubscribe from any previous listener
+    if (OMS.ordersUnsubscribe) {
+        console.log('🛑 Unsubscribing from previous listener');
+        OMS.ordersUnsubscribe();
+    }
     
-    // Store unsubscribe function
-    this.ordersUnsubscribe = db.collection('orders').onSnapshot((snapshot) => {
+    console.log('🔄 Setting up real-time listener (SINGLE INSTANCE)');
+    OMS.realtimeListenerActive = true;
+    
+    // Track initial load to avoid processing existing orders as "new"
+    let isInitialLoad = true;
+    
+    OMS.ordersUnsubscribe = db.collection('orders').onSnapshot((snapshot) => {
+        if (isInitialLoad) {
+            console.log('📋 Initial snapshot received - skipping "added" events');
+            isInitialLoad = false;
+            return; // Skip processing the initial snapshot
+        }
+        
         snapshot.docChanges().forEach((change) => {
             const orderData = change.doc.data();
             const customer = orderData.customer || {};
             
             if (change.type === 'added') {
-                // Check if order already exists
                 const exists = this.data.orders.some(o => o.orderId === orderData.orderId);
                 if (!exists) {
                     console.log('🆕 New order detected:', orderData.orderId);
@@ -3334,7 +3349,7 @@ setupRealtimeListeners() {
             }
             
             if (change.type === 'removed') {
-                console.log('🗑️ Order deleted:', change.doc.id);
+                console.log('🗑️ Order removed from Firestore:', change.doc.id);
                 const index = this.data.orders.findIndex(o => o.orderId === change.doc.id);
                 if (index !== -1) {
                     const deleted = this.data.orders.splice(index, 1)[0];
@@ -3345,7 +3360,7 @@ setupRealtimeListeners() {
         });
     });
     
-    console.log('✅ Real-time listeners active');
+    console.log('✅ Real-time listener active (SINGLE INSTANCE CONFIRMED)');
 },
 
 loadDemoData() {
