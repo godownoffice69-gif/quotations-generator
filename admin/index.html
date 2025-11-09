@@ -3249,10 +3249,17 @@ async loadTrackingFromFirestore() {
 },
 
 setupRealtimeListeners() {
-    console.log('🔄 Setting up real-time listeners...');
+    // Prevent duplicate listeners
+    if (this.realtimeListenerActive) {
+        console.log('⚠️ Real-time listener already active, skipping...');
+        return;
+    }
     
-    // Listen for all order changes (add, modify, delete)
-    db.collection('orders').onSnapshot((snapshot) => {
+    console.log('🔄 Setting up real-time listeners...');
+    this.realtimeListenerActive = true;
+    
+    // Store unsubscribe function
+    this.ordersUnsubscribe = db.collection('orders').onSnapshot((snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const orderData = change.doc.data();
             const customer = orderData.customer || {};
