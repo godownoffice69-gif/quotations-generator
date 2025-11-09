@@ -2977,14 +2977,63 @@ debounce: (func, wait) => {
             };
         }
         
-        // Load orders from Firestore
+        // Load orders and tracking from Firestore
         await this.loadOrdersFromFirestore();
+        await this.loadTrackingFromFirestore();
         
     } catch (error) {
         console.error('Load error:', error);
     }
 },
-async loadOrdersFromFirestore()
+
+async loadOrdersFromFirestore() {
+    try {
+        console.log('📥 Loading orders from Firestore...');
+        
+        const ordersSnapshot = await db.collection('orders').get();
+        
+        this.data.orders = [];
+        ordersSnapshot.forEach(doc => {
+            const orderData = doc.data();
+            const customer = orderData.customer || {};
+            
+            this.data.orders.push({
+                orderId: orderData.orderId || doc.id,
+                date: Utils.convertDateFormat(customer.dates) || '',
+                readyTime: customer.timeSlot || '',
+                clientName: customer.name || '',
+                contact: customer.phone || '',
+                venue: customer.venue || '',
+                eventType: orderData.functionType || customer.functionType || '',
+                transport: '',
+                driverName: '',
+                operator: '',
+                helper: '',
+                status: orderData.status || 'Confirmed',
+                notes: '',
+                items: (orderData.items || []).map(item => ({
+                    name: item.name || '',
+                    quantity: item.qty || 0,
+                    remarks: item.desc || '',
+                    price: item.price || 0
+                })),
+                createdAt: orderData.createdAt || new Date().toISOString(),
+                totalAmount: orderData.totalAmount || 0
+            });
+        });
+        
+        console.log(`✅ Loaded ${this.data.orders.length} orders from Firestore`);
+        
+        // Update customer database from orders
+        this.data.orders.forEach(order => {
+            this.updateCustomerDatabase(order);
+        });
+        
+    } catch (error) {
+        console.error('❌ Error loading orders from Firestore:', error);
+    }
+},
+
 async loadTrackingFromFirestore() {
     try {
         console.log('📊 Loading tracking data from Firestore...');
@@ -3013,7 +3062,7 @@ async loadTrackingFromFirestore() {
         console.error('❌ Error loading tracking data:', error);
         this.data.trackingData = [];
     }
-},{
+},
     try {
         console.log('📥 Loading orders from Firestore...');
         
