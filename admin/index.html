@@ -1370,78 +1370,124 @@ debounce: (func, wait) => {
                 return handlers[type]?.() || false;
             },
 
-            updateItem(type, id, newData) {
-                const handlers = {
-                    order: () => {
-                        const index = this.data.orders.findIndex(o => o.orderId === id);
-                        if (index === -1) return false;
-                        
-                        this.addToUndoStack('update', 'order', this.data.orders[index]);
-                        this.data.orders[index] = newData;
-                        this.updateCustomerDatabase(newData);
-                        return true;
+            async updateItem(type, id, newData) {
+    const handlers = {
+        order: async () => {
+            const index = this.data.orders.findIndex(o => o.orderId === id);
+            if (index === -1) return false;
+            
+            try {
+                this.addToUndoStack('update', 'order', this.data.orders[index]);
+                this.data.orders[index] = newData;
+                this.updateCustomerDatabase(newData);
+                
+                // Update in Firestore
+                const firestoreData = {
+                    orderId: newData.orderId,
+                    customer: {
+                        name: newData.clientName,
+                        phone: newData.contact,
+                        venue: newData.venue,
+                        dates: this.convertToQuotationDateFormat(newData.date),
+                        timeSlot: newData.readyTime,
+                        functionType: newData.eventType,
+                        location: ''
                     },
-                    task: () => {
-                        const index = this.data.tasks.findIndex(t => t.id === id);
-                        if (index === -1) return false;
-                        this.data.tasks[index] = { ...this.data.tasks[index], ...newData };
-                        return true;
-                    }
+                    functionType: newData.eventType,
+                    items: newData.items.map(item => ({
+                        name: item.name,
+                        qty: item.quantity,
+                        desc: item.remarks || '',
+                        price: item.price || 0
+                    })),
+                    itemCount: newData.items.length,
+                    totalAmount: newData.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0),
+                    status: newData.status.toLowerCase(),
+                    source: 'admin_panel',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 };
-                return handlers[type]?.() || false;
-            },
+                
+                await db.collection('orders').doc(id).set(firestoreData, { merge: true });
+                console.log('✏️ Order updated in Firestore:', id);
+                
+                return true;
+            } catch (error) {
+                console.error('Error updating Firestore:', error);
+                this.showToast('Error updating order', 'error');
+                return false;
+            }
+        },
+        task: () => {
+            const index = this.data.tasks.findIndex(t => t.id === id);
+            if (index === -1) return false;
+            this.data.tasks[index] = { ...this.data.tasks[index], ...newData };
+            return true;
+        }
+    };
+    return await handlers[type]?.() || false;
+},
 
-            deleteItem(type, id) {
-                const confirmations = {
-                    order: 'Delete this order?',
-                    category: 'Delete category and all items?',
-                    item: 'Delete this item?',
-                    task: 'Delete this task?'
-                };
-
-                if (!confirm(confirmations[type])) return false;
-
-                const handlers = {
-                    order: () => {
-                        const index = this.data.orders.findIndex(o => o.orderId === id);
-                        if (index === -1) return false;
-                        
-                        const deleted = this.data.orders.splice(index, 1)[0];
-                        this.addToUndoStack('delete', 'order', deleted);
-                        this.data.deletedOrders.push({
-                            ...deleted,
-                            deletedAt: new Date().toISOString(),
-                            deleteReason: 'Manual deletion'
-                        });
-                        return true;
-                    },
-                    category: () => {
-                        this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
-                        this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
-                        return true;
-                    },
-                    item: () => {
-                        this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
-                        return true;
-                    },
-                    task: () => {
-                        const index = this.data.tasks.findIndex(t => t.id === id);
-                        if (index === -1) return false;
-                        const deleted = this.data.tasks.splice(index, 1)[0];
-                        this.addToUndoStack('delete', 'task', deleted);
-                        return true;
-                    }
-                };
-
-                const success = handlers[type]?.() || false;
-                if (success) {
-                    this.saveToStorage();
-                    this.updateAllDisplays();
-                    this.showToast(`${type} deleted successfully`);
-                    this.showUndoBar(`${type} deleted`);
-                }
-                return success;
-            },
+            async deleteItem(type, id) {
+    const confirmations = {
+        order: 'Delete this order?',
+        category: 'Delete category and all items?',
+        item: 'Delete this item?',
+        task: 'Delete this task?'
+    };
+    
+    if (!confirm(confirmations[type])) return false;
+    
+    const handlers = {
+        order: async () => {
+            const index = this.data.orders.findIndex(o => o.orderId === id);
+            if (index === -1) return false;
+            
+            try {
+                // Delete from Firestore
+                await db.collection('orders').doc(id).delete();
+                console.log('🗑️ Order deleted from Firestore:', id);
+                
+                const deleted = this.data.orders.splice(index, 1)[0];
+                this.addToUndoStack('delete', 'order', deleted);
+                this.data.deletedOrders.push({
+                    ...deleted,
+                    deletedAt: new Date().toISOString(),
+                    deleteReason: 'Manual deletion'
+                });
+                return true;
+            } catch (error) {
+                console.error('Error deleting from Firestore:', error);
+                this.showToast('Error deleting order', 'error');
+                return false;
+            }
+        },
+        category: () => {
+            this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
+            this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
+            return true;
+        },
+        item: () => {
+            this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
+            return true;
+        },
+        task: () => {
+            const index = this.data.tasks.findIndex(t => t.id === id);
+            if (index === -1) return false;
+            const deleted = this.data.tasks.splice(index, 1)[0];
+            this.addToUndoStack('delete', 'task', deleted);
+            return true;
+        }
+    };
+    
+    const success = await handlers[type]?.() || false;
+    if (success) {
+        this.saveToStorage();
+        this.updateAllDisplays();
+        this.showToast(`${type} deleted successfully`);
+        this.showUndoBar(`${type} deleted`);
+    }
+    return success;
+},
 
             editItem(type, id) {
                 const handlers = {
@@ -1556,30 +1602,78 @@ debounce: (func, wait) => {
                 };
             },
 
-            saveOrder() {
-                const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
-                if (errors.length > 0) {
-                    this.showToast('Please fill all required fields', 'error');
-                    return;
-                }
-
-                const orderData = this.collectFormData();
-                const existingIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
-
-                if (existingIndex !== -1) {
-                    this.updateItem('order', orderData.orderId, orderData);
-                    this.showToast('Order updated!');
-                } else {
-                    if (this.createItem('order', orderData)) {
-                        this.showToast('Order saved!');
-                        this.refreshOrderId();
-                    }
-                }
-
-                this.saveToStorage();
-                this.updateAllDisplays();
-                localStorage.removeItem('oms_draft');
+            async saveOrder() {
+    const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
+    if (errors.length > 0) {
+        this.showToast('Please fill all required fields', 'error');
+        return;
+    }
+    
+    const orderData = this.collectFormData();
+    const existingIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
+    
+    try {
+        // Convert admin format to quotation format for Firestore
+        const firestoreData = {
+            orderId: orderData.orderId,
+            customer: {
+                name: orderData.clientName,
+                phone: orderData.contact,
+                venue: orderData.venue,
+                dates: this.convertToQuotationDateFormat(orderData.date),
+                timeSlot: orderData.readyTime,
+                functionType: orderData.eventType,
+                location: ''
             },
+            functionType: orderData.eventType,
+            items: orderData.items.map(item => ({
+                name: item.name,
+                qty: item.quantity,
+                desc: item.remarks || '',
+                price: item.price || 0
+            })),
+            itemCount: orderData.items.length,
+            totalAmount: orderData.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0),
+            status: orderData.status.toLowerCase(),
+            source: 'admin_panel',
+            createdAt: orderData.createdAt || new Date().toISOString(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        if (existingIndex !== -1) {
+            // Update existing order
+            await db.collection('orders').doc(orderData.orderId).set(firestoreData, { merge: true });
+            this.data.orders[existingIndex] = orderData;
+            this.showToast('Order updated in Firestore!');
+        } else {
+            // Create new order
+            await db.collection('orders').doc(orderData.orderId).set(firestoreData);
+            this.data.orders.push(orderData);
+            this.updateCustomerDatabase(orderData);
+            this.incrementOrderCounter();
+            this.showToast('Order saved to Firestore!');
+            this.refreshOrderId();
+        }
+        
+        this.saveToStorage();
+        this.updateAllDisplays();
+        localStorage.removeItem('oms_draft');
+        
+    } catch (error) {
+        console.error('Error saving to Firestore:', error);
+        this.showToast('Error saving order: ' + error.message, 'error');
+    }
+},
+
+convertToQuotationDateFormat(dateStr) {
+    // Convert YYYY-MM-DD to DD/MM/YYYY
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+},
 
             loadOrderToForm(order) {
                 Object.entries({
@@ -3157,13 +3251,13 @@ async loadTrackingFromFirestore() {
 setupRealtimeListeners() {
     console.log('🔄 Setting up real-time listeners...');
     
-    // Listen for new orders
+    // Listen for all order changes (add, modify, delete)
     db.collection('orders').onSnapshot((snapshot) => {
         snapshot.docChanges().forEach((change) => {
+            const orderData = change.doc.data();
+            const customer = orderData.customer || {};
+            
             if (change.type === 'added') {
-                const orderData = change.doc.data();
-                const customer = orderData.customer || {};
-                
                 // Check if order already exists
                 const exists = this.data.orders.some(o => o.orderId === orderData.orderId);
                 if (!exists) {
@@ -3193,10 +3287,52 @@ setupRealtimeListeners() {
                         totalAmount: orderData.totalAmount || 0
                     };
                     
-                    this.data.orders.unshift(newOrder); // Add to beginning
+                    this.data.orders.unshift(newOrder);
                     this.updateCustomerDatabase(newOrder);
                     this.updateAllDisplays();
-                    this.showToast(`🆕 New order received: ${newOrder.orderId}!`, 'success');
+                    this.showToast(`🆕 New order: ${newOrder.orderId}`, 'success');
+                }
+            }
+            
+            if (change.type === 'modified') {
+                console.log('✏️ Order modified:', orderData.orderId);
+                const index = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
+                if (index !== -1) {
+                    this.data.orders[index] = {
+                        orderId: orderData.orderId || change.doc.id,
+                        date: Utils.convertDateFormat(customer.dates) || '',
+                        readyTime: customer.timeSlot || '',
+                        clientName: customer.name || '',
+                        contact: customer.phone || '',
+                        venue: customer.venue || '',
+                        eventType: orderData.functionType || customer.functionType || '',
+                        transport: '',
+                        driverName: '',
+                        operator: '',
+                        helper: '',
+                        status: orderData.status || 'Confirmed',
+                        notes: '',
+                        items: (orderData.items || []).map(item => ({
+                            name: item.name || '',
+                            quantity: item.qty || 0,
+                            remarks: item.desc || '',
+                            price: item.price || 0
+                        })),
+                        createdAt: orderData.createdAt || new Date().toISOString(),
+                        totalAmount: orderData.totalAmount || 0
+                    };
+                    this.updateAllDisplays();
+                    this.showToast(`✏️ Order updated: ${orderData.orderId}`, 'success');
+                }
+            }
+            
+            if (change.type === 'removed') {
+                console.log('🗑️ Order deleted:', change.doc.id);
+                const index = this.data.orders.findIndex(o => o.orderId === change.doc.id);
+                if (index !== -1) {
+                    const deleted = this.data.orders.splice(index, 1)[0];
+                    this.updateAllDisplays();
+                    this.showToast(`🗑️ Order deleted: ${deleted.orderId}`, 'success');
                 }
             }
         });
