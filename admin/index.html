@@ -1436,7 +1436,7 @@ debounce: (func, wait) => {
     };
 },
 
-           async deleteItem(type, id) {
+async deleteItem(type, id) {
     const confirmations = {
         order: 'Delete this order?',
         category: 'Delete category and all items?',
@@ -1490,39 +1490,6 @@ debounce: (func, wait) => {
         }
     };
     
-    // Call handler and await if it's async
-    let success = false;
-    if (handlers[type]) {
-        success = await handlers[type]();
-    }
-    
-    if (success) {
-        this.saveToStorage();
-        this.updateAllDisplays();
-        this.showToast(`${type} deleted successfully`);
-        this.showUndoBar(`${type} deleted`);
-    }
-    return success;
-},
-        category: () => {
-            this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
-            this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
-            return true;
-        },
-        item: () => {
-            this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
-            return true;
-        },
-        task: () => {
-            const index = this.data.tasks.findIndex(t => t.id === id);
-            if (index === -1) return false;
-            const deleted = this.data.tasks.splice(index, 1)[0];
-            this.addToUndoStack('delete', 'task', deleted);
-            return true;
-        }
-    };
-    
-    // Call handler and await if it's async
     let success = false;
     if (handlers[type]) {
         success = await handlers[type]();
