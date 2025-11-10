@@ -1388,6 +1388,9 @@ async updateItem(type, id, newData) {
         const snapshot = await db.collection('orders')
             .where('orderId', '==', id)
             .get();
+            console.log('🔥 Deleting orderId:', id);
+console.log('Firestore snapshot size:', snapshot.size);
+snapshot.forEach(doc => console.log('Found Firestore doc ID:', doc.id));
 
         if (snapshot.empty) {
             console.warn('No Firestore doc found for', id);
