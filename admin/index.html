@@ -1453,23 +1453,25 @@ debounce: (func, wait) => {
             if (index === -1) return false;
             
             try {
-                // Delete from Firestore
-                await db.collection('orders').doc(id).delete();
-                console.log('🗑️ Order deleted from Firestore:', id);
-                
-                const deleted = this.data.orders.splice(index, 1)[0];
-                this.addToUndoStack('delete', 'order', deleted);
-                this.data.deletedOrders.push({
-                    ...deleted,
-                    deletedAt: new Date().toISOString(),
-                    deleteReason: 'Manual deletion'
-                });
-                return true;
-            } catch (error) {
-                console.error('Error deleting from Firestore:', error);
-                this.showToast('Error deleting order', 'error');
-                return false;
-            }
+    console.log('🔄 Attempting to delete from Firestore:', id);
+    await db.collection('orders').doc(id).delete();
+    console.log('✅ Successfully deleted from Firestore:', id);
+    
+    const deleted = this.data.orders.splice(index, 1)[0];
+    this.addToUndoStack('delete', 'order', deleted);
+    this.data.deletedOrders.push({
+        ...deleted,
+        deletedAt: new Date().toISOString(),
+        deleteReason: 'Manual deletion'
+    });
+    return true;
+} catch (error) {
+    console.error('❌ FIRESTORE DELETE ERROR:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    this.showToast('Delete failed: ' + error.message, 'error');
+    return false;
+}
         },
         category: () => {
             this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
