@@ -3528,7 +3528,38 @@ loadDemoData() {
                 else if (this.currentTab === 'calendar') this.renderCalendarTab();
                 else if (this.currentTab === 'history') this.renderHistory();
                 else if (this.currentTab === 'analytics') this.renderAnalytics();
-            }
+            },
+             // Get next order ID from Firestore counter
+    async getNextOrderIdFromFirestore() {
+        try {
+            const counterRef = db.collection('counters').doc('orderCounter');
+            
+            const newOrderId = await db.runTransaction(async (transaction) => {
+                const counterDoc = await transaction.get(counterRef);
+                
+                if (!counterDoc.exists) {
+                    transaction.set(counterRef, { currentNumber: 1 });
+                    return 'FP0001';
+                }
+                
+                const currentNumber = counterDoc.data().currentNumber || 0;
+                const nextNumber = currentNumber + 1;
+                
+                transaction.update(counterRef, { currentNumber: nextNumber });
+                
+                const prefix = this.data.settings.invoicePrefix || 'FP';
+                return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+            });
+            
+            console.log('✅ Generated order ID from Firestore:', newOrderId);
+            return newOrderId;
+            
+        } catch (error) {
+            console.error('❌ Error getting order ID:', error);
+            return this.getNextOrderId();
+        }
+    }
+};
         };
 
         // ============ INITIALIZATION ============
