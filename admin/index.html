@@ -1437,7 +1437,7 @@ debounce: (func, wait) => {
     return await handlers[type]?.() || false;
 },
 
-            async deleteItem(type, id) {
+           async deleteItem(type, id) {
     const confirmations = {
         order: 'Delete this order?',
         category: 'Delete category and all items?',
@@ -1453,26 +1453,53 @@ debounce: (func, wait) => {
             if (index === -1) return false;
             
             try {
-    console.log('🔄 Attempting to delete from Firestore:', id);
-    await db.collection('orders').doc(id).delete();
-    console.log('✅ Successfully deleted from Firestore:', id);
-    
-    const deleted = this.data.orders.splice(index, 1)[0];
-    this.addToUndoStack('delete', 'order', deleted);
-    this.data.deletedOrders.push({
-        ...deleted,
-        deletedAt: new Date().toISOString(),
-        deleteReason: 'Manual deletion'
-    });
-    return true;
-} catch (error) {
-    console.error('❌ FIRESTORE DELETE ERROR:', error);
-    console.error('Error code:', error.code);
-    console.error('Error message:', error.message);
-    this.showToast('Delete failed: ' + error.message, 'error');
-    return false;
-}
+                console.log('🔄 Attempting to delete from Firestore:', id);
+                await db.collection('orders').doc(id).delete();
+                console.log('✅ Successfully deleted from Firestore:', id);
+                
+                const deleted = this.data.orders.splice(index, 1)[0];
+                this.addToUndoStack('delete', 'order', deleted);
+                this.data.deletedOrders.push({
+                    ...deleted,
+                    deletedAt: new Date().toISOString(),
+                    deleteReason: 'Manual deletion'
+                });
+                return true;
+            } catch (error) {
+                console.error('❌ FIRESTORE DELETE ERROR:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                this.showToast('Delete failed: ' + error.message, 'error');
+                return false;
+            }
         },
+        category: () => {
+            this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
+            this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
+            return true;
+        },
+        item: () => {
+            this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
+            return true;
+        },
+        task: () => {
+            const index = this.data.tasks.findIndex(t => t.id === id);
+            if (index === -1) return false;
+            const deleted = this.data.tasks.splice(index, 1)[0];
+            this.addToUndoStack('delete', 'task', deleted);
+            return true;
+        }
+    };
+    
+    const success = await handlers[type]?.() || false;  // ← ADD await HERE!
+    if (success) {
+        this.saveToStorage();
+        this.updateAllDisplays();
+        this.showToast(`${type} deleted successfully`);
+        this.showUndoBar(`${type} deleted`);
+    }
+    return success;
+},
         category: () => {
             this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
             this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
