@@ -1435,6 +1435,72 @@ debounce: (func, wait) => {
         }
     };
 },
+// ============ DELETE ITEM ============
+async deleteItem(type, id) {
+    const confirmations = {
+        order: 'Delete this order?',
+        category: 'Delete category and all items?',
+        item: 'Delete this item?',
+        task: 'Delete this task?'
+    };
+
+    if (!confirm(confirmations[type] || 'Delete this item?')) return false;
+
+    const handlers = {
+        order: async () => {
+            const index = this.data.orders.findIndex(o => o.orderId === id);
+            if (index === -1) return false;
+            try {
+                if (typeof db !== 'undefined' && db?.collection) {
+                    await db.collection('orders').doc(id).delete();
+                }
+                const deleted = this.data.orders.splice(index, 1)[0];
+                this.addToUndoStack('delete', 'order', deleted);
+                this.data.deletedOrders.push({
+                    ...deleted,
+                    deletedAt: new Date().toISOString(),
+                    deleteReason: 'Manual deletion'
+                });
+                return true;
+            } catch (error) {
+                console.error('Error deleting Firestore order:', error);
+                this.showToast('Delete failed: ' + error.message, 'error');
+                return false;
+            }
+        },
+
+        category: () => {
+            this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
+            this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
+            return true;
+        },
+
+        item: () => {
+            this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
+            return true;
+        },
+
+        task: () => {
+            const index = this.data.tasks.findIndex(t => t.id === id);
+            if (index === -1) return false;
+            const deleted = this.data.tasks.splice(index, 1)[0];
+            this.addToUndoStack('delete', 'task', deleted);
+            return true;
+        }
+    };
+
+    let success = false;
+    if (handlers[type]) success = await handlers[type]();
+
+    if (success) {
+        this.saveToStorage();
+        this.updateAllDisplays();
+        this.showToast(`${type} deleted successfully`);
+        this.showUndoBar(`${type} deleted`);
+    }
+
+    return success;
+},
 
 
 async editItem(type, id) {
