@@ -1446,23 +1446,21 @@ async deleteItem(type, id) {
     if (!confirm(confirmations[type] || 'Delete this item?')) return false;
 
     const handlers = {
-        order: async () => {
+order: async () => {
     const index = this.data.orders.findIndex(o => o.orderId === id);
     if (index === -1) return false;
     
     try {
         console.log('🔄 Attempting to delete orderId:', id);
         
-        // Find document by orderId field (not doc.id)
+        // CRITICAL: Search by orderId FIELD, not doc ID
         const snapshot = await db.collection('orders')
             .where('orderId', '==', id)
             .get();
         
-        console.log('📊 Found', snapshot.size, 'document(s) with orderId:', id);
+        console.log('📊 Found', snapshot.size, 'document(s)');
         
-        if (snapshot.empty) {
-            console.warn('⚠️ No Firestore document found for orderId:', id);
-        } else {
+        if (!snapshot.empty) {
             // Delete all matching documents
             const batch = db.batch();
             snapshot.forEach(doc => {
@@ -1470,7 +1468,7 @@ async deleteItem(type, id) {
                 batch.delete(doc.ref);
             });
             await batch.commit();
-            console.log('✅ Successfully deleted from Firestore');
+            console.log('✅ Deleted from Firestore');
         }
         
         // Delete from local array
