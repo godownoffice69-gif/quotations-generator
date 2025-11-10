@@ -1447,27 +1447,48 @@ async deleteItem(type, id) {
 
     const handlers = {
         order: async () => {
-            const index = this.data.orders.findIndex(o => o.orderId === id);
-            if (index === -1) return false;
-            try {
-                if (typeof db !== 'undefined' && db?.collection) {
-                    await db.collection('orders').doc(id).delete();
-                }
-                const deleted = this.data.orders.splice(index, 1)[0];
-                this.addToUndoStack('delete', 'order', deleted);
-                this.data.deletedOrders.push({
-                    ...deleted,
-                    deletedAt: new Date().toISOString(),
-                    deleteReason: 'Manual deletion'
-                });
-                return true;
-            } catch (error) {
-                console.error('🔥 Firestore delete error details:', error);
-                console.error('Error deleting Firestore order:', error);
-                this.showToast('Delete failed: ' + error.message, 'error');
-                return false;
-            }
-        },
+    const index = this.data.orders.findIndex(o => o.orderId === id);
+    if (index === -1) return false;
+    
+    try {
+        console.log('🔄 Attempting to delete orderId:', id);
+        
+        // Find document by orderId field (not doc.id)
+        const snapshot = await db.collection('orders')
+            .where('orderId', '==', id)
+            .get();
+        
+        console.log('📊 Found', snapshot.size, 'document(s) with orderId:', id);
+        
+        if (snapshot.empty) {
+            console.warn('⚠️ No Firestore document found for orderId:', id);
+        } else {
+            // Delete all matching documents
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                console.log('🗑️ Deleting Firestore doc ID:', doc.id);
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            console.log('✅ Successfully deleted from Firestore');
+        }
+        
+        // Delete from local array
+        const deleted = this.data.orders.splice(index, 1)[0];
+        this.addToUndoStack('delete', 'order', deleted);
+        this.data.deletedOrders.push({
+            ...deleted,
+            deletedAt: new Date().toISOString(),
+            deleteReason: 'Manual deletion'
+        });
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Delete error:', error);
+        this.showToast('Delete failed: ' + error.message, 'error');
+        return false;
+    }
+},
 
         category: () => {
             this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
