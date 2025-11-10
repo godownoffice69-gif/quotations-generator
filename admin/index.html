@@ -1434,7 +1434,6 @@ debounce: (func, wait) => {
             return true;
         }
     };
-    return await handlers[type]?.() || false;
 },
 
            async deleteItem(type, id) {
@@ -1522,8 +1521,6 @@ debounce: (func, wait) => {
             return true;
         }
     };
-    
-    const success = await handlers[type]?.() || false;
     if (success) {
         this.saveToStorage();
         this.updateAllDisplays();
