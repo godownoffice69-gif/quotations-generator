@@ -1167,18 +1167,18 @@ debounce: (func, wait) => {
 
                     e.preventDefault();
                     const handlers = {
-                        'preview': () => this.previewOrder(),
-                        'duplicate': () => this.duplicateLastOrder(),
-                        'sameDay': () => this.downloadSameDayOrders(),
-                        'clear': () => this.clearForm(),
-                        'edit': () => this.editItem(type, id),
-                        'delete': () => this.deleteItem(type, id),
-                        'print': () => this.downloadOrderImage(id),
-                        'quickAction': () => this.showQuickMenu(e.target, id),
-                        'undo': () => this.undo(),
-                        'exportData': () => this.exportData(),
-                        'importData': () => this.importData()
-                    };
+    'preview': () => OMS.previewOrder(),
+    'duplicate': () => OMS.duplicateLastOrder(),
+    'sameDay': () => OMS.downloadSameDayOrders(),
+    'clear': () => OMS.clearForm(),
+    'edit': () => OMS.editItem(type, id),
+    'delete': () => OMS.deleteItem(type, id),
+    'print': () => OMS.downloadOrderImage(id),
+    'quickAction': () => OMS.showQuickMenu(e.target, id),
+    'undo': () => OMS.undo(),
+    'exportData': () => OMS.exportData(),
+    'importData': () => OMS.importData()
+};
 
                     handlers[action]?.();
                 });
