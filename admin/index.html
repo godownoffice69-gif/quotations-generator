@@ -1462,6 +1462,7 @@ async deleteItem(type, id) {
                 });
                 return true;
             } catch (error) {
+                console.error('🔥 Firestore delete error details:', error);
                 console.error('Error deleting Firestore order:', error);
                 this.showToast('Delete failed: ' + error.message, 'error');
                 return false;
@@ -3504,4 +3505,3 @@ loadDemoData() {
     </script>
 </body>
 </html>
-                            
