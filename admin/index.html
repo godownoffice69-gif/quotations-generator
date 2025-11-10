@@ -1380,7 +1380,7 @@ debounce: (func, wait) => {
                 return handlers[type]?.() || false;
             },
 
-            async updateItem(type, id, newData) {
+async updateItem(type, id, newData) {
     const handlers = {
         order: async () => {
             const index = this.data.orders.findIndex(o => o.orderId === id);
@@ -1614,7 +1614,7 @@ async editItem(type, id) {
                     items: [...this.currentOrderItems],
                     createdAt: new Date().toISOString()
                 };
-            },
+},
 
             async saveOrder() {
     const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
