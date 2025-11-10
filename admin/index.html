@@ -1432,6 +1432,10 @@ snapshot.forEach(doc => console.log('Found Firestore doc ID:', doc.id));
 },
 // ============ DELETE ITEM ============
 async deleteItem(type, id) {
+    console.log('🧩 deleteItem CALLED');
+    console.log('type:', type);
+    console.log('id:', id);
+
     const confirmations = {
         order: 'Delete this order?',
         category: 'Delete category and all items?',
@@ -3500,3 +3504,4 @@ loadDemoData() {
     </script>
 </body>
 </html>
+                            
