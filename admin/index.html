@@ -1635,7 +1635,7 @@ async editItem(type, id) {
                 };
 },
 
-            async saveOrder() {
+async saveOrder() {
     const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
     if (errors.length > 0) {
         this.showToast('Please fill all required fields', 'error');
@@ -1643,9 +1643,15 @@ async editItem(type, id) {
     }
     
     const orderData = this.collectFormData();
-    const existingIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
     
     try {
+        console.log('💾 Saving order:', orderData.orderId);
+        
+        // Check if order already exists in Firestore BY ORDERID FIELD
+        const existingSnapshot = await db.collection('orders')
+            .where('orderId', '==', orderData.orderId)
+            .get();
+        
         // Convert admin format to quotation format for Firestore
         const firestoreData = {
             orderId: orderData.orderId,
@@ -1673,18 +1679,35 @@ async editItem(type, id) {
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        if (existingIndex !== -1) {
-            // Update existing order
-            await db.collection('orders').doc(orderData.orderId).set(firestoreData, { merge: true });
-            this.data.orders[existingIndex] = orderData;
-            this.showToast('Order updated in Firestore!');
+        if (!existingSnapshot.empty) {
+            // UPDATE existing order
+            const docId = existingSnapshot.docs[0].id;
+            console.log('✏️ Updating existing order, Firestore doc ID:', docId);
+            
+            await db.collection('orders').doc(docId).update(firestoreData);
+            
+            // Update in local array
+            const localIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
+            if (localIndex !== -1) {
+                this.data.orders[localIndex] = orderData;
+            }
+            
+            this.showToast('Order updated in Firestore! ✏️');
         } else {
-            // Create new order
+            // CREATE new order
+            console.log('🆕 Creating new order');
+            
             await db.collection('orders').doc(orderData.orderId).set(firestoreData);
-            this.data.orders.push(orderData);
-            this.updateCustomerDatabase(orderData);
-            this.incrementOrderCounter();
-            this.showToast('Order saved to Firestore!');
+            
+            // Add to local array only if not already there
+            const localExists = this.data.orders.some(o => o.orderId === orderData.orderId);
+            if (!localExists) {
+                this.data.orders.push(orderData);
+                this.updateCustomerDatabase(orderData);
+                this.incrementOrderCounter();
+            }
+            
+            this.showToast('Order saved to Firestore! 🆕');
             this.refreshOrderId();
         }
         
@@ -3347,37 +3370,68 @@ setupRealtimeListeners() {
                 }
             }
             
-            if (change.type === 'modified') {
-                console.log('✏️ Order modified:', orderData.orderId);
-                const index = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
-                if (index !== -1) {
-                    this.data.orders[index] = {
-                        orderId: orderData.orderId || change.doc.id,
-                        date: Utils.convertDateFormat(customer.dates) || '',
-                        readyTime: customer.timeSlot || '',
-                        clientName: customer.name || '',
-                        contact: customer.phone || '',
-                        venue: customer.venue || '',
-                        eventType: orderData.functionType || customer.functionType || '',
-                        transport: '',
-                        driverName: '',
-                        operator: '',
-                        helper: '',
-                        status: orderData.status || 'Confirmed',
-                        notes: '',
-                        items: (orderData.items || []).map(item => ({
-                            name: item.name || '',
-                            quantity: item.qty || 0,
-                            remarks: item.desc || '',
-                            price: item.price || 0
-                        })),
-                        createdAt: orderData.createdAt || new Date().toISOString(),
-                        totalAmount: orderData.totalAmount || 0
-                    };
-                    this.updateAllDisplays();
-                    this.showToast(`✏️ Order updated: ${orderData.orderId}`, 'success');
-                }
-            }
+if (change.type === 'modified') {
+    console.log('✏️ Order modified:', orderData.orderId);
+    const index = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
+    
+    if (index !== -1) {
+        // Update existing order
+        this.data.orders[index] = {
+            orderId: orderData.orderId || change.doc.id,
+            date: Utils.convertDateFormat(customer.dates) || '',
+            readyTime: customer.timeSlot || '',
+            clientName: customer.name || '',
+            contact: customer.phone || '',
+            venue: customer.venue || '',
+            eventType: orderData.functionType || customer.functionType || '',
+            transport: '',
+            driverName: '',
+            operator: '',
+            helper: '',
+            status: orderData.status || 'Confirmed',
+            notes: '',
+            items: (orderData.items || []).map(item => ({
+                name: item.name || '',
+                quantity: item.qty || 0,
+                remarks: item.desc || '',
+                price: item.price || 0
+            })),
+            createdAt: orderData.createdAt || new Date().toISOString(),
+            totalAmount: orderData.totalAmount || 0
+        };
+        
+        this.updateAllDisplays();
+        this.showToast(`✏️ Order updated: ${orderData.orderId}`, 'success');
+    } else {
+        console.warn('⚠️ Modified order not found locally, adding it');
+        // Add it as new if somehow missing
+        const newOrder = {
+            orderId: orderData.orderId || change.doc.id,
+            date: Utils.convertDateFormat(customer.dates) || '',
+            readyTime: customer.timeSlot || '',
+            clientName: customer.name || '',
+            contact: customer.phone || '',
+            venue: customer.venue || '',
+            eventType: orderData.functionType || customer.functionType || '',
+            transport: '',
+            driverName: '',
+            operator: '',
+            helper: '',
+            status: orderData.status || 'Confirmed',
+            notes: '',
+            items: (orderData.items || []).map(item => ({
+                name: item.name || '',
+                quantity: item.qty || 0,
+                remarks: item.desc || '',
+                price: item.price || 0
+            })),
+            createdAt: orderData.createdAt || new Date().toISOString(),
+            totalAmount: orderData.totalAmount || 0
+        };
+        this.data.orders.push(newOrder);
+        this.updateAllDisplays();
+    }
+}
             
             if (change.type === 'removed') {
                 console.log('🗑️ Order removed from Firestore:', change.doc.id);
