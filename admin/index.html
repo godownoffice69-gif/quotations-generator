@@ -1134,7 +1134,7 @@ debounce: (func, wait) => {
                 "2025-11-02": ["दीवाली", "Diwali"]
             },
 
-            async init() {
+async init() {
                 // Prevent duplicate initialization
     if (this.initialized) {
         console.log('⚠️ Already initialized - skipping duplicate init');
@@ -1179,6 +1179,41 @@ debounce: (func, wait) => {
     'exportData': () => OMS.exportData(),
     'importData': () => OMS.importData()
 };
+// Get next order ID from Firestore counter
+async getNextOrderIdFromFirestore() {
+    try {
+        const counterRef = db.collection('counters').doc('orderCounter');
+        
+        // Use transaction to prevent race conditions
+        const newOrderId = await db.runTransaction(async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            
+            if (!counterDoc.exists) {
+                // Create counter if doesn't exist
+                transaction.set(counterRef, { currentNumber: 1 });
+                return 'FP0001';
+            }
+            
+            const currentNumber = counterDoc.data().currentNumber || 0;
+            const nextNumber = currentNumber + 1;
+            
+            // Update counter
+            transaction.update(counterRef, { currentNumber: nextNumber });
+            
+            // Format: FP0001, FP0002, etc.
+            const prefix = this.data.settings.invoicePrefix || 'FP';
+            return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+        });
+        
+        console.log('✅ Generated order ID from Firestore:', newOrderId);
+        return newOrderId;
+        
+    } catch (error) {
+        console.error('❌ Error getting order ID:', error);
+        // Fallback to local counter
+        return this.getNextOrderId();
+    }
+},
 
                     handlers[action]?.();
                 });
@@ -1597,11 +1632,11 @@ async editItem(type, id) {
                 }
             },
 
-            refreshOrderId() {
-                const nextId = this.getNextOrderId();
-                Utils.set('orderId', nextId);
-                document.getElementById('currentOrderId').textContent = `Next: ${nextId}`;
-            },
+            async refreshOrderId() {
+    const nextId = await this.getNextOrderIdFromFirestore();
+    Utils.set('orderId', nextId);
+    document.getElementById('currentOrderId').textContent = `Next: ${nextId}`;
+},
 
             getNextOrderId() {
                 const prefix = this.data.settings.invoicePrefix || 'FP';
@@ -1704,7 +1739,6 @@ async saveOrder() {
             if (!localExists) {
                 this.data.orders.push(orderData);
                 this.updateCustomerDatabase(orderData);
-                this.incrementOrderCounter();
             }
             
             this.showToast('Order saved to Firestore! 🆕');
