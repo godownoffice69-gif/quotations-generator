@@ -1383,50 +1383,42 @@ debounce: (func, wait) => {
 async updateItem(type, id, newData) {
     const handlers = {
         order: async () => {
-            const index = this.data.orders.findIndex(o => o.orderId === id);
-            if (index === -1) return false;
-            
-            try {
-                this.addToUndoStack('update', 'order', this.data.orders[index]);
-                this.data.orders[index] = newData;
-                this.updateCustomerDatabase(newData);
-                
-                // Update in Firestore
-                const firestoreData = {
-                    orderId: newData.orderId,
-                    customer: {
-                        name: newData.clientName,
-                        phone: newData.contact,
-                        venue: newData.venue,
-                        dates: this.convertToQuotationDateFormat(newData.date),
-                        timeSlot: newData.readyTime,
-                        functionType: newData.eventType,
-                        location: ''
-                    },
-                    functionType: newData.eventType,
-                    items: newData.items.map(item => ({
-                        name: item.name,
-                        qty: item.quantity,
-                        desc: item.remarks || '',
-                        price: item.price || 0
-                    })),
-                    itemCount: newData.items.length,
-                    totalAmount: newData.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0),
-                    status: newData.status.toLowerCase(),
-                    source: 'admin_panel',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                };
-                
-                await db.collection('orders').doc(id).set(firestoreData, { merge: true });
-                console.log('✏️ Order updated in Firestore:', id);
-                
-                return true;
-            } catch (error) {
-                console.error('Error updating Firestore:', error);
-                this.showToast('Error updating order', 'error');
-                return false;
-            }
-        },
+    try {
+        // Find the document by orderId field (instead of doc(id))
+        const snapshot = await db.collection('orders')
+            .where('orderId', '==', id)
+            .get();
+
+        if (snapshot.empty) {
+            console.warn('No Firestore doc found for', id);
+            return false;
+        }
+
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        console.log(`🔥 Deleted ${snapshot.size} Firestore doc(s) for orderId ${id}`);
+
+        // Local delete
+        const index = this.data.orders.findIndex(o => o.orderId === id);
+        if (index !== -1) {
+            const deleted = this.data.orders.splice(index, 1)[0];
+            this.addToUndoStack('delete', 'order', deleted);
+            this.data.deletedOrders.push({
+                ...deleted,
+                deletedAt: new Date().toISOString(),
+                deleteReason: 'Manual deletion'
+            });
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error deleting Firestore order:', error);
+        this.showToast('Delete failed: ' + error.message, 'error');
+        return false;
+    }
+},
+
         task: () => {
             const index = this.data.tasks.findIndex(t => t.id === id);
             if (index === -1) return false;
