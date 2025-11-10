@@ -1537,7 +1537,7 @@ debounce: (func, wait) => {
     return success;
 },
 
-editItem(type, id) {
+async editItem(type, id) {
                 const handlers = {
                     order: () => {
                         const order = this.data.orders.find(o => o.orderId === id);
