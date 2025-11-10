@@ -1491,7 +1491,12 @@ debounce: (func, wait) => {
         }
     };
     
-    const success = await handlers[type]?.() || false;  // ← ADD await HERE!
+    // Call handler and await if it's async
+    let success = false;
+    if (handlers[type]) {
+        success = await handlers[type]();
+    }
+    
     if (success) {
         this.saveToStorage();
         this.updateAllDisplays();
