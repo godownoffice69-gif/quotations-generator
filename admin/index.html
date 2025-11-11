@@ -1433,6 +1433,7 @@ snapshot.forEach(doc => console.log('Found Firestore doc ID:', doc.id));
 },
 // ============ DELETE ITEM ============
 async deleteItem(type, id) {
+    console.log('Auth user during delete:', firebase.auth().currentUser?.email || 'none');
     console.log('🧩 deleteItem CALLED');
     console.log('type:', type);
     console.log('id:', id);
