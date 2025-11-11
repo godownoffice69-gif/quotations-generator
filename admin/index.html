@@ -3498,7 +3498,7 @@ loadDemoData() {
     },
 
     // Get next order ID from Firestore counter
-    async getNextOrderIdFromFirestore() {
+async getNextOrderIdFromFirestore() {
         try {
             const counterRef = db.collection('counters').doc('orderCounter');
             
