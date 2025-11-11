@@ -1179,41 +1179,7 @@ async init() {
     'exportData': () => OMS.exportData(),
     'importData': () => OMS.importData()
 };
-// Get next order ID from Firestore counter
-    async getNextOrderIdFromFirestore() {
-    try {
-        const counterRef = db.collection('counters').doc('orderCounter');
-        
-        // Use transaction to prevent race conditions
-        const newOrderId = await db.runTransaction(async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            
-            if (!counterDoc.exists) {
-                // Create counter if doesn't exist
-                transaction.set(counterRef, { currentNumber: 1 });
-                return 'FP0001';
-            }
-            
-            const currentNumber = counterDoc.data().currentNumber || 0;
-            const nextNumber = currentNumber + 1;
-            
-            // Update counter
-            transaction.update(counterRef, { currentNumber: nextNumber });
-            
-            // Format: FP0001, FP0002, etc.
-            const prefix = this.data.settings.invoicePrefix || 'FP';
-            return `${prefix}${String(nextNumber).padStart(4, '0')}`;
-        });
-        
-        console.log('✅ Generated order ID from Firestore:', newOrderId);
-        return newOrderId;
-        
-    } catch (error) {
-        console.error('❌ Error getting order ID:', error);
-        // Fallback to local counter
-        return this.getNextOrderId();
-    }
-},
+
 
                     handlers[action]?.();
                 });
@@ -3528,8 +3494,10 @@ loadDemoData() {
                 else if (this.currentTab === 'calendar') this.renderCalendarTab();
                 else if (this.currentTab === 'history') this.renderHistory();
                 else if (this.currentTab === 'analytics') this.renderAnalytics();
-            },
-             // Get next order ID from Firestore counter
+            }
+    },
+
+    // Get next order ID from Firestore counter
     async getNextOrderIdFromFirestore() {
         try {
             const counterRef = db.collection('counters').doc('orderCounter');
