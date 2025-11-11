@@ -3492,15 +3492,14 @@ loadDemoData() {
                 else if (this.currentTab === 'inventory') this.updateInventoryDisplay();
                 else if (this.currentTab === 'customers') this.renderCustomers();
                 else if (this.currentTab === 'calendar') this.renderCalendarTab();
-                else if (this.currentTab === 'history') this.renderHistory();
-                else if (this.currentTab === 'analytics') this.renderAnalytics();
-            }
-},
+else if (this.currentTab === 'history') this.renderHistory();
+            else if (this.currentTab === 'analytics') this.renderAnalytics();
+        }
+    },
 
     // Get next order ID from Firestore counter
-async getNextOrderIdFromFirestore() {
-        try {
-            const counterRef = db.collection('counters').doc('orderCounter');
+    async getNextOrderIdFromFirestore() {
+        try {     const counterRef = db.collection('counters').doc('orderCounter');
             
             const newOrderId = await db.runTransaction(async (transaction) => {
                 const counterDoc = await transaction.get(counterRef);
