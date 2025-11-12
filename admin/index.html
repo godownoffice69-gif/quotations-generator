@@ -1727,7 +1727,7 @@ async saveOrder() {
                 console.error('❌ Error saving to Firestore (create):', error);
                 this.showToast('Error saving order: ' + error.message, 'error');
             }
-        }
+        },
 
     } catch (error) {
         console.error('❌ Error saving to Firestore (outer):', error);
@@ -1742,9 +1742,7 @@ convertToQuotationDateFormat(dateStr) {
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
     return dateStr;
-}
-
-
+},
 
             loadOrderToForm(order) {
                 Object.entries({
