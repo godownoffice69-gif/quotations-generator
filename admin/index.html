@@ -1717,28 +1717,25 @@ try {
     }
 
     this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
-this.refreshOrderId();
+    this.refreshOrderId();
 
-this.saveToStorage();
-this.updateAllDisplays();
-localStorage.removeItem('oms_draft');
+    this.saveToStorage();
+    this.updateAllDisplays();
+    localStorage.removeItem('oms_draft');
 
 } catch (error) {
     console.error('❌ Error saving to Firestore:', error);
     this.showToast('Error saving order: ' + error.message, 'error');
-}
-}  // ✅ keep this one to close your outer function properly
+}, // <-- comma closes this method inside an object (important!)
 
 convertToQuotationDateFormat(dateStr) {  
-    // Convert YYYY-MM-DD to DD/MM/YYYY
     if (!dateStr) return '';
     const parts = dateStr.split('-');
     if (parts.length === 3) {
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
     return dateStr;
-}
-
+},
 
 
             loadOrderToForm(order) {
