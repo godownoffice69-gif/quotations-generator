@@ -167,6 +167,7 @@ from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         console.log('order.orderId before saving:', order.orderId);
         console.log('typeof order.orderId =', typeof order.orderId);
         console.log('order object keys:', Object.keys(order));
+        console.log('db value before saving:', db);
 
         await setDoc(doc(db, 'orders', orderData.orderId), {
     ...orderData,
