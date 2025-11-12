@@ -1718,18 +1718,13 @@ async saveOrder() {
 
                 this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
                 this.refreshOrderId();
-
                 this.saveToStorage();
                 this.updateAllDisplays();
                 localStorage.removeItem('oms_draft');
-
-            } catch (error) {
-                console.error('❌ Error saving to Firestore:', error);
-                this.showToast('Error saving order: ' + error.message, 'error');
-            }
         }
+
     } catch (error) {
-        console.error('❌ Error saving to Firestore (outer):', error);
+        console.error('❌ Error saving to Firestore:', error);
         this.showToast('Error saving order: ' + error.message, 'error');
     }
 },
