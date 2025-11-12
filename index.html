@@ -169,7 +169,12 @@ from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         console.log('order object keys:', Object.keys(order));
         console.log('db value before saving:', db);
 
-        await setDoc(doc(db, 'orders', orderData.orderId), {
+        const ordersCol = collection(db, 'orders');
+console.log('ordersCol check:', ordersCol);
+const orderRef = doc(ordersCol, order.orderId);
+console.log('orderRef path:', orderRef.path);
+await setDoc(orderRef, {
+
     ...orderData,
     createdAt: serverTimestamp()
 });
