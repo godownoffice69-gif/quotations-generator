@@ -1431,26 +1431,6 @@ snapshot.forEach(doc => console.log('Found Firestore doc ID:', doc.id));
         }
     };
 },
-// 🔢 Generate next FP order ID using Firestore transaction
-async function generateNextOrderId() {
-    const counterRef = db.collection('counters').doc('orderCounter');
-    let newNumber;
-
-    await runTransaction(db, async (transaction) => {
-        const counterDoc = await transaction.get(counterRef);
-        if (!counterDoc.exists) {
-            throw new Error('Counter document missing!');
-        }
-
-        const current = counterDoc.data().currentNumber || 0;
-        newNumber = current + 1;
-        transaction.update(counterRef, { currentNumber: newNumber });
-    });
-
-    const formattedId = `FP${String(newNumber).padStart(3, '0')}`;
-    console.log('🧮 New order ID generated:', formattedId);
-    return formattedId;
-}
 
 // ============ DELETE ITEM ============
 async deleteItem(type, id) {
@@ -3545,6 +3525,27 @@ else if (this.currentTab === 'history') this.renderHistory();
         }
     }
 };
+// 🔢 Generate next FP order ID using Firestore transaction
+async function generateNextOrderId() {
+    const counterRef = db.collection('counters').doc('orderCounter');
+    let newNumber;
+
+    await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        if (!counterDoc.exists) {
+            throw new Error('Counter document missing!');
+        }
+
+        const current = counterDoc.data().currentNumber || 0;
+        newNumber = current + 1;
+        transaction.update(counterRef, { currentNumber: newNumber });
+    });
+
+    const formattedId = `FP${String(newNumber).padStart(3, '0')}`;
+    console.log('🧮 New order ID generated:', formattedId);
+    return formattedId;
+}
+
         
 
         // ============ INITIALIZATION ============
