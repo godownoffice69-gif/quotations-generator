@@ -41,8 +41,7 @@
   </script>
   <!-- 🔍 TRACKING SYSTEM - Round 2 🔍 -->
   <script type="module">
-    import { getFirestore, collection, addDoc, setDoc, doc, serverTimestamp } 
-from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getFirestore, collection, addDoc, setDoc, doc, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
     const db = getFirestore();
     let sessionData = {
