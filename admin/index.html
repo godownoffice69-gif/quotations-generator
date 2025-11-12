@@ -1644,114 +1644,114 @@ async editItem(type, id) {
                 };
 },
 
-async saveOrder() {
-    const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
-    if (errors.length > 0) {
-        this.showToast('Please fill all required fields', 'error');
-        return;
-    }
-
-    const orderData = this.collectFormData();
-
-    try {
-        console.log('💾 Saving order:', orderData.orderId);
-
-        // Check if order already exists in Firestore BY ORDERID FIELD
-        const existingSnapshot = await db.collection('orders')
-            .where('orderId', '==', orderData.orderId)
-            .get();
-
-        // Convert admin format to quotation format for Firestore
-        const firestoreData = {
-            orderId: orderData.orderId,
-            customer: {
-                name: orderData.clientName,
-                phone: orderData.contact,
-                venue: orderData.venue,
-                dates: this.convertToQuotationDateFormat(orderData.date),
-                timeSlot: orderData.readyTime,
-                functionType: orderData.eventType,
-                location: ''
-            },
-            functionType: orderData.eventType,
-            items: orderData.items.map(item => ({
-                name: item.name,
-                qty: item.quantity,
-                desc: item.remarks || '',
-                price: item.price || 0
-            })),
-            itemCount: orderData.items.length,
-            totalAmount: orderData.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0),
-            status: orderData.status.toLowerCase(),
-            source: 'admin_panel',
-            createdAt: orderData.createdAt || new Date().toISOString(),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        if (!existingSnapshot.empty) {
-            // UPDATE existing order
-            const docId = existingSnapshot.docs[0].id;
-            console.log('✏️ Updating existing order, Firestore doc ID:', docId);
-
-            await db.collection('orders').doc(docId).update(firestoreData);
-
-            // Update in local array
-            const localIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
-            if (localIndex !== -1) {
-                this.data.orders[localIndex] = orderData;
-            }
-
-            this.showToast('Order updated in Firestore! ✏️');
-        } else {
-            // CREATE new order
-            console.log('🆕 Creating new order');
-
-            try {
-                // generate FP-style order id
-                const newOrderId = await generateNextOrderId();
-                orderData.orderId = newOrderId;
-
-                console.log('🆔 Generated FP Order ID:', newOrderId);
-
-                // save to Firestore
-                await db.collection('orders').doc(newOrderId).set({
-                    ...firestoreData,
-                    orderId: newOrderId
-                });
-
-                // Add to local array only if not already there
-                const localExists = this.data.orders.some(o => o.orderId === newOrderId);
-                if (!localExists) {
-                    this.data.orders.push(orderData);
-                    this.updateCustomerDatabase(orderData);
+            async saveOrder() {
+                const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
+                if (errors.length > 0) {
+                    this.showToast('Please fill all required fields', 'error');
+                    return;
                 }
 
-                this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
-                this.refreshOrderId();
+                const orderData = this.collectFormData();
 
-                this.saveToStorage();
-                this.updateAllDisplays();
-                localStorage.removeItem('oms_draft');
+                try {
+                    console.log('💾 Saving order:', orderData.orderId);
 
-            } catch (error) {
-                console.error('❌ Error saving to Firestore (create):', error);
-                this.showToast('Error saving order: ' + error.message, 'error');
-            }
-        }
+                    // Check if order already exists in Firestore BY ORDERID FIELD
+                    const existingSnapshot = await db.collection('orders')
+                        .where('orderId', '==', orderData.orderId)
+                        .get();
 
-    } catch (error) {
-        console.error('❌ Error saving to Firestore (outer):', error);
-        this.showToast('Error saving order: ' + error.message, 'error');
-    }
+                    // Convert admin format to quotation format for Firestore
+                    const firestoreData = {
+                        orderId: orderData.orderId,
+                        customer: {
+                            name: orderData.clientName,
+                            phone: orderData.contact,
+                            venue: orderData.venue,
+                            dates: this.convertToQuotationDateFormat(orderData.date),
+                            timeSlot: orderData.readyTime,
+                            functionType: orderData.eventType,
+                            location: ''
+                        },
+                        functionType: orderData.eventType,
+                        items: orderData.items.map(item => ({
+                            name: item.name,
+                            qty: item.quantity,
+                            desc: item.remarks || '',
+                            price: item.price || 0
+                        })),
+                        itemCount: orderData.items.length,
+                        totalAmount: orderData.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0),
+                        status: orderData.status.toLowerCase(),
+                        source: 'admin_panel',
+                        createdAt: orderData.createdAt || new Date().toISOString(),
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    if (!existingSnapshot.empty) {
+                        // UPDATE existing order
+                        const docId = existingSnapshot.docs[0].id;
+                        console.log('✏️ Updating existing order, Firestore doc ID:', docId);
+
+                        await db.collection('orders').doc(docId).update(firestoreData);
+
+                        // Update in local array
+                        const localIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
+                        if (localIndex !== -1) {
+                            this.data.orders[localIndex] = orderData;
+                        }
+
+                        this.showToast('Order updated in Firestore! ✏️');
+                    } else {
+                        // CREATE new order
+                        console.log('🆕 Creating new order');
+
+                        try {
+                            // generate FP-style order id
+                            const newOrderId = await generateNextOrderId();
+                            orderData.orderId = newOrderId;
+
+                            console.log('🆔 Generated FP Order ID:', newOrderId);
+
+                            // save to Firestore
+                            await db.collection('orders').doc(newOrderId).set({
+                                ...firestoreData,
+                                orderId: newOrderId
+                            });
+
+                            // Add to local array only if not already there
+                            const localExists = this.data.orders.some(o => o.orderId === newOrderId);
+                            if (!localExists) {
+                                this.data.orders.push(orderData);
+                                this.updateCustomerDatabase(orderData);
+                            }
+
+                            this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
+                            this.refreshOrderId();
+
+                            this.saveToStorage();
+                            this.updateAllDisplays();
+                            localStorage.removeItem('oms_draft');
+
+                        } catch (error) {
+                            console.error('❌ Error saving to Firestore (create):', error);
+                            this.showToast('Error saving order: ' + error.message, 'error');
+                        }
+                    }
+
+                } catch (error) {
+                    console.error('❌ Error saving to Firestore (outer):', error);
+                    this.showToast('Error saving order: ' + error.message, 'error');
+                }
 }, // 👈 keep this comma ONLY if inside an object of methods (like OMS = { ... })
 
-convertToQuotationDateFormat(dateStr) {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-    return dateStr;
+            convertToQuotationDateFormat(dateStr) {
+                if (!dateStr) return '';
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+                return dateStr;
 },
 
             loadOrderToForm(order) {
