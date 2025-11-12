@@ -44,7 +44,7 @@
     import { getFirestore, collection, addDoc, setDoc, doc, serverTimestamp } 
 from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-    const db = window.firebaseDB;
+    const db = getFirestore();
     let sessionData = {
       sessionId: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       startTime: Date.now(),
