@@ -1716,7 +1716,7 @@ try {
         this.updateCustomerDatabase(orderData);
     }
 
-    this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
+        this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
     this.refreshOrderId();
 
     this.saveToStorage();
@@ -1726,7 +1726,7 @@ try {
 } catch (error) {
     console.error('❌ Error saving to Firestore:', error);
     this.showToast('Error saving order: ' + error.message, 'error');
-},
+}
 
 convertToQuotationDateFormat(dateStr){  
     // Convert YYYY-MM-DD to DD/MM/YYYY
