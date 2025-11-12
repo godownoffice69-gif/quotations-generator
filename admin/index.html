@@ -1384,45 +1384,44 @@ async init() {
 async updateItem(type, id, newData) {
     const handlers = {
         order: async () => {
-            try {
-                // Find the document by orderId field
-                const snapshot = await db.collection('orders')
-                    .where('orderId', '==', id)
-                    .get();
+    try {
+        // Find the document by orderId field (instead of doc(id))
+        const snapshot = await db.collection('orders')
+            .where('orderId', '==', id)
+            .get();
+            console.log('🔥 Deleting orderId:', id);
+console.log('Firestore snapshot size:', snapshot.size);
+snapshot.forEach(doc => console.log('Found Firestore doc ID:', doc.id));
 
-                console.log('✏️ Updating orderId:', id);
-                console.log('Firestore snapshot size:', snapshot.size);
+        if (snapshot.empty) {
+            console.warn('No Firestore doc found for', id);
+            return false;
+        }
 
-                if (snapshot.empty) {
-                    console.warn('⚠️ No Firestore doc found for', id);
-                    // Still update locally
-                    const index = this.data.orders.findIndex(o => o.orderId === id);
-                    if (index !== -1) {
-                        this.data.orders[index] = { ...this.data.orders[index], ...newData };
-                        return true;
-                    }
-                    return false;
-                }
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        console.log(`🔥 Deleted ${snapshot.size} Firestore doc(s) for orderId ${id}`);
 
-                // Update in Firestore
-                const docId = snapshot.docs[0].id;
-                await db.collection('orders').doc(docId).update(newData);
-                console.log(`✅ Updated Firestore doc with ID: ${docId}`);
+        // Local delete
+        const index = this.data.orders.findIndex(o => o.orderId === id);
+        if (index !== -1) {
+            const deleted = this.data.orders.splice(index, 1)[0];
+            this.addToUndoStack('delete', 'order', deleted);
+            this.data.deletedOrders.push({
+                ...deleted,
+                deletedAt: new Date().toISOString(),
+                deleteReason: 'Manual deletion'
+            });
+        }
 
-                // Update in local array
-                const index = this.data.orders.findIndex(o => o.orderId === id);
-                if (index !== -1) {
-                    this.data.orders[index] = { ...this.data.orders[index], ...newData };
-                    this.addToUndoStack('update', 'order', this.data.orders[index]);
-                }
-
-                return true;
-            } catch (error) {
-                console.error('❌ Update error:', error);
-                this.showToast('Update failed: ' + error.message, 'error');
-                return false;
-            }
-        },
+        return true;
+    } catch (error) {
+        console.error('Error deleting Firestore order:', error);
+        this.showToast('Delete failed: ' + error.message, 'error');
+        return false;
+    }
+},
 
         task: () => {
             const index = this.data.tasks.findIndex(t => t.id === id);
@@ -1431,17 +1430,6 @@ async updateItem(type, id, newData) {
             return true;
         }
     };
-
-    const handler = handlers[type];
-    if (handler) {
-        const success = await handler();
-        if (success) {
-            this.saveToStorage();
-            this.updateAllDisplays();
-        }
-        return success;
-    }
-    return false;
 },
 
 // ============ DELETE ITEM ============
@@ -1467,8 +1455,10 @@ order: async () => {
     
     try {
         console.log('🔄 Attempting to delete orderId:', id);
+        
+        console.log('🔄 Attempting to delete orderId:', id);
 
-        // Delete directly by document ID (since doc ID = orderId)
+// Delete directly by document ID (since doc ID = orderId)
 const docRef = db.collection('orders').doc(id);
 const docSnap = await docRef.get();
 
@@ -3552,28 +3542,6 @@ else if (this.currentTab === 'history') this.renderHistory();
         }
     }
 };
-// 🔢 Generate next FP order ID using Firestore transaction
-async function generateNextOrderId() {
-    const counterRef = db.collection('counters').doc('orderCounter');
-    let newNumber;
-
-    await runTransaction(db, async (transaction) => {
-        const counterDoc = await transaction.get(counterRef);
-        if (!counterDoc.exists) {
-            throw new Error('Counter document missing!');
-        }
-
-        const current = counterDoc.data().currentNumber || 0;
-        newNumber = current + 1;
-        transaction.update(counterRef, { currentNumber: newNumber });
-    });
-
-    const formattedId = `FP${String(newNumber).padStart(3, '0')}`;
-    console.log('🧮 New order ID generated:', formattedId);
-    return formattedId;
-}
-
-        
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
@@ -3590,7 +3558,6 @@ async function generateNextOrderId() {
             firebase.initializeApp(firebaseConfig);
             window.auth = firebase.auth();
             window.db = firebase.firestore();
-            const { runTransaction } = firebase.firestore;
             console.log('✅ Firebase initialized successfully!');
 
             // Check if user is logged in
