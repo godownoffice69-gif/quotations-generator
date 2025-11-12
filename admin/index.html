@@ -1693,7 +1693,7 @@ async saveOrder() {
             
             this.showToast('Order updated in Firestore! ✏️');
         } else {
-            // CREATE new order
+// CREATE new order
 console.log('🆕 Creating new order');
 
 try {
@@ -1704,12 +1704,10 @@ try {
     console.log('🆔 Generated FP Order ID:', newOrderId);
 
     // save to Firestore
-await db.collection('orders').doc(newOrderId).set({
-    ...firestoreData,
-    orderId: newOrderId
-}); // 👈 this parenthesis closes .set( )
-
-
+    await db.collection('orders').doc(newOrderId).set({
+        ...firestoreData,
+        orderId: newOrderId
+    });
 
     // Add to local array only if not already there
     const localExists = this.data.orders.some(o => o.orderId === newOrderId);
@@ -1728,8 +1726,7 @@ await db.collection('orders').doc(newOrderId).set({
 } catch (error) {
     console.error('❌ Error saving to Firestore:', error);
     this.showToast('Error saving order: ' + error.message, 'error');
-
-
+},
 
 convertToQuotationDateFormat(dateStr){  
     // Convert YYYY-MM-DD to DD/MM/YYYY
