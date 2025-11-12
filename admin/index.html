@@ -1724,16 +1724,15 @@ async saveOrder() {
                 localStorage.removeItem('oms_draft');
 
             } catch (error) {
-                console.error('❌ Error saving to Firestore (create):', error);
+                console.error('❌ Error saving to Firestore:', error);
                 this.showToast('Error saving order: ' + error.message, 'error');
             }
-},
-
+        }
     } catch (error) {
         console.error('❌ Error saving to Firestore (outer):', error);
         this.showToast('Error saving order: ' + error.message, 'error');
     }
-}, // 👈 keep this comma ONLY if inside an object of methods (like OMS = { ... })
+},
 
 convertToQuotationDateFormat(dateStr) {
     if (!dateStr) return '';
