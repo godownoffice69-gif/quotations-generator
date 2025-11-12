@@ -1640,17 +1640,17 @@ async saveOrder() {
         this.showToast('Please fill all required fields', 'error');
         return;
     }
-    
+
     const orderData = this.collectFormData();
-    
+
     try {
         console.log('💾 Saving order:', orderData.orderId);
-        
+
         // Check if order already exists in Firestore BY ORDERID FIELD
         const existingSnapshot = await db.collection('orders')
             .where('orderId', '==', orderData.orderId)
             .get();
-        
+
         // Convert admin format to quotation format for Firestore
         const firestoreData = {
             orderId: orderData.orderId,
@@ -1677,58 +1677,65 @@ async saveOrder() {
             createdAt: orderData.createdAt || new Date().toISOString(),
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
-        
+
         if (!existingSnapshot.empty) {
             // UPDATE existing order
             const docId = existingSnapshot.docs[0].id;
             console.log('✏️ Updating existing order, Firestore doc ID:', docId);
-            
+
             await db.collection('orders').doc(docId).update(firestoreData);
-            
+
             // Update in local array
             const localIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
             if (localIndex !== -1) {
                 this.data.orders[localIndex] = orderData;
             }
-            
+
             this.showToast('Order updated in Firestore! ✏️');
         } else {
-// CREATE new order
-console.log('🆕 Creating new order');
+            // CREATE new order
+            console.log('🆕 Creating new order');
 
-try {
-    // generate FP-style order id
-    const newOrderId = await generateNextOrderId();
-    orderData.orderId = newOrderId;
+            try {
+                // generate FP-style order id
+                const newOrderId = await generateNextOrderId();
+                orderData.orderId = newOrderId;
 
-    console.log('🆔 Generated FP Order ID:', newOrderId);
+                console.log('🆔 Generated FP Order ID:', newOrderId);
 
-    // save to Firestore
-    await db.collection('orders').doc(newOrderId).set({
-        ...firestoreData,
-        orderId: newOrderId
-    });
+                // save to Firestore
+                await db.collection('orders').doc(newOrderId).set({
+                    ...firestoreData,
+                    orderId: newOrderId
+                });
 
-    // Add to local array only if not already there
-    const localExists = this.data.orders.some(o => o.orderId === newOrderId);
-    if (!localExists) {
-        this.data.orders.push(orderData);
-        this.updateCustomerDatabase(orderData);
+                // Add to local array only if not already there
+                const localExists = this.data.orders.some(o => o.orderId === newOrderId);
+                if (!localExists) {
+                    this.data.orders.push(orderData);
+                    this.updateCustomerDatabase(orderData);
+                }
+
+                this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
+                this.refreshOrderId();
+
+                this.saveToStorage();
+                this.updateAllDisplays();
+                localStorage.removeItem('oms_draft');
+
+            } catch (error) {
+                console.error('❌ Error saving to Firestore (create):', error);
+                this.showToast('Error saving order: ' + error.message, 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Error saving to Firestore (outer):', error);
+        this.showToast('Error saving order: ' + error.message, 'error');
     }
+}, // 👈 keep this comma ONLY if inside an object of methods (like OMS = { ... })
 
-    this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
-    this.refreshOrderId();
-
-    this.saveToStorage();
-    this.updateAllDisplays();
-    localStorage.removeItem('oms_draft');
-
-} catch (error) {
-    console.error('❌ Error saving to Firestore:', error);
-    this.showToast('Error saving order: ' + error.message, 'error');
-}
-
-convertToQuotationDateFormat(dateStr) {  
+convertToQuotationDateFormat(dateStr) {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
     if (parts.length === 3) {
