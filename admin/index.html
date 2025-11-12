@@ -1704,7 +1704,10 @@ try {
     console.log('🆔 Generated FP Order ID:', newOrderId);
 
     // save to Firestore
-    await db.collection('orders').doc(newOrderId).set(firestoreData);
+    await db.collection('orders').doc(newOrderId).set({
+    ...firestoreData,
+    orderId: newOrderId
+});
 
     // Add to local array only if not already there
     const localExists = this.data.orders.some(o => o.orderId === newOrderId);
