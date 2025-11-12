@@ -1726,7 +1726,7 @@ try {
 } catch (error) {
     console.error('❌ Error saving to Firestore:', error);
     this.showToast('Error saving order: ' + error.message, 'error');
-}, // <-- comma closes this method inside an object (important!)
+}
 
 convertToQuotationDateFormat(dateStr) {  
     if (!dateStr) return '';
@@ -1735,7 +1735,8 @@ convertToQuotationDateFormat(dateStr) {
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
     return dateStr;
-},
+}
+
 
 
             loadOrderToForm(order) {
