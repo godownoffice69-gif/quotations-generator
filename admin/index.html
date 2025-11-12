@@ -1696,12 +1696,12 @@ async saveOrder() {
             // CREATE new order
             console.log('🆕 Creating new order');
 
-            try {
-                // generate FP-style order id
-                const newOrderId = await generateNextOrderId();
-                orderData.orderId = newOrderId;
+            // Generate FP-style order ID from Firestore
+            const newOrderId = await this.getNextOrderIdFromFirestore();
+            orderData.orderId = newOrderId;
+            firestoreData.orderId = newOrderId;
 
-                console.log('🆔 Generated FP Order ID:', newOrderId);
+            console.log('🆔 Generated order ID:', newOrderId);
 
                 // save to Firestore
                 await db.collection('orders').doc(newOrderId).set({
