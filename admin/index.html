@@ -1694,30 +1694,37 @@ async saveOrder() {
             this.showToast('Order updated in Firestore! ✏️');
         } else {
             // CREATE new order
-            console.log('🆕 Creating new order');
-            
-            await db.collection('orders').doc(orderData.orderId).set(firestoreData);
-            
-            // Add to local array only if not already there
-            const localExists = this.data.orders.some(o => o.orderId === orderData.orderId);
-            if (!localExists) {
-                this.data.orders.push(orderData);
-                this.updateCustomerDatabase(orderData);
-            }
-            
-            this.showToast('Order saved to Firestore! 🆕');
-            this.refreshOrderId();
-        }
-        
-        this.saveToStorage();
-        this.updateAllDisplays();
-        localStorage.removeItem('oms_draft');
-        
-    } catch (error) {
-        console.error('Error saving to Firestore:', error);
-        this.showToast('Error saving order: ' + error.message, 'error');
+console.log('🆕 Creating new order');
+
+try {
+    // generate FP-style order id
+    const newOrderId = await generateNextOrderId();
+    orderData.orderId = newOrderId;
+
+    console.log('🆔 Generated FP Order ID:', newOrderId);
+
+    // save to Firestore
+    await db.collection('orders').doc(newOrderId).set(firestoreData);
+
+    // Add to local array only if not already there
+    const localExists = this.data.orders.some(o => o.orderId === newOrderId);
+    if (!localExists) {
+        this.data.orders.push(orderData);
+        this.updateCustomerDatabase(orderData);
     }
-},
+
+    this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
+    this.refreshOrderId();
+
+    this.saveToStorage();
+    this.updateAllDisplays();
+    localStorage.removeItem('oms_draft');
+
+} catch (error) {
+    console.error('❌ Error saving to Firestore:', error);
+    this.showToast('Error saving order: ' + error.message, 'error');
+}
+
 
 convertToQuotationDateFormat(dateStr) {
     // Convert YYYY-MM-DD to DD/MM/YYYY
