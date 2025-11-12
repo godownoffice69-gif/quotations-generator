@@ -1716,7 +1716,7 @@ try {
         this.updateCustomerDatabase(orderData);
     }
 
-        this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
+    this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
     this.refreshOrderId();
 
     this.saveToStorage();
@@ -1724,12 +1724,11 @@ try {
     localStorage.removeItem('oms_draft');
 
 } catch (error) {
-        console.error('❌ Error saving to Firestore:', error);
-        this.showToast('Error saving order: ' + error.message, 'error');
-    }
-}   // ✅ ← add this closing brace to end the if/else block  
+    console.error('❌ Error saving to Firestore:', error);
+    this.showToast('Error saving order: ' + error.message, 'error');
+}   // ✅ only this one should stay — remove any duplicate below
 
-convertToQuotationDateFormat(dateStr){  
+convertToQuotationDateFormat(dateStr) {  
     // Convert YYYY-MM-DD to DD/MM/YYYY
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -1738,6 +1737,7 @@ convertToQuotationDateFormat(dateStr){
     }
     return dateStr;
 }
+
 
             loadOrderToForm(order) {
                 Object.entries({
