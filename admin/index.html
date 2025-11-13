@@ -1211,50 +1211,7 @@ const OMS = {
     'undo': () => OMS.undo(),
     'exportData': () => OMS.exportData(),
     'importData': () => OMS.importData()
-},
-
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
-        
-        let html = '';
-        for (let i = 0; i < diffDays; i++) {
-            const currentDate = new Date(start);
-            currentDate.setDate(start.getDate() + i);
-            const dateStr = currentDate.toLocaleDateString('en-IN', { 
-                weekday: 'short', 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            });
-            
-            html += `
-                <div class="card" style="background: rgba(102, 126, 234, 0.05); margin-bottom: 1rem;">
-                    <h4 style="color: var(--primary);">Day ${i + 1} - ${dateStr}</h4>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Function Type</label>
-                            <input type="text" id="day${i}Function" class="form-input" 
-                                   placeholder="e.g., Sangeet, Mehendi, Reception">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Time Slot</label>
-                            <input type="text" id="day${i}Time" class="form-input" 
-                                   placeholder="e.g., 7:00 PM - 11:00 PM">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Notes for this day</label>
-                        <textarea id="day${i}Notes" class="form-textarea" 
-                                  placeholder="Special requirements..."></textarea>
-                    </div>
-                </div>
-            `;
-        }
-        
-        container.innerHTML = html;
-    },
-
+};
 
                     handlers[action]?.();
                 });
@@ -1273,8 +1230,8 @@ const OMS = {
                         document.querySelectorAll('.search-dropdown').forEach(d => d.classList.remove('show'));
                     }
                 });
-            },
-            generateDayWiseFunctions() {
+    },
+    generateDayWiseFunctions() {
         const container = document.getElementById('functionsContainer');
         if (!container) return;
         
@@ -1328,8 +1285,8 @@ const OMS = {
         container.innerHTML = html;
     },
 
-            // ============ KEYBOARD SHORTCUTS ============
-            setupKeyboardShortcuts() {
+    // ============ KEYBOARD SHORTCUTS ============
+    setupKeyboardShortcuts() {
                 document.addEventListener('keydown', (e) => {
                     if (e.ctrlKey || e.metaKey) {
                         const shortcuts = {
