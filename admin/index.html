@@ -1297,6 +1297,121 @@ const OMS = {
         
         container.innerHTML = html;
     },
+    addItemToDay(dayIndex, itemId) {
+        const item = this.data.inventory.items.find(i => i.id === itemId);
+        if (!item) return;
+        
+        // Initialize day items array if not exists
+        if (!this.dayWiseItems) {
+            this.dayWiseItems = {};
+        }
+        if (!this.dayWiseItems[dayIndex]) {
+            this.dayWiseItems[dayIndex] = [];
+        }
+        
+        // Check if item already added
+        const existing = this.dayWiseItems[dayIndex].find(i => i.itemId === itemId);
+        if (existing) {
+            existing.quantity++;
+        } else {
+            this.dayWiseItems[dayIndex].push({
+                itemId: itemId,
+                name: item.name,
+                quantity: 1,
+                remarks: ''
+            });
+        }
+        
+        this.updateDayItemsList(dayIndex);
+        
+        // Clear search and hide dropdown
+        const searchInput = document.getElementById(`day${dayIndex}ItemSearch`);
+        const dropdown = document.getElementById(`day${dayIndex}ItemDropdown`);
+        if (searchInput) searchInput.value = '';
+        if (dropdown) dropdown.classList.remove('show');
+    },
+
+    updateDayItemsList(dayIndex) {
+        const container = document.getElementById(`day${dayIndex}ItemsList`);
+        if (!container) return;
+        
+        const items = this.dayWiseItems?.[dayIndex] || [];
+        
+        if (items.length === 0) {
+            container.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">No items added yet</div>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Remarks</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map((item, idx) => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>
+                                <div class="quantity-controls">
+                                    <button class="quantity-btn" onclick="OMS.adjustDayItemQty(${dayIndex}, ${idx}, -1)">-</button>
+                                    <input type="number" value="${item.quantity}" 
+                                           onchange="OMS.setDayItemQty(${dayIndex}, ${idx}, this.value)" 
+                                           style="width: 60px; text-align: center; border: 1px solid var(--border); border-radius: 4px; padding: 0.25rem;" 
+                                           min="1">
+                                    <button class="quantity-btn" onclick="OMS.adjustDayItemQty(${dayIndex}, ${idx}, 1)">+</button>
+                                </div>
+                            </td>
+                            <td>
+                                <input type="text" class="form-input" value="${item.remarks || ''}" 
+                                       onchange="OMS.setDayItemRemarks(${dayIndex}, ${idx}, this.value)" 
+                                       placeholder="Notes">
+                            </td>
+                            <td>
+                                <button class="btn btn-danger btn-small" onclick="OMS.removeDayItem(${dayIndex}, ${idx})">🗑️</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    },
+
+    adjustDayItemQty(dayIndex, itemIndex, delta) {
+        if (!this.dayWiseItems?.[dayIndex]) return;
+        const item = this.dayWiseItems[dayIndex][itemIndex];
+        if (item) {
+            item.quantity = Math.max(1, item.quantity + delta);
+            this.updateDayItemsList(dayIndex);
+        }
+    },
+
+    setDayItemQty(dayIndex, itemIndex, qty) {
+        if (!this.dayWiseItems?.[dayIndex]) return;
+        const item = this.dayWiseItems[dayIndex][itemIndex];
+        if (item) {
+            item.quantity = Math.max(1, parseInt(qty) || 1);
+            this.updateDayItemsList(dayIndex);
+        }
+    },
+
+    setDayItemRemarks(dayIndex, itemIndex, remarks) {
+        if (!this.dayWiseItems?.[dayIndex]) return;
+        const item = this.dayWiseItems[dayIndex][itemIndex];
+        if (item) {
+            item.remarks = remarks;
+        }
+    },
+
+    removeDayItem(dayIndex, itemIndex) {
+        if (!this.dayWiseItems?.[dayIndex]) return;
+        this.dayWiseItems[dayIndex].splice(itemIndex, 1);
+        this.updateDayItemsList(dayIndex);
+    },
 
     // ============ KEYBOARD SHORTCUTS ============
     setupKeyboardShortcuts() {
