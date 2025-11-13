@@ -122,10 +122,9 @@
   </script>
   <!-- 📦 ORDER SYSTEM - Round 3 📦 -->
   <script type="module">
-   import { getFirestore, collection, setDoc, doc, addDoc, runTransaction, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-   window.addDoc = addDoc;
+    import { getFirestore, collection, setDoc, doc, addDoc, runTransaction, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    window.addDoc = addDoc;
 
-    
     const db = window.firebaseDB;
     
     // Generate Order ID from Firestore counter
