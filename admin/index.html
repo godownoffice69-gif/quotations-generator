@@ -3521,7 +3521,7 @@ updateAllDisplays() {
                 transaction.update(counterRef, { currentNumber: nextNumber });
                 
                 const prefix = this.data.settings.invoicePrefix || 'FP';
-                return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+                return `${prefix}${String(nextNumber).padStart(3, '0')}`;
             });
             
             console.log('✅ Generated order ID from Firestore:', newOrderId);
