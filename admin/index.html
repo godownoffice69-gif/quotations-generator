@@ -3591,6 +3591,49 @@ updateAllDisplays() {
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
+            // Multi-day event toggle
+    const eventTypeSelect = document.getElementById('eventTypeSelect');
+    const singleDayFields = document.getElementById('singleDayFields');
+    const multiDayFields = document.getElementById('multiDayFields');
+    const dayWiseFunctions = document.getElementById('dayWiseFunctions');
+    
+    if (eventTypeSelect) {
+        eventTypeSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'single') {
+                singleDayFields.style.display = 'block';
+                multiDayFields.style.display = 'none';
+                dayWiseFunctions.style.display = 'none';
+                document.getElementById('orderDate').required = true;
+                document.getElementById('startDate').required = false;
+                document.getElementById('endDate').required = false;
+            } else {
+                singleDayFields.style.display = 'none';
+                multiDayFields.style.display = 'grid';
+                dayWiseFunctions.style.display = 'block';
+                document.getElementById('orderDate').required = false;
+                document.getElementById('startDate').required = true;
+                document.getElementById('endDate').required = true;
+            }
+        });
+    }
+    
+    // Calculate total days
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const totalDaysInput = document.getElementById('totalDays');
+    
+    function calculateTotalDays() {
+        if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+            const start = new Date(startDateInput.value);
+            const end = new Date(endDateInput.value);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            totalDaysInput.value = diffDays + ' days';
+        }
+    }
+    
+    if (startDateInput) startDateInput.addEventListener('change', calculateTotalDays);
+    if (endDateInput) endDateInput.addEventListener('change', calculateTotalDays);
             // Initialize Firebase
             const firebaseConfig = {
                 apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
