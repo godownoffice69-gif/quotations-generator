@@ -3942,9 +3942,23 @@ updateAllDisplays() {
                 }
             });
 
-            // Set initial date
-            Utils.set('orderDate', Utils.toDateString(new Date()));
+    // Set initial date and block past dates
+    const today = Utils.toDateString(new Date());
+    Utils.set('orderDate', today);
+
+    // Block past dates on all date inputs
+    ['orderDate', 'startDate', 'endDate'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.setAttribute('min', today);
+            input.addEventListener('change', (e) => {
+                if (e.target.value < today) {
+                    OMS.showToast('⚠️ Cannot create orders for past dates!', 'error');
+                    e.target.value = today;
+            }
         });
+    }
+});
     </script>
 </body>
 </html>
