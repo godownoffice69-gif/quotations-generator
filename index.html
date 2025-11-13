@@ -197,42 +197,42 @@ async function generateOrderId() {
         console.log('db value before saving:', db);
 
         const ordersCol = collection(db, 'orders');
-console.log('ordersCol check:', ordersCol);
-const orderRef = doc(ordersCol, order.orderId);
-console.log('orderRef path:', orderRef.path);
-await setDoc(orderRef, {
-  ...order,
-  createdAt: serverTimestamp()
-});
+        console.log('ordersCol check:', ordersCol);
+        const orderRef = doc(ordersCol, order.orderId);
+        console.log('orderRef path:', orderRef.path);
+        await setDoc(orderRef, {
+          ...order,
+          createdAt: serverTimestamp()
+        });
 
-// Confirm saved by reading back once (optional quick verify)
-try {
-  const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-  const saved = await getDoc(orderRef);
-  console.log('Saved order doc data:', saved.exists() ? saved.data() : null);
-} catch (e) {
-  console.warn('Could not verify saved doc immediately:', e);
-}
+        // Confirm saved by reading back once (optional quick verify)
+        try {
+          const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+          const saved = await getDoc(orderRef);
+          console.log('Saved order doc data:', saved.exists() ? saved.data() : null);
+        } catch (e) {
+          console.warn('Could not verify saved doc immediately:', e);
+        }
 
-// Show success UI to user
-if (typeof window.showOrderConfirmation === 'function') {
-  window.showOrderConfirmation(order.orderId);
-}
-if (typeof window.showToast === 'function') {
-  window.showToast && window.showToast('Order placed successfully! — ' + order.orderId);
-}
+        // Show success UI to user
+        if (typeof window.showOrderConfirmation === 'function') {
+          window.showOrderConfirmation(order.orderId);
+        }
+        if (typeof window.showToast === 'function') {
+          window.showToast && window.showToast('Order placed successfully! — ' + order.orderId);
+        }
 
-// Track order (keep existing tracking call)
-await addDoc(collection(db, 'tracking'), {
-  type: 'order_placed',
-  sessionId: order.sessionId,
-  orderId: order.orderId,
-  timestamp: serverTimestamp(),
-  totalAmount: order.totalAmount,
-  userInfo: order.userInfo
-});
+        // Track order (keep existing tracking call)
+        await addDoc(collection(db, 'tracking'), {
+          type: 'order_placed',
+          sessionId: order.sessionId,
+          orderId: order.orderId,
+          timestamp: serverTimestamp(),
+          totalAmount: order.totalAmount,
+          userInfo: order.userInfo
+        });
 
-return { success: true, orderId: order.orderId };
+        return { success: true, orderId: order.orderId };
 
       } catch (error) {
         console.error('❌ Error:', error);
