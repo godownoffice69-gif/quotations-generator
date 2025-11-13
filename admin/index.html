@@ -842,9 +842,42 @@
                                 <small style="color: var(--text-gray);">Manual edit enabled - check for duplicates</small>
                             </div>
                             <div class="form-group">
-                                <label class="form-label required">Date</label>
-                                <input type="date" id="orderDate" class="form-input" required>
-                            </div>
+    <label class="form-label required">Event Type</label>
+    <select id="eventTypeSelect" class="form-select" required>
+        <option value="single">Single Day Event</option>
+        <option value="multi">Multi-Day Event</option>
+    </select>
+</div>
+
+<!-- Single Day Fields -->
+<div id="singleDayFields" class="form-group">
+    <label class="form-label required">Event Date</label>
+    <input type="date" id="orderDate" class="form-input" required>
+</div>
+
+<!-- Multi-Day Fields -->
+<div id="multiDayFields" class="form-grid" style="display: none;">
+    <div class="form-group">
+        <label class="form-label required">Start Date</label>
+        <input type="date" id="startDate" class="form-input">
+    </div>
+    <div class="form-group">
+        <label class="form-label required">End Date</label>
+        <input type="date" id="endDate" class="form-input">
+    </div>
+    <div class="form-group">
+        <label class="form-label">Total Days</label>
+        <input type="text" id="totalDays" class="form-input" readonly>
+    </div>
+</div>
+
+<!-- Day-wise Functions Container -->
+<div id="dayWiseFunctions" style="display: none;">
+    <div class="card">
+        <h3 class="card-title">📅 Day-wise Functions</h3>
+        <div id="functionsContainer"></div>
+    </div>
+</div>
                             <div class="form-group">
                                 <label class="form-label required">Ready Time</label>
                                 <select id="readyTime" class="form-select" required></select>
@@ -3547,7 +3580,7 @@ updateAllDisplays() {
             const nextNumber = currentNumber + 1;
             
             const prefix = this.data.settings.invoicePrefix || 'FP';
-            return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+            return `${prefix}${String(nextNumber).padStart(3, '0')}`;
             
         } catch (error) {
             console.error('❌ Error previewing order ID:', error);
