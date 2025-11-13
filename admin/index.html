@@ -3698,6 +3698,59 @@ updateAllDisplays() {
             OMS.generateDayWiseFunctions();
         }
     }
+    // Item search for multi-day events
+    function setupDayItemSearch(dayIndex) {
+        const searchInput = document.getElementById(`day${dayIndex}ItemSearch`);
+        const dropdown = document.getElementById(`day${dayIndex}ItemDropdown`);
+        
+        if (!searchInput || !dropdown) return;
+        
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            
+            if (query.length === 0) {
+                dropdown.classList.remove('show');
+                return;
+            }
+            
+            const items = OMS.data.inventory.items.filter(i => 
+                i.name.toLowerCase().includes(query)
+            );
+            
+            if (items.length > 0) {
+                dropdown.innerHTML = items.map(i => `
+                    <div class="search-item" onclick="OMS.addItemToDay(${dayIndex}, '${i.id}')">
+                        <span>${i.name}</span>
+                        <span style="color: var(--text-gray);">${i.quantity} in stock</span>
+                    </div>
+                `).join('');
+                dropdown.classList.add('show');
+            } else {
+                dropdown.innerHTML = '<div class="search-item">No items found</div>';
+                dropdown.classList.add('show');
+            }
+        });
+    }
+    
+    // Initialize item search for each day after generating functions
+    const originalGenerateFunctions = OMS.generateDayWiseFunctions.bind(OMS);
+    OMS.generateDayWiseFunctions = function() {
+        originalGenerateFunctions();
+        
+        // Setup search for each day
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
+            
+            for (let i = 0; i < diffDays; i++) {
+                setupDayItemSearch(i);
+            }
+        }
+    };
     
     if (startDateInput) startDateInput.addEventListener('change', calculateTotalDays);
     if (endDateInput) endDateInput.addEventListener('change', calculateTotalDays);
