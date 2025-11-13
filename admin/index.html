@@ -1278,6 +1278,19 @@ const OMS = {
                         <textarea id="day${i}Notes" class="form-textarea" 
                                   placeholder="Special requirements..."></textarea>
                     </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Items for this day</label>
+                        <div class="search-container">
+                            <input type="text" id="day${i}ItemSearch" class="form-input" 
+                                   placeholder="🔍 Search items for this day..." autocomplete="off">
+                            <div id="day${i}ItemDropdown" class="search-dropdown"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="day${i}ItemsList" class="table-container" style="margin-top: 1rem;">
+                        <div style="color: var(--text-gray); text-align: center; padding: 1rem;">No items added yet</div>
+                    </div>
                 </div>
             `;
         }
