@@ -1826,25 +1826,58 @@ async refreshOrderId() {
                 this.refreshOrderId();
             },
 
-            collectFormData() {
-                const transport = Utils.get('transport');
-                return {
-                    orderId: Utils.get('orderId'),
-                    date: Utils.get('orderDate'),
-                    readyTime: Utils.get('readyTime'),
-                    clientName: Utils.get('clientName'),
-                    contact: Utils.get('contact'),
-                    venue: Utils.get('venue'),
-                    eventType: Utils.get('eventType'),
-                    transport: transport === 'Other' ? Utils.get('customTransport') : transport,
-                    driverName: Utils.get('driverName'),
-                    operator: Utils.get('operator'),
-                    helper: Utils.get('helper'),
-                    status: Utils.get('orderStatus'),
-                    notes: Utils.get('orderNotes'),
-                    items: [...this.currentOrderItems],
-                    createdAt: new Date().toISOString()
-                };
+   collectFormData() {
+        const transport = Utils.get('transport');
+        const eventType = Utils.get('eventTypeSelect');
+        const isMultiDay = eventType === 'multi';
+        
+        // Collect day-wise data for multi-day events
+        let dayWiseData = [];
+        if (isMultiDay) {
+            const startDate = Utils.get('startDate');
+            const endDate = Utils.get('endDate');
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
+            
+            for (let i = 0; i < diffDays; i++) {
+                const currentDate = new Date(start);
+                currentDate.setDate(start.getDate() + i);
+                
+                dayWiseData.push({
+                    dayNumber: i + 1,
+                    date: Utils.toDateString(currentDate),
+                    functionType: Utils.get(`day${i}Function`),
+                    timeSlot: Utils.get(`day${i}Time`),
+                    notes: Utils.get(`day${i}Notes`),
+                    items: window.dayItemsData[i] || []
+                });
+            }
+        }
+        
+        return {
+            orderId: Utils.get('orderId'),
+            isMultiDay: isMultiDay,
+            date: isMultiDay ? null : Utils.get('orderDate'),
+            startDate: isMultiDay ? Utils.get('startDate') : null,
+            endDate: isMultiDay ? Utils.get('endDate') : null,
+            dayWiseData: dayWiseData,
+            lastEventDate: isMultiDay ? Utils.get('endDate') : Utils.get('orderDate'),
+            readyTime: Utils.get('readyTime'),
+            clientName: Utils.get('clientName'),
+            contact: Utils.get('contact'),
+            venue: Utils.get('venue'),
+            eventType: Utils.get('eventType'),
+            transport: transport === 'Other' ? Utils.get('customTransport') : transport,
+            driverName: Utils.get('driverName'),
+            operator: Utils.get('operator'),
+            helper: Utils.get('helper'),
+            status: Utils.get('orderStatus'),
+            notes: Utils.get('orderNotes'),
+            items: isMultiDay ? [] : [...this.currentOrderItems],
+            createdAt: new Date().toISOString()
+        };
+    },
 },
 
 async saveOrder() {
