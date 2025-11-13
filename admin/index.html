@@ -842,9 +842,42 @@
                                 <small style="color: var(--text-gray);">Manual edit enabled - check for duplicates</small>
                             </div>
                             <div class="form-group">
-                                <label class="form-label required">Date</label>
-                                <input type="date" id="orderDate" class="form-input" required>
-                            </div>
+    <label class="form-label required">Event Type</label>
+    <select id="eventTypeSelect" class="form-select" required>
+        <option value="single">Single Day Event</option>
+        <option value="multi">Multi-Day Event</option>
+    </select>
+</div>
+
+<!-- Single Day Fields -->
+<div id="singleDayFields" class="form-group">
+    <label class="form-label required">Event Date</label>
+    <input type="date" id="orderDate" class="form-input" required>
+</div>
+
+<!-- Multi-Day Fields -->
+<div id="multiDayFields" class="form-grid" style="display: none;">
+    <div class="form-group">
+        <label class="form-label required">Start Date</label>
+        <input type="date" id="startDate" class="form-input">
+    </div>
+    <div class="form-group">
+        <label class="form-label required">End Date</label>
+        <input type="date" id="endDate" class="form-input">
+    </div>
+    <div class="form-group">
+        <label class="form-label">Total Days</label>
+        <input type="text" id="totalDays" class="form-input" readonly>
+    </div>
+</div>
+
+<!-- Day-wise Functions Container -->
+<div id="dayWiseFunctions" style="display: none;">
+    <div class="card">
+        <h3 class="card-title">📅 Day-wise Functions</h3>
+        <div id="functionsContainer"></div>
+    </div>
+</div>
                             <div class="form-group">
                                 <label class="form-label required">Ready Time</label>
                                 <select id="readyTime" class="form-select" required></select>
@@ -1079,7 +1112,7 @@ debounce: (func, wait) => {
         };
 
         // ============ MAIN APP ============
-        const OMS = {
+const OMS = {
             initialized: false,
             realtimeListenerActive: false,
     ordersUnsubscribe: null,
@@ -1134,7 +1167,7 @@ debounce: (func, wait) => {
                 "2025-11-02": ["दीवाली", "Diwali"]
             },
 
-async init() {
+    async init() {
                 // Prevent duplicate initialization
     if (this.initialized) {
         console.log('⚠️ Already initialized - skipping duplicate init');
@@ -1157,7 +1190,7 @@ async init() {
             },
 
             // ============ EVENT DELEGATION ============
-            setupEventDelegation() {
+    setupEventDelegation() {
                 document.addEventListener('click', (e) => {
                     const action = e.target.closest('[data-action]')?.dataset.action;
                     const id = e.target.closest('[data-id]')?.dataset.id;
@@ -1178,8 +1211,7 @@ async init() {
     'undo': () => OMS.undo(),
     'exportData': () => OMS.exportData(),
     'importData': () => OMS.importData()
-};
-
+},
 
                     handlers[action]?.();
                 });
@@ -1198,7 +1230,60 @@ async init() {
                         document.querySelectorAll('.search-dropdown').forEach(d => d.classList.remove('show'));
                     }
                 });
-            },
+    },
+    generateDayWiseFunctions() {
+        const container = document.getElementById('functionsContainer');
+        if (!container) return;
+        
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        if (!startDate || !endDate) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
+        
+        let html = '';
+        for (let i = 0; i < diffDays; i++) {
+            const currentDate = new Date(start);
+            currentDate.setDate(start.getDate() + i);
+            const dateStr = currentDate.toLocaleDateString('en-IN', { 
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            
+            html += `
+                <div class="card" style="background: rgba(102, 126, 234, 0.05); margin-bottom: 1rem;">
+                    <h4 style="color: var(--primary);">Day ${i + 1} - ${dateStr}</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Function Type</label>
+                            <input type="text" id="day${i}Function" class="form-input" 
+                                   placeholder="e.g., Sangeet, Mehendi, Reception">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Time Slot</label>
+                            <input type="text" id="day${i}Time" class="form-input" 
+                                   placeholder="e.g., 7:00 PM - 11:00 PM">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes for this day</label>
+                        <textarea id="day${i}Notes" class="form-textarea" 
+                                  placeholder="Special requirements..."></textarea>
+                    </div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+    },
 
             // ============ KEYBOARD SHORTCUTS ============
             setupKeyboardShortcuts() {
@@ -1384,45 +1469,44 @@ async init() {
 async updateItem(type, id, newData) {
     const handlers = {
         order: async () => {
-            try {
-                // Find the document by orderId field
-                const snapshot = await db.collection('orders')
-                    .where('orderId', '==', id)
-                    .get();
+    try {
+        // Find the document by orderId field (instead of doc(id))
+        const snapshot = await db.collection('orders')
+            .where('orderId', '==', id)
+            .get();
+            console.log('🔥 Deleting orderId:', id);
+console.log('Firestore snapshot size:', snapshot.size);
+snapshot.forEach(doc => console.log('Found Firestore doc ID:', doc.id));
 
-                console.log('✏️ Updating orderId:', id);
-                console.log('Firestore snapshot size:', snapshot.size);
+        if (snapshot.empty) {
+            console.warn('No Firestore doc found for', id);
+            return false;
+        }
 
-                if (snapshot.empty) {
-                    console.warn('⚠️ No Firestore doc found for', id);
-                    // Still update locally
-                    const index = this.data.orders.findIndex(o => o.orderId === id);
-                    if (index !== -1) {
-                        this.data.orders[index] = { ...this.data.orders[index], ...newData };
-                        return true;
-                    }
-                    return false;
-                }
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        console.log(`🔥 Deleted ${snapshot.size} Firestore doc(s) for orderId ${id}`);
 
-                // Update in Firestore
-                const docId = snapshot.docs[0].id;
-                await db.collection('orders').doc(docId).update(newData);
-                console.log(`✅ Updated Firestore doc with ID: ${docId}`);
+        // Local delete
+        const index = this.data.orders.findIndex(o => o.orderId === id);
+        if (index !== -1) {
+            const deleted = this.data.orders.splice(index, 1)[0];
+            this.addToUndoStack('delete', 'order', deleted);
+            this.data.deletedOrders.push({
+                ...deleted,
+                deletedAt: new Date().toISOString(),
+                deleteReason: 'Manual deletion'
+            });
+        }
 
-                // Update in local array
-                const index = this.data.orders.findIndex(o => o.orderId === id);
-                if (index !== -1) {
-                    this.data.orders[index] = { ...this.data.orders[index], ...newData };
-                    this.addToUndoStack('update', 'order', this.data.orders[index]);
-                }
-
-                return true;
-            } catch (error) {
-                console.error('❌ Update error:', error);
-                this.showToast('Update failed: ' + error.message, 'error');
-                return false;
-            }
-        },
+        return true;
+    } catch (error) {
+        console.error('Error deleting Firestore order:', error);
+        this.showToast('Delete failed: ' + error.message, 'error');
+        return false;
+    }
+},
 
         task: () => {
             const index = this.data.tasks.findIndex(t => t.id === id);
@@ -1431,17 +1515,6 @@ async updateItem(type, id, newData) {
             return true;
         }
     };
-
-    const handler = handlers[type];
-    if (handler) {
-        const success = await handler();
-        if (success) {
-            this.saveToStorage();
-            this.updateAllDisplays();
-        }
-        return success;
-    }
-    return false;
 },
 
 // ============ DELETE ITEM ============
@@ -1467,8 +1540,10 @@ order: async () => {
     
     try {
         console.log('🔄 Attempting to delete orderId:', id);
+        
+        console.log('🔄 Attempting to delete orderId:', id);
 
-        // Delete directly by document ID (since doc ID = orderId)
+// Delete directly by document ID (since doc ID = orderId)
 const docRef = db.collection('orders').doc(id);
 const docSnap = await docRef.get();
 
@@ -1606,8 +1681,8 @@ async editItem(type, id) {
                 }
             },
 
-            async refreshOrderId() {
-    const nextId = await this.getNextOrderIdFromFirestore();
+async refreshOrderId() {
+    const nextId = await this.previewNextOrderId();
     Utils.set('orderId', nextId);
     document.getElementById('currentOrderId').textContent = `Next: ${nextId}`;
 },
@@ -1644,115 +1719,109 @@ async editItem(type, id) {
                 };
 },
 
-            async saveOrder() {
-                const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
-                if (errors.length > 0) {
-                    this.showToast('Please fill all required fields', 'error');
-                    return;
-                }
+async saveOrder() {
+    const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
+    if (errors.length > 0) {
+        this.showToast('Please fill all required fields', 'error');
+        return;
+    }
 
-                const orderData = this.collectFormData();
+    const orderData = this.collectFormData();
 
-                try {
-                    console.log('💾 Saving order:', orderData.orderId);
+    try {
+        console.log('💾 Saving order:', orderData.orderId);
 
-                    // Check if order already exists in Firestore BY ORDERID FIELD
-                    const existingSnapshot = await db.collection('orders')
-                        .where('orderId', '==', orderData.orderId)
-                        .get();
+        // Check if order already exists in Firestore BY ORDERID FIELD
+        const existingSnapshot = await db.collection('orders')
+            .where('orderId', '==', orderData.orderId)
+            .get();
 
-                    // Convert admin format to quotation format for Firestore
-                    const firestoreData = {
-                        orderId: orderData.orderId,
-                        customer: {
-                            name: orderData.clientName,
-                            phone: orderData.contact,
-                            venue: orderData.venue,
-                            dates: this.convertToQuotationDateFormat(orderData.date),
-                            timeSlot: orderData.readyTime,
-                            functionType: orderData.eventType,
-                            location: ''
-                        },
-                        functionType: orderData.eventType,
-                        items: orderData.items.map(item => ({
-                            name: item.name,
-                            qty: item.quantity,
-                            desc: item.remarks || '',
-                            price: item.price || 0
-                        })),
-                        itemCount: orderData.items.length,
-                        totalAmount: orderData.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0),
-                        status: orderData.status.toLowerCase(),
-                        source: 'admin_panel',
-                        createdAt: orderData.createdAt || new Date().toISOString(),
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-
-                    if (!existingSnapshot.empty) {
-                        // UPDATE existing order
-                        const docId = existingSnapshot.docs[0].id;
-                        console.log('✏️ Updating existing order, Firestore doc ID:', docId);
-
-                        await db.collection('orders').doc(docId).update(firestoreData);
-
-                        // Update in local array
-                        const localIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
-                        if (localIndex !== -1) {
-                            this.data.orders[localIndex] = orderData;
-                        }
-
-                        this.showToast('Order updated in Firestore! ✏️');
-                    } else {
-                        // CREATE new order
-                        console.log('🆕 Creating new order');
-
-                        try {
-                            // generate FP-style order id
-                            const newOrderId = await generateNextOrderId();
-                            orderData.orderId = newOrderId;
-
-                            console.log('🆔 Generated FP Order ID:', newOrderId);
-
-                            // save to Firestore
-                            await db.collection('orders').doc(newOrderId).set({
-                                ...firestoreData,
-                                orderId: newOrderId
-                            });
-
-                            // Add to local array only if not already there
-                            const localExists = this.data.orders.some(o => o.orderId === newOrderId);
-                            if (!localExists) {
-                                this.data.orders.push(orderData);
-                                this.updateCustomerDatabase(orderData);
-                            }
-
-                            this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
-                            this.refreshOrderId();
-
-                            this.saveToStorage();
-                            this.updateAllDisplays();
-                            localStorage.removeItem('oms_draft');
-
-                        } catch (error) {
-                            console.error('❌ Error saving to Firestore (create):', error);
-                            this.showToast('Error saving order: ' + error.message, 'error');
-                        }
-                    }
-
-                } catch (error) {
-                    console.error('❌ Error saving to Firestore (outer):', error);
-                    this.showToast('Error saving order: ' + error.message, 'error');
-                }
-}, // 👈 keep this comma ONLY if inside an object of methods (like OMS = { ... })
-
-            convertToQuotationDateFormat(dateStr) {
-                if (!dateStr) return '';
-                const parts = dateStr.split('-');
-                if (parts.length === 3) {
-                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
-                return dateStr;
+        // Convert admin format to quotation format for Firestore
+        const firestoreData = {
+            orderId: orderData.orderId,
+            customer: {
+                name: orderData.clientName,
+                phone: orderData.contact,
+                venue: orderData.venue,
+                dates: this.convertToQuotationDateFormat(orderData.date),
+                timeSlot: orderData.readyTime,
+                functionType: orderData.eventType,
+                location: ''
             },
+            functionType: orderData.eventType,
+            items: orderData.items.map(item => ({
+                name: item.name,
+                qty: item.quantity,
+                desc: item.remarks || '',
+                price: item.price || 0
+            })),
+            itemCount: orderData.items.length,
+            totalAmount: orderData.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0),
+            status: orderData.status.toLowerCase(),
+            source: 'admin_panel',
+            createdAt: orderData.createdAt || new Date().toISOString(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (!existingSnapshot.empty) {
+            // UPDATE existing order
+            const docId = existingSnapshot.docs[0].id;
+            console.log('✏️ Updating existing order, Firestore doc ID:', docId);
+
+            await db.collection('orders').doc(docId).update(firestoreData);
+
+            // Update in local array
+            const localIndex = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
+            if (localIndex !== -1) {
+                this.data.orders[localIndex] = orderData;
+            }
+
+            this.showToast('Order updated in Firestore! ✏️');
+        } else {
+            // CREATE new order
+            console.log('🆕 Creating new order');
+
+            // Generate FP-style order ID from Firestore
+            const newOrderId = await this.getNextOrderIdFromFirestore();
+            orderData.orderId = newOrderId;
+            firestoreData.orderId = newOrderId;
+
+            console.log('🆔 Generated order ID:', newOrderId);
+
+            // Save to Firestore
+                await db.collection('orders').doc(newOrderId).set({
+                    ...firestoreData,
+                    orderId: newOrderId
+                });
+
+                // Add to local array only if not already there
+                const localExists = this.data.orders.some(o => o.orderId === newOrderId);
+                if (!localExists) {
+                    this.data.orders.push(orderData);
+                    this.updateCustomerDatabase(orderData);
+                }
+
+                this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
+                this.refreshOrderId();
+                this.saveToStorage();
+                this.updateAllDisplays();
+                localStorage.removeItem('oms_draft');
+        }
+
+    } catch (error) {
+        console.error('❌ Error saving to Firestore:', error);
+        this.showToast('Error saving order: ' + error.message, 'error');
+    }
+},
+
+convertToQuotationDateFormat(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+},
 
             loadOrderToForm(order) {
                 Object.entries({
@@ -3510,19 +3579,18 @@ loadDemoData() {
     }
 },
 
-            updateAllDisplays() {
-                if (this.currentTab === 'dashboard') this.renderDashboard();
-                else if (this.currentTab === 'inventory') this.updateInventoryDisplay();
-                else if (this.currentTab === 'customers') this.renderCustomers();
-                else if (this.currentTab === 'calendar') this.renderCalendarTab();
-else if (this.currentTab === 'history') this.renderHistory();
-            else if (this.currentTab === 'analytics') this.renderAnalytics();
-        
+updateAllDisplays() {
+        if (this.currentTab === 'dashboard') this.renderDashboard();
+        else if (this.currentTab === 'inventory') this.updateInventoryDisplay();
+        else if (this.currentTab === 'customers') this.renderCustomers();
+        else if (this.currentTab === 'calendar') this.renderCalendarTab();
+        else if (this.currentTab === 'history') this.renderHistory();
+        else if (this.currentTab === 'analytics') this.renderAnalytics();
     },
 
-    // Get next order ID from Firestore counter
     async getNextOrderIdFromFirestore() {
-        try {     const counterRef = db.collection('counters').doc('orderCounter');
+        try {
+            const counterRef = db.collection('counters').doc('orderCounter');
             
             const newOrderId = await db.runTransaction(async (transaction) => {
                 const counterDoc = await transaction.get(counterRef);
@@ -3538,7 +3606,7 @@ else if (this.currentTab === 'history') this.renderHistory();
                 transaction.update(counterRef, { currentNumber: nextNumber });
                 
                 const prefix = this.data.settings.invoicePrefix || 'FP';
-                return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+                return `${prefix}${String(nextNumber).padStart(3, '0')}`;
             });
             
             console.log('✅ Generated order ID from Firestore:', newOrderId);
@@ -3548,33 +3616,78 @@ else if (this.currentTab === 'history') this.renderHistory();
             console.error('❌ Error getting order ID:', error);
             return this.getNextOrderId();
         }
+    },
+
+    // Preview next order ID WITHOUT incrementing
+    async previewNextOrderId() {
+        try {
+            const counterRef = db.collection('counters').doc('orderCounter');
+            const counterDoc = await counterRef.get();
+            
+            if (!counterDoc.exists) {
+                return 'FP0001';
+            }
+            
+            const currentNumber = counterDoc.data().currentNumber || 0;
+            const nextNumber = currentNumber + 1;
+            
+            const prefix = this.data.settings.invoicePrefix || 'FP';
+            return `${prefix}${String(nextNumber).padStart(3, '0')}`;
+            
+        } catch (error) {
+            console.error('❌ Error previewing order ID:', error);
+            return this.getNextOrderId();
+        }
     }
 };
-// 🔢 Generate next FP order ID using Firestore transaction
-async function generateNextOrderId() {
-    const counterRef = db.collection('counters').doc('orderCounter');
-    let newNumber;
-
-    await runTransaction(db, async (transaction) => {
-        const counterDoc = await transaction.get(counterRef);
-        if (!counterDoc.exists) {
-            throw new Error('Counter document missing!');
-        }
-
-        const current = counterDoc.data().currentNumber || 0;
-        newNumber = current + 1;
-        transaction.update(counterRef, { currentNumber: newNumber });
-    });
-
-    const formattedId = `FP${String(newNumber).padStart(3, '0')}`;
-    console.log('🧮 New order ID generated:', formattedId);
-    return formattedId;
-}
-
-        
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
+            // Multi-day event toggle
+    const eventTypeSelect = document.getElementById('eventTypeSelect');
+    const singleDayFields = document.getElementById('singleDayFields');
+    const multiDayFields = document.getElementById('multiDayFields');
+    const dayWiseFunctions = document.getElementById('dayWiseFunctions');
+    
+    if (eventTypeSelect) {
+        eventTypeSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'single') {
+                singleDayFields.style.display = 'block';
+                multiDayFields.style.display = 'none';
+                dayWiseFunctions.style.display = 'none';
+                document.getElementById('orderDate').required = true;
+                document.getElementById('startDate').required = false;
+                document.getElementById('endDate').required = false;
+            } else {
+                singleDayFields.style.display = 'none';
+                multiDayFields.style.display = 'grid';
+                dayWiseFunctions.style.display = 'block';
+                OMS.generateDayWiseFunctions();
+                document.getElementById('orderDate').required = false;
+                document.getElementById('startDate').required = true;
+                document.getElementById('endDate').required = true;
+            }
+        });
+    }
+    
+    // Calculate total days
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const totalDaysInput = document.getElementById('totalDays');
+    
+    function calculateTotalDays() {
+        if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+            const start = new Date(startDateInput.value);
+            const end = new Date(endDateInput.value);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            totalDaysInput.value = diffDays + ' days';
+            OMS.generateDayWiseFunctions();
+        }
+    }
+    
+    if (startDateInput) startDateInput.addEventListener('change', calculateTotalDays);
+    if (endDateInput) endDateInput.addEventListener('change', calculateTotalDays);
             // Initialize Firebase
             const firebaseConfig = {
                 apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
@@ -3588,7 +3701,6 @@ async function generateNextOrderId() {
             firebase.initializeApp(firebaseConfig);
             window.auth = firebase.auth();
             window.db = firebase.firestore();
-            const { runTransaction } = firebase.firestore;
             console.log('✅ Firebase initialized successfully!');
 
             // Check if user is logged in
