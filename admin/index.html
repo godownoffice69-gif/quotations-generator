@@ -1112,7 +1112,7 @@ debounce: (func, wait) => {
         };
 
         // ============ MAIN APP ============
-        const OMS = {
+const OMS = {
             initialized: false,
             realtimeListenerActive: false,
     ordersUnsubscribe: null,
@@ -1167,7 +1167,7 @@ debounce: (func, wait) => {
                 "2025-11-02": ["दीवाली", "Diwali"]
             },
 
-async init() {
+    async init() {
                 // Prevent duplicate initialization
     if (this.initialized) {
         console.log('⚠️ Already initialized - skipping duplicate init');
@@ -1212,8 +1212,11 @@ async init() {
     'exportData': () => OMS.exportData(),
     'importData': () => OMS.importData()
 };
-generateDayWiseFunctions() {
+    generateDayWiseFunctions() {
         const container = document.getElementById('functionsContainer');
+        console.log('🔍 Container found:', container);  // ← ADD THIS LINE
+        console.log('🔍 Start date:', document.getElementById('startDate').value);  // ← ADD THIS LINE
+        console.log('🔍 End date:', document.getElementById('endDate').value);  // ← ADD THIS LINE
         if (!container) return;
         
         const startDate = document.getElementById('startDate').value;
