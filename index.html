@@ -122,18 +122,44 @@
   </script>
   <!-- 📦 ORDER SYSTEM - Round 3 📦 -->
   <script type="module">
-   import { getFirestore, collection, setDoc, doc, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+   import { getFirestore, collection, setDoc, doc, addDoc, runTransaction, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
    window.addDoc = addDoc;
 
     
     const db = window.firebaseDB;
     
-    // Generate Order ID
-    function generateOrderId() {
-      const timestamp = Date.now().toString().slice(-6);
-      const random = Math.random().toString(36).substr(2, 4).toUpperCase();
-      return `ORD-${timestamp}-${random}`;
-    }
+    // Generate Order ID from Firestore counter
+async function generateOrderId() {
+  try {
+    const counterRef = doc(db, 'counters', 'orderCounter');
+    
+    const newOrderId = await runTransaction(db, async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      
+      if (!counterDoc.exists()) {
+        transaction.set(counterRef, { currentNumber: 1 });
+        return 'FP0001';
+      }
+      
+      const currentNumber = counterDoc.data().currentNumber || 0;
+      const nextNumber = currentNumber + 1;
+      
+      transaction.update(counterRef, { currentNumber: nextNumber });
+      
+      return `FP${String(nextNumber).padStart(4, '0')}`;
+    });
+    
+    console.log('✅ Generated order ID:', newOrderId);
+    return newOrderId;
+    
+  } catch (error) {
+    console.error('❌ Error getting order ID:', error);
+    // Fallback to random ID
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+    return `ORD-${timestamp}-${random}`;
+  }
+}
     
     // Place Order Function
     window.placeOrder = async function(orderData) {
@@ -145,7 +171,7 @@
         const userInfo = window.sessionDataGlobal?.userInfo || {};
         
         const order = {
-          orderId: generateOrderId(),
+          orderId: await generateOrderId(),
           timestamp: serverTimestamp(),
           status: 'pending',
           customer: {
