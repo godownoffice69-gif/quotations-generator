@@ -1884,7 +1884,7 @@ async saveOrder() {
     const eventType = Utils.get('eventTypeSelect');
     const isMultiDay = eventType === 'multi';
     
-    let requiredFields = ['orderId', 'clientName', 'contact', 'venue', 'orderStatus'];
+    let requiredFields = ['clientName', 'contact', 'venue', 'orderStatus'];
 
     if (isMultiDay) {
         requiredFields.push('startDate', 'endDate');
