@@ -2056,6 +2056,10 @@ convertToQuotationDateFormat(dateStr) {
             loadOrderToForm(order) {
         // Store original order ID for updates
         this.editingOrderId = order.orderId;
+        
+        console.log('🔍 Loading order to form:', order);
+        console.log('🔍 Order status:', order.status);
+        
                 Object.entries({
                     orderId: order.orderId,
                     clientName: order.clientName,
