@@ -3984,11 +3984,14 @@ updateAllDisplays() {
         if (input) {
             input.setAttribute('min', today);
             input.addEventListener('change', (e) => {
-                if (e.target.value < today) {
-                    OMS.showToast('⚠️ Cannot create orders for past dates!', 'error');
-                    e.target.value = today;
-                }
-            });
+            const selectedDate = new Date(e.target.value);
+            const todayDate = new Date(today);
+                
+            if (selectedDate < todayDate) {
+                OMS.showToast('⚠️ Cannot create orders for past dates!', 'error');
+                e.target.value = today;
+            }
+        });
     }
 });
         });
