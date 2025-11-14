@@ -1880,7 +1880,19 @@ async refreshOrderId() {
     },
 
 async saveOrder() {
-    const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
+    // Conditional validation based on event type
+    const eventType = Utils.get('eventTypeSelect');
+    const isMultiDay = eventType === 'multi';
+    
+    let requiredFields = ['orderId', 'clientName', 'contact', 'venue', 'orderStatus'];
+
+    if (isMultiDay) {
+        requiredFields.push('startDate', 'endDate');
+} else {
+    requiredFields.push('orderDate', 'readyTime');
+}
+
+const errors = Utils.validateRequired(requiredFields);
     if (errors.length > 0) {
         this.showToast('Please fill all required fields', 'error');
         return;
