@@ -3852,22 +3852,8 @@ updateAllDisplays() {
     document.getElementById('startDate').required = true;
     document.getElementById('endDate').required = true;
 }
-                dayWiseFunctions.style.display = 'none';
-                document.getElementById('orderDate').required = true;
-                document.getElementById('startDate').required = false;
-                document.getElementById('endDate').required = false;
-            } else {
-                singleDayFields.style.display = 'none';
-                multiDayFields.style.display = 'grid';
-                dayWiseFunctions.style.display = 'block';
-                OMS.generateDayWiseFunctions();
-                document.getElementById('orderDate').required = false;
-                document.getElementById('startDate').required = true;
-                document.getElementById('endDate').required = true;
-            }
         });
-    }
-    
+    }    
     // Calculate total days
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
