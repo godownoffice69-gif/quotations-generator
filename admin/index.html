@@ -2362,26 +2362,74 @@ convertToQuotationDateFormat(dateStr) {
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; font-size: ${fontSize}px; margin-bottom: 20px;">
                             <div>
-                                <strong>Date:</strong> ${Utils.formatDate(order.date)}<br>
-                                <strong>Client:</strong> ${order.clientName}<br>
-                                <strong>Contact:</strong> ${order.contact}<br>
-                                <strong>Venue:</strong> ${order.venue}
+                                ${order.isMultiDay ? `
+                                    <strong>Start Date:</strong> ${Utils.formatDate(order.startDate) || 'N/A'}<br>
+                                    <strong>End Date:</strong> ${Utils.formatDate(order.endDate) || 'N/A'}<br>
+                                ` : `
+                                    <strong>Date:</strong> ${Utils.formatDate(order.date) || 'N/A'}<br>
+                                    <strong>Time:</strong> ${order.readyTime || '-'}<br>
+                                `}
+                                <strong>Client:</strong> ${order.clientName || '-'}<br>
+                                <strong>Contact:</strong> ${order.contact || '-'}<br>
+                                <strong>Venue:</strong> ${order.venue || '-'}
                             </div>
                             <div>
-                                <strong>Time:</strong> ${order.readyTime}<br>
-                                <strong>Transport:</strong> ${order.transport}<br>
-                                <strong>Event:</strong> ${order.eventType || ''}<br>
-                                <strong>Driver:</strong> ${order.driverName || ''}
+                                <strong>Transport:</strong> ${order.transport || '-'}<br>
+                                <strong>Driver:</strong> ${order.driverName || '-'}<br>
+                                <strong>Event:</strong> ${order.eventType || '-'}<br>
+                                <strong>Operator:</strong> ${order.operator || '-'}
                             </div>
                             <div>
-                                <strong>Operator:</strong> ${order.operator || ''}<br>
-                                <strong>Status:</strong> ${order.status}<br>
-                                <strong>Helper:</strong> ${order.helper || ''}
+                                <strong>Helper:</strong> ${order.helper || '-'}<br>
+                                <strong>Status:</strong> ${order.status || '-'}
                             </div>
                         </div>
 
-                        ${order.items.length > 0 ? `
-                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px;">
+                        ${order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0 ? `
+                            <div style="margin-top: 30px;">
+                                <h3 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 15px; text-align: center;">
+                                    Day-wise Details
+                                </h3>
+                                ${order.dayWiseData.map((day, idx) => `
+                                    <div style="margin-top: 25px; border: 2px solid ${colors.tableBorder}; padding: 15px; background: rgba(102, 126, 234, 0.05);">
+                                        <h4 style="color: ${orderIdBg}; margin-bottom: 15px;">
+                                            Day ${day.dayNumber} - ${Utils.formatDate(day.date)}
+                                        </h4>
+                                        <div style="font-size: ${fontSize}px; margin-bottom: 15px;">
+                                            <strong>Function:</strong> ${day.functionType || '-'}<br>
+                                            <strong>Time Slot:</strong> ${day.timeSlot || '-'}<br>
+                                            ${day.notes ? `<strong>Notes:</strong> ${day.notes}<br>` : ''}
+                                        </div>
+                                        
+                                        ${day.items && day.items.length > 0 ? `
+                                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px;">
+                                                <thead>
+                                                    <tr style="background: ${colors.tableHeaderBg}; color: ${colors.tableHeaderText};">
+                                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthSr}%;">Sr</th>
+                                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthItem}%;">Item</th>
+                                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthQty}%;">Qty</th>
+                                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthRemarks}%;">Remarks</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${day.items.map((item, i) => `
+                                                        <tr>
+                                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center;">${i + 1}</td>
+                                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px;">${item.name}</td>
+                                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center;">${item.quantity}</td>
+                                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px;">${item.remarks || '-'}</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+                                        ` : '<p style="text-align: center; color: #666; font-style: italic;">No items for this day</p>'}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${!order.isMultiDay && order.items && order.items.length > 0 ? `
+                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px; margin-top: 20px;">
                                 <thead>
                                     <tr style="background: ${colors.tableHeaderBg}; color: ${colors.tableHeaderText};">
                                         <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthSr}%;">Sr</th>
@@ -2401,7 +2449,7 @@ convertToQuotationDateFormat(dateStr) {
                                     `).join('')}
                                 </tbody>
                             </table>
-                        ` : ''}
+                        ` : (!order.isMultiDay ? '<p style="text-align: center; color: #666; font-style: italic; margin-top: 20px;">No items added</p>' : '')}
 
                         ${order.notes ? `
                             <div style="margin-top: 20px; font-size: ${fontSize}px;">
