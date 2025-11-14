@@ -1850,7 +1850,7 @@ async refreshOrderId() {
                     functionType: Utils.get(`day${i}Function`),
                     timeSlot: Utils.get(`day${i}Time`),
                     notes: Utils.get(`day${i}Notes`),
-                    items: window.dayItemsData[i] || []
+                    items: (window.dayItemsData && window.dayItemsData[i]) ? window.dayItemsData[i] : []
                 });
             }
         }
@@ -3864,14 +3864,25 @@ updateAllDisplays() {
     
     function calculateTotalDays() {
         if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+            // Check if dates are complete (YYYY-MM-DD format)
+            if (startDateInput.value.length !== 10 || endDateInput.value.length !== 10) {
+            return; // Wait for complete date
+            }
+        
             const start = new Date(startDateInput.value);
             const end = new Date(endDateInput.value);
+        
+            // Validate dates are real dates
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return; // Invalid dates, wait
+            }
+        
             const diffTime = Math.abs(end - start);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
             totalDaysInput.value = diffDays + ' days';
             OMS.generateDayWiseFunctions();
-        }
     }
+}
     // Item search for multi-day events
     function setupDayItemSearch(dayIndex) {
         const searchInput = document.getElementById(`day${dayIndex}ItemSearch`);
