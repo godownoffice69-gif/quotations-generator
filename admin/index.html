@@ -2073,7 +2073,7 @@ convertToQuotationDateFormat(dateStr) {
                     driverName: order.driverName,
                     operator: order.operator,
                     helper: order.helper,
-                    orderStatus: order.status,
+                    orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
                     orderNotes: order.notes
                 }).forEach(([key, value]) => Utils.set(key, value));
 
