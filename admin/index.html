@@ -1899,7 +1899,33 @@ const errors = Utils.validateRequired(requiredFields);
     }
 
     const orderData = this.collectFormData();
-
+    const status = orderData.status.toLowerCase();
+    const manualOrderId = Utils.get('orderId').trim();
+    
+    // CRITICAL: Check status and ID
+    let finalOrderId;
+    
+    if (status === 'completed') {
+        // Check if manual ID was entered
+        if (manualOrderId && manualOrderId.startsWith('FP')) {
+            // Use manual ID
+            finalOrderId = manualOrderId;
+            console.log('✅ Using manual ID:', finalOrderId);
+        } else {
+            // Generate permanent FP ID
+            finalOrderId = await this.getNextOrderIdFromFirestore();
+            console.log('✅ Generated FP ID:', finalOrderId);
+        }
+    } else {
+        // Use temporary ID for pending/confirmed
+        const tempId = `ORD-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+        finalOrderId = tempId;
+        console.log('⏳ Using temp ID:', tempId);
+    }
+    
+    // Update order data with final ID
+    orderData.orderId = finalOrderId;
+    
     try {
         console.log('💾 Saving order:', orderData.orderId);
 
