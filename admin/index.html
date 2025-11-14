@@ -3951,8 +3951,14 @@ if (diffDays > 30) {
         }
     };
     
-    if (startDateInput) startDateInput.addEventListener('change', calculateTotalDays);
-    if (endDateInput) endDateInput.addEventListener('change', calculateTotalDays);
+    if (startDateInput) {
+        startDateInput.addEventListener('blur', calculateTotalDays);
+        startDateInput.addEventListener('click', calculateTotalDays);
+}
+    if (endDateInput) {
+       endDateInput.addEventListener('blur', calculateTotalDays);
+       endDateInput.addEventListener('click', calculateTotalDays);
+}
             // Initialize Firebase
             const firebaseConfig = {
                 apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
