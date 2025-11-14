@@ -2105,7 +2105,16 @@ convertToQuotationDateFormat(dateStr) {
                 this.refreshOrderId();
                 this.showToast('Last order duplicated');
             },
-
+            previewOrder() {
+                const errors = Utils.validateRequired(['clientName', 'contact', 'venue']);
+                if (errors.length > 0) {
+                this.showToast('Fill required fields first', 'error');
+                return;
+                }
+                
+                const orderData = this.collectFormData();
+                this.showModal('Order Preview', this.generatePreviewHTML(orderData));
+            },
             generatePreviewHTML(order) {
                 return `
                     <div style="font-family: Arial, sans-serif;">
