@@ -1980,19 +1980,19 @@ const errors = Utils.validateRequired(requiredFields);
             console.log('🆕 Creating new order');
 
             // Save to Firestore
-                await db.collection('orders').doc(newOrderId).set({
+                await db.collection('orders').doc(finalOrderId).set({
                     ...firestoreData,
-                    orderId: newOrderId
+                    orderId: finalOrderId
                 });
 
                 // Add to local array only if not already there
-                const localExists = this.data.orders.some(o => o.orderId === newOrderId);
+                const localExists = this.data.orders.some(o => o.orderId === finalOrderId);
                 if (!localExists) {
                     this.data.orders.push(orderData);
                     this.updateCustomerDatabase(orderData);
                 }
 
-                this.showToast(`Order ${newOrderId} saved to Firestore! 🆕`);
+                this.showToast(`Order ${finalOrderId} saved to Firestore! 🆕`);
                 this.refreshOrderId();
                 this.saveToStorage();
                 this.updateAllDisplays();
