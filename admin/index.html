@@ -1946,17 +1946,45 @@ if (this.editingOrderId) {
 }
 
         // Convert admin format to quotation format for Firestore
-        const firestoreData = {
-            orderId: orderData.orderId,
-            customer: {
-                name: orderData.clientName,
-                phone: orderData.contact,
-                venue: orderData.venue,
-                dates: this.convertToQuotationDateFormat(orderData.date),
-                timeSlot: orderData.readyTime,
-                functionType: orderData.eventType,
-                location: ''
-            },
+    const firestoreData = {
+        orderId: finalOrderId,
+        isMultiDay: orderData.isMultiDay || false,
+        startDate: orderData.startDate || null,
+        endDate: orderData.endDate || null,
+        dayWiseData: orderData.dayWiseData || [],
+        customer: {
+        name: orderData.clientName,
+        phone: orderData.contact,
+        venue: orderData.venue,
+        dates: orderData.isMultiDay 
+        ? `${Utils.formatDate(orderData.startDate)} to ${Utils.formatDate(orderData.endDate)}`
+        : this.convertToQuotationDateFormat(orderData.date),
+        timeSlot: orderData.readyTime || '',
+        functionType: orderData.eventType || '',
+        location: ''
+    },
+        functionType: orderData.eventType || '',
+        items: orderData.isMultiDay ? [] : (orderData.items || []).map(item => ({
+        name: item.name,
+        qty: item.quantity,
+        desc: item.remarks || '',
+        price: item.price || 0
+    })),
+        clientName: orderData.clientName,
+        contact: orderData.contact,
+        venue: orderData.venue,
+        date: orderData.date || '',
+        readyTime: orderData.readyTime || '',
+        eventType: orderData.eventType || '',
+        transport: orderData.transport || '',
+        driverName: orderData.driverName || '',
+        operator: orderData.operator || '',
+        helper: orderData.helper || '',
+        status: orderData.status.toLowerCase(),
+        notes: orderData.notes || '',
+        createdAt: orderData.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
             functionType: orderData.eventType,
             items: orderData.items.map(item => ({
                 name: item.name,
