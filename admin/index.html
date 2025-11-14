@@ -2079,6 +2079,14 @@ convertToQuotationDateFormat(dateStr) {
 
                 this.currentOrderItems = order.items ? [...order.items] : [];
                 this.updateOrderItemsTable();
+                // Trigger status change to show/hide order ID field
+                setTimeout(() => {
+                    const statusSelect = document.getElementById('orderStatus');
+                    if (statusSelect) {
+                        const event = new Event('change');
+                        statusSelect.dispatchEvent(event);
+                    }
+                }, 100);
             },
 
             clearForm() {
