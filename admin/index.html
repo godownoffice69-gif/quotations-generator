@@ -3817,15 +3817,16 @@ updateAllDisplays() {
     multiDayFields.style.display = 'none';
     dayWiseFunctions.style.display = 'none';
     
-    // Show fields needed for single day
-    document.getElementById('readyTime').parentElement.style.display = 'block';
-    document.getElementById('eventType').parentElement.style.display = 'block';
+            // Show fields needed for single day
+            const readyTimeField = document.getElementById('readyTime');
+            readyTimeField.parentElement.style.display = 'block';
+            readyTimeField.required = true;
     
-    // Show single-day item search
-    const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items') 
-        ? document.querySelector('.card h3').closest('.card') 
-        : null;
-    if (itemSearchSection) itemSearchSection.style.display = 'block';
+            // Show single-day item search
+            const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items') 
+            ? document.querySelector('.card h3').closest('.card') 
+            : null;
+            if (itemSearchSection) itemSearchSection.style.display = 'block';
     
     // Set required fields
     document.getElementById('orderDate').required = true;
@@ -3837,9 +3838,11 @@ updateAllDisplays() {
     multiDayFields.style.display = 'grid';
     dayWiseFunctions.style.display = 'block';
     
-    // Hide fields not needed for multi-day
-    document.getElementById('readyTime').parentElement.style.display = 'none';
-    document.getElementById('eventType').parentElement.style.display = 'none';
+            // Hide fields not needed for multi-day
+            const readyTimeField = document.getElementById('readyTime');
+            readyTimeField.parentElement.style.display = 'none';
+            readyTimeField.required = false;
+            document.getElementById('eventType').parentElement.style.display = 'none';
     
     // Hide single-day item search
     const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items') 
