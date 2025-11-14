@@ -2339,6 +2339,9 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             buildOrderHTML(order, fontSize, colors, compact = false) {
+                console.log('🖼️ Building image for order:', order.orderId);
+                console.log('🖼️ isMultiDay:', order.isMultiDay);
+                console.log('🖼️ dayWiseData:', order.dayWiseData);
                 const ts = this.data.settings.tableSettings;
                 const orderIdBg = colors.orderIdBg || '#667eea';
                 const orderIdText = colors.orderIdText || '#ffffff';
