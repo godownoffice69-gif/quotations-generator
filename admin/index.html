@@ -2106,31 +2106,79 @@ convertToQuotationDateFormat(dateStr) {
                 this.showToast('Last order duplicated');
             },
 
-            previewOrder() {
-                const errors = Utils.validateRequired(['clientName', 'contact', 'venue', 'orderDate']);
-                if (errors.length > 0) {
-                    this.showToast('Fill required fields first', 'error');
-                    return;
-                }
-                
-                const orderData = this.collectFormData();
-                this.showModal('Order Preview', this.generatePreviewHTML(orderData));
-            },
-
             generatePreviewHTML(order) {
-    return `
-        ...
-        <div>
-            <strong>Time:</strong> ${order.readyTime}<br>
-            <strong>Transport:</strong> ${order.transport}<br>
-            <strong>Event:</strong> ${order.eventType || ''}
-        </div>
-        <div>
-            <strong>Operator:</strong> ${order.operator || ''}<br>
-            <strong>Status:</strong> ${order.status}
-        </div>
-
-                        ${order.items.length > 0 ? `
+                return `
+                    <div style="font-family: Arial, sans-serif;">
+                        <h3 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                            Order ID: ${order.orderId || 'Not assigned yet'}
+                        </h3>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0;">
+                            <div>
+                                <strong>Client Name:</strong> ${order.clientName || '-'}<br>
+                                <strong>Contact:</strong> ${order.contact || '-'}<br>
+                                <strong>Venue:</strong> ${order.venue || '-'}
+                            </div>
+                            <div>
+                                ${order.isMultiDay ? `
+                                    <strong>Event Type:</strong> Multi-Day<br>
+                                    <strong>Start Date:</strong> ${Utils.formatDate(order.startDate)}<br>
+                                    <strong>End Date:</strong> ${Utils.formatDate(order.endDate)}
+                                ` : `
+                                    <strong>Event Type:</strong> Single Day<br>
+                                    <strong>Date:</strong> ${Utils.formatDate(order.date)}<br>
+                                    <strong>Ready Time:</strong> ${order.readyTime || '-'}
+                                `}
+                            </div>
+                            <div>
+                                <strong>Transport:</strong> ${order.transport || '-'}<br>
+                                <strong>Driver:</strong> ${order.driverName || '-'}<br>
+                                <strong>Status:</strong> <span class="status-badge status-${order.status.toLowerCase()}">${order.status}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0;">
+                            <div>
+                                <strong>Operator:</strong> ${order.operator || '-'}
+                            </div>
+                            <div>
+                                <strong>Helper:</strong> ${order.helper || '-'}
+                            </div>
+                            <div>
+                                <strong>Function Type:</strong> ${order.eventType || '-'}
+                            </div>
+                        </div>
+                        
+                        ${order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0 ? `
+                            <h4 style="color: var(--primary); margin-top: 30px;">Day-wise Details:</h4>
+                            ${order.dayWiseData.map((day, idx) => `
+                                <div style="background: rgba(102, 126, 234, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                    <h5 style="color: var(--primary);">Day ${day.dayNumber} - ${Utils.formatDate(day.date)}</h5>
+                                    <strong>Function:</strong> ${day.functionType || '-'}<br>
+                                    <strong>Time Slot:</strong> ${day.timeSlot || '-'}<br>
+                                    ${day.notes ? `<strong>Notes:</strong> ${day.notes}<br>` : ''}
+                                    
+                                    ${day.items && day.items.length > 0 ? `
+                                        <table class="table" style="margin-top: 10px;">
+                                            <thead><tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th></tr></thead>
+                                            <tbody>
+                                                ${day.items.map((item, i) => `
+                                                    <tr>
+                                                        <td>${i + 1}</td>
+                                                        <td>${item.name}</td>
+                                                        <td>${item.quantity}</td>
+                                                        <td>${item.remarks || '-'}</td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    ` : '<p style="color: var(--text-gray); margin-top: 10px;">No items for this day</p>'}
+                                </div>
+                            `).join('')}
+                        ` : ''}
+                        
+                        ${!order.isMultiDay && order.items && order.items.length > 0 ? `
+                            <h4 style="color: var(--primary); margin-top: 30px;">Items:</h4>
                             <table class="table">
                                 <thead><tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th></tr></thead>
                                 <tbody>
@@ -2139,14 +2187,19 @@ convertToQuotationDateFormat(dateStr) {
                                             <td>${i + 1}</td>
                                             <td>${item.name}</td>
                                             <td>${item.quantity}</td>
-                                            <td>${item.remarks || ''}</td>
+                                            <td>${item.remarks || '-'}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
                             </table>
-                        ` : '<p>No items added</p>'}
-
-                        ${order.notes ? `<div style="margin-top: 20px;"><strong>Notes:</strong><br>${order.notes}</div>` : ''}
+                        ` : (!order.isMultiDay ? '<p style="color: var(--text-gray);">No items added</p>' : '')}
+                        
+                        ${order.notes ? `
+                            <div style="margin-top: 20px; background: rgba(102, 126, 234, 0.05); padding: 15px; border-radius: 8px;">
+                                <strong>General Notes:</strong><br>
+                                ${order.notes}
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             },
