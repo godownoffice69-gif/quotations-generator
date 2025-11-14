@@ -3812,8 +3812,46 @@ updateAllDisplays() {
     if (eventTypeSelect) {
         eventTypeSelect.addEventListener('change', (e) => {
             if (e.target.value === 'single') {
-                singleDayFields.style.display = 'block';
-                multiDayFields.style.display = 'none';
+    // Show single day fields
+    singleDayFields.style.display = 'block';
+    multiDayFields.style.display = 'none';
+    dayWiseFunctions.style.display = 'none';
+    
+    // Show fields needed for single day
+    document.getElementById('readyTime').parentElement.style.display = 'block';
+    document.getElementById('eventType').parentElement.style.display = 'block';
+    
+    // Show single-day item search
+    const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items') 
+        ? document.querySelector('.card h3').closest('.card') 
+        : null;
+    if (itemSearchSection) itemSearchSection.style.display = 'block';
+    
+    // Set required fields
+    document.getElementById('orderDate').required = true;
+    document.getElementById('startDate').required = false;
+    document.getElementById('endDate').required = false;
+} else {
+    // Show multi-day fields
+    singleDayFields.style.display = 'none';
+    multiDayFields.style.display = 'grid';
+    dayWiseFunctions.style.display = 'block';
+    
+    // Hide fields not needed for multi-day
+    document.getElementById('readyTime').parentElement.style.display = 'none';
+    document.getElementById('eventType').parentElement.style.display = 'none';
+    
+    // Hide single-day item search
+    const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items') 
+        ? document.querySelector('.card h3').closest('.card') 
+        : null;
+    if (itemSearchSection) itemSearchSection.style.display = 'none';
+    
+    // Set required fields
+    document.getElementById('orderDate').required = false;
+    document.getElementById('startDate').required = true;
+    document.getElementById('endDate').required = true;
+}
                 dayWiseFunctions.style.display = 'none';
                 document.getElementById('orderDate').required = true;
                 document.getElementById('startDate').required = false;
