@@ -836,10 +836,10 @@
                     </div>
                     <form id="orderForm">
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label required">Order ID</label>
-                                <input type="text" id="orderId" class="form-input" required>
-                                <small style="color: var(--text-gray);">Manual edit enabled - check for duplicates</small>
+                            <div class="form-group" id="orderIdGroup">
+                                <label class="form-label required">Order ID (Completed Orders Only)</label>
+                                <input type="text" id="orderId" class="form-input">
+                                <small style="color: var(--text-gray);">Only needed for completed orders. Leave empty for pending/confirmed.</small>
                             </div>
                             <div class="form-group">
     <label class="form-label required">Event Type</label>
@@ -1978,13 +1978,6 @@ const errors = Utils.validateRequired(requiredFields);
         } else {
             // CREATE new order
             console.log('🆕 Creating new order');
-
-            // Generate FP-style order ID from Firestore
-            const newOrderId = await this.getNextOrderIdFromFirestore();
-            orderData.orderId = newOrderId;
-            firestoreData.orderId = newOrderId;
-
-            console.log('🆔 Generated order ID:', newOrderId);
 
             // Save to Firestore
                 await db.collection('orders').doc(newOrderId).set({
@@ -4069,6 +4062,21 @@ if (diffDays > 30) {
                     group.classList.add('hidden');
                 }
             });
+            
+    // Order ID visibility based on status
+    document.getElementById('orderStatus').addEventListener('change', (e) => {
+        const orderIdGroup = document.getElementById('orderIdGroup');
+        const orderIdInput = document.getElementById('orderId');
+    
+    if (e.target.value === 'Completed') {
+        orderIdGroup.style.display = 'block';
+        orderIdInput.required = false;
+    } else {
+        orderIdGroup.style.display = 'none';
+        orderIdInput.required = false;
+        orderIdInput.value = '';
+    }
+});
 
     // Set initial date and block past dates
     const today = Utils.toDateString(new Date());
