@@ -3916,9 +3916,23 @@ updateAllDisplays() {
         const endDate = document.getElementById('endDate').value;
         
         if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        // Validate dates
+        if (end < start) {
+            container.innerHTML = '<div style="color: var(--danger); text-align: center; padding: 1rem;">⚠️ End date must be after start date!</div>';
+    return;
+        }
+
+const diffTime = end - start;
+const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+// Safety check - max 30 days
+if (diffDays > 30) {
+    container.innerHTML = '<div style="color: var(--danger); text-align: center; padding: 1rem;">⚠️ Maximum 30 days allowed!</div>';
+    return;
+}
             
             for (let i = 0; i < diffDays; i++) {
                 setupDayItemSearch(i);
