@@ -1878,7 +1878,6 @@ async refreshOrderId() {
             createdAt: new Date().toISOString()
         };
     },
-},
 
 async saveOrder() {
     const errors = Utils.validateRequired(['orderId', 'clientName', 'contact', 'venue', 'orderDate', 'readyTime', 'orderStatus']);
