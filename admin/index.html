@@ -1282,6 +1282,103 @@ const OMS = {
             }
         }, 100);
     },
+    addFunctionToDay(dayIndex, isFirst = false) {
+        const container = document.getElementById(`day${dayIndex}FunctionsContainer`);
+        if (!container) return;
+        
+        // Initialize functions array for this day
+        if (!window.dayFunctionsData) {
+            window.dayFunctionsData = {};
+        }
+        if (!window.dayFunctionsData[dayIndex]) {
+            window.dayFunctionsData[dayIndex] = [];
+        }
+        
+        const functionIndex = window.dayFunctionsData[dayIndex].length;
+        const functionId = `day${dayIndex}func${functionIndex}`;
+        
+        // Add function data
+        window.dayFunctionsData[dayIndex].push({
+            functionType: '',
+            timeSlot: '',
+            driver: '',
+            operator: '',
+            helper: '',
+            notes: '',
+            items: []
+        });
+        
+        // Create function HTML
+        const functionHTML = `
+            <div class="card" style="background: white; margin-bottom: 1rem; border: 1px solid var(--border);" id="${functionId}Card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h5 style="color: var(--primary); margin: 0;">Function ${functionIndex + 1}</h5>
+                    ${!isFirst ? `<button type="button" class="btn btn-danger btn-small" onclick="OMS.removeFunctionFromDay(${dayIndex}, ${functionIndex})">🗑️ Remove</button>` : ''}
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Function Type</label>
+                        <input type="text" id="${functionId}Type" class="form-input" 
+                               placeholder="e.g., Sangeet, Reception" 
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'functionType', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Time Slot</label>
+                        <input type="text" id="${functionId}Time" class="form-input" 
+                               placeholder="e.g., 5:00 PM - 9:00 PM"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'timeSlot', this.value)">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Driver</label>
+                        <input type="text" id="${functionId}Driver" class="form-input" 
+                               placeholder="Driver name"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'driver', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Operator</label>
+                        <input type="text" id="${functionId}Operator" class="form-input" 
+                               placeholder="Operator name"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'operator', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Helper</label>
+                        <input type="text" id="${functionId}Helper" class="form-input" 
+                               placeholder="Helper name"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', this.value)">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea id="${functionId}Notes" class="form-textarea" 
+                              placeholder="Special requirements for this function..."
+                              onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'notes', this.value)"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Items for this function</label>
+                    <div class="search-container">
+                        <input type="text" id="${functionId}ItemSearch" class="form-input" 
+                               placeholder="🔍 Search items..." autocomplete="off">
+                        <div id="${functionId}ItemDropdown" class="search-dropdown"></div>
+                    </div>
+                </div>
+                
+                <div id="${functionId}ItemsList" class="table-container" style="margin-top: 1rem;">
+                    <div style="color: var(--text-gray); text-align: center; padding: 1rem;">No items added yet</div>
+                </div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', functionHTML);
+        
+        // Setup item search for this function
+        this.setupFunctionItemSearch(dayIndex, functionIndex);
+    },
     addItemToDay(dayIndex, itemId) {
         const item = this.data.inventory.items.find(i => i.id === itemId);
         if (!item) return;
