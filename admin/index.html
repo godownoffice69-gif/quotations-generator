@@ -1987,10 +1987,10 @@ const firestoreData = {
 };
             functionType: orderData.eventType,
             items: orderData.items.map(item => ({
-                name: item.name,
-                qty: item.quantity,
-                desc: item.remarks || '',
-                price: item.price || 0
+            name: item.name,
+            qty: item.quantity,
+            desc: item.remarks || '',
+            price: item.price || 0
             })),
             itemCount: orderData.items.length,
             totalAmount: orderData.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0),
