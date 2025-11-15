@@ -1379,6 +1379,81 @@ const OMS = {
         // Setup item search for this function
         this.setupFunctionItemSearch(dayIndex, functionIndex);
     },
+    updateFunctionData(dayIndex, functionIndex, field, value) {
+        if (!window.dayFunctionsData?.[dayIndex]?.[functionIndex]) return;
+        window.dayFunctionsData[dayIndex][functionIndex][field] = value;
+    },
+
+    removeFunctionFromDay(dayIndex, functionIndex) {
+        if (!window.dayFunctionsData?.[dayIndex]) return;
+        
+        const functionId = `day${dayIndex}func${functionIndex}`;
+        const card = document.getElementById(`${functionId}Card`);
+        if (card) {
+            card.remove();
+        }
+        
+        // Remove from data
+        window.dayFunctionsData[dayIndex].splice(functionIndex, 1);
+        
+        // Re-render all functions for this day to fix indices
+        const container = document.getElementById(`day${dayIndex}FunctionsContainer`);
+        if (container) {
+            container.innerHTML = '';
+            const functionsCount = window.dayFunctionsData[dayIndex].length;
+            
+            // Re-add all remaining functions
+            const tempData = [...window.dayFunctionsData[dayIndex]];
+            window.dayFunctionsData[dayIndex] = [];
+            
+            tempData.forEach((funcData, idx) => {
+                this.addFunctionToDay(dayIndex, idx === 0);
+                // Restore data
+                Object.keys(funcData).forEach(key => {
+                    if (key !== 'items') {
+                        const functionId = `day${dayIndex}func${idx}`;
+                        const input = document.getElementById(`${functionId}${key.charAt(0).toUpperCase() + key.slice(1)}`);
+                        if (input) input.value = funcData[key];
+                        window.dayFunctionsData[dayIndex][idx][key] = funcData[key];
+                    }
+                });
+                window.dayFunctionsData[dayIndex][idx].items = funcData.items;
+                this.updateFunctionItemsList(dayIndex, idx);
+            });
+        }
+    },
+
+    setupFunctionItemSearch(dayIndex, functionIndex) {
+        const functionId = `day${dayIndex}func${functionIndex}`;
+        const searchInput = document.getElementById(`${functionId}ItemSearch`);
+        const dropdown = document.getElementById(`${functionId}ItemDropdown`);
+        
+        if (!searchInput || !dropdown) return;
+        
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            
+            if (query.length > 0) {
+                const items = this.data.inventory.items.filter(i => 
+                    i.name.toLowerCase().includes(query)
+                );
+                
+                if (items.length > 0) {
+                    dropdown.innerHTML = items.map(i => `
+                        <div class="search-item" onclick="OMS.addItemToFunction(${dayIndex}, ${functionIndex}, '${i.id}')">
+                            <span>${i.name}</span>
+                            <span>${i.quantity} in stock</span>
+                        </div>
+                    `).join('');
+                    dropdown.classList.add('show');
+                } else {
+                    dropdown.classList.remove('show');
+                }
+            } else {
+                dropdown.classList.remove('show');
+            }
+        });
+    },
     addItemToDay(dayIndex, itemId) {
         const item = this.data.inventory.items.find(i => i.id === itemId);
         if (!item) return;
