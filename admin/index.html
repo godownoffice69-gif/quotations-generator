@@ -2782,17 +2782,17 @@ convertToQuotationDateFormat(dateStr) {
                             </table>
                         ` : (!order.isMultiDay ? '<p style="text-align: center; color: #666; font-style: italic; margin-top: 20px;">No items added</p>' : '')}
 
-                        ${order.notes ? `
-                            <div style="margin-top: 20px; font-size: ${fontSize}px;">
-                                <strong>Notes:</strong><br>
-                                <div style="background: ${colors.notesBg}; padding: 15px; border: 1px solid ${colors.tableBorder};">
-                                    ${order.notes}
+                                    ${order.notes ? `
+                                        <div style="margin-top: 20px; font-size: ${fontSize}px;">
+                                        <strong>Notes:</strong><br>
+                                        <div style="background: ${colors.notesBg}; padding: 15px; border: 1px solid ${colors.tableBorder};">
+                                        ${order.notes}
+                                    </div>
                                 </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            },
+                            ` : ''}
+                        </div>
+                    `;
+                },
 
             // ============ CUSTOMER MANAGEMENT ============
             updateCustomerDatabase(orderData) {
