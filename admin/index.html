@@ -2485,92 +2485,44 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                         </div>
                         
-                        ${order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0 ? `
-                            <h4 style="color: var(--primary); margin-top: 30px;">Day-wise Details:</h4>
-                            ${order.dayWiseData.map((day, idx) => `
-                                <div style="background: rgba(102, 126, 234, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                                    <h5 style="color: var(--primary);">Day ${day.dayNumber} - ${Utils.formatDate(day.date)}</h5>
-                                    
-                                    ${day.functions && day.functions.length > 0 ? day.functions.map((func, funcIdx) => `
-                                        <div style="background: white; padding: 15px; border: 1px solid var(--border); border-radius: 6px; margin-top: ${funcIdx > 0 ? '15px' : '10px'};">
-                                            <h6 style="color: var(--primary); margin-bottom: 10px;">Function ${funcIdx + 1}</h6>
-                                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">
-                                                <div><strong>Type:</strong> ${func.functionType || '-'}</div>
-                                                <div><strong>Time:</strong> ${func.timeSlot || '-'}</div>
-                                                <div><strong>Driver:</strong> ${func.driver || '-'}</div>
-                                                <div><strong>Operator:</strong> ${func.operator || '-'}</div>
-                                                <div><strong>Helper:</strong> ${func.helper || '-'}</div>
-                                            </div>
-                                            ${func.notes ? `<div style="margin-bottom: 10px;"><strong>Notes:</strong> ${func.notes}</div>` : ''}
-                                            
-                                            ${func.items && func.items.length > 0 ? `
-                                                <table class="table" style="margin-top: 10px;">
-                                                    <thead><tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th></tr></thead>
-                                                    <tbody>
-                                                        ${func.items.map((item, i) => `
-                                                            <tr>
-                                                                <td>${i + 1}</td>
-                                                                <td>${item.name}</td>
-                                                                <td>${item.quantity}</td>
-                                                                <td>${item.remarks || '-'}</td>
-                                                            </tr>
-                                                        `).join('')}
-                                                    </tbody>
-                                                </table>
-                                            ` : '<p style="color: var(--text-gray); margin-top: 10px; font-style: italic;">No items for this function</p>'}
-                                        </div>
-                                    `).join('') : '<p style="color: var(--text-gray); margin-top: 10px;">No functions added for this day</p>'`}
-                                </div>
-                            `).join('')}
-                        ` : ''}
-                                <div style="background: rgba(102, 126, 234, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                                    <h5 style="color: var(--primary);">Day ${day.dayNumber} - ${Utils.formatDate(day.date)}</h5>
-                                    <strong>Function:</strong> ${day.functionType || '-'}<br>
-                                    <strong>Time Slot:</strong> ${day.timeSlot || '-'}<br>
-                                    ${day.notes ? `<strong>Notes:</strong> ${day.notes}<br>` : ''}
-                                    
-                                    ${day.items && day.items.length > 0 ? `
-                                        <table class="table" style="margin-top: 10px;">
-                                            <thead><tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th></tr></thead>
-                                            <tbody>
-                                                ${day.items.map((item, i) => `
-                                                    <tr>
-                                                        <td>${i + 1}</td>
-                                                        <td>${item.name}</td>
-                                                        <td>${item.quantity}</td>
-                                                        <td>${item.remarks || '-'}</td>
-                                                    </tr>
-                                                `).join('')}
-                                            </tbody>
-                                        </table>
-                                    ` : '<p style="color: var(--text-gray); margin-top: 10px;">No items for this day</p>'}
-                                </div>
-                            `).join('')}
-                        ` : ''}
-                        
-                        ${!order.isMultiDay && order.items && order.items.length > 0 ? `
-                            <h4 style="color: var(--primary); margin-top: 30px;">Items:</h4>
-                            <table class="table">
-                                <thead><tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th></tr></thead>
-                                <tbody>
-                                    ${order.items.map((item, i) => `
-                                        <tr>
-                                            <td>${i + 1}</td>
-                                            <td>${item.name}</td>
-                                            <td>${item.quantity}</td>
-                                            <td>${item.remarks || '-'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        ` : (!order.isMultiDay ? '<p style="color: var(--text-gray);">No items added</p>' : '')}
-                        
-                        ${order.notes ? `
-                            <div style="margin-top: 20px; background: rgba(102, 126, 234, 0.05); padding: 15px; border-radius: 8px;">
-                                <strong>General Notes:</strong><br>
-                                ${order.notes}
-                            </div>
-                        ` : ''}
+                        ${order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0 ? 
+                            '<h4 style="color: var(--primary); margin-top: 30px;">Day-wise Details:</h4>' +
+                            order.dayWiseData.map((day, idx) => 
+                                '<div style="background: rgba(102, 126, 234, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px;">' +
+                                    '<h5 style="color: var(--primary);">Day ' + day.dayNumber + ' - ' + Utils.formatDate(day.date) + '</h5>' +
+                                    (day.functions && day.functions.length > 0 ? 
+                                        day.functions.map((func, funcIdx) => 
+                                            '<div style="background: white; padding: 15px; border: 1px solid var(--border); border-radius: 6px; margin-top: ' + (funcIdx > 0 ? '15px' : '10px') + ';">' +
+                                                '<h6 style="color: var(--primary); margin-bottom: 10px;">Function ' + (funcIdx + 1) + '</h6>' +
+                                                '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">' +
+                                                    '<div><strong>Type:</strong> ' + (func.functionType || '-') + '</div>' +
+                                                    '<div><strong>Time:</strong> ' + (func.timeSlot || '-') + '</div>' +
+                                                    '<div><strong>Driver:</strong> ' + (func.driver || '-') + '</div>' +
+                                                    '<div><strong>Operator:</strong> ' + (func.operator || '-') + '</div>' +
+                                                    '<div><strong>Helper:</strong> ' + (func.helper || '-') + '</div>' +
+                                                '</div>' +
+                                                (func.notes ? '<div style="margin-bottom: 10px;"><strong>Notes:</strong> ' + func.notes + '</div>' : '') +
+                                                (func.items && func.items.length > 0 ? 
+                                                    '<table class="table" style="margin-top: 10px;">' +
+                                                        '<thead><tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th></tr></thead>' +
+                                                        '<tbody>' +
+                                                            func.items.map((item, i) => 
+                                                                '<tr>' +
+                                                                    '<td>' + (i + 1) + '</td>' +
+                                                                    '<td>' + item.name + '</td>' +
+                                                                    '<td>' + item.quantity + '</td>' +
+                                                                    '<td>' + (item.remarks || '-') + '</td>' +
+                                                                '</tr>'
+                                                            ).join('') +
+                                                        '</tbody>' +
+                                                    '</table>'
+                                                : '<p style="color: var(--text-gray); margin-top: 10px; font-style: italic;">No items for this function</p>') +
+                                            '</div>'
+                                        ).join('')
+                                    : '<p style="color: var(--text-gray); margin-top: 10px;">No functions added for this day</p>') +
+                                '</div>'
+                            ).join('')
+                        : ''}
                     </div>
                 `;
             },
