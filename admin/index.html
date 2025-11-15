@@ -2005,11 +2005,19 @@ const firestoreData = {
         await db.collection('orders').doc(finalOrderId).set(firestoreData);
         console.log('✅ Created new FP ID:', finalOrderId);
         
-        // Update local array
-        const localIndex = this.data.orders.findIndex(o => o.orderId === oldOrderId);
-        if (localIndex !== -1) {
-            this.data.orders[localIndex] = orderData;
-        }
+// Update local array with all data including multi-day
+const completeOrderData = {
+        ...orderData,
+        isMultiDay: orderData.isMultiDay || false,
+        startDate: orderData.startDate || null,
+        endDate: orderData.endDate || null,
+        dayWiseData: orderData.dayWiseData || []
+};
+
+const localIndex = this.data.orders.findIndex(o => o.orderId === oldOrderId);
+if (localIndex !== -1) {
+    this.data.orders[localIndex] = completeOrderData;
+}
         
         this.showToast(`Order upgraded: ${oldOrderId} → ${finalOrderId} ✅`);
     } else {
@@ -2038,12 +2046,19 @@ const firestoreData = {
                     orderId: finalOrderId
                 });
 
-                // Add to local array only if not already there
-                const localExists = this.data.orders.some(o => o.orderId === finalOrderId);
-                if (!localExists) {
-                    this.data.orders.push(orderData);
-                    this.updateCustomerDatabase(orderData);
-                }
+// Add to local array with all multi-day data
+const completeOrderData = {
+        ...orderData,
+        isMultiDay: orderData.isMultiDay || false,
+        startDate: orderData.startDate || null,
+        endDate: orderData.endDate || null,
+        dayWiseData: orderData.dayWiseData || []
+};
+
+const localExists = this.data.orders.some(o => o.orderId === finalOrderId);
+if (!localExists) {
+    this.data.orders.push(completeOrderData);
+}
 
                 this.showToast(`Order ${finalOrderId} saved to Firestore! 🆕`);
                 this.refreshOrderId();
