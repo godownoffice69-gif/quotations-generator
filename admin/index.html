@@ -2690,12 +2690,53 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                         </div>
 
-                        ${order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0 ? `
-                            <div style="margin-top: 30px;">
-                                <h3 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 15px; text-align: center;">
-                                    Day-wise Details
-                                </h3>
-                                ${order.dayWiseData.map((day, idx) => `
+                            ${order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0 ? 
+                            '<div style="margin-top: 30px;">' +
+                                '<h3 style="color: ' + colors.headerText + '; background: ' + colors.headerBg + '; padding: 15px; text-align: center;">Day-wise Details</h3>' +
+                                order.dayWiseData.map((day, idx) => 
+                                    '<div style="margin-top: 25px; border: 2px solid ' + colors.tableBorder + '; padding: 15px; background: rgba(102, 126, 234, 0.05);">' +
+                                        '<h4 style="color: ' + orderIdBg + '; margin-bottom: 15px;">Day ' + day.dayNumber + ' - ' + Utils.formatDate(day.date) + '</h4>' +
+                                        (day.functions && day.functions.length > 0 ?
+                                            day.functions.map((func, funcIdx) =>
+                                                '<div style="background: white; padding: 15px; border: 1px solid ' + colors.tableBorder + '; border-radius: 6px; margin-top: ' + (funcIdx > 0 ? '15px' : '0') + ';">' +
+                                                    '<h5 style="color: ' + orderIdBg + '; margin-bottom: 10px; font-size: ' + (fontSize - 2) + 'px;">Function ' + (funcIdx + 1) + '</h5>' +
+                                                    '<div style="font-size: ' + fontSize + 'px; margin-bottom: 10px;">' +
+                                                        '<strong>Type:</strong> ' + (func.functionType || '-') + '<br>' +
+                                                        '<strong>Time:</strong> ' + (func.timeSlot || '-') + '<br>' +
+                                                        '<strong>Driver:</strong> ' + (func.driver || '-') + '<br>' +
+                                                        '<strong>Operator:</strong> ' + (func.operator || '-') + '<br>' +
+                                                        '<strong>Helper:</strong> ' + (func.helper || '-') + '<br>' +
+                                                        (func.notes ? '<strong>Notes:</strong> ' + func.notes + '<br>' : '') +
+                                                    '</div>' +
+                                                    (func.items && func.items.length > 0 ?
+                                                        '<table style="width: 100%; border-collapse: collapse; font-size: ' + (fontSize - 4) + 'px;">' +
+                                                            '<thead>' +
+                                                                '<tr style="background: ' + colors.tableHeaderBg + '; color: ' + colors.tableHeaderText + ';">' +
+                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; width: ' + ts.columnWidthSr + '%;">Sr</th>' +
+                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; width: ' + ts.columnWidthItem + '%;">Item</th>' +
+                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; width: ' + ts.columnWidthQty + '%;">Qty</th>' +
+                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; width: ' + ts.columnWidthRemarks + '%;">Remarks</th>' +
+                                                                '</tr>' +
+                                                            '</thead>' +
+                                                            '<tbody>' +
+                                                                func.items.map((item, i) =>
+                                                                    '<tr>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; text-align: center;">' + (i + 1) + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px;">' + item.name + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; text-align: center;">' + item.quantity + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px;">' + (item.remarks || '-') + '</td>' +
+                                                                    '</tr>'
+                                                                ).join('') +
+                                                            '</tbody>' +
+                                                        '</table>'
+                                                    : '<p style="text-align: center; color: #666; font-style: italic; margin-top: 10px;">No items for this function</p>') +
+                                                '</div>'
+                                            ).join('')
+                                        : '<p style="text-align: center; color: #666; font-style: italic; margin-top: 10px;">No functions for this day</p>') +
+                                    '</div>'
+                                ).join('') +
+                            '</div>'
+                        : ''}
                                     <div style="margin-top: 25px; border: 2px solid ${colors.tableBorder}; padding: 15px; background: rgba(102, 126, 234, 0.05);">
                                         <h4 style="color: ${orderIdBg}; margin-bottom: 15px;">
                                             Day ${day.dayNumber} - ${Utils.formatDate(day.date)}
