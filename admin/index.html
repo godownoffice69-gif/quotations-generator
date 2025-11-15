@@ -1912,6 +1912,8 @@ snapshot.forEach(doc => console.log('Found Firestore doc ID:', doc.id));
             return true;
         }
     };
+
+    return handlers[type]?.() || false;
 },
 
 // ============ DELETE ITEM ============
@@ -2772,18 +2774,6 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
                 `;
             },
-
-                                        ${day.items && day.items.length > 0 ? `
-                                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px;">
-                                                <thead>
-                                                    <tr style="background: ${colors.tableHeaderBg}; color: ${colors.tableHeaderText};">
-                                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthSr}%;">Sr</th>
-                                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthItem}%;">Item</th>
-                                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthQty}%;">Qty</th>
-                                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthRemarks}%;">Remarks</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
 
             // ============ CUSTOMER MANAGEMENT ============
             updateCustomerDatabase(orderData) {
@@ -4442,7 +4432,9 @@ updateAllDisplays() {
     const originalGenerateFunctions = OMS.generateDayWiseFunctions.bind(OMS);
     OMS.generateDayWiseFunctions = function() {
         originalGenerateFunctions();
-        
+
+        const container = document.getElementById('functionsContainer');
+
         // Setup search for each day
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
