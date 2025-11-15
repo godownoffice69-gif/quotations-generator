@@ -4244,7 +4244,7 @@ convertToQuotationDateFormat(dateStr) {
                                                 </a>
                                             </td>
                                             <td>${member.email || '-'}</td>
-                                            <td><small>${member.skills.join(', ') || '-'}</small></td>
+                                            <td><small>${member.skills && member.skills.length > 0 ? member.skills.join(', ') : '-'}</small></td>
                                             <td>${statusBadge}</td>
                                             <td>
                                                 <button class="btn btn-info btn-small" onclick="OMS.editTeamMember('${member.id}')">Edit</button>
@@ -4371,7 +4371,7 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
                     <div class="form-group">
                         <label class="form-label">Skills (comma-separated)</label>
-                        <input type="text" id="editTeamMemberSkills" class="form-input" value="${member.skills.join(', ')}">
+                        <input type="text" id="editTeamMemberSkills" class="form-input" value="${member.skills && member.skills.length > 0 ? member.skills.join(', ') : ''}">
                     </div>
                     <div class="btn-group">
                         <button class="btn btn-primary" onclick="OMS.saveTeamMemberEdit('${id}')">💾 Save Changes</button>
@@ -5204,10 +5204,12 @@ convertToQuotationDateFormat(dateStr) {
             this.data = {
                 orders: [], // Will load from Firestore
                 customers: parsed.customers || [],
+                team: parsed.team || [],
                 inventory: parsed.inventory || { categories: [], items: [] },
                 tasks: parsed.tasks || [],
                 deletedOrders: parsed.deletedOrders || [],
                 undoStack: [],
+                notifications: parsed.notifications || [],
                 settings: { ...this.data.settings, ...parsed.settings }
             };
         }
