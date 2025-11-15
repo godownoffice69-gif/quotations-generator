@@ -2794,41 +2794,6 @@ convertToQuotationDateFormat(dateStr) {
                                                 </thead>
                                                 <tbody>
 
-                        ${!order.isMultiDay && order.items && order.items.length > 0 ? `
-                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px; margin-top: 20px;">
-                                <thead>
-                                    <tr style="background: ${colors.tableHeaderBg}; color: ${colors.tableHeaderText};">
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthSr}%;">Sr</th>
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthItem}%;">Item</th>
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthQty}%;">Qty</th>
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthRemarks}%;">Remarks</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${order.items.map((item, i) => `
-                                        <tr>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center;">${i + 1}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px;">${item.name}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center;">${item.quantity}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px;">${item.remarks || ''}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        ` : (!order.isMultiDay ? '<p style="text-align: center; color: #666; font-style: italic; margin-top: 20px;">No items added</p>' : '')}
-
-                                    ${order.notes ? `
-                                        <div style="margin-top: 20px; font-size: ${fontSize}px;">
-                                        <strong>Notes:</strong><br>
-                                        <div style="background: ${colors.notesBg}; padding: 15px; border: 1px solid ${colors.tableBorder};">
-                                        ${order.notes}
-                                    </div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                },
-
             // ============ CUSTOMER MANAGEMENT ============
             updateCustomerDatabase(orderData) {
                 let customer = this.data.customers.find(c => 
