@@ -1259,43 +1259,28 @@ const OMS = {
             });
             
             html += `
-                <div class="card" style="background: rgba(102, 126, 234, 0.05); margin-bottom: 1rem;">
-                    <h4 style="color: var(--primary);">Day ${i + 1} - ${dateStr}</h4>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Function Type</label>
-                            <input type="text" id="day${i}Function" class="form-input" 
-                                   placeholder="e.g., Sangeet, Mehendi, Reception">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Time Slot</label>
-                            <input type="text" id="day${i}Time" class="form-input" 
-                                   placeholder="e.g., 7:00 PM - 11:00 PM">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Notes for this day</label>
-                        <textarea id="day${i}Notes" class="form-textarea" 
-                                  placeholder="Special requirements..."></textarea>
+                <div class="card" style="background: rgba(102, 126, 234, 0.05); margin-bottom: 1.5rem;" id="day${i}Card">
+                    <h4 style="color: var(--primary); margin-bottom: 1rem;">Day ${i + 1} - ${dateStr}</h4>
+                    
+                    <div id="day${i}FunctionsContainer">
+                        <!-- Functions will be added here -->
                     </div>
                     
-                    <div class="form-group">
-                        <label class="form-label">Items for this day</label>
-                        <div class="search-container">
-                            <input type="text" id="day${i}ItemSearch" class="form-input" 
-                                   placeholder="🔍 Search items for this day..." autocomplete="off">
-                            <div id="day${i}ItemDropdown" class="search-dropdown"></div>
-                        </div>
-                    </div>
-                    
-                    <div id="day${i}ItemsList" class="table-container" style="margin-top: 1rem;">
-                        <div style="color: var(--text-gray); text-align: center; padding: 1rem;">No items added yet</div>
-                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="OMS.addFunctionToDay(${i})" style="width: 100%; margin-top: 1rem;">
+                        ➕ Add Function to This Day
+                    </button>
                 </div>
             `;
         }
         
         container.innerHTML = html;
+        
+        // Initialize first function for each day
+        setTimeout(() => {
+            for (let i = 0; i < diffDays; i++) {
+                OMS.addFunctionToDay(i, true); // true = first function (auto-add)
+            }
+        }, 100);
     },
     addItemToDay(dayIndex, itemId) {
         const item = this.data.inventory.items.find(i => i.id === itemId);
