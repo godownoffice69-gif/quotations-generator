@@ -2114,13 +2114,21 @@ async refreshOrderId() {
                 const currentDate = new Date(start);
                 currentDate.setDate(start.getDate() + i);
                 
+                // Get functions for this day
+                const dayFunctions = window.dayFunctionsData?.[i] || [];
+                
                 dayWiseData.push({
                     dayNumber: i + 1,
                     date: Utils.toDateString(currentDate),
-                    functionType: Utils.get(`day${i}Function`),
-                    timeSlot: Utils.get(`day${i}Time`),
-                    notes: Utils.get(`day${i}Notes`),
-                    items: (window.dayItemsData && window.dayItemsData[i]) ? window.dayItemsData[i] : []
+                    functions: dayFunctions.map(func => ({
+                        functionType: func.functionType || '',
+                        timeSlot: func.timeSlot || '',
+                        driver: func.driver || '',
+                        operator: func.operator || '',
+                        helper: func.helper || '',
+                        notes: func.notes || '',
+                        items: func.items || []
+                    }))
                 });
             }
         }
