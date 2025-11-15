@@ -803,6 +803,7 @@
                 <button class="nav-tab" data-tab="inventory">📦 Inventory</button>
                 <button class="nav-tab" data-tab="preparation">📋 Preparation</button>
                 <button class="nav-tab" data-tab="customers">👥 Customers</button>
+                <button class="nav-tab" data-tab="team">👷 Team</button>
                 <button class="nav-tab" data-tab="calendar">🗓️ Calendar</button>
                 <button class="nav-tab" data-tab="history">📚 History</button>
                 <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
@@ -924,14 +925,18 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Driver</label>
-                                <input type="text" id="driverName" class="form-input">
+                                <select id="driverName" class="form-select">
+                                    <option value="">Select Driver</option>
+                                </select>
                             </div>
                         </div>
 
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Operator</label>
-                                <input type="text" id="operator" class="form-input">
+                                <select id="operator" class="form-select">
+                                    <option value="">Select Operator</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label class="form-label required">Status</label>
@@ -943,8 +948,15 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Helper</label>
-                                <input type="text" id="helper" class="form-input">
+                                <select id="helper" class="form-select">
+                                    <option value="">Select Helper</option>
+                                </select>
                             </div>
+                        </div>
+
+                        <div class="btn-group" style="margin-top: 0.5rem;">
+                            <button type="button" class="btn btn-success" onclick="OMS.notifyAllocatedTeam()">📱 Notify Allocated Team</button>
+                            <button type="button" class="btn btn-info" onclick="OMS.sendManagerReport()">📊 Send Manager Report</button>
                         </div>
 
                         <div class="form-group">
@@ -976,6 +988,7 @@
             <div id="inventory" class="tab-content"></div>
             <div id="preparation" class="tab-content"></div>
             <div id="customers" class="tab-content"></div>
+            <div id="team" class="tab-content"></div>
             <div id="calendar" class="tab-content"></div>
             <div id="history" class="tab-content"></div>
             <div id="analytics" class="tab-content"></div>
@@ -1121,10 +1134,12 @@ const OMS = {
             data: {
                 orders: [],
                 customers: [],
+                team: [],
                 inventory: { categories: [], items: [] },
                 tasks: [],
                 deletedOrders: [],
                 undoStack: [],
+                notifications: [],
                 settings: {
                     printFontSize: 32,
                     orderIdCounter: 1,
@@ -3260,6 +3275,7 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'inventory') this.renderInventory();
                     else if (tabName === 'preparation') this.renderPreparation();
                     else if (tabName === 'customers') this.renderCustomers();
+                    else if (tabName === 'team') this.renderTeam();
                     else if (tabName === 'calendar') this.renderCalendarTab();
                     else if (tabName === 'history') this.renderHistory();
                     else if (tabName === 'analytics') this.renderAnalytics();
@@ -4058,6 +4074,631 @@ convertToQuotationDateFormat(dateStr) {
                 if (customer.lastVenue) Utils.set('venue', customer.lastVenue);
             },
 
+            // ============ TEAM MANAGEMENT ============
+
+            renderTeam() {
+                const container = document.getElementById('team');
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">👷 Team Management</h2>
+                            <p style="color: var(--text-gray); margin-top: 0.5rem;">Manage your staff members and their roles</p>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">➕ Add Team Member</h3>
+                            </div>
+                            <div class="form-grid" style="grid-template-columns: repeat(2, 1fr);">
+                                <div class="form-group">
+                                    <label class="form-label required">Name</label>
+                                    <input type="text" id="teamMemberName" class="form-input" placeholder="e.g., Rajesh Kumar">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label required">WhatsApp Number</label>
+                                    <input type="tel" id="teamMemberWhatsApp" class="form-input" placeholder="e.g., +91 98765 43210">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email (Optional)</label>
+                                    <input type="email" id="teamMemberEmail" class="form-input" placeholder="e.g., rajesh@example.com">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label required">Status</label>
+                                    <select id="teamMemberStatus" class="form-select">
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required">Roles (Select one or more)</label>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-top: 0.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border: 2px solid var(--border); border-radius: var(--radius); background: var(--white);">
+                                        <input type="checkbox" id="roleDriver" value="Driver" style="width: 18px; height: 18px; cursor: pointer;">
+                                        <span>🚗 Driver</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border: 2px solid var(--border); border-radius: var(--radius); background: var(--white);">
+                                        <input type="checkbox" id="roleOperator" value="Operator" style="width: 18px; height: 18px; cursor: pointer;">
+                                        <span>⚙️ Operator</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border: 2px solid var(--border); border-radius: var(--radius); background: var(--white);">
+                                        <input type="checkbox" id="roleHelper" value="Helper" style="width: 18px; height: 18px; cursor: pointer;">
+                                        <span>🤝 Helper</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border: 2px solid var(--border); border-radius: var(--radius); background: var(--white);">
+                                        <input type="checkbox" id="roleManager" value="Manager" style="width: 18px; height: 18px; cursor: pointer;">
+                                        <span>👔 Manager</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border: 2px solid var(--border); border-radius: var(--radius); background: var(--white);">
+                                        <input type="checkbox" id="roleSupervisor" value="Supervisor" style="width: 18px; height: 18px; cursor: pointer;">
+                                        <span>📋 Supervisor</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Skills/Specialties (Optional)</label>
+                                <input type="text" id="teamMemberSkills" class="form-input" placeholder="e.g., Wedding Expert, Corporate Events, Sound Systems">
+                                <small style="color: var(--text-gray);">Separate multiple skills with commas</small>
+                            </div>
+
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="OMS.addTeamMember()">➕ Add Team Member</button>
+                                <button class="btn btn-secondary" onclick="OMS.clearTeamForm()">🔄 Clear Form</button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">👥 Team Members</h3>
+                            </div>
+                            <div class="form-row" style="margin-bottom: 1rem;">
+                                <select id="teamRoleFilter" class="form-select" onchange="OMS.renderTeamTable()">
+                                    <option value="">All Roles</option>
+                                    <option value="Driver">🚗 Drivers</option>
+                                    <option value="Operator">⚙️ Operators</option>
+                                    <option value="Helper">🤝 Helpers</option>
+                                    <option value="Manager">👔 Managers</option>
+                                    <option value="Supervisor">📋 Supervisors</option>
+                                </select>
+                                <select id="teamStatusFilter" class="form-select" onchange="OMS.renderTeamTable()">
+                                    <option value="">All Status</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                </select>
+                                <input type="text" id="teamSearch" class="form-input" placeholder="Search by name..." oninput="OMS.renderTeamTable()">
+                            </div>
+                            <div id="teamMembersContainer"></div>
+                        </div>
+                    </div>
+                `;
+
+                this.renderTeamTable();
+            },
+
+            renderTeamTable() {
+                const container = document.getElementById('teamMembersContainer');
+                if (!container) return;
+
+                // Get filter values
+                const roleFilter = document.getElementById('teamRoleFilter')?.value || '';
+                const statusFilter = document.getElementById('teamStatusFilter')?.value || '';
+                const searchQuery = document.getElementById('teamSearch')?.value.toLowerCase() || '';
+
+                // Filter team members
+                let filteredTeam = this.data.team.filter(member => {
+                    const matchesRole = !roleFilter || member.roles.includes(roleFilter);
+                    const matchesStatus = !statusFilter || member.status === statusFilter;
+                    const matchesSearch = !searchQuery || member.name.toLowerCase().includes(searchQuery);
+                    return matchesRole && matchesStatus && matchesSearch;
+                });
+
+                if (filteredTeam.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: var(--text-gray);">
+                            <p>No team members found. Add your first team member above!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Render table
+                const tableHtml = `
+                    <div style="overflow-x: auto;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Roles</th>
+                                    <th>WhatsApp</th>
+                                    <th>Email</th>
+                                    <th>Skills</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filteredTeam.map(member => {
+                                    const roleIcons = {
+                                        'Driver': '🚗',
+                                        'Operator': '⚙️',
+                                        'Helper': '🤝',
+                                        'Manager': '👔',
+                                        'Supervisor': '📋'
+                                    };
+                                    const roleBadges = member.roles.map(role =>
+                                        `<span style="background: var(--primary); color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; margin-right: 0.25rem;">${roleIcons[role] || ''} ${role}</span>`
+                                    ).join('');
+
+                                    const statusColor = member.status === 'Active' ? 'var(--success)' : 'var(--text-gray)';
+                                    const statusBadge = `<span style="background: ${statusColor}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">${member.status}</span>`;
+
+                                    return `
+                                        <tr>
+                                            <td><strong>${member.name}</strong></td>
+                                            <td>${roleBadges}</td>
+                                            <td>
+                                                <a href="https://wa.me/${member.whatsApp.replace(/[^0-9]/g, '')}" target="_blank" style="color: var(--success);">
+                                                    ${member.whatsApp}
+                                                </a>
+                                            </td>
+                                            <td>${member.email || '-'}</td>
+                                            <td><small>${member.skills.join(', ') || '-'}</small></td>
+                                            <td>${statusBadge}</td>
+                                            <td>
+                                                <button class="btn btn-info btn-small" onclick="OMS.editTeamMember('${member.id}')">Edit</button>
+                                                <button class="btn btn-danger btn-small" onclick="OMS.deleteTeamMember('${member.id}')">Delete</button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                container.innerHTML = tableHtml;
+            },
+
+            addTeamMember() {
+                const name = Utils.get('teamMemberName');
+                const whatsApp = Utils.get('teamMemberWhatsApp');
+                const email = Utils.get('teamMemberEmail');
+                const status = Utils.get('teamMemberStatus');
+                const skillsStr = Utils.get('teamMemberSkills');
+
+                // Get selected roles
+                const roles = [];
+                if (document.getElementById('roleDriver')?.checked) roles.push('Driver');
+                if (document.getElementById('roleOperator')?.checked) roles.push('Operator');
+                if (document.getElementById('roleHelper')?.checked) roles.push('Helper');
+                if (document.getElementById('roleManager')?.checked) roles.push('Manager');
+                if (document.getElementById('roleSupervisor')?.checked) roles.push('Supervisor');
+
+                // Validation
+                if (!name || !whatsApp || roles.length === 0) {
+                    this.showToast('Please fill Name, WhatsApp, and select at least one Role', 'error');
+                    return;
+                }
+
+                // Parse skills
+                const skills = skillsStr ? skillsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+
+                // Create team member object
+                const teamMember = {
+                    id: Utils.generateId(),
+                    name,
+                    roles,
+                    whatsApp,
+                    email: email || '',
+                    skills,
+                    status,
+                    createdAt: new Date().toISOString()
+                };
+
+                this.data.team.push(teamMember);
+                this.saveToStorage();
+                this.renderTeamTable();
+                this.clearTeamForm();
+                this.showToast(`${name} added to team!`, 'success');
+            },
+
+            clearTeamForm() {
+                Utils.set('teamMemberName', '');
+                Utils.set('teamMemberWhatsApp', '');
+                Utils.set('teamMemberEmail', '');
+                Utils.set('teamMemberSkills', '');
+                Utils.set('teamMemberStatus', 'Active');
+
+                // Uncheck all role checkboxes
+                ['roleDriver', 'roleOperator', 'roleHelper', 'roleManager', 'roleSupervisor'].forEach(id => {
+                    const checkbox = document.getElementById(id);
+                    if (checkbox) checkbox.checked = false;
+                });
+            },
+
+            editTeamMember(id) {
+                const member = this.data.team.find(m => m.id === id);
+                if (!member) return;
+
+                // Show edit modal
+                this.showModal(`
+                    <h2>Edit Team Member</h2>
+                    <div class="form-group">
+                        <label class="form-label required">Name</label>
+                        <input type="text" id="editTeamMemberName" class="form-input" value="${member.name}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">WhatsApp Number</label>
+                        <input type="tel" id="editTeamMemberWhatsApp" class="form-input" value="${member.whatsApp}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="editTeamMemberEmail" class="form-input" value="${member.email || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Status</label>
+                        <select id="editTeamMemberStatus" class="form-select">
+                            <option value="Active" ${member.status === 'Active' ? 'selected' : ''}>Active</option>
+                            <option value="Inactive" ${member.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Roles</label>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="editRoleDriver" value="Driver" ${member.roles.includes('Driver') ? 'checked' : ''}>
+                                🚗 Driver
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="editRoleOperator" value="Operator" ${member.roles.includes('Operator') ? 'checked' : ''}>
+                                ⚙️ Operator
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="editRoleHelper" value="Helper" ${member.roles.includes('Helper') ? 'checked' : ''}>
+                                🤝 Helper
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="editRoleManager" value="Manager" ${member.roles.includes('Manager') ? 'checked' : ''}>
+                                👔 Manager
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="editRoleSupervisor" value="Supervisor" ${member.roles.includes('Supervisor') ? 'checked' : ''}>
+                                📋 Supervisor
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Skills (comma-separated)</label>
+                        <input type="text" id="editTeamMemberSkills" class="form-input" value="${member.skills.join(', ')}">
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="OMS.saveTeamMemberEdit('${id}')">💾 Save Changes</button>
+                        <button class="btn btn-secondary" onclick="OMS.closeModal()">Cancel</button>
+                    </div>
+                `);
+            },
+
+            saveTeamMemberEdit(id) {
+                const member = this.data.team.find(m => m.id === id);
+                if (!member) return;
+
+                const name = Utils.get('editTeamMemberName');
+                const whatsApp = Utils.get('editTeamMemberWhatsApp');
+                const email = Utils.get('editTeamMemberEmail');
+                const status = Utils.get('editTeamMemberStatus');
+                const skillsStr = Utils.get('editTeamMemberSkills');
+
+                // Get selected roles
+                const roles = [];
+                if (document.getElementById('editRoleDriver')?.checked) roles.push('Driver');
+                if (document.getElementById('editRoleOperator')?.checked) roles.push('Operator');
+                if (document.getElementById('editRoleHelper')?.checked) roles.push('Helper');
+                if (document.getElementById('editRoleManager')?.checked) roles.push('Manager');
+                if (document.getElementById('editRoleSupervisor')?.checked) roles.push('Supervisor');
+
+                // Validation
+                if (!name || !whatsApp || roles.length === 0) {
+                    this.showToast('Please fill all required fields', 'error');
+                    return;
+                }
+
+                // Update member
+                member.name = name;
+                member.whatsApp = whatsApp;
+                member.email = email;
+                member.status = status;
+                member.roles = roles;
+                member.skills = skillsStr ? skillsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+                member.updatedAt = new Date().toISOString();
+
+                this.saveToStorage();
+                this.renderTeamTable();
+                this.closeModal();
+                this.showToast('Team member updated!', 'success');
+            },
+
+            deleteTeamMember(id) {
+                const member = this.data.team.find(m => m.id === id);
+                if (!member) return;
+
+                if (confirm(`Are you sure you want to delete ${member.name} from the team?`)) {
+                    const index = this.data.team.findIndex(m => m.id === id);
+                    if (index !== -1) {
+                        this.data.team.splice(index, 1);
+                        this.saveToStorage();
+                        this.renderTeamTable();
+                        this.showToast(`${member.name} removed from team`, 'success');
+                    }
+                }
+            },
+
+            // ============ TEAM ALLOCATION & NOTIFICATIONS ============
+
+            populateTeamDropdowns() {
+                // Get active team members
+                const activeTeam = this.data.team.filter(m => m.status === 'Active');
+
+                // Populate Driver dropdown
+                const driverSelect = document.getElementById('driverName');
+                if (driverSelect) {
+                    const drivers = activeTeam.filter(m => m.roles.includes('Driver'));
+                    driverSelect.innerHTML = '<option value="">Select Driver</option>' +
+                        drivers.map(d => `<option value="${d.name}" data-id="${d.id}">🚗 ${d.name}</option>`).join('');
+                }
+
+                // Populate Operator dropdown
+                const operatorSelect = document.getElementById('operator');
+                if (operatorSelect) {
+                    const operators = activeTeam.filter(m => m.roles.includes('Operator'));
+                    operatorSelect.innerHTML = '<option value="">Select Operator</option>' +
+                        operators.map(o => `<option value="${o.name}" data-id="${o.id}">⚙️ ${o.name}</option>`).join('');
+                }
+
+                // Populate Helper dropdown
+                const helperSelect = document.getElementById('helper');
+                if (helperSelect) {
+                    const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
+                    helperSelect.innerHTML = '<option value="">Select Helper</option>' +
+                        helpers.map(h => `<option value="${h.name}" data-id="${h.id}">🤝 ${h.name}</option>`).join('');
+                }
+            },
+
+            notifyAllocatedTeam() {
+                // Get current order form data
+                const driverName = Utils.get('driverName');
+                const operatorName = Utils.get('operator');
+                const helperName = Utils.get('helper');
+
+                // Get order details
+                const orderId = Utils.get('orderId') || 'NEW';
+                const clientName = Utils.get('clientName');
+                const venue = Utils.get('venue');
+                const date = Utils.get('orderDate');
+                const readyTime = Utils.get('readyTime');
+                const contact = Utils.get('contact');
+
+                if (!clientName || !venue || !date) {
+                    this.showToast('Please fill Order ID, Client Name, Venue, and Date first', 'error');
+                    return;
+                }
+
+                // Get items from current order
+                const items = this.currentOrderItems || [];
+
+                // Find team members and send notifications
+                const notifications = [];
+
+                if (driverName) {
+                    const driver = this.data.team.find(m => m.name === driverName);
+                    if (driver && driver.whatsApp) {
+                        this.sendTeamMemberNotification(driver, 'Driver', {
+                            orderId, clientName, venue, date, readyTime, contact, items,
+                            driverName, operatorName, helperName
+                        });
+                        notifications.push(driver.name);
+                    }
+                }
+
+                if (operatorName) {
+                    const operator = this.data.team.find(m => m.name === operatorName);
+                    if (operator && operator.whatsApp) {
+                        this.sendTeamMemberNotification(operator, 'Operator', {
+                            orderId, clientName, venue, date, readyTime, contact, items,
+                            driverName, operatorName, helperName
+                        });
+                        notifications.push(operator.name);
+                    }
+                }
+
+                if (helperName) {
+                    const helper = this.data.team.find(m => m.name === helperName);
+                    if (helper && helper.whatsApp) {
+                        this.sendTeamMemberNotification(helper, 'Helper', {
+                            orderId, clientName, venue, date, readyTime, contact, items,
+                            driverName, operatorName, helperName
+                        });
+                        notifications.push(helper.name);
+                    }
+                }
+
+                if (notifications.length > 0) {
+                    this.showToast(`Notifications sent to ${notifications.join(', ')}`, 'success');
+
+                    // Log notification
+                    this.data.notifications.push({
+                        id: Utils.generateId(),
+                        type: 'team_allocation',
+                        orderId,
+                        recipients: notifications,
+                        timestamp: new Date().toISOString()
+                    });
+                    this.saveToStorage();
+                } else {
+                    this.showToast('No team members selected or no WhatsApp numbers found', 'warning');
+                }
+            },
+
+            sendTeamMemberNotification(teamMember, role, orderDetails) {
+                const { orderId, clientName, venue, date, readyTime, contact, items, driverName, operatorName, helperName } = orderDetails;
+
+                // Format items list
+                const itemsList = items && items.length > 0
+                    ? items.map(item => `• ${item.name}: ${item.quantity}${item.remarks ? ' (' + item.remarks + ')' : ''}`).join('\n')
+                    : '• No items added yet';
+
+                // Build team members list
+                const teamList = [
+                    driverName ? `• Driver: ${driverName}` : null,
+                    operatorName ? `• Operator: ${operatorName}` : null,
+                    helperName ? `• Helper: ${helperName}` : null
+                ].filter(Boolean).join('\n');
+
+                // Create WhatsApp message
+                let message = `🎉 *NEW ORDER ASSIGNED TO YOU*\n\n`;
+                message += `📋 *Order ID:* ${orderId}\n`;
+                message += `👤 *Client:* ${clientName}\n`;
+                message += `📍 *Venue:* ${venue}\n`;
+                message += `📅 *Date:* ${Utils.formatDate(date)}\n`;
+                message += `🕐 *Ready Time:* ${readyTime || 'TBD'}\n\n`;
+                message += `🎭 *Your Role:* ${role.toUpperCase()}\n\n`;
+
+                if (teamList) {
+                    message += `👷 *Team Members:*\n${teamList}\n\n`;
+                }
+
+                message += `📦 *Items Required:*\n${itemsList}\n\n`;
+
+                if (contact) {
+                    message += `📞 *Client Contact:* ${contact}\n\n`;
+                }
+
+                message += `⚡ Please confirm receipt by replying "OK"\n\n`;
+                message += `--\n_FirepowerSFX Order Management_`;
+
+                // Encode and open WhatsApp
+                const phoneNumber = teamMember.whatsApp.replace(/[^0-9]/g, '');
+                const encodedMessage = encodeURIComponent(message);
+                window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
+            },
+
+            sendManagerReport() {
+                // Get all managers
+                const managers = this.data.team.filter(m => m.roles.includes('Manager') && m.status === 'Active');
+
+                if (managers.length === 0) {
+                    this.showToast('No managers found in team. Add a team member with Manager role first.', 'warning');
+                    return;
+                }
+
+                // Get today's and upcoming orders
+                const today = new Date();
+                const todayStr = today.toISOString().split('T')[0];
+                const next7Days = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+                const upcomingOrders = this.data.orders.filter(order => {
+                    const orderDate = order.isMultiDay ? order.startDate : order.date;
+                    return orderDate >= todayStr && orderDate <= next7Days;
+                }).sort((a, b) => {
+                    const dateA = a.isMultiDay ? a.startDate : a.date;
+                    const dateB = b.isMultiDay ? b.startDate : b.date;
+                    return dateA.localeCompare(dateB);
+                });
+
+                if (upcomingOrders.length === 0) {
+                    this.showToast('No upcoming orders in next 7 days to report', 'info');
+                    return;
+                }
+
+                // Build manager report
+                let message = `📊 *TEAM ALLOCATION REPORT*\n`;
+                message += `📅 *Date:* ${new Date().toLocaleDateString()}\n`;
+                message += `📋 *Period:* Next 7 Days\n\n`;
+                message += `*Total Orders:* ${upcomingOrders.length}\n`;
+                message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+                // Group orders by date
+                const ordersByDate = {};
+                upcomingOrders.forEach(order => {
+                    const orderDate = order.isMultiDay ? order.startDate : order.date;
+                    if (!ordersByDate[orderDate]) {
+                        ordersByDate[orderDate] = [];
+                    }
+                    ordersByDate[orderDate].push(order);
+                });
+
+                // Add orders to message
+                Object.keys(ordersByDate).sort().forEach(date => {
+                    message += `📅 *${Utils.formatDate(date)}*\n\n`;
+
+                    ordersByDate[date].forEach((order, index) => {
+                        message += `*ORDER #${index + 1}: ${order.orderId}*\n`;
+                        message += `👤 Client: ${order.clientName}\n`;
+                        message += `📍 Venue: ${order.venue}\n`;
+                        message += `🕐 ${order.readyTime || 'TBD'}\n`;
+                        message += `📊 Status: ${order.status || 'Pending'}\n`;
+
+                        if (order.driverName || order.operator || order.helper) {
+                            message += `👷 Team:\n`;
+                            if (order.driverName) message += `  • Driver: ${order.driverName}\n`;
+                            if (order.operator) message += `  • Operator: ${order.operator}\n`;
+                            if (order.helper) message += `  • Helper: ${order.helper}\n`;
+                        } else {
+                            message += `⚠️ *Not Allocated Yet*\n`;
+                        }
+                        message += `\n`;
+                    });
+                });
+
+                message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+                // Workload summary
+                const workload = {};
+                upcomingOrders.forEach(order => {
+                    if (order.driverName) {
+                        workload[order.driverName] = (workload[order.driverName] || 0) + 1;
+                    }
+                    if (order.operator) {
+                        workload[order.operator] = (workload[order.operator] || 0) + 1;
+                    }
+                    if (order.helper) {
+                        workload[order.helper] = (workload[order.helper] || 0) + 1;
+                    }
+                });
+
+                if (Object.keys(workload).length > 0) {
+                    message += `📊 *WORKLOAD SUMMARY:*\n`;
+                    Object.entries(workload)
+                        .sort((a, b) => b[1] - a[1])
+                        .forEach(([name, count]) => {
+                            message += `${name}: ${count} order${count > 1 ? 's' : ''}\n`;
+                        });
+                    message += `\n`;
+                }
+
+                message += `--\n_FirepowerSFX Admin_`;
+
+                // Send to all managers
+                managers.forEach(manager => {
+                    const phoneNumber = manager.whatsApp.replace(/[^0-9]/g, '');
+                    const encodedMessage = encodeURIComponent(message);
+                    window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
+                });
+
+                // Log notification
+                this.data.notifications.push({
+                    id: Utils.generateId(),
+                    type: 'manager_report',
+                    recipients: managers.map(m => m.name),
+                    orderCount: upcomingOrders.length,
+                    timestamp: new Date().toISOString()
+                });
+                this.saveToStorage();
+
+                this.showToast(`Manager report sent to ${managers.length} manager(s)`, 'success');
+            },
+
             renderCalendarTab() {
                 document.getElementById('calendar').innerHTML = this.renderCalendar(this.currentCalendarDate || new Date());
             },
@@ -4423,8 +5064,11 @@ convertToQuotationDateFormat(dateStr) {
             initItemSearch() {
                 const itemSearch = document.getElementById('itemSearch');
                 const dropdown = document.getElementById('itemSearchDropdown');
-                
+
                 if (!itemSearch || !dropdown) return;
+
+                // Populate team member dropdowns
+                this.populateTeamDropdowns();
 
                 itemSearch.addEventListener('input', Utils.debounce((e) => {
                     const query = e.target.value.toLowerCase().trim();
