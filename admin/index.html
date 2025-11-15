@@ -1454,6 +1454,118 @@ const OMS = {
             }
         });
     },
+    addItemToFunction(dayIndex, functionIndex, itemId) {
+        const item = this.data.inventory.items.find(i => i.id === itemId);
+        if (!item) return;
+        
+        if (!window.dayFunctionsData?.[dayIndex]?.[functionIndex]) return;
+        
+        const funcItems = window.dayFunctionsData[dayIndex][functionIndex].items;
+        
+        // Check if item already added
+        const existing = funcItems.find(i => i.itemId === itemId);
+        if (existing) {
+            existing.quantity++;
+        } else {
+            funcItems.push({
+                itemId: itemId,
+                name: item.name,
+                quantity: 1,
+                remarks: ''
+            });
+        }
+        
+        this.updateFunctionItemsList(dayIndex, functionIndex);
+        
+        // Clear search
+        const functionId = `day${dayIndex}func${functionIndex}`;
+        const searchInput = document.getElementById(`${functionId}ItemSearch`);
+        const dropdown = document.getElementById(`${functionId}ItemDropdown`);
+        if (searchInput) searchInput.value = '';
+        if (dropdown) dropdown.classList.remove('show');
+    },
+
+    updateFunctionItemsList(dayIndex, functionIndex) {
+        const functionId = `day${dayIndex}func${functionIndex}`;
+        const container = document.getElementById(`${functionId}ItemsList`);
+        if (!container) return;
+        
+        const items = window.dayFunctionsData?.[dayIndex]?.[functionIndex]?.items || [];
+        
+        if (items.length === 0) {
+            container.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">No items added yet</div>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Remarks</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map((item, idx) => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>
+                                <div class="quantity-controls">
+                                    <button class="quantity-btn" onclick="OMS.adjustFunctionItemQty(${dayIndex}, ${functionIndex}, ${idx}, -1)">-</button>
+                                    <input type="number" value="${item.quantity}" 
+                                           onchange="OMS.setFunctionItemQty(${dayIndex}, ${functionIndex}, ${idx}, this.value)" 
+                                           style="width: 60px; text-align: center; border: 1px solid var(--border); border-radius: 4px; padding: 0.25rem;" 
+                                           min="1">
+                                    <button class="quantity-btn" onclick="OMS.adjustFunctionItemQty(${dayIndex}, ${functionIndex}, ${idx}, 1)">+</button>
+                                </div>
+                            </td>
+                            <td>
+                                <input type="text" class="form-input" value="${item.remarks || ''}" 
+                                       onchange="OMS.setFunctionItemRemarks(${dayIndex}, ${functionIndex}, ${idx}, this.value)" 
+                                       placeholder="Notes">
+                            </td>
+                            <td>
+                                <button class="btn btn-danger btn-small" onclick="OMS.removeFunctionItem(${dayIndex}, ${functionIndex}, ${idx})">🗑️</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    },
+
+    adjustFunctionItemQty(dayIndex, functionIndex, itemIndex, delta) {
+        const items = window.dayFunctionsData?.[dayIndex]?.[functionIndex]?.items;
+        if (!items?.[itemIndex]) return;
+        
+        items[itemIndex].quantity = Math.max(1, items[itemIndex].quantity + delta);
+        this.updateFunctionItemsList(dayIndex, functionIndex);
+    },
+
+    setFunctionItemQty(dayIndex, functionIndex, itemIndex, qty) {
+        const items = window.dayFunctionsData?.[dayIndex]?.[functionIndex]?.items;
+        if (!items?.[itemIndex]) return;
+        
+        items[itemIndex].quantity = Math.max(1, parseInt(qty) || 1);
+        this.updateFunctionItemsList(dayIndex, functionIndex);
+    },
+
+    setFunctionItemRemarks(dayIndex, functionIndex, itemIndex, remarks) {
+        const items = window.dayFunctionsData?.[dayIndex]?.[functionIndex]?.items;
+        if (!items?.[itemIndex]) return;
+        
+        items[itemIndex].remarks = remarks;
+    },
+
+    removeFunctionItem(dayIndex, functionIndex, itemIndex) {
+        const items = window.dayFunctionsData?.[dayIndex]?.[functionIndex]?.items;
+        if (!items) return;
+        
+        items.splice(itemIndex, 1);
+        this.updateFunctionItemsList(dayIndex, functionIndex);
+    },
     addItemToDay(dayIndex, itemId) {
         const item = this.data.inventory.items.find(i => i.id === itemId);
         if (!item) return;
