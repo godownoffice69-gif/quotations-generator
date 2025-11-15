@@ -1985,20 +1985,6 @@ const firestoreData = {
     createdAt: orderData.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
 };
-        functionType: orderData.eventType,
-        items: orderData.items.map(item => ({
-        name: item.name,
-        qty: item.quantity,
-        desc: item.remarks || '',
-        price: item.price || 0
-        })),
-        itemCount: orderData.items.length,
-        totalAmount: orderData.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0),
-        status: orderData.status.toLowerCase(),
-        source: 'admin_panel',
-        createdAt: orderData.createdAt || new Date().toISOString(),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    };
 
         if (!existingSnapshot.empty) {
     // UPDATE existing order
