@@ -2772,16 +2772,7 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
                 `;
             },
-                                    <div style="margin-top: 25px; border: 2px solid ${colors.tableBorder}; padding: 15px; background: rgba(102, 126, 234, 0.05);">
-                                        <h4 style="color: ${orderIdBg}; margin-bottom: 15px;">
-                                            Day ${day.dayNumber} - ${Utils.formatDate(day.date)}
-                                        </h4>
-                                        <div style="font-size: ${fontSize}px; margin-bottom: 15px;">
-                                            <strong>Function:</strong> ${day.functionType || '-'}<br>
-                                            <strong>Time Slot:</strong> ${day.timeSlot || '-'}<br>
-                                            ${day.notes ? `<strong>Notes:</strong> ${day.notes}<br>` : ''}
-                                        </div>
-                                        
+
                                         ${day.items && day.items.length > 0 ? `
                                             <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px;">
                                                 <thead>
