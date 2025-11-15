@@ -2026,9 +2026,17 @@ if (localIndex !== -1) {
         await db.collection('orders').doc(docId).update(firestoreData);
         console.log('✅ Updated order:', finalOrderId);
         
+        const completeOrderData = {
+            ...orderData,
+            isMultiDay: orderData.isMultiDay || false,
+            startDate: orderData.startDate || null,
+            endDate: orderData.endDate || null,
+            dayWiseData: orderData.dayWiseData || []
+        };
+        
         const localIndex = this.data.orders.findIndex(o => o.orderId === finalOrderId);
         if (localIndex !== -1) {
-            this.data.orders[localIndex] = orderData;
+            this.data.orders[localIndex] = completeOrderData;
         }
         
         this.showToast('Order updated! ✏️');
