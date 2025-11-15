@@ -801,6 +801,7 @@
                 <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
                 <button class="nav-tab" data-tab="orders">📝 Orders</button>
                 <button class="nav-tab" data-tab="inventory">📦 Inventory</button>
+                <button class="nav-tab" data-tab="preparation">📋 Preparation</button>
                 <button class="nav-tab" data-tab="customers">👥 Customers</button>
                 <button class="nav-tab" data-tab="calendar">🗓️ Calendar</button>
                 <button class="nav-tab" data-tab="history">📚 History</button>
@@ -973,6 +974,7 @@
 
             <!-- Other tabs will be dynamically populated -->
             <div id="inventory" class="tab-content"></div>
+            <div id="preparation" class="tab-content"></div>
             <div id="customers" class="tab-content"></div>
             <div id="calendar" class="tab-content"></div>
             <div id="history" class="tab-content"></div>
@@ -3256,6 +3258,7 @@ convertToQuotationDateFormat(dateStr) {
                 setTimeout(() => {
                     if (tabName === 'dashboard') this.renderDashboard();
                     else if (tabName === 'inventory') this.renderInventory();
+                    else if (tabName === 'preparation') this.renderPreparation();
                     else if (tabName === 'customers') this.renderCustomers();
                     else if (tabName === 'calendar') this.renderCalendarTab();
                     else if (tabName === 'history') this.renderHistory();
@@ -3409,6 +3412,595 @@ convertToQuotationDateFormat(dateStr) {
                 this.saveToStorage();
                 this.updateInventoryDisplay();
                 this.showToast('Item added!');
+            },
+
+            // ============ PREPARATION / FORECAST FUNCTIONS ============
+
+            renderPreparation() {
+                const container = document.getElementById('preparation');
+                const today = new Date().toISOString().split('T')[0];
+                const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+                const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📋 Preparation & Forecast</h2>
+                            <p style="color: var(--text-gray); margin-top: 0.5rem;">Plan your inventory and see what items you need for upcoming orders</p>
+                        </div>
+
+                        <div class="card">
+                            <h3>📅 Select Date Range</h3>
+                            <div class="form-row" style="margin-bottom: 1rem;">
+                                <button class="btn btn-secondary" onclick="OMS.quickForecast('today')">Today</button>
+                                <button class="btn btn-secondary" onclick="OMS.quickForecast('tomorrow')">Tomorrow</button>
+                                <button class="btn btn-secondary" onclick="OMS.quickForecast('week')">Next 7 Days</button>
+                                <button class="btn btn-secondary" onclick="OMS.quickForecast('month')">Next 30 Days</button>
+                            </div>
+                            <div class="form-row">
+                                <div style="flex: 1;">
+                                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500;">From Date</label>
+                                    <input type="date" id="forecastStartDate" class="form-input" value="${today}">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500;">To Date</label>
+                                    <input type="date" id="forecastEndDate" class="form-input" value="${tomorrow}">
+                                </div>
+                                <div style="display: flex; align-items: flex-end;">
+                                    <button class="btn btn-primary" onclick="OMS.generateForecast()" style="height: fit-content;">
+                                        🔍 Generate Forecast
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="forecastResults"></div>
+                    </div>
+                `;
+
+                // Auto-generate forecast for tomorrow by default
+                setTimeout(() => this.generateForecast(), 100);
+            },
+
+            quickForecast(period) {
+                const today = new Date();
+                const startInput = document.getElementById('forecastStartDate');
+                const endInput = document.getElementById('forecastEndDate');
+
+                let start = new Date(today);
+                let end = new Date(today);
+
+                switch(period) {
+                    case 'today':
+                        // Start and end are same (today)
+                        break;
+                    case 'tomorrow':
+                        start.setDate(start.getDate() + 1);
+                        end.setDate(end.getDate() + 1);
+                        break;
+                    case 'week':
+                        end.setDate(end.getDate() + 7);
+                        break;
+                    case 'month':
+                        end.setDate(end.getDate() + 30);
+                        break;
+                }
+
+                startInput.value = start.toISOString().split('T')[0];
+                endInput.value = end.toISOString().split('T')[0];
+
+                this.generateForecast();
+            },
+
+            generateForecast() {
+                const startDate = Utils.get('forecastStartDate');
+                const endDate = Utils.get('forecastEndDate');
+
+                if (!startDate || !endDate) {
+                    this.showToast('Please select both start and end dates', 'error');
+                    return;
+                }
+
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+
+                if (end < start) {
+                    this.showToast('End date must be after start date', 'error');
+                    return;
+                }
+
+                // Get orders in date range
+                const ordersInRange = this.getOrdersInDateRange(startDate, endDate);
+
+                // Aggregate items from all orders
+                const itemsMap = new Map();
+                const orderItemsMap = new Map(); // Track which orders use which items
+
+                ordersInRange.forEach(order => {
+                    const items = this.getItemsFromOrder(order, startDate, endDate);
+
+                    items.forEach(item => {
+                        // Aggregate quantities
+                        const current = itemsMap.get(item.name) || 0;
+                        itemsMap.set(item.name, current + item.quantity);
+
+                        // Track order references
+                        if (!orderItemsMap.has(item.name)) {
+                            orderItemsMap.set(item.name, []);
+                        }
+                        orderItemsMap.get(item.name).push({
+                            orderId: order.orderId,
+                            clientName: order.clientName,
+                            quantity: item.quantity
+                        });
+                    });
+                });
+
+                // Convert to array and sort by quantity (descending)
+                const aggregatedItems = Array.from(itemsMap, ([name, quantity]) => {
+                    // Find matching inventory item
+                    const inventoryItem = this.data.inventory.items.find(i =>
+                        i.name.toLowerCase() === name.toLowerCase()
+                    );
+
+                    return {
+                        name,
+                        required: quantity,
+                        inStock: inventoryItem ? inventoryItem.quantity : 0,
+                        difference: inventoryItem ? inventoryItem.quantity - quantity : -quantity,
+                        orders: orderItemsMap.get(name) || []
+                    };
+                }).sort((a, b) => b.required - a.required);
+
+                // Render forecast results
+                this.renderForecastResults(ordersInRange, aggregatedItems, startDate, endDate);
+            },
+
+            getOrdersInDateRange(startDate, endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+
+                return this.data.orders.filter(order => {
+                    if (order.isMultiDay) {
+                        // For multi-day orders, check if any day falls in range
+                        const orderStart = new Date(order.startDate);
+                        const orderEnd = new Date(order.endDate);
+
+                        // Check for overlap: order overlaps if it starts before range ends AND ends after range starts
+                        return orderStart <= end && orderEnd >= start;
+                    } else {
+                        // For single-day orders
+                        const orderDate = new Date(order.date);
+                        return orderDate >= start && orderDate <= end;
+                    }
+                });
+            },
+
+            getItemsFromOrder(order, startDate, endDate) {
+                const items = [];
+
+                if (order.isMultiDay && order.dayWiseData) {
+                    // Filter days that fall in the date range
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+
+                    order.dayWiseData.forEach(day => {
+                        const dayDate = new Date(day.date);
+                        if (dayDate >= start && dayDate <= end) {
+                            // Get items from all functions of this day
+                            if (day.functions) {
+                                day.functions.forEach(func => {
+                                    if (func.items) {
+                                        items.push(...func.items);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                } else if (order.items) {
+                    // Single-day order
+                    items.push(...order.items);
+                }
+
+                return items;
+            },
+
+            renderForecastResults(orders, items, startDate, endDate) {
+                const container = document.getElementById('forecastResults');
+
+                if (orders.length === 0) {
+                    container.innerHTML = `
+                        <div class="card" style="text-align: center; padding: 2rem; color: var(--text-gray);">
+                            <h3>📭 No Orders Found</h3>
+                            <p>No orders scheduled between ${Utils.formatDate(startDate)} and ${Utils.formatDate(endDate)}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Calculate statistics
+                const confirmedOrders = orders.filter(o => o.status === 'Confirmed').length;
+                const pendingOrders = orders.filter(o => o.status !== 'Confirmed' && o.status !== 'Completed').length;
+                const completedOrders = orders.filter(o => o.status === 'Completed').length;
+                const totalItems = items.reduce((sum, item) => sum + item.required, 0);
+                const shortageItems = items.filter(i => i.difference < 0);
+                const okItems = items.filter(i => i.difference >= 0);
+
+                container.innerHTML = `
+                    <!-- Summary Cards -->
+                    <div class="card" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 1.5rem;">
+                        <h3 style="margin-bottom: 1rem; font-size: 1.3rem;">📊 Summary for ${Utils.formatDate(startDate)} to ${Utils.formatDate(endDate)}</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 2rem; font-weight: 700;">${orders.length}</div>
+                                <div style="font-size: 0.9rem; opacity: 0.9;">Total Orders</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 2rem; font-weight: 700;">${confirmedOrders}</div>
+                                <div style="font-size: 0.9rem; opacity: 0.9;">✅ Confirmed</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 2rem; font-weight: 700;">${items.length}</div>
+                                <div style="font-size: 0.9rem; opacity: 0.9;">Unique Items</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 2rem; font-weight: 700;">${totalItems}</div>
+                                <div style="font-size: 0.9rem; opacity: 0.9;">Total Quantity</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 2rem; font-weight: 700; color: ${shortageItems.length > 0 ? '#fca5a5' : '#86efac'};">${shortageItems.length}</div>
+                                <div style="font-size: 0.9rem; opacity: 0.9;">⚠️ Shortages</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 2rem; font-weight: 700; color: #86efac;">${okItems.length}</div>
+                                <div style="font-size: 0.9rem; opacity: 0.9;">✅ Sufficient</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Buttons -->
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="OMS.printForecast()">🖨️ Print</button>
+                        <button class="btn btn-info" onclick="OMS.exportForecastPDF()">📄 Export PDF</button>
+                        <button class="btn btn-warning" onclick="OMS.shareForecastWhatsApp()">📱 Share WhatsApp</button>
+                    </div>
+
+                    <!-- Items Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📦 Items Preparation List</h3>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 5%;">Sr</th>
+                                        <th style="width: 25%;">Item Name</th>
+                                        <th style="width: 10%;">Required</th>
+                                        <th style="width: 10%;">In Stock</th>
+                                        <th style="width: 10%;">Difference</th>
+                                        <th style="width: 10%;">Status</th>
+                                        <th style="width: 30%;">Used In Orders</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${items.map((item, index) => {
+                                        const statusBadge = item.difference >= 0
+                                            ? `<span style="background: var(--success); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">✅ OK</span>`
+                                            : `<span style="background: var(--danger); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">⚠️ SHORT ${item.difference}</span>`;
+
+                                        const ordersText = item.orders.slice(0, 3).map(o => o.orderId).join(', ') +
+                                            (item.orders.length > 3 ? ` +${item.orders.length - 3} more` : '');
+
+                                        return `
+                                            <tr style="background: ${item.difference < 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};">
+                                                <td>${index + 1}</td>
+                                                <td><strong>${item.name}</strong></td>
+                                                <td><strong>${item.required}</strong></td>
+                                                <td>${item.inStock}</td>
+                                                <td style="color: ${item.difference >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">
+                                                    ${item.difference >= 0 ? '+' : ''}${item.difference}
+                                                </td>
+                                                <td>${statusBadge}</td>
+                                                <td>
+                                                    <small style="color: var(--text-gray);">${ordersText}</small>
+                                                    <button class="btn btn-secondary btn-small" onclick="OMS.showItemOrderDetails('${item.name.replace(/'/g, "\\'")}')">Details</button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                                <tfoot>
+                                    <tr style="background: var(--light); font-weight: 700;">
+                                        <td colspan="2">GRAND TOTAL</td>
+                                        <td>${totalItems}</td>
+                                        <td>${items.reduce((sum, i) => sum + i.inStock, 0)}</td>
+                                        <td style="color: ${items.reduce((sum, i) => sum + i.difference, 0) >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                                            ${items.reduce((sum, i) => sum + i.difference, 0)}
+                                        </td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Orders Breakdown -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📋 Order Details Breakdown</h3>
+                        </div>
+                        <div style="display: grid; gap: 1rem;">
+                            ${orders.map(order => {
+                                const items = this.getItemsFromOrder(order, startDate, endDate);
+                                const statusColor = {
+                                    'Confirmed': 'var(--success)',
+                                    'Completed': 'var(--info)',
+                                    'Cancelled': 'var(--danger)'
+                                }[order.status] || 'var(--warning)';
+
+                                return `
+                                    <div style="border: 2px solid var(--border); border-radius: var(--radius); padding: 1rem; background: white;">
+                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                                            <div>
+                                                <div style="font-size: 1.1rem; font-weight: 600; color: var(--primary);">${order.orderId}</div>
+                                                <div style="color: var(--text-dark); font-weight: 500;">${order.clientName}</div>
+                                                <div style="font-size: 0.9rem; color: var(--text-gray);">
+                                                    📍 ${order.venue} |
+                                                    📅 ${order.isMultiDay ? `${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}` : Utils.formatDate(order.date)} |
+                                                    🕐 ${order.readyTime || 'N/A'}
+                                                </div>
+                                            </div>
+                                            <span style="background: ${statusColor}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">
+                                                ${order.status || 'Pending'}
+                                            </span>
+                                        </div>
+                                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border);">
+                                            <strong style="font-size: 0.9rem; color: var(--text-gray);">Items Required:</strong>
+                                            <div style="margin-top: 0.25rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                                ${items.map(item => `
+                                                    <span style="background: var(--light); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">
+                                                        ${item.name}: <strong>${item.quantity}</strong>
+                                                    </span>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+
+                // Store current forecast data for export
+                this.currentForecastData = {
+                    orders,
+                    items,
+                    startDate,
+                    endDate,
+                    stats: {
+                        totalOrders: orders.length,
+                        confirmed: confirmedOrders,
+                        pending: pendingOrders,
+                        completed: completedOrders,
+                        totalItems: totalItems,
+                        shortages: shortageItems.length,
+                        sufficient: okItems.length
+                    }
+                };
+            },
+
+            showItemOrderDetails(itemName) {
+                if (!this.currentForecastData) return;
+
+                const item = this.currentForecastData.items.find(i => i.name === itemName);
+                if (!item) return;
+
+                const ordersHtml = item.orders.map(o => `
+                    <div style="padding: 0.75rem; border-bottom: 1px solid var(--border);">
+                        <div style="font-weight: 600; color: var(--primary);">${o.orderId}</div>
+                        <div style="color: var(--text-gray); font-size: 0.9rem;">${o.clientName}</div>
+                        <div style="margin-top: 0.25rem;">
+                            <span style="background: var(--light); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">
+                                Quantity: <strong>${o.quantity}</strong>
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+
+                this.showModal(`
+                    <h2 style="margin-bottom: 1rem;">📦 ${itemName}</h2>
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                            <div style="background: var(--light); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${item.required}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-gray);">Required</div>
+                            </div>
+                            <div style="background: var(--light); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--info);">${item.inStock}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-gray);">In Stock</div>
+                            </div>
+                            <div style="background: var(--light); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: ${item.difference >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                                    ${item.difference >= 0 ? '+' : ''}${item.difference}
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-gray);">Difference</div>
+                            </div>
+                        </div>
+                    </div>
+                    <h3 style="margin-bottom: 0.5rem;">Used in ${item.orders.length} order(s):</h3>
+                    <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius);">
+                        ${ordersHtml}
+                    </div>
+                `);
+            },
+
+            printForecast() {
+                if (!this.currentForecastData) {
+                    this.showToast('No forecast data to print', 'error');
+                    return;
+                }
+
+                const { items, orders, startDate, endDate, stats } = this.currentForecastData;
+
+                const printWindow = window.open('', '', 'width=800,height=600');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Preparation Forecast - ${Utils.formatDate(startDate)} to ${Utils.formatDate(endDate)}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 20px; }
+                            h1 { color: #333; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+                            h2 { color: #667eea; margin-top: 20px; }
+                            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                            th { background: #667eea; color: white; }
+                            .shortage { background: #fee; color: #c00; font-weight: bold; }
+                            .ok { background: #efe; color: #060; font-weight: bold; }
+                            .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+                            .summary-card { border: 2px solid #667eea; padding: 15px; border-radius: 8px; text-align: center; }
+                            .summary-card .value { font-size: 2rem; font-weight: bold; color: #667eea; }
+                            .summary-card .label { color: #666; margin-top: 5px; }
+                            @media print {
+                                button { display: none; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>📋 Preparation & Forecast Report</h1>
+                        <p><strong>Period:</strong> ${Utils.formatDate(startDate)} to ${Utils.formatDate(endDate)}</p>
+                        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+
+                        <div class="summary">
+                            <div class="summary-card">
+                                <div class="value">${stats.totalOrders}</div>
+                                <div class="label">Total Orders</div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="value">${items.length}</div>
+                                <div class="label">Unique Items</div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="value">${stats.totalItems}</div>
+                                <div class="label">Total Quantity</div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="value">${stats.confirmed}</div>
+                                <div class="label">Confirmed Orders</div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="value" style="color: ${stats.shortages > 0 ? '#c00' : '#060'};">${stats.shortages}</div>
+                                <div class="label">Items Short</div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="value" style="color: #060;">${stats.sufficient}</div>
+                                <div class="label">Items OK</div>
+                            </div>
+                        </div>
+
+                        <h2>📦 Items Preparation List</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Sr</th>
+                                    <th>Item Name</th>
+                                    <th>Required</th>
+                                    <th>In Stock</th>
+                                    <th>Difference</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.map((item, index) => `
+                                    <tr class="${item.difference < 0 ? 'shortage' : ''}">
+                                        <td>${index + 1}</td>
+                                        <td><strong>${item.name}</strong></td>
+                                        <td>${item.required}</td>
+                                        <td>${item.inStock}</td>
+                                        <td class="${item.difference >= 0 ? 'ok' : 'shortage'}">
+                                            ${item.difference >= 0 ? '+' : ''}${item.difference}
+                                        </td>
+                                        <td>${item.difference >= 0 ? '✅ OK' : '⚠️ SHORT'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+
+                        <h2>📋 Orders Summary</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Client</th>
+                                    <th>Venue</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${orders.map(order => `
+                                    <tr>
+                                        <td>${order.orderId}</td>
+                                        <td>${order.clientName}</td>
+                                        <td>${order.venue}</td>
+                                        <td>${order.isMultiDay ? `${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}` : Utils.formatDate(order.date)}</td>
+                                        <td>${order.status || 'Pending'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+
+                        <button onclick="window.print()" style="background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 20px;">
+                            🖨️ Print This Report
+                        </button>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            },
+
+            exportForecastPDF() {
+                this.showToast('PDF export coming soon! Use Print for now.', 'info');
+                // Future: Implement PDF generation using jsPDF or similar
+            },
+
+            shareForecastWhatsApp() {
+                if (!this.currentForecastData) {
+                    this.showToast('No forecast data to share', 'error');
+                    return;
+                }
+
+                const { items, startDate, endDate, stats } = this.currentForecastData;
+
+                // Create WhatsApp message
+                let message = `📋 *PREPARATION FORECAST*\n\n`;
+                message += `📅 *Period:* ${Utils.formatDate(startDate)} to ${Utils.formatDate(endDate)}\n\n`;
+                message += `📊 *SUMMARY*\n`;
+                message += `• Total Orders: ${stats.totalOrders}\n`;
+                message += `• Confirmed: ${stats.confirmed}\n`;
+                message += `• Total Items: ${items.length}\n`;
+                message += `• Total Quantity: ${stats.totalItems}\n`;
+                message += `• Shortages: ${stats.shortages}\n\n`;
+
+                message += `📦 *ITEMS NEEDED*\n`;
+                message += `━━━━━━━━━━━━━━━━━\n`;
+
+                items.forEach((item, index) => {
+                    const status = item.difference >= 0 ? '✅' : '⚠️';
+                    message += `${index + 1}. ${item.name}\n`;
+                    message += `   Required: ${item.required} | Stock: ${item.inStock} | ${item.difference >= 0 ? '+' : ''}${item.difference} ${status}\n`;
+                });
+
+                message += `\n━━━━━━━━━━━━━━━━━\n`;
+                message += `Generated: ${new Date().toLocaleString()}\n`;
+                message += `\n_Powered by FirepowerSFX Admin_`;
+
+                // Encode and open WhatsApp
+                const encodedMessage = encodeURIComponent(message);
+                window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+
+                this.showToast('Opening WhatsApp...', 'success');
             },
 
             renderCustomers() {
