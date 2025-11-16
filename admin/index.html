@@ -1228,6 +1228,7 @@ const OMS = {
                 this.setupKeyboardShortcuts();
                 this.setupAutoSave();
                 this.setupDragDrop();
+                this.setupAutoBackup(); // Automatic backup system
                 this.populateTimeDropdown();
                 this.loadDemoData();
                 this.updateAllDisplays();
@@ -1795,6 +1796,74 @@ const OMS = {
                         this.handleImportFile(file);
                     }
                 });
+            },
+
+            // ============ AUTOMATIC BACKUP SYSTEM ============
+            setupAutoBackup() {
+                // Auto-export every 24 hours
+                const BACKUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+
+                setInterval(() => {
+                    this.autoExportData();
+                }, BACKUP_INTERVAL);
+
+                // Also backup on significant changes
+                let changeCounter = 0;
+                const originalSaveToStorage = this.saveToStorage.bind(this);
+                this.saveToStorage = function() {
+                    originalSaveToStorage();
+                    changeCounter++;
+
+                    // Backup every 50 changes
+                    if (changeCounter >= 50) {
+                        this.autoExportData();
+                        changeCounter = 0;
+                    }
+                };
+
+                console.log('✅ Auto-backup system initialized (exports every 24h or 50 changes)');
+            },
+
+            autoExportData() {
+                try {
+                    const exportData = {
+                        exportDate: new Date().toISOString(),
+                        version: '2.0',
+                        data: {
+                            orders: this.data.orders,
+                            customers: this.data.customers,
+                            inventory: this.data.inventory,
+                            team: this.data.team,
+                            settings: this.data.settings,
+                            tasks: this.data.tasks,
+                            orderAuditLog: this.data.orderAuditLog || {}
+                        },
+                        stats: {
+                            totalOrders: this.data.orders.length,
+                            totalCustomers: this.data.customers.length,
+                            totalInventoryItems: this.data.inventory.items.length
+                        }
+                    };
+
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `OMS_AutoBackup_${Utils.toDateString(new Date())}_${Date.now()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+
+                    console.log('✅ Auto-backup created successfully');
+                    this.showToast('📦 Auto-backup created', 'success');
+                } catch (error) {
+                    console.error('❌ Auto-backup failed:', error);
+                }
+            },
+
+            // Manual export function (can be called anytime)
+            manualExport() {
+                this.autoExportData();
+                this.showToast('📥 Manual backup created!', 'success');
             },
 
             // ============ GLOBAL SEARCH ============
@@ -2450,6 +2519,20 @@ if (!localExists) {
 }
 
                 const displayId = finalOrderId || `[${status.toUpperCase()}]`;
+
+                // AUTOMATIC INVENTORY DEDUCTION (if order is completed)
+                if (status === 'completed' && orderData.items) {
+                    this.deductInventory(orderData.items, orderData.orderId);
+                }
+
+                // ADD TO ORDER AUDIT HISTORY
+                this.addAuditEntry(orderData.orderId || orderData.docId, {
+                    action: 'created',
+                    user: this.getCurrentUser().name || 'Admin',
+                    timestamp: new Date().toISOString(),
+                    details: `Order created with status: ${status}`
+                });
+
                 this.showToast(`Order ${displayId} saved to Firestore! 🆕`);
                 this.refreshOrderId();
                 this.saveToStorage();
@@ -2461,6 +2544,63 @@ if (!localExists) {
         console.error('❌ Error saving to Firestore:', error);
         this.showToast('Error saving order: ' + error.message, 'error');
     }
+},
+
+// Automatic Inventory Deduction
+deductInventory(items, orderId) {
+    if (!items || items.length === 0) return;
+
+    items.forEach(orderItem => {
+        const inventoryItem = this.data.inventory.items.find(i =>
+            i.name.toLowerCase() === orderItem.name.toLowerCase()
+        );
+
+        if (inventoryItem) {
+            const previousQty = inventoryItem.quantity;
+            inventoryItem.quantity -= orderItem.quantity;
+
+            console.log(`📦 Deducted ${orderItem.quantity} ${orderItem.name} from inventory (${previousQty} → ${inventoryItem.quantity})`);
+
+            // Low stock warning
+            if (inventoryItem.quantity <= this.data.settings.lowStockThreshold) {
+                this.showToast(`⚠️ LOW STOCK: ${inventoryItem.name} (${inventoryItem.quantity} left)`, 'warning');
+            }
+
+            // Negative stock alert
+            if (inventoryItem.quantity < 0) {
+                this.showToast(`🚨 CRITICAL: ${inventoryItem.name} stock is NEGATIVE!`, 'error');
+            }
+        }
+    });
+
+    this.saveToStorage();
+},
+
+// Order Audit History System
+addAuditEntry(identifier, entry) {
+    if (!this.data.orderAuditLog) {
+        this.data.orderAuditLog = {};
+    }
+
+    if (!this.data.orderAuditLog[identifier]) {
+        this.data.orderAuditLog[identifier] = [];
+    }
+
+    this.data.orderAuditLog[identifier].push(entry);
+    console.log(`📝 Audit log: ${entry.action} by ${entry.user}`);
+},
+
+// Get current logged in user (for multi-user system)
+getCurrentUser() {
+    if (!this.data.currentUser) {
+        this.data.currentUser = {
+            id: 'admin',
+            name: this.data.settings.businessOwner || 'Admin',
+            role: 'admin',
+            permissions: ['all']
+        };
+    }
+    return this.data.currentUser;
 },
 
 convertToQuotationDateFormat(dateStr) {
@@ -2950,12 +3090,27 @@ convertToQuotationDateFormat(dateStr) {
                         id: Utils.generateId(),
                         name: orderData.clientName,
                         contact: orderData.contact,
+                        email: '',
+                        address: '',
                         firstOrderDate: orderData.date,
                         lastOrderDate: orderData.date,
                         lastOrderId: orderData.orderId,
                         lastVenue: orderData.venue,
                         totalOrders: 1,
-                        createdAt: new Date().toISOString()
+                        // Enhanced customer profile fields
+                        preferences: {
+                            preferredItems: [],
+                            dietaryRestrictions: '',
+                            specialRequests: ''
+                        },
+                        notes: '',
+                        paymentHistory: [],
+                        totalRevenue: 0,
+                        creditLimit: 0,
+                        discount: 0, // Percentage discount for loyal customers
+                        tags: [], // e.g., ['VIP', 'Corporate', 'Regular']
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
                     };
                     this.data.customers.push(customer);
                 }
