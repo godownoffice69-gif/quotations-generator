@@ -5637,7 +5637,7 @@ async loadInventoryFromFirestore() {
 
         const currentCatCount = this.data.inventory.categories.length;
         const currentItemCount = this.data.inventory.items.length;
-        const hasLocalData = currentCatCount > 0 || currentItemCount > 0;
+        const currentTotalCount = currentCatCount + currentItemCount;
 
         // Load categories
         const categoriesSnapshot = await db.collection('inventory').doc('categories').collection('items').get();
@@ -5653,29 +5653,36 @@ async loadInventoryFromFirestore() {
             items.push({ id: doc.id, ...doc.data() });
         });
 
-        console.log(`📦 Firestore inventory: ${categories.length} categories, ${items.length} items`);
-        console.log(`📦 Current local inventory: ${currentCatCount} categories, ${currentItemCount} items`);
+        const firestoreTotalCount = categories.length + items.length;
 
-        // CRITICAL: Data loss prevention
-        const hasFirestoreData = categories.length > 0 || items.length > 0;
+        console.log(`📦 Firestore inventory: ${categories.length} categories, ${items.length} items (TOTAL: ${firestoreTotalCount})`);
+        console.log(`📦 Current local inventory: ${currentCatCount} categories, ${currentItemCount} items (TOTAL: ${currentTotalCount})`);
 
-        if (hasFirestoreData) {
-            // Firestore has data - use it
+        // CRITICAL: Always prefer the larger dataset (prevents demo data from overwriting real data)
+        if (firestoreTotalCount > currentTotalCount) {
+            // Firestore has MORE data - use it (this is the real data!)
+            console.log(`✅ Firestore has MORE data (${firestoreTotalCount} vs ${currentTotalCount}) - loading from Firestore`);
             this.data.inventory = { categories, items };
             console.log(`✅ Loaded ${categories.length} categories and ${items.length} items from Firestore`);
             this.saveToStorage(); // Save to localStorage immediately
-        } else if (hasLocalData) {
-            // No Firestore data but we have local data - KEEP local and sync to Firestore
-            console.warn('⚠️⚠️ CRITICAL: No inventory in Firestore but we have local data!');
-            console.log(`📦 Keeping local: ${currentCatCount} categories, ${currentItemCount} items`);
-            console.log('🔄 Syncing local data to Firestore to prevent future loss...');
+        } else if (currentTotalCount > firestoreTotalCount && currentTotalCount > 0) {
+            // Local has MORE data - keep it and sync to Firestore
+            console.warn(`⚠️ Local has MORE data (${currentTotalCount} vs ${firestoreTotalCount}) - keeping local`);
+            console.log('🔄 Syncing local data to Firestore...');
+            await this.syncInventoryToFirestore();
+        } else if (firestoreTotalCount > 0) {
+            // Both have same amount, but Firestore exists - use Firestore
+            console.log('✅ Using Firestore data (same count or Firestore is source of truth)');
+            this.data.inventory = { categories, items };
+            this.saveToStorage();
+        } else if (currentTotalCount > 0) {
+            // Firestore empty but local has data
+            console.warn('⚠️⚠️ Firestore is empty but local has data - keeping local and syncing');
             await this.syncInventoryToFirestore();
         } else {
             // Both empty - data loss!
-            console.error('❌❌ CRITICAL: Both Firestore AND localStorage are empty!');
+            console.error('❌❌ CRITICAL: Both Firestore AND local are empty!');
             console.error('❌ ALL INVENTORY DATA HAS BEEN LOST!');
-            console.error('💡 Use: await AdminUtils.recoverInventoryFromFirestore() if Firestore had data before');
-            console.error('💡 Or check browser localStorage backup');
         }
 
         return true;
@@ -6126,17 +6133,35 @@ if (change.type === 'modified') {
 },
 
 loadDemoData() {
+    // DISABLED: Don't load demo data if we have real data in Firestore or deletedOrders
+    console.log('📋 Checking if demo data should be loaded...');
+
+    const hasDeletedOrders = this.data.deletedOrders && this.data.deletedOrders.length > 0;
+    const hasRealInventory = this.data.inventory.categories.length > 2 || this.data.inventory.items.length > 2;
+
+    if (hasDeletedOrders) {
+        console.log('⚠️ Found deleted orders - skipping demo data (system has been used before)');
+        return;
+    }
+
+    if (hasRealInventory) {
+        console.log('⚠️ Found real inventory - skipping demo data');
+        return;
+    }
+
     if (this.data.orders.length === 0) {
+        console.log('📋 No orders found. Loading demo data for first-time users...');
+
         this.data.inventory.categories = [
             { id: 'cat-1', name: 'Sparklers', createdAt: new Date().toISOString() },
             { id: 'cat-2', name: 'Fountains', createdAt: new Date().toISOString() }
         ];
-        
+
         this.data.inventory.items = [
             { id: 'item-1', categoryId: 'cat-1', name: '7 cm Electric Sparkler', quantity: 50, createdAt: new Date().toISOString() },
             { id: 'item-2', categoryId: 'cat-2', name: 'Golden Fountain', quantity: 5, createdAt: new Date().toISOString() }
         ];
-        
+
         const demoOrder = {
             orderId: 'FP001',
             date: Utils.toDateString(new Date()),
@@ -6156,11 +6181,14 @@ loadDemoData() {
             ],
             createdAt: new Date().toISOString()
         };
-        
+
         this.data.orders.push(demoOrder);
         this.updateCustomerDatabase(demoOrder);
         this.data.settings.orderIdCounter = 2;
         this.saveToStorage();
+        console.log('✅ Demo data loaded for first-time user');
+    } else {
+        console.log('✅ Orders exist - demo data not needed');
     }
 },
 
@@ -6716,6 +6744,23 @@ updateAllDisplays() {
                 }
             },
 
+            // Clean up deleted orders list (remove undefined entries)
+            cleanupDeletedOrdersList() {
+                console.log('🧹 Cleaning up deleted orders list...');
+                const before = OMS.data.deletedOrders.length;
+                const undefinedCount = OMS.data.deletedOrders.filter(o => !o.orderId).length;
+
+                if (undefinedCount > 0) {
+                    console.log(`⚠️ Found ${undefinedCount} entries with undefined orderId`);
+                    OMS.data.deletedOrders = OMS.data.deletedOrders.filter(o => o.orderId && o.orderId !== 'undefined');
+                    OMS.saveToStorage();
+                    console.log(`✅ Removed ${before - OMS.data.deletedOrders.length} invalid entries`);
+                    console.log(`📋 Deleted orders list: ${before} → ${OMS.data.deletedOrders.length}`);
+                } else {
+                    console.log('✅ No cleanup needed - all entries have valid orderIds');
+                }
+            },
+
             // COMPREHENSIVE DIAGNOSTIC - Find all bugs
             async debugEverything() {
                 console.log('🔍🔍🔍 COMPREHENSIVE SYSTEM DIAGNOSTIC 🔍🔍🔍\n');
@@ -6792,6 +6837,12 @@ updateAllDisplays() {
                 if (OMS.data.deletedOrders.length > 0) {
                     console.log('  Checking if deleted orders still exist in Firestore...');
                     for (const delOrder of OMS.data.deletedOrders) {
+                        // Skip if orderId is undefined
+                        if (!delOrder.orderId) {
+                            console.warn(`  ⚠️ Skipping deleted order with undefined ID`);
+                            continue;
+                        }
+
                         const snapshot = await db.collection('orders')
                             .where('orderId', '==', delOrder.orderId)
                             .get();
@@ -6859,6 +6910,7 @@ updateAllDisplays() {
         console.log('  - AdminUtils.removeGhostOrders() - Remove all ghost orders');
         console.log('  - await AdminUtils.findAndDeleteDemoOrders() - Find and delete demo orders');
         console.log('  - AdminUtils.viewDeletedOrders() - View deleted orders list');
+        console.log('  - AdminUtils.cleanupDeletedOrdersList() - Clean up undefined entries in deleted list');
         console.log('\n📦 INVENTORY COMMANDS:');
         console.log('  - AdminUtils.checkInventoryStatus() - Check inventory status');
         console.log('  - await AdminUtils.checkFirestoreInventory() - See what is in Firestore');
