@@ -3392,42 +3392,54 @@ convertToQuotationDateFormat(dateStr) {
             addCategory() {
                 const name = Utils.get('categoryName');
                 if (!name) return;
-                
-                this.createItem('category', {
+
+                const category = {
                     id: Utils.generateId(),
                     name: name,
                     createdAt: new Date().toISOString()
-                });
-                
+                };
+
+                this.createItem('category', category);
+
                 Utils.set('categoryName', '');
                 this.saveToStorage();
+
+                // Save to Firestore
+                this.saveInventoryCategoryToFirestore(category);
+
                 this.updateInventoryDisplay();
-                this.showToast('Category added!');
+                this.showToast('Category added and synced!');
             },
 
             addItem() {
                 const categoryId = Utils.get('itemCategory');
                 const name = Utils.get('itemName');
                 const quantity = parseInt(Utils.get('itemQuantity')) || 0;
-                
+
                 if (!categoryId || !name) {
                     this.showToast('Select category and enter name', 'error');
                     return;
                 }
-                
-                this.createItem('item', {
+
+                const item = {
                     id: Utils.generateId(),
                     categoryId: categoryId,
                     name: name,
                     quantity: quantity,
                     createdAt: new Date().toISOString()
-                });
-                
+                };
+
+                this.createItem('item', item);
+
                 Utils.set('itemName', '');
                 Utils.set('itemQuantity', '');
                 this.saveToStorage();
+
+                // Save to Firestore
+                this.saveInventoryItemToFirestore(item);
+
                 this.updateInventoryDisplay();
-                this.showToast('Item added!');
+                this.showToast('Item added and synced!');
             },
 
             // ============ PREPARATION / FORECAST FUNCTIONS ============
@@ -4299,9 +4311,18 @@ convertToQuotationDateFormat(dateStr) {
 
                 this.data.team.push(teamMember);
                 this.saveToStorage();
+
+                // Save to Firestore
+                this.saveTeamMemberToFirestore(teamMember).then(success => {
+                    if (success) {
+                        this.showToast(`${name} added to team and synced!`, 'success');
+                    } else {
+                        this.showToast(`${name} added locally, but sync failed`, 'warning');
+                    }
+                });
+
                 this.renderTeamTable();
                 this.clearTeamForm();
-                this.showToast(`${name} added to team!`, 'success');
             },
 
             clearTeamForm() {
@@ -4414,9 +4435,18 @@ convertToQuotationDateFormat(dateStr) {
                 member.updatedAt = new Date().toISOString();
 
                 this.saveToStorage();
+
+                // Save to Firestore
+                this.saveTeamMemberToFirestore(member).then(success => {
+                    if (success) {
+                        this.showToast('Team member updated and synced!', 'success');
+                    } else {
+                        this.showToast('Team member updated locally, but sync failed', 'warning');
+                    }
+                });
+
                 this.renderTeamTable();
                 this.closeModal();
-                this.showToast('Team member updated!', 'success');
             },
 
             deleteTeamMember(id) {
@@ -4426,10 +4456,21 @@ convertToQuotationDateFormat(dateStr) {
                 if (confirm(`Are you sure you want to delete ${member.name} from the team?`)) {
                     const index = this.data.team.findIndex(m => m.id === id);
                     if (index !== -1) {
+                        const memberName = member.name;
+
                         this.data.team.splice(index, 1);
                         this.saveToStorage();
+
+                        // Delete from Firestore
+                        this.deleteTeamMemberFromFirestore(id).then(success => {
+                            if (success) {
+                                this.showToast(`${memberName} removed from team and synced!`, 'success');
+                            } else {
+                                this.showToast(`${memberName} removed locally, but sync failed`, 'warning');
+                            }
+                        });
+
                         this.renderTeamTable();
-                        this.showToast(`${member.name} removed from team`, 'success');
                     }
                 }
             },
@@ -4527,14 +4568,18 @@ convertToQuotationDateFormat(dateStr) {
                     this.showToast(`Notifications sent to ${notifications.join(', ')}`, 'success');
 
                     // Log notification
-                    this.data.notifications.push({
+                    const notification = {
                         id: Utils.generateId(),
                         type: 'team_allocation',
                         orderId,
                         recipients: notifications,
                         timestamp: new Date().toISOString()
-                    });
+                    };
+                    this.data.notifications.push(notification);
                     this.saveToStorage();
+
+                    // Save to Firestore
+                    this.saveNotificationToFirestore(notification);
                 } else {
                     this.showToast('No team members selected or no WhatsApp numbers found', 'warning');
                 }
@@ -4687,14 +4732,18 @@ convertToQuotationDateFormat(dateStr) {
                 });
 
                 // Log notification
-                this.data.notifications.push({
+                const notification = {
                     id: Utils.generateId(),
                     type: 'manager_report',
                     recipients: managers.map(m => m.name),
                     orderCount: upcomingOrders.length,
                     timestamp: new Date().toISOString()
-                });
+                };
+                this.data.notifications.push(notification);
                 this.saveToStorage();
+
+                // Save to Firestore
+                this.saveNotificationToFirestore(notification);
 
                 this.showToast(`Manager report sent to ${managers.length} manager(s)`, 'success');
             },
@@ -5197,7 +5246,9 @@ convertToQuotationDateFormat(dateStr) {
 
             async loadFromStorage() {
     try {
-        // Load from localStorage for settings and inventory
+        console.log('📥 Loading all data from Firestore...');
+
+        // Load localStorage as fallback/cache
         const saved = localStorage.getItem('oms_data');
         if (saved) {
             const parsed = JSON.parse(saved);
@@ -5213,13 +5264,25 @@ convertToQuotationDateFormat(dateStr) {
                 settings: { ...this.data.settings, ...parsed.settings }
             };
         }
-        
-        // Load orders and tracking from Firestore
-        await this.loadOrdersFromFirestore();
-        await this.loadTrackingFromFirestore();
-        
+
+        // Load ALL data from Firestore (primary source)
+        await Promise.all([
+            this.loadOrdersFromFirestore(),
+            this.loadTrackingFromFirestore(),
+            this.loadTeamFromFirestore(),
+            this.loadInventoryFromFirestore(),
+            this.loadNotificationsFromFirestore(),
+            this.loadSettingsFromFirestore()
+        ]);
+
+        // Setup real-time listeners for all collections
+        this.setupAllRealtimeListeners();
+
+        console.log('✅ All data loaded from Firestore successfully!');
+
     } catch (error) {
-        console.error('Load error:', error);
+        console.error('❌ Load error:', error);
+        this.showToast('Error loading data: ' + error.message, 'error');
     }
 },
 
@@ -5299,6 +5362,341 @@ async loadTrackingFromFirestore() {
         console.error('❌ Error loading tracking data:', error);
         this.data.trackingData = [];
     }
+},
+
+// ============ TEAM FIRESTORE SYNC ============
+
+async saveTeamMemberToFirestore(teamMember) {
+    try {
+        const user = auth.currentUser;
+        if (!user) {
+            console.error('❌ No user logged in');
+            return false;
+        }
+
+        await db.collection('team').doc(teamMember.id).set({
+            ...teamMember,
+            updatedBy: user.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log('✅ Team member saved to Firestore:', teamMember.name);
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving team member to Firestore:', error);
+        this.showToast('Failed to sync team member: ' + error.message, 'error');
+        return false;
+    }
+},
+
+async loadTeamFromFirestore() {
+    try {
+        console.log('👷 Loading team from Firestore...');
+
+        const teamSnapshot = await db.collection('team')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        this.data.team = [];
+        teamSnapshot.forEach(doc => {
+            this.data.team.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+
+        console.log(`✅ Loaded ${this.data.team.length} team members from Firestore`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error loading team from Firestore:', error);
+        // Try to load from localStorage as fallback
+        const saved = localStorage.getItem('oms_data');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            this.data.team = parsed.team || [];
+            console.log('📦 Loaded team from localStorage backup');
+        }
+        return false;
+    }
+},
+
+async deleteTeamMemberFromFirestore(teamMemberId) {
+    try {
+        await db.collection('team').doc(teamMemberId).delete();
+        console.log('✅ Team member deleted from Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error deleting team member from Firestore:', error);
+        return false;
+    }
+},
+
+// ============ INVENTORY FIRESTORE SYNC ============
+
+async saveInventoryCategoryToFirestore(category) {
+    try {
+        await db.collection('inventory').doc('categories').collection('items').doc(category.id).set({
+            ...category,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('✅ Inventory category saved to Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving category to Firestore:', error);
+        return false;
+    }
+},
+
+async saveInventoryItemToFirestore(item) {
+    try {
+        await db.collection('inventory').doc('items').collection('list').doc(item.id).set({
+            ...item,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('✅ Inventory item saved to Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving item to Firestore:', error);
+        return false;
+    }
+},
+
+async loadInventoryFromFirestore() {
+    try {
+        console.log('📦 Loading inventory from Firestore...');
+
+        // Load categories
+        const categoriesSnapshot = await db.collection('inventory').doc('categories').collection('items').get();
+        const categories = [];
+        categoriesSnapshot.forEach(doc => {
+            categories.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Load items
+        const itemsSnapshot = await db.collection('inventory').doc('items').collection('list').get();
+        const items = [];
+        itemsSnapshot.forEach(doc => {
+            items.push({ id: doc.id, ...doc.data() });
+        });
+
+        this.data.inventory = { categories, items };
+        console.log(`✅ Loaded ${categories.length} categories and ${items.length} items from Firestore`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error loading inventory from Firestore:', error);
+        return false;
+    }
+},
+
+async deleteInventoryItemFromFirestore(itemId, type = 'item') {
+    try {
+        const collection = type === 'category' ? 'categories' : 'items';
+        await db.collection('inventory').doc(collection).collection('list').doc(itemId).delete();
+        console.log('✅ Inventory item deleted from Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error deleting inventory item:', error);
+        return false;
+    }
+},
+
+// ============ NOTIFICATIONS FIRESTORE SYNC ============
+
+async saveNotificationToFirestore(notification) {
+    try {
+        await db.collection('notifications').doc(notification.id).set({
+            ...notification,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('✅ Notification saved to Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving notification to Firestore:', error);
+        return false;
+    }
+},
+
+async loadNotificationsFromFirestore() {
+    try {
+        console.log('🔔 Loading notifications from Firestore...');
+
+        const notifSnapshot = await db.collection('notifications')
+            .orderBy('timestamp', 'desc')
+            .limit(100)
+            .get();
+
+        this.data.notifications = [];
+        notifSnapshot.forEach(doc => {
+            this.data.notifications.push({ id: doc.id, ...doc.data() });
+        });
+
+        console.log(`✅ Loaded ${this.data.notifications.length} notifications from Firestore`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error loading notifications from Firestore:', error);
+        return false;
+    }
+},
+
+// ============ SETTINGS FIRESTORE SYNC ============
+
+async saveSettingsToFirestore() {
+    try {
+        const user = auth.currentUser;
+        if (!user) return false;
+
+        await db.collection('settings').doc('app_settings').set({
+            ...this.data.settings,
+            updatedBy: user.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log('✅ Settings saved to Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving settings to Firestore:', error);
+        return false;
+    }
+},
+
+async loadSettingsFromFirestore() {
+    try {
+        console.log('⚙️ Loading settings from Firestore...');
+
+        const settingsDoc = await db.collection('settings').doc('app_settings').get();
+
+        if (settingsDoc.exists) {
+            const firestoreSettings = settingsDoc.data();
+            // Merge with default settings
+            this.data.settings = {
+                ...this.data.settings,
+                ...firestoreSettings
+            };
+            console.log('✅ Settings loaded from Firestore');
+            return true;
+        } else {
+            console.log('📝 No settings in Firestore, using defaults');
+            // Save default settings to Firestore
+            await this.saveSettingsToFirestore();
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error loading settings from Firestore:', error);
+        return false;
+    }
+},
+
+// ============ REAL-TIME SYNC LISTENERS ============
+
+setupAllRealtimeListeners() {
+    if (this.allListenersActive) {
+        console.log('⚠️ All listeners already active');
+        return;
+    }
+
+    console.log('🔄 Setting up all real-time listeners...');
+    this.allListenersActive = true;
+
+    // Team real-time listener
+    this.teamUnsubscribe = db.collection('team').onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const teamMember = { id: change.doc.id, ...change.doc.data() };
+
+            if (change.type === 'added' || change.type === 'modified') {
+                const index = this.data.team.findIndex(t => t.id === teamMember.id);
+                if (index === -1) {
+                    this.data.team.push(teamMember);
+                    console.log('👷 Team member added/updated:', teamMember.name);
+                } else {
+                    this.data.team[index] = teamMember;
+                }
+                // Update UI if on team tab
+                if (this.currentTab === 'team') {
+                    this.renderTeamTable();
+                }
+            } else if (change.type === 'removed') {
+                const index = this.data.team.findIndex(t => t.id === teamMember.id);
+                if (index !== -1) {
+                    this.data.team.splice(index, 1);
+                    console.log('👷 Team member removed:', teamMember.name);
+                    if (this.currentTab === 'team') {
+                        this.renderTeamTable();
+                    }
+                }
+            }
+        });
+
+        // Update localStorage backup
+        this.saveToStorage();
+    });
+
+    // Inventory real-time listeners
+    this.inventoryCategoriesUnsubscribe = db.collection('inventory').doc('categories').collection('items')
+        .onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                const category = { id: change.doc.id, ...change.doc.data() };
+
+                if (change.type === 'added' || change.type === 'modified') {
+                    const index = this.data.inventory.categories.findIndex(c => c.id === category.id);
+                    if (index === -1) {
+                        this.data.inventory.categories.push(category);
+                    } else {
+                        this.data.inventory.categories[index] = category;
+                    }
+                } else if (change.type === 'removed') {
+                    const index = this.data.inventory.categories.findIndex(c => c.id === category.id);
+                    if (index !== -1) {
+                        this.data.inventory.categories.splice(index, 1);
+                    }
+                }
+            });
+
+            if (this.currentTab === 'inventory') {
+                this.updateInventoryDisplay();
+            }
+            this.saveToStorage();
+        });
+
+    this.inventoryItemsUnsubscribe = db.collection('inventory').doc('items').collection('list')
+        .onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                const item = { id: change.doc.id, ...change.doc.data() };
+
+                if (change.type === 'added' || change.type === 'modified') {
+                    const index = this.data.inventory.items.findIndex(i => i.id === item.id);
+                    if (index === -1) {
+                        this.data.inventory.items.push(item);
+                    } else {
+                        this.data.inventory.items[index] = item;
+                    }
+                } else if (change.type === 'removed') {
+                    const index = this.data.inventory.items.findIndex(i => i.id === item.id);
+                    if (index !== -1) {
+                        this.data.inventory.items.splice(index, 1);
+                    }
+                }
+            });
+
+            if (this.currentTab === 'inventory') {
+                this.updateInventoryDisplay();
+            }
+            this.saveToStorage();
+        });
+
+    // Settings real-time listener
+    this.settingsUnsubscribe = db.collection('settings').doc('app_settings')
+        .onSnapshot((doc) => {
+            if (doc.exists) {
+                this.data.settings = {
+                    ...this.data.settings,
+                    ...doc.data()
+                };
+                console.log('⚙️ Settings updated from Firestore');
+                this.saveToStorage();
+            }
+        });
+
+    console.log('✅ All real-time listeners active');
 },
 
 setupRealtimeListeners() {
