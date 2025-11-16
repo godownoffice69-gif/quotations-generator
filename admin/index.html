@@ -5822,8 +5822,15 @@ setupAllRealtimeListeners() {
     });
 
     // Inventory real-time listeners
+    let categoriesInitialLoad = true;
     this.inventoryCategoriesUnsubscribe = db.collection('inventory').doc('categories').collection('items')
         .onSnapshot((snapshot) => {
+            if (categoriesInitialLoad) {
+                console.log('📦 Inventory categories listener - initial snapshot (skipping save)');
+                categoriesInitialLoad = false;
+                return; // Skip initial snapshot to prevent overwriting loaded data
+            }
+
             snapshot.docChanges().forEach((change) => {
                 const category = { id: change.doc.id, ...change.doc.data() };
 
@@ -5831,6 +5838,7 @@ setupAllRealtimeListeners() {
                     const index = this.data.inventory.categories.findIndex(c => c.id === category.id);
                     if (index === -1) {
                         this.data.inventory.categories.push(category);
+                        console.log(`📁 Category ${change.type}:`, category.name);
                     } else {
                         this.data.inventory.categories[index] = category;
                     }
@@ -5838,18 +5846,27 @@ setupAllRealtimeListeners() {
                     const index = this.data.inventory.categories.findIndex(c => c.id === category.id);
                     if (index !== -1) {
                         this.data.inventory.categories.splice(index, 1);
+                        console.log(`🗑️ Category removed:`, category.name);
                     }
                 }
             });
 
+            console.log(`📦 Total categories after update: ${this.data.inventory.categories.length}`);
             if (this.currentTab === 'inventory') {
                 this.updateInventoryDisplay();
             }
             this.saveToStorage();
         });
 
+    let itemsInitialLoad = true;
     this.inventoryItemsUnsubscribe = db.collection('inventory').doc('items').collection('list')
         .onSnapshot((snapshot) => {
+            if (itemsInitialLoad) {
+                console.log('📦 Inventory items listener - initial snapshot (skipping save)');
+                itemsInitialLoad = false;
+                return; // Skip initial snapshot to prevent overwriting loaded data
+            }
+
             snapshot.docChanges().forEach((change) => {
                 const item = { id: change.doc.id, ...change.doc.data() };
 
@@ -5857,6 +5874,7 @@ setupAllRealtimeListeners() {
                     const index = this.data.inventory.items.findIndex(i => i.id === item.id);
                     if (index === -1) {
                         this.data.inventory.items.push(item);
+                        console.log(`📦 Item ${change.type}:`, item.name);
                     } else {
                         this.data.inventory.items[index] = item;
                     }
@@ -5864,10 +5882,12 @@ setupAllRealtimeListeners() {
                     const index = this.data.inventory.items.findIndex(i => i.id === item.id);
                     if (index !== -1) {
                         this.data.inventory.items.splice(index, 1);
+                        console.log(`🗑️ Item removed:`, item.name);
                     }
                 }
             });
 
+            console.log(`📦 Total items after update: ${this.data.inventory.items.length}`);
             if (this.currentTab === 'inventory') {
                 this.updateInventoryDisplay();
             }
@@ -6325,17 +6345,106 @@ updateAllDisplays() {
                 }
 
                 console.log('\nUse AdminUtils.recoverInventoryFromLocalStorage() to restore from backup');
+                console.log('Use AdminUtils.checkFirestoreInventory() to see what is in Firestore');
+            },
+
+            // Check what's actually in Firestore
+            async checkFirestoreInventory() {
+                try {
+                    console.log('🔍 Checking Firestore inventory...');
+
+                    // Check categories
+                    const categoriesSnapshot = await db.collection('inventory').doc('categories').collection('items').get();
+                    console.log(`📁 Categories in Firestore: ${categoriesSnapshot.size}`);
+                    const categories = [];
+                    categoriesSnapshot.forEach(doc => {
+                        categories.push({ id: doc.id, name: doc.data().name });
+                    });
+                    console.table(categories);
+
+                    // Check items
+                    const itemsSnapshot = await db.collection('inventory').doc('items').collection('list').get();
+                    console.log(`📦 Items in Firestore: ${itemsSnapshot.size}`);
+                    const items = [];
+                    itemsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        items.push({ id: doc.id, name: data.name, quantity: data.quantity });
+                    });
+                    console.table(items.slice(0, 20)); // Show first 20
+
+                    return { categories, items };
+                } catch (error) {
+                    console.error('❌ Error checking Firestore inventory:', error);
+                    return null;
+                }
+            },
+
+            // List all orders with their document IDs
+            async listAllOrdersWithDetails() {
+                try {
+                    const snapshot = await db.collection('orders').get();
+                    const orders = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        orders.push({
+                            DocID: doc.id,
+                            OrderID: data.orderId,
+                            Client: data.clientName || data.customer?.name,
+                            Date: data.date || data.customer?.dates,
+                            Status: data.status
+                        });
+                    });
+                    console.table(orders);
+                    console.log(`📋 Found ${orders.length} orders in Firestore`);
+                    console.log('\nTo delete an order, use: await AdminUtils.deleteOrderByDocId("DOC_ID")');
+                    return orders;
+                } catch (error) {
+                    console.error('❌ Error listing orders:', error);
+                }
+            },
+
+            // Delete order by document ID (not orderId)
+            async deleteOrderByDocId(docId) {
+                try {
+                    const docRef = db.collection('orders').doc(docId);
+                    const docSnap = await docRef.get();
+
+                    if (docSnap.exists) {
+                        const data = docSnap.data();
+                        await docRef.delete();
+                        console.log(`✅ Deleted order from Firestore - DocID: ${docId}, OrderID: ${data.orderId}`);
+
+                        // Also add to deletedOrders
+                        OMS.data.deletedOrders.push({
+                            orderId: data.orderId || docId,
+                            ...data,
+                            deletedAt: new Date().toISOString(),
+                            deleteReason: 'Manual deletion via AdminUtils'
+                        });
+                        OMS.saveToStorage();
+                        console.log(`✅ Added to deletedOrders list`);
+                        return true;
+                    } else {
+                        console.warn(`⚠️ Document ${docId} not found in Firestore`);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('❌ Error deleting order:', error);
+                    return false;
+                }
             }
         };
 
         console.log('🛠️ Admin utilities loaded. Available commands:');
-        console.log('  - AdminUtils.listAllFirestoreOrders() - List all orders in Firestore');
-        console.log('  - AdminUtils.deleteOrderFromFirestore("ORDER_ID") - Delete specific order');
-        console.log('  - AdminUtils.findAndDeleteDemoOrders() - Find and delete demo/test orders');
-        console.log('  - AdminUtils.viewDeletedOrders() - View locally deleted orders');
-        console.log('  - AdminUtils.clearDeletedOrdersList() - Clear deleted orders list');
+        console.log('\n📋 ORDER COMMANDS:');
+        console.log('  - await AdminUtils.listAllOrdersWithDetails() - List all orders with DocIDs');
+        console.log('  - await AdminUtils.deleteOrderByDocId("DOC_ID") - Delete by document ID');
+        console.log('  - await AdminUtils.findAndDeleteDemoOrders() - Find and delete demo orders');
+        console.log('  - AdminUtils.viewDeletedOrders() - View deleted orders list');
+        console.log('\n📦 INVENTORY COMMANDS:');
         console.log('  - AdminUtils.checkInventoryStatus() - Check inventory status');
-        console.log('  - AdminUtils.recoverInventoryFromLocalStorage() - Restore inventory from backup');
+        console.log('  - await AdminUtils.checkFirestoreInventory() - See what is in Firestore');
+        console.log('  - AdminUtils.recoverInventoryFromLocalStorage() - Restore from backup');
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
