@@ -1952,34 +1952,44 @@ async deleteItem(type, id) {
     const handlers = {
 order: async () => {
     const index = this.data.orders.findIndex(o => o.orderId === id);
-    if (index === -1) return false;
-    
+    if (index === -1) {
+        console.warn('⚠️ Order not found in local array:', id);
+        return false;
+    }
+
     try {
         console.log('🔄 Attempting to delete orderId:', id);
-        
-        console.log('🔄 Attempting to delete orderId:', id);
 
-// Delete directly by document ID (since doc ID = orderId)
-const docRef = db.collection('orders').doc(id);
-const docSnap = await docRef.get();
+        // Delete directly by document ID (since doc ID = orderId)
+        const docRef = db.collection('orders').doc(id);
+        const docSnap = await docRef.get();
 
-if (docSnap.exists) {
-    await docRef.delete();
-    console.log('✅ Deleted Firestore doc with ID:', id);
-} else {
-    console.warn('⚠️ No Firestore document found with ID:', id);
-}
+        if (docSnap.exists) {
+            await docRef.delete();
+            console.log('✅ Deleted Firestore doc with ID:', id);
+        } else {
+            console.warn('⚠️ No Firestore document found with ID:', id);
+            // Continue with local deletion even if Firestore doc doesn't exist
+        }
 
-        
-        // Delete from local array
+        // Delete from local array FIRST
         const deleted = this.data.orders.splice(index, 1)[0];
-        this.addToUndoStack('delete', 'order', deleted);
-        this.data.deletedOrders.push({
+
+        // Add to deletedOrders to prevent reappearing
+        const deletedRecord = {
             ...deleted,
             deletedAt: new Date().toISOString(),
             deleteReason: 'Manual deletion'
-        });
-        
+        };
+        this.data.deletedOrders.push(deletedRecord);
+
+        // CRITICAL: Save to localStorage immediately
+        this.saveToStorage();
+        console.log(`📝 Saved deletedOrders list (${this.data.deletedOrders.length} total)`);
+
+        // Add to undo stack
+        this.addToUndoStack('delete', 'order', deleted);
+
         return true;
     } catch (error) {
         console.error('❌ Delete error:', error);
@@ -1988,15 +1998,35 @@ if (docSnap.exists) {
     }
 },
 
-        category: () => {
-            this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
-            this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
-            return true;
+        category: async () => {
+            try {
+                // Delete from Firestore
+                await this.deleteInventoryItemFromFirestore(id, 'category');
+
+                // Delete from local array
+                this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
+                this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
+
+                return true;
+            } catch (error) {
+                console.error('❌ Error deleting category:', error);
+                return false;
+            }
         },
 
-        item: () => {
-            this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
-            return true;
+        item: async () => {
+            try {
+                // Delete from Firestore
+                await this.deleteInventoryItemFromFirestore(id, 'item');
+
+                // Delete from local array
+                this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
+
+                return true;
+            } catch (error) {
+                console.error('❌ Error deleting item:', error);
+                return false;
+            }
         },
 
         task: () => {
@@ -4738,9 +4768,38 @@ convertToQuotationDateFormat(dateStr) {
                 const todayStr = today.toISOString().split('T')[0];
                 const next7Days = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+                // Filter keywords for demo/test orders
+                const demoKeywords = ['demo', 'test', 'sample', 'example', 'blank'];
+
                 const upcomingOrders = this.data.orders.filter(order => {
+                    // Filter by date
                     const orderDate = order.isMultiDay ? order.startDate : order.date;
-                    return orderDate >= todayStr && orderDate <= next7Days;
+                    if (!orderDate || orderDate < todayStr || orderDate > next7Days) {
+                        return false;
+                    }
+
+                    // Filter out deleted orders
+                    const isDeleted = this.data.deletedOrders.some(d => d.orderId === order.orderId);
+                    if (isDeleted) {
+                        return false;
+                    }
+
+                    // Filter out demo/test orders
+                    const clientName = (order.clientName || '').toLowerCase();
+                    const orderId = (order.orderId || '').toLowerCase();
+                    const isDemo = demoKeywords.some(keyword =>
+                        clientName.includes(keyword) || orderId.includes(keyword)
+                    );
+                    if (isDemo) {
+                        return false;
+                    }
+
+                    // Filter out orders with empty client names
+                    if (!order.clientName || order.clientName.trim() === '') {
+                        return false;
+                    }
+
+                    return true;
                 }).sort((a, b) => {
                     const dateA = a.isMultiDay ? a.startDate : a.date;
                     const dateB = b.isMultiDay ? b.startDate : b.date;
@@ -5575,8 +5634,20 @@ async loadInventoryFromFirestore() {
             items.push({ id: doc.id, ...doc.data() });
         });
 
-        this.data.inventory = { categories, items };
-        console.log(`✅ Loaded ${categories.length} categories and ${items.length} items from Firestore`);
+        // CRITICAL: Only overwrite if Firestore has data, otherwise keep localStorage data
+        if (categories.length > 0 || items.length > 0) {
+            this.data.inventory = { categories, items };
+            console.log(`✅ Loaded ${categories.length} categories and ${items.length} items from Firestore`);
+        } else {
+            console.warn('⚠️ No inventory in Firestore - keeping localStorage data');
+            console.log(`📦 Current inventory: ${this.data.inventory.categories.length} categories, ${this.data.inventory.items.length} items`);
+
+            // If localStorage has data, sync it to Firestore
+            if (this.data.inventory.categories.length > 0 || this.data.inventory.items.length > 0) {
+                console.log('🔄 Syncing localStorage inventory to Firestore...');
+                await this.syncInventoryToFirestore();
+            }
+        }
         return true;
     } catch (error) {
         console.error('❌ Error loading inventory from Firestore:', error);
@@ -5584,11 +5655,35 @@ async loadInventoryFromFirestore() {
     }
 },
 
+async syncInventoryToFirestore() {
+    try {
+        // Sync all categories
+        for (const category of this.data.inventory.categories) {
+            await this.saveInventoryCategoryToFirestore(category);
+        }
+
+        // Sync all items
+        for (const item of this.data.inventory.items) {
+            await this.saveInventoryItemToFirestore(item);
+        }
+
+        console.log('✅ Inventory synced to Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error syncing inventory:', error);
+        return false;
+    }
+},
+
 async deleteInventoryItemFromFirestore(itemId, type = 'item') {
     try {
-        const collection = type === 'category' ? 'categories' : 'items';
-        await db.collection('inventory').doc(collection).collection('list').doc(itemId).delete();
-        console.log('✅ Inventory item deleted from Firestore');
+        if (type === 'category') {
+            await db.collection('inventory').doc('categories').collection('items').doc(itemId).delete();
+            console.log('✅ Inventory category deleted from Firestore');
+        } else {
+            await db.collection('inventory').doc('items').collection('list').doc(itemId).delete();
+            console.log('✅ Inventory item deleted from Firestore');
+        }
         return true;
     } catch (error) {
         console.error('❌ Error deleting inventory item:', error);
@@ -6175,6 +6270,61 @@ updateAllDisplays() {
                     Reason: o.deleteReason
                 })));
                 console.log(`📋 Total deleted orders: ${OMS.data.deletedOrders.length}`);
+            },
+
+            // Recover inventory from localStorage backup
+            recoverInventoryFromLocalStorage() {
+                try {
+                    const saved = localStorage.getItem('oms_data');
+                    if (!saved) {
+                        console.error('❌ No localStorage backup found');
+                        return false;
+                    }
+
+                    const parsed = JSON.parse(saved);
+                    if (!parsed.inventory || (!parsed.inventory.categories && !parsed.inventory.items)) {
+                        console.error('❌ No inventory data in localStorage backup');
+                        return false;
+                    }
+
+                    console.log('📦 Found inventory in localStorage backup:');
+                    console.log(`  Categories: ${parsed.inventory.categories?.length || 0}`);
+                    console.log(`  Items: ${parsed.inventory.items?.length || 0}`);
+
+                    const confirmed = confirm(`Restore ${parsed.inventory.categories?.length || 0} categories and ${parsed.inventory.items?.length || 0} items from backup?`);
+                    if (confirmed) {
+                        OMS.data.inventory = parsed.inventory;
+                        OMS.saveToStorage();
+                        OMS.updateInventoryDisplay();
+                        console.log('✅ Inventory restored from localStorage backup!');
+
+                        // Sync to Firestore
+                        OMS.syncInventoryToFirestore();
+                        return true;
+                    }
+
+                    return false;
+                } catch (error) {
+                    console.error('❌ Error recovering inventory:', error);
+                    return false;
+                }
+            },
+
+            // View current inventory status
+            checkInventoryStatus() {
+                console.log('📦 INVENTORY STATUS:');
+                console.log(`  Categories in memory: ${OMS.data.inventory.categories.length}`);
+                console.log(`  Items in memory: ${OMS.data.inventory.items.length}`);
+
+                // Check localStorage
+                const saved = localStorage.getItem('oms_data');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    console.log(`  Categories in localStorage: ${parsed.inventory?.categories?.length || 0}`);
+                    console.log(`  Items in localStorage: ${parsed.inventory?.items?.length || 0}`);
+                }
+
+                console.log('\nUse AdminUtils.recoverInventoryFromLocalStorage() to restore from backup');
             }
         };
 
@@ -6184,6 +6334,8 @@ updateAllDisplays() {
         console.log('  - AdminUtils.findAndDeleteDemoOrders() - Find and delete demo/test orders');
         console.log('  - AdminUtils.viewDeletedOrders() - View locally deleted orders');
         console.log('  - AdminUtils.clearDeletedOrdersList() - Clear deleted orders list');
+        console.log('  - AdminUtils.checkInventoryStatus() - Check inventory status');
+        console.log('  - AdminUtils.recoverInventoryFromLocalStorage() - Restore inventory from backup');
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
