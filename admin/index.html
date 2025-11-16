@@ -815,6 +815,16 @@
             <!-- Dashboard Tab -->
             <div id="dashboard" class="tab-content active">
                 <div class="stats-grid" id="dashboardStats"></div>
+
+                <!-- Smart Notifications Panel -->
+                <div id="notificationsPanel" class="card" style="display:none; border-left: 4px solid var(--warning); background: #fffbeb;">
+                    <div class="card-header" style="background: transparent;">
+                        <h2 class="card-title">🔔 Action Required</h2>
+                        <button class="btn btn-sm" onclick="OMS.dismissNotifications()">Dismiss All</button>
+                    </div>
+                    <div id="notificationsContent"></div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">🍕 Recent Orders</h2>
@@ -1163,6 +1173,24 @@ const OMS = {
                         notesBg: '#f9f9f9',
                         orderIdBg: '#667eea',
                         orderIdText: '#ffffff'
+                    },
+                    // Color coding for different order/event types
+                    eventTypeColors: {
+                        'Wedding': '#e91e63',
+                        'Birthday': '#ff9800',
+                        'Corporate': '#2196f3',
+                        'Anniversary': '#9c27b0',
+                        'Festival': '#4caf50',
+                        'Party': '#ff5722',
+                        'Meeting': '#607d8b',
+                        'Conference': '#3f51b5',
+                        'default': '#667eea'
+                    },
+                    statusColors: {
+                        'pending': '#ff9800',
+                        'confirmed': '#2196f3',
+                        'completed': '#4caf50',
+                        'cancelled': '#f44336'
                     }
                 }
             },
@@ -1200,6 +1228,7 @@ const OMS = {
                 this.setupKeyboardShortcuts();
                 this.setupAutoSave();
                 this.setupDragDrop();
+                this.setupAutoBackup(); // Automatic backup system
                 this.populateTimeDropdown();
                 this.loadDemoData();
                 this.updateAllDisplays();
@@ -1769,6 +1798,74 @@ const OMS = {
                 });
             },
 
+            // ============ AUTOMATIC BACKUP SYSTEM ============
+            setupAutoBackup() {
+                // Auto-export every 24 hours
+                const BACKUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+
+                setInterval(() => {
+                    this.autoExportData();
+                }, BACKUP_INTERVAL);
+
+                // Also backup on significant changes
+                let changeCounter = 0;
+                const originalSaveToStorage = this.saveToStorage.bind(this);
+                this.saveToStorage = function() {
+                    originalSaveToStorage();
+                    changeCounter++;
+
+                    // Backup every 50 changes
+                    if (changeCounter >= 50) {
+                        this.autoExportData();
+                        changeCounter = 0;
+                    }
+                };
+
+                console.log('✅ Auto-backup system initialized (exports every 24h or 50 changes)');
+            },
+
+            autoExportData() {
+                try {
+                    const exportData = {
+                        exportDate: new Date().toISOString(),
+                        version: '2.0',
+                        data: {
+                            orders: this.data.orders,
+                            customers: this.data.customers,
+                            inventory: this.data.inventory,
+                            team: this.data.team,
+                            settings: this.data.settings,
+                            tasks: this.data.tasks,
+                            orderAuditLog: this.data.orderAuditLog || {}
+                        },
+                        stats: {
+                            totalOrders: this.data.orders.length,
+                            totalCustomers: this.data.customers.length,
+                            totalInventoryItems: this.data.inventory.items.length
+                        }
+                    };
+
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `OMS_AutoBackup_${Utils.toDateString(new Date())}_${Date.now()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+
+                    console.log('✅ Auto-backup created successfully');
+                    this.showToast('📦 Auto-backup created', 'success');
+                } catch (error) {
+                    console.error('❌ Auto-backup failed:', error);
+                }
+            },
+
+            // Manual export function (can be called anytime)
+            manualExport() {
+                this.autoExportData();
+                this.showToast('📥 Manual backup created!', 'success');
+            },
+
             // ============ GLOBAL SEARCH ============
             initGlobalSearch() {
                 const input = document.getElementById('globalSearch');
@@ -2228,29 +2325,26 @@ const errors = Utils.validateRequired(requiredFields);
     const orderData = this.collectFormData();
     const status = orderData.status.toLowerCase();
     const manualOrderId = Utils.get('orderId').trim();
-    
-    // CRITICAL: Check status and ID
+
+    // NEW ID SYSTEM: Only completed orders get FP IDs
     let finalOrderId;
-    
+
     if (status === 'completed') {
-        // Check if manual ID was entered
+        // Completed orders MUST have manual FP ID
         if (manualOrderId && manualOrderId.startsWith('FP')) {
-            // Use manual ID
             finalOrderId = manualOrderId;
-            console.log('✅ Using manual ID:', finalOrderId);
+            console.log('✅ Using manual FP ID:', finalOrderId);
         } else {
-            // Generate permanent FP ID
-            finalOrderId = await this.getNextOrderIdFromFirestore();
-            console.log('✅ Generated FP ID:', finalOrderId);
+            this.showToast('⚠️ Completed orders require a manual FP ID (e.g., FP001)', 'error');
+            return;
         }
     } else {
-        // Use temporary ID for pending/confirmed
-        const tempId = `ORD-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-        finalOrderId = tempId;
-        console.log('⏳ Using temp ID:', tempId);
+        // Pending/Confirmed orders have NO ID (blank)
+        finalOrderId = '';
+        console.log('⏳ Order saved without ID (status: ' + status + ')');
     }
-    
-    // Update order data with final ID
+
+    // Update order data with final ID (can be blank)
     orderData.orderId = finalOrderId;
     
     try {
@@ -2259,17 +2353,26 @@ const errors = Utils.validateRequired(requiredFields);
         // Check if we're editing an existing order
 let existingSnapshot;
 
-if (this.editingOrderId) {
-    // Editing mode - find by ORIGINAL ID
-    existingSnapshot = await db.collection('orders')
-        .where('orderId', '==', this.editingOrderId)
-        .get();
-    console.log('✏️ Editing existing order:', this.editingOrderId);
-} else {
-    // New order - check if ID already exists
+if (this.editingOrderId || this.editingDocId) {
+    // Editing mode - find by doc ID or order ID
+    if (this.editingDocId) {
+        const doc = await db.collection('orders').doc(this.editingDocId).get();
+        existingSnapshot = doc.exists ? { empty: false, docs: [doc] } : { empty: true };
+        console.log('✏️ Editing existing order by docId:', this.editingDocId);
+    } else {
+        existingSnapshot = await db.collection('orders')
+            .where('orderId', '==', this.editingOrderId)
+            .get();
+        console.log('✏️ Editing existing order:', this.editingOrderId);
+    }
+} else if (finalOrderId) {
+    // New order with ID - check if ID already exists
     existingSnapshot = await db.collection('orders')
         .where('orderId', '==', finalOrderId)
         .get();
+} else {
+    // New order without ID
+    existingSnapshot = { empty: true };
 }
 
         // Convert admin format to quotation format for Firestore
@@ -2316,22 +2419,24 @@ const firestoreData = {
         if (!existingSnapshot.empty) {
     // UPDATE existing order
     const docId = existingSnapshot.docs[0].id;
-    const oldOrderId = existingSnapshot.docs[0].data().orderId;
-    
-    console.log('✏️ Updating order, old ID:', oldOrderId, 'new ID:', finalOrderId);
-    
-    // If orderId changed (confirmed → completed), delete old and create new
-    if (oldOrderId !== finalOrderId) {
-        console.log('🔄 Status changed - migrating from temp to FP ID');
-        
+    const oldData = existingSnapshot.docs[0].data();
+    const oldOrderId = oldData.orderId || '';
+
+    console.log('✏️ Updating order, old ID:', oldOrderId || '[blank]', 'new ID:', finalOrderId || '[blank]');
+
+    // Check if status changed to completed (needs FP ID)
+    if (oldOrderId !== finalOrderId && finalOrderId) {
+        console.log('🔄 Status upgraded - assigning FP ID to order');
+
         // Delete old document
         await db.collection('orders').doc(docId).delete();
-        console.log('🗑️ Deleted old temp ID:', oldOrderId);
-        
+        console.log('🗑️ Deleted old doc (ID: ' + (oldOrderId || docId) + ')');
+
         // Create new document with FP ID
         await db.collection('orders').doc(finalOrderId).set(firestoreData);
-        console.log('✅ Created new FP ID:', finalOrderId);
-        
+        console.log('✅ Created new doc with FP ID:', finalOrderId);
+        orderData.docId = finalOrderId;
+
 // Update local array with all data including multi-day
 const completeOrderData = {
         ...orderData,
@@ -2341,17 +2446,21 @@ const completeOrderData = {
         dayWiseData: orderData.dayWiseData || []
 };
 
-const localIndex = this.data.orders.findIndex(o => o.orderId === oldOrderId);
+const localIndex = this.data.orders.findIndex(o =>
+    (o.orderId && o.orderId === oldOrderId) ||
+    (o.docId && o.docId === docId)
+);
 if (localIndex !== -1) {
     this.data.orders[localIndex] = completeOrderData;
 }
-        
-        this.showToast(`Order upgraded: ${oldOrderId} → ${finalOrderId} ✅`);
+
+        this.showToast(`Order upgraded: ${oldOrderId || '[No ID]'} → ${finalOrderId} ✅`);
     } else {
-        // Same ID - just update
+        // Same status - just update existing doc
         await db.collection('orders').doc(docId).update(firestoreData);
-        console.log('✅ Updated order:', finalOrderId);
-        
+        console.log('✅ Updated order:', finalOrderId || docId);
+        orderData.docId = docId;
+
         const completeOrderData = {
             ...orderData,
             isMultiDay: orderData.isMultiDay || false,
@@ -2359,27 +2468,38 @@ if (localIndex !== -1) {
             endDate: orderData.endDate || null,
             dayWiseData: orderData.dayWiseData || []
         };
-        
-        const localIndex = this.data.orders.findIndex(o => o.orderId === finalOrderId);
+
+        const localIndex = this.data.orders.findIndex(o =>
+            (o.orderId && o.orderId === finalOrderId) ||
+            (o.docId && o.docId === docId)
+        );
         if (localIndex !== -1) {
             this.data.orders[localIndex] = completeOrderData;
         }
-        
+
         this.showToast('Order updated! ✏️');
     }
-    
-    // Clear editing flag
+
+    // Clear editing flags
     this.editingOrderId = null;
+    this.editingDocId = null;
     
 } else {
             // CREATE new order
             console.log('🆕 Creating new order');
 
             // Save to Firestore
-                await db.collection('orders').doc(finalOrderId).set({
-                    ...firestoreData,
-                    orderId: finalOrderId
-                });
+            let docRef;
+            if (finalOrderId) {
+                // Order has FP ID - use it as doc ID
+                docRef = await db.collection('orders').doc(finalOrderId).set(firestoreData);
+                orderData.docId = finalOrderId;
+            } else {
+                // No ID (pending/confirmed) - let Firestore generate doc ID
+                docRef = await db.collection('orders').add(firestoreData);
+                orderData.docId = docRef.id;
+                console.log('📝 Auto-generated docId:', docRef.id);
+            }
 
 // Add to local array with all multi-day data
 const completeOrderData = {
@@ -2390,12 +2510,30 @@ const completeOrderData = {
         dayWiseData: orderData.dayWiseData || []
 };
 
-const localExists = this.data.orders.some(o => o.orderId === finalOrderId);
+const localExists = this.data.orders.some(o =>
+    (o.orderId && o.orderId === finalOrderId) ||
+    (o.docId && o.docId === orderData.docId)
+);
 if (!localExists) {
     this.data.orders.push(completeOrderData);
 }
 
-                this.showToast(`Order ${finalOrderId} saved to Firestore! 🆕`);
+                const displayId = finalOrderId || `[${status.toUpperCase()}]`;
+
+                // AUTOMATIC INVENTORY DEDUCTION (if order is completed)
+                if (status === 'completed' && orderData.items) {
+                    this.deductInventory(orderData.items, orderData.orderId);
+                }
+
+                // ADD TO ORDER AUDIT HISTORY
+                this.addAuditEntry(orderData.orderId || orderData.docId, {
+                    action: 'created',
+                    user: this.getCurrentUser().name || 'Admin',
+                    timestamp: new Date().toISOString(),
+                    details: `Order created with status: ${status}`
+                });
+
+                this.showToast(`Order ${displayId} saved to Firestore! 🆕`);
                 this.refreshOrderId();
                 this.saveToStorage();
                 this.updateAllDisplays();
@@ -2408,6 +2546,63 @@ if (!localExists) {
     }
 },
 
+// Automatic Inventory Deduction
+deductInventory(items, orderId) {
+    if (!items || items.length === 0) return;
+
+    items.forEach(orderItem => {
+        const inventoryItem = this.data.inventory.items.find(i =>
+            i.name.toLowerCase() === orderItem.name.toLowerCase()
+        );
+
+        if (inventoryItem) {
+            const previousQty = inventoryItem.quantity;
+            inventoryItem.quantity -= orderItem.quantity;
+
+            console.log(`📦 Deducted ${orderItem.quantity} ${orderItem.name} from inventory (${previousQty} → ${inventoryItem.quantity})`);
+
+            // Low stock warning
+            if (inventoryItem.quantity <= this.data.settings.lowStockThreshold) {
+                this.showToast(`⚠️ LOW STOCK: ${inventoryItem.name} (${inventoryItem.quantity} left)`, 'warning');
+            }
+
+            // Negative stock alert
+            if (inventoryItem.quantity < 0) {
+                this.showToast(`🚨 CRITICAL: ${inventoryItem.name} stock is NEGATIVE!`, 'error');
+            }
+        }
+    });
+
+    this.saveToStorage();
+},
+
+// Order Audit History System
+addAuditEntry(identifier, entry) {
+    if (!this.data.orderAuditLog) {
+        this.data.orderAuditLog = {};
+    }
+
+    if (!this.data.orderAuditLog[identifier]) {
+        this.data.orderAuditLog[identifier] = [];
+    }
+
+    this.data.orderAuditLog[identifier].push(entry);
+    console.log(`📝 Audit log: ${entry.action} by ${entry.user}`);
+},
+
+// Get current logged in user (for multi-user system)
+getCurrentUser() {
+    if (!this.data.currentUser) {
+        this.data.currentUser = {
+            id: 'admin',
+            name: this.data.settings.businessOwner || 'Admin',
+            role: 'admin',
+            permissions: ['all']
+        };
+    }
+    return this.data.currentUser;
+},
+
 convertToQuotationDateFormat(dateStr) {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -2418,9 +2613,10 @@ convertToQuotationDateFormat(dateStr) {
 },
 
             loadOrderToForm(order) {
-        // Store original order ID for updates
+        // Store original order ID and docId for updates
         this.editingOrderId = order.orderId;
-        
+        this.editingDocId = order.docId;
+
         console.log('🔍 Loading order to form:', order);
         console.log('🔍 Order status:', order.status);
         
@@ -2458,9 +2654,10 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             clearForm() {
-                this.editingOrderId = null;  // Clear editing flag
+                this.editingOrderId = null;  // Clear editing flags
+                this.editingDocId = null;
                 if (this.hasUnsavedChanges() && !confirm('Clear all data?')) return;
-                
+
                 document.getElementById('orderForm').reset();
                 this.currentOrderItems = [];
                 this.updateOrderItemsTable();
@@ -2468,6 +2665,58 @@ convertToQuotationDateFormat(dateStr) {
                 Utils.set('orderDate', Utils.toDateString(new Date()));
                 document.getElementById('customTransportGroup').classList.add('hidden');
                 this.showToast('Form cleared');
+            },
+
+            // Duplicate any order by ID or docId
+            duplicateOrder(identifier) {
+                const order = this.data.orders.find(o =>
+                    o.orderId === identifier || o.docId === identifier
+                );
+
+                if (!order) {
+                    this.showToast('Order not found', 'error');
+                    return;
+                }
+
+                if (confirm(`Duplicate order for "${order.clientName}"?\n\nThis will create a new order with the same details.`)) {
+                    // Clear any editing state
+                    this.editingOrderId = null;
+                    this.editingDocId = null;
+
+                    // Load order data but clear ID and set to pending
+                    Object.entries({
+                        orderId: '', // No ID for new order
+                        clientName: order.clientName,
+                        contact: order.contact,
+                        venue: order.venue,
+                        orderDate: Utils.toDateString(new Date()), // Today's date
+                        readyTime: order.readyTime,
+                        eventType: order.eventType,
+                        transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
+                        customTransport: !['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : '',
+                        driverName: order.driverName || '',
+                        operator: order.operator || '',
+                        helper: order.helper || '',
+                        orderStatus: 'Pending', // New duplicate starts as pending
+                        orderNotes: order.notes ? `[DUPLICATED] ${order.notes}` : '[DUPLICATED ORDER]'
+                    }).forEach(([key, value]) => Utils.set(key, value));
+
+                    // Copy items
+                    this.currentOrderItems = order.items ? order.items.map(item => ({...item})) : [];
+                    this.updateOrderItemsTable();
+
+                    // Show transport field if needed
+                    if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
+                        document.getElementById('customTransportGroup').classList.remove('hidden');
+                    }
+
+                    // Switch to orders tab
+                    this.switchTab('orders');
+                    this.showToast(`✅ Order duplicated! Review and save.`, 'success');
+
+                    // Scroll to top
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
             },
 
             duplicateLastOrder() {
@@ -2841,12 +3090,27 @@ convertToQuotationDateFormat(dateStr) {
                         id: Utils.generateId(),
                         name: orderData.clientName,
                         contact: orderData.contact,
+                        email: '',
+                        address: '',
                         firstOrderDate: orderData.date,
                         lastOrderDate: orderData.date,
                         lastOrderId: orderData.orderId,
                         lastVenue: orderData.venue,
                         totalOrders: 1,
-                        createdAt: new Date().toISOString()
+                        // Enhanced customer profile fields
+                        preferences: {
+                            preferredItems: [],
+                            dietaryRestrictions: '',
+                            specialRequests: ''
+                        },
+                        notes: '',
+                        paymentHistory: [],
+                        totalRevenue: 0,
+                        creditLimit: 0,
+                        discount: 0, // Percentage discount for loyal customers
+                        tags: [], // e.g., ['VIP', 'Corporate', 'Regular']
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
                     };
                     this.data.customers.push(customer);
                 }
@@ -2919,11 +3183,17 @@ convertToQuotationDateFormat(dateStr) {
                                 if (tasks.length) classes += ' has-tasks';
                                 if (festival) classes += ' has-festival';
                                 
+                                // Get color indicators for this day's orders
+                                const orderColorDots = orders.slice(0, 3).map(o => {
+                                    const color = this.getOrderColor(o);
+                                    return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin:0 2px;"></span>`;
+                                }).join('');
+
                                 return `
                                     <div class="${classes}" onclick="OMS.showDayDetails('${dateStr}')">
                                         <div class="calendar-day-number">${day}</div>
                                         ${festival ? `<div class="festival-text">${festival[1]}</div>` : ''}
-                                        ${orders.length ? `<div class="order-count">${orders.length}</div>` : ''}
+                                        ${orders.length ? `<div class="order-count" title="${orders.length} order(s)">${orderColorDots}${orders.length > 3 ? '+' : ''}</div>` : ''}
                                         ${tasks.length ? `<div class="calendar-day-content">${tasks.length} task${tasks.length > 1 ? 's' : ''}</div>` : ''}
                                     </div>
                                 `;
@@ -2975,11 +3245,18 @@ convertToQuotationDateFormat(dateStr) {
                 }
                 
                 if (orders.length > 0) {
-                    content += `<h4>📋 Orders (${orders.length})</h4><ul>`;
+                    content += `<h4>📋 Orders (${orders.length})</h4>`;
                     orders.forEach(o => {
-                        content += `<li>${o.orderId} - ${o.clientName} (${o.status})</li>`;
+                        const color = this.getOrderColor(o);
+                        content += `
+                            <div style="padding:10px;margin:8px 0;border-left:4px solid ${color};background:#f9f9f9;border-radius:4px;">
+                                <strong>${o.orderId || '[No ID]'}</strong> - ${o.clientName}
+                                <br>
+                                <span style="color:${color};font-weight:bold;">${o.eventType || 'Event'}</span> |
+                                <span style="background:${color};color:white;padding:2px 6px;border-radius:3px;font-size:12px;">${o.status}</span>
+                            </div>
+                        `;
                     });
-                    content += '</ul>';
                 }
                 
                 if (tasks.length > 0) {
@@ -3340,7 +3617,8 @@ convertToQuotationDateFormat(dateStr) {
                     { key: 'date', label: 'Date', render: o => Utils.formatDate(o.date) },
                     { key: 'status', label: 'Status', render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span>` }
                 ], recentOrders, (row) => `
-                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.orderId}">View</button>
+                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.orderId || row.docId}">View</button>
+                    <button class="btn btn-info btn-small" onclick="OMS.duplicateOrder('${row.orderId || row.docId}')">📋 Duplicate</button>
                     <button class="btn btn-success btn-small" data-action="print" data-id="${row.orderId}">Print</button>
                 `);
                 
@@ -6199,6 +6477,110 @@ updateAllDisplays() {
         else if (this.currentTab === 'calendar') this.renderCalendarTab();
         else if (this.currentTab === 'history') this.renderHistory();
         else if (this.currentTab === 'analytics') this.renderAnalytics();
+
+        // Always update notifications
+        this.updateNotifications();
+    },
+
+    // Smart Notifications System
+    updateNotifications() {
+        const pendingOrders = this.data.orders.filter(o =>
+            o.status && (o.status.toLowerCase() === 'pending' || o.status.toLowerCase() === 'confirmed')
+        );
+
+        const panel = document.getElementById('notificationsPanel');
+        const content = document.getElementById('notificationsContent');
+
+        if (pendingOrders.length === 0) {
+            panel.style.display = 'none';
+            return;
+        }
+
+        panel.style.display = 'block';
+
+        const now = new Date();
+        const notifications = pendingOrders.map(order => {
+            const orderDate = new Date(order.date || order.startDate);
+            const daysUntil = Math.ceil((orderDate - now) / (1000 * 60 * 60 * 24));
+            let urgency = '';
+            let color = 'var(--warning)';
+
+            if (daysUntil < 0) {
+                urgency = `⚠️ OVERDUE by ${Math.abs(daysUntil)} days!`;
+                color = 'var(--danger)';
+            } else if (daysUntil === 0) {
+                urgency = '🔥 TODAY';
+                color = 'var(--danger)';
+            } else if (daysUntil === 1) {
+                urgency = '⚡ TOMORROW';
+                color = 'var(--warning)';
+            } else if (daysUntil <= 3) {
+                urgency = `⏰ In ${daysUntil} days`;
+                color = 'var(--warning)';
+            } else {
+                urgency = `📅 In ${daysUntil} days`;
+                color = 'var(--info)';
+            }
+
+            return { order, urgency, color, daysUntil };
+        }).sort((a, b) => a.daysUntil - b.daysUntil);
+
+        content.innerHTML = notifications.map(({ order, urgency, color }) => `
+            <div style="padding: 12px; margin: 8px 0; background: white; border-left: 3px solid ${color}; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: ${color};">${urgency}</strong>
+                    <span style="margin: 0 8px;">|</span>
+                    <strong>${order.clientName || 'Unknown'}</strong> - ${order.venue || 'N/A'}
+                    <span style="margin: 0 8px;">|</span>
+                    Status: <span style="background: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${order.status}</span>
+                    <span style="margin: 0 8px;">|</span>
+                    Date: ${Utils.formatDate(order.date || order.startDate)}
+                </div>
+                <button class="btn btn-sm" onclick="OMS.markAsCompleted('${order.docId || order.orderId}')" style="background: var(--success);">
+                    ✓ Mark Complete
+                </button>
+            </div>
+        `).join('');
+    },
+
+    markAsCompleted(identifier) {
+        const order = this.data.orders.find(o =>
+            o.docId === identifier || o.orderId === identifier
+        );
+
+        if (!order) {
+            this.showToast('Order not found', 'error');
+            return;
+        }
+
+        if (confirm(`Mark "${order.clientName}" order as completed?\n\nIMPORTANT: You'll need to provide an FP ID!`)) {
+            this.loadOrderToForm(order);
+            document.getElementById('orderStatus').value = 'Completed';
+            this.switchTab('orders');
+            this.showToast('Please enter FP ID and save the order', 'info');
+        }
+    },
+
+    dismissNotifications() {
+        document.getElementById('notificationsPanel').style.display = 'none';
+    },
+
+    // Get color for order based on event type or status
+    getOrderColor(order) {
+        if (!order) return this.data.settings.eventTypeColors.default;
+
+        // Priority: event type color > status color > default
+        const eventType = order.eventType || order.functionType || '';
+        if (eventType && this.data.settings.eventTypeColors[eventType]) {
+            return this.data.settings.eventTypeColors[eventType];
+        }
+
+        const status = (order.status || '').toLowerCase();
+        if (status && this.data.settings.statusColors[status]) {
+            return this.data.settings.statusColors[status];
+        }
+
+        return this.data.settings.eventTypeColors.default;
     },
 
     async getNextOrderIdFromFirestore() {
@@ -7168,17 +7550,12 @@ if (diffDays > 30) {
     }
 });
 
-    // Set initial date and block past dates
+    // Set initial date (NO restrictions - allow past dates for historical orders)
     const today = Utils.toDateString(new Date());
     Utils.set('orderDate', today);
 
-    // Block past dates on all date inputs
-    ['orderDate', 'startDate', 'endDate'].forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-            input.setAttribute('min', today);
-    }
-});
+    // NO date restrictions - allow adding past, present, and future orders
+    console.log('✅ Date restrictions removed - can add orders from any date');
         });
     </script>
 </body>
