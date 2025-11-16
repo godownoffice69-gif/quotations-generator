@@ -5444,16 +5444,31 @@ convertToQuotationDateFormat(dateStr) {
 async loadOrdersFromFirestore() {
     try {
         console.log('📥 Loading orders from Firestore...');
-        
+
         const ordersSnapshot = await db.collection('orders').get();
-        
+
         this.data.orders = [];
+        let skippedDeleted = 0;
+
         ordersSnapshot.forEach(doc => {
             const orderData = doc.data();
             const customer = orderData.customer || {};
-            
+            const orderId = orderData.orderId || doc.id;
+
+            // CRITICAL: Skip orders that are in deletedOrders list
+            const wasDeleted = this.data.deletedOrders.some(o =>
+                o.orderId === orderId || o.docId === doc.id
+            );
+
+            if (wasDeleted) {
+                console.warn(`⚠️ Skipping deleted order: ${orderId} (found in deletedOrders list)`);
+                skippedDeleted++;
+                return;
+            }
+
             this.data.orders.push({
-                orderId: orderData.orderId || doc.id,
+                orderId: orderId,
+                docId: doc.id, // Store document ID for deletion
                 date: Utils.convertDateFormat(customer.dates) || '',
                 readyTime: customer.timeSlot || '',
                 clientName: customer.name || '',
@@ -5476,14 +5491,14 @@ async loadOrdersFromFirestore() {
                 totalAmount: orderData.totalAmount || 0
             });
         });
-        
-        console.log(`✅ Loaded ${this.data.orders.length} orders from Firestore`);
-        
+
+        console.log(`✅ Loaded ${this.data.orders.length} orders from Firestore (skipped ${skippedDeleted} deleted)`);
+
         // Update customer database from orders
         this.data.orders.forEach(order => {
             this.updateCustomerDatabase(order);
         });
-        
+
     } catch (error) {
         console.error('❌ Error loading orders from Firestore:', error);
     }
@@ -5634,18 +5649,23 @@ async loadInventoryFromFirestore() {
             items.push({ id: doc.id, ...doc.data() });
         });
 
+        console.log(`📦 Firestore inventory: ${categories.length} categories, ${items.length} items`);
+        console.log(`📦 LocalStorage inventory: ${this.data.inventory.categories.length} categories, ${this.data.inventory.items.length} items`);
+
         // CRITICAL: Only overwrite if Firestore has data, otherwise keep localStorage data
         if (categories.length > 0 || items.length > 0) {
             this.data.inventory = { categories, items };
             console.log(`✅ Loaded ${categories.length} categories and ${items.length} items from Firestore`);
         } else {
             console.warn('⚠️ No inventory in Firestore - keeping localStorage data');
-            console.log(`📦 Current inventory: ${this.data.inventory.categories.length} categories, ${this.data.inventory.items.length} items`);
 
             // If localStorage has data, sync it to Firestore
             if (this.data.inventory.categories.length > 0 || this.data.inventory.items.length > 0) {
                 console.log('🔄 Syncing localStorage inventory to Firestore...');
                 await this.syncInventoryToFirestore();
+            } else {
+                console.error('❌❌ CRITICAL: Both Firestore and localStorage are empty! Data loss detected!');
+                console.error('Please check localStorage backup or contact support');
             }
         }
         return true;
@@ -5831,7 +5851,17 @@ setupAllRealtimeListeners() {
                 return; // Skip initial snapshot to prevent overwriting loaded data
             }
 
-            snapshot.docChanges().forEach((change) => {
+            const changes = snapshot.docChanges();
+            const removedCount = changes.filter(c => c.type === 'removed').length;
+
+            // SAFETY: Prevent mass deletion - if more than 50% of items are being removed, log error and skip
+            if (removedCount > 3 && removedCount > this.data.inventory.categories.length * 0.5) {
+                console.error(`⚠️⚠️ BLOCKED: Attempted to remove ${removedCount} categories (${this.data.inventory.categories.length} total). This looks like data loss!`);
+                console.error('Inventory categories NOT deleted. Check Firestore data integrity.');
+                return;
+            }
+
+            changes.forEach((change) => {
                 const category = { id: change.doc.id, ...change.doc.data() };
 
                 if (change.type === 'added' || change.type === 'modified') {
@@ -5867,7 +5897,18 @@ setupAllRealtimeListeners() {
                 return; // Skip initial snapshot to prevent overwriting loaded data
             }
 
-            snapshot.docChanges().forEach((change) => {
+            const changes = snapshot.docChanges();
+            const removedCount = changes.filter(c => c.type === 'removed').length;
+
+            // SAFETY: Prevent mass deletion - if more than 50% of items are being removed, log error and skip
+            if (removedCount > 5 && removedCount > this.data.inventory.items.length * 0.5) {
+                console.error(`⚠️⚠️ BLOCKED: Attempted to remove ${removedCount} items (${this.data.inventory.items.length} total). This looks like data loss!`);
+                console.error('Inventory items NOT deleted. Check Firestore data integrity.');
+                console.error('Use AdminUtils.recoverInventoryFromLocalStorage() to recover data');
+                return;
+            }
+
+            changes.forEach((change) => {
                 const item = { id: change.doc.id, ...change.doc.data() };
 
                 if (change.type === 'added' || change.type === 'modified') {
@@ -6417,6 +6458,7 @@ updateAllDisplays() {
                         // Also add to deletedOrders
                         OMS.data.deletedOrders.push({
                             orderId: data.orderId || docId,
+                            docId: docId,
                             ...data,
                             deletedAt: new Date().toISOString(),
                             deleteReason: 'Manual deletion via AdminUtils'
@@ -6432,6 +6474,144 @@ updateAllDisplays() {
                     console.error('❌ Error deleting order:', error);
                     return false;
                 }
+            },
+
+            // Find orders that are in local data but NOT in Firestore (ghost orders)
+            async findGhostOrders() {
+                try {
+                    console.log('👻 Searching for ghost orders (in local but not in Firestore)...');
+
+                    // Get all orders from Firestore
+                    const snapshot = await db.collection('orders').get();
+                    const firestoreOrderIds = new Set();
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        firestoreOrderIds.add(data.orderId || doc.id);
+                        firestoreOrderIds.add(doc.id);
+                    });
+
+                    // Find local orders not in Firestore
+                    const ghostOrders = OMS.data.orders.filter(order =>
+                        !firestoreOrderIds.has(order.orderId) && !firestoreOrderIds.has(order.docId)
+                    );
+
+                    if (ghostOrders.length === 0) {
+                        console.log('✅ No ghost orders found! All local orders exist in Firestore.');
+                        return [];
+                    }
+
+                    console.log(`👻 Found ${ghostOrders.length} ghost orders:`);
+                    console.table(ghostOrders.map(o => ({
+                        OrderID: o.orderId,
+                        Client: o.clientName,
+                        Date: o.date,
+                        Status: o.status,
+                        IsInDeletedList: OMS.data.deletedOrders.some(d => d.orderId === o.orderId) ? 'YES' : 'NO'
+                    })));
+
+                    console.log('\n💡 These orders exist locally but NOT in Firestore.');
+                    console.log('They may be reappearing because of localStorage.');
+                    console.log('\nTo remove them permanently:');
+                    console.log('  AdminUtils.removeGhostOrders()');
+
+                    return ghostOrders;
+                } catch (error) {
+                    console.error('❌ Error finding ghost orders:', error);
+                    return [];
+                }
+            },
+
+            // Remove ghost orders from local data
+            removeGhostOrders() {
+                const ghostOrders = OMS.data.orders.filter(order => {
+                    // Keep only orders that should exist
+                    return false; // For now, will be set properly
+                });
+
+                console.log('⚠️ This will remove ALL orders that are NOT in Firestore.');
+                console.log('First run: await AdminUtils.findGhostOrders() to see what will be removed.');
+
+                const confirmed = confirm('Remove all ghost orders (orders not in Firestore)? This cannot be undone.');
+                if (!confirmed) {
+                    console.log('❌ Cancelled');
+                    return;
+                }
+
+                // Reload from Firestore to get clean state
+                OMS.loadOrdersFromFirestore().then(() => {
+                    OMS.updateAllDisplays();
+                    OMS.saveToStorage();
+                    console.log('✅ Ghost orders removed. Data reloaded from Firestore.');
+                });
+            },
+
+            // Add an order to the permanently deleted list (to prevent it from reappearing)
+            permanentlyDeleteOrder(orderId) {
+                console.log(`🗑️ Adding order ${orderId} to permanently deleted list...`);
+
+                // Find the order in local data
+                const order = OMS.data.orders.find(o => o.orderId === orderId);
+
+                if (!order) {
+                    console.warn(`⚠️ Order ${orderId} not found in local data`);
+                    console.log('Adding to deletedOrders list anyway...');
+                }
+
+                // Add to deletedOrders
+                OMS.data.deletedOrders.push({
+                    orderId: orderId,
+                    ...(order || {}),
+                    deletedAt: new Date().toISOString(),
+                    deleteReason: 'Permanently deleted via AdminUtils'
+                });
+
+                // Remove from local orders
+                OMS.data.orders = OMS.data.orders.filter(o => o.orderId !== orderId);
+
+                OMS.saveToStorage();
+                OMS.updateAllDisplays();
+
+                console.log(`✅ Order ${orderId} permanently deleted and added to block list`);
+                console.log('This order will no longer appear even if it exists in Firestore');
+            },
+
+            // Check for data inconsistencies
+            async checkDataConsistency() {
+                console.log('🔍 Checking data consistency...\n');
+
+                // Check orders
+                const snapshot = await db.collection('orders').get();
+                const firestoreOrderCount = snapshot.size;
+                const localOrderCount = OMS.data.orders.length;
+                const deletedOrderCount = OMS.data.deletedOrders.length;
+
+                console.log('📊 ORDER COUNTS:');
+                console.log(`  Firestore orders: ${firestoreOrderCount}`);
+                console.log(`  Local orders: ${localOrderCount}`);
+                console.log(`  Deleted orders list: ${deletedOrderCount}`);
+
+                if (firestoreOrderCount !== localOrderCount) {
+                    console.warn(`⚠️ Mismatch detected! ${Math.abs(firestoreOrderCount - localOrderCount)} orders difference`);
+                    console.log('\nRun these commands to investigate:');
+                    console.log('  await AdminUtils.findGhostOrders() - Find local orders not in Firestore');
+                    console.log('  await AdminUtils.listAllOrdersWithDetails() - See all Firestore orders');
+                } else {
+                    console.log('✅ Order counts match!');
+                }
+
+                // Check inventory
+                const categoriesSnapshot = await db.collection('inventory').doc('categories').collection('items').get();
+                const itemsSnapshot = await db.collection('inventory').doc('items').collection('list').get();
+
+                console.log('\n📦 INVENTORY COUNTS:');
+                console.log(`  Firestore categories: ${categoriesSnapshot.size}, Local: ${OMS.data.inventory.categories.length}`);
+                console.log(`  Firestore items: ${itemsSnapshot.size}, Local: ${OMS.data.inventory.items.length}`);
+
+                if (categoriesSnapshot.size === 0 && itemsSnapshot.size === 0 &&
+                    (OMS.data.inventory.categories.length > 0 || OMS.data.inventory.items.length > 0)) {
+                    console.error('❌ CRITICAL: Inventory exists locally but NOT in Firestore!');
+                    console.log('Run: AdminUtils.recoverInventoryFromLocalStorage() to sync to Firestore');
+                }
             }
         };
 
@@ -6439,12 +6619,17 @@ updateAllDisplays() {
         console.log('\n📋 ORDER COMMANDS:');
         console.log('  - await AdminUtils.listAllOrdersWithDetails() - List all orders with DocIDs');
         console.log('  - await AdminUtils.deleteOrderByDocId("DOC_ID") - Delete by document ID');
+        console.log('  - await AdminUtils.findGhostOrders() - Find orders in local but NOT in Firestore');
+        console.log('  - AdminUtils.permanentlyDeleteOrder("ORDER_ID") - Block order from reappearing');
+        console.log('  - AdminUtils.removeGhostOrders() - Remove all ghost orders');
         console.log('  - await AdminUtils.findAndDeleteDemoOrders() - Find and delete demo orders');
         console.log('  - AdminUtils.viewDeletedOrders() - View deleted orders list');
         console.log('\n📦 INVENTORY COMMANDS:');
         console.log('  - AdminUtils.checkInventoryStatus() - Check inventory status');
         console.log('  - await AdminUtils.checkFirestoreInventory() - See what is in Firestore');
         console.log('  - AdminUtils.recoverInventoryFromLocalStorage() - Restore from backup');
+        console.log('\n🔍 DIAGNOSTIC COMMANDS:');
+        console.log('  - await AdminUtils.checkDataConsistency() - Check for data mismatches');
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
