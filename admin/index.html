@@ -3385,7 +3385,10 @@ convertToQuotationDateFormat(dateStr) {
                     { key: 'categoryId', label: 'Category', render: i => this.data.inventory.categories.find(c => c.id === i.categoryId)?.name || 'N/A' },
                     { key: 'quantity', label: 'Stock' }
                 ], this.data.inventory.items, (row) => `
-                    <button class="btn btn-danger btn-small" data-action="delete" data-type="item" data-id="${row.id}">Delete</button>
+                    <button class="btn btn-success btn-small" onclick="OMS.increaseItemQuantity('${row.id}')">+</button>
+                    <button class="btn btn-warning btn-small" onclick="OMS.decreaseItemQuantity('${row.id}')">-</button>
+                    <button class="btn btn-primary btn-small" onclick="OMS.editInventoryItem('${row.id}')">✏️ Edit</button>
+                    <button class="btn btn-danger btn-small" data-action="delete" data-type="item" data-id="${row.id}">🗑️ Delete</button>
                 `);
             },
 
@@ -3440,6 +3443,100 @@ convertToQuotationDateFormat(dateStr) {
 
                 this.updateInventoryDisplay();
                 this.showToast('Item added and synced!');
+            },
+
+            editInventoryItem(id) {
+                const item = this.data.inventory.items.find(i => i.id === id);
+                if (!item) return;
+
+                // Show edit modal
+                this.showModal('Edit Inventory Item', `
+                    <div class="form-group">
+                        <label class="form-label required">Item Name</label>
+                        <input type="text" id="editItemName" class="form-input" value="${item.name}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Category</label>
+                        <select id="editItemCategory" class="form-select">
+                            ${this.data.inventory.categories.map(c => `
+                                <option value="${c.id}" ${c.id === item.categoryId ? 'selected' : ''}>${c.name}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Quantity</label>
+                        <input type="number" id="editItemQuantity" class="form-input" value="${item.quantity}" min="0">
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="OMS.saveInventoryItemEdit('${id}')">💾 Save Changes</button>
+                        <button class="btn btn-secondary" onclick="OMS.closeModal()">Cancel</button>
+                    </div>
+                `);
+            },
+
+            saveInventoryItemEdit(id) {
+                const item = this.data.inventory.items.find(i => i.id === id);
+                if (!item) return;
+
+                const name = Utils.get('editItemName');
+                const categoryId = Utils.get('editItemCategory');
+                const quantity = parseInt(Utils.get('editItemQuantity')) || 0;
+
+                if (!name || !categoryId) {
+                    this.showToast('Please fill all required fields', 'error');
+                    return;
+                }
+
+                // Update item
+                item.name = name;
+                item.categoryId = categoryId;
+                item.quantity = quantity;
+                item.updatedAt = new Date().toISOString();
+
+                this.saveToStorage();
+
+                // Save to Firestore
+                this.saveInventoryItemToFirestore(item);
+
+                this.closeModal();
+                this.updateInventoryDisplay();
+                this.showToast('Item updated and synced!');
+            },
+
+            async increaseItemQuantity(id) {
+                const item = this.data.inventory.items.find(i => i.id === id);
+                if (!item) return;
+
+                item.quantity = (item.quantity || 0) + 1;
+                item.updatedAt = new Date().toISOString();
+
+                this.saveToStorage();
+
+                // Save to Firestore
+                await this.saveInventoryItemToFirestore(item);
+
+                this.updateInventoryDisplay();
+                this.showToast(`${item.name} quantity increased to ${item.quantity}`);
+            },
+
+            async decreaseItemQuantity(id) {
+                const item = this.data.inventory.items.find(i => i.id === id);
+                if (!item) return;
+
+                if (item.quantity > 0) {
+                    item.quantity -= 1;
+                    item.updatedAt = new Date().toISOString();
+
+                    this.saveToStorage();
+
+                    // Save to Firestore
+                    await this.saveInventoryItemToFirestore(item);
+
+                    this.updateInventoryDisplay();
+                    this.showToast(`${item.name} quantity decreased to ${item.quantity}`);
+                } else {
+                    this.showToast('Quantity cannot be negative', 'error');
+                }
             },
 
             // ============ PREPARATION / FORECAST FUNCTIONS ============
@@ -4344,8 +4441,7 @@ convertToQuotationDateFormat(dateStr) {
                 if (!member) return;
 
                 // Show edit modal
-                this.showModal(`
-                    <h2>Edit Team Member</h2>
+                this.showModal('Edit Team Member', `
                     <div class="form-group">
                         <label class="form-label required">Name</label>
                         <input type="text" id="editTeamMemberName" class="form-input" value="${member.name}">
@@ -5732,8 +5828,15 @@ setupRealtimeListeners() {
             if (change.type === 'added') {
                 const exists = this.data.orders.some(o => o.orderId === orderData.orderId);
                 if (!exists) {
+                    // Check if this order was previously deleted
+                    const wasDeleted = this.data.deletedOrders.some(o => o.orderId === orderData.orderId);
+                    if (wasDeleted) {
+                        console.warn('⚠️ New order was previously deleted - ignoring to prevent reappearing');
+                        return;
+                    }
+
                     console.log('🆕 New order detected:', orderData.orderId);
-                    
+
                     const newOrder = {
                         orderId: orderData.orderId || change.doc.id,
                         isMultiDay: orderData.isMultiDay || false,
@@ -5761,7 +5864,7 @@ setupRealtimeListeners() {
                         createdAt: orderData.createdAt || new Date().toISOString(),
                         totalAmount: orderData.totalAmount || 0
                     };
-                    
+
                     this.data.orders.unshift(newOrder);
                     this.updateCustomerDatabase(newOrder);
                     this.updateAllDisplays();
@@ -5772,7 +5875,7 @@ setupRealtimeListeners() {
 if (change.type === 'modified') {
     console.log('✏️ Order modified:', orderData.orderId);
     const index = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
-    
+
     if (index !== -1) {
         // Update existing order
         this.data.orders[index] = {
@@ -5798,10 +5901,17 @@ if (change.type === 'modified') {
             createdAt: orderData.createdAt || new Date().toISOString(),
             totalAmount: orderData.totalAmount || 0
         };
-        
+
         this.updateAllDisplays();
         this.showToast(`✏️ Order updated: ${orderData.orderId}`, 'success');
     } else {
+        // Check if this order was previously deleted
+        const wasDeleted = this.data.deletedOrders.some(o => o.orderId === orderData.orderId);
+        if (wasDeleted) {
+            console.warn('⚠️ Modified order was previously deleted - ignoring to prevent reappearing');
+            return;
+        }
+
         console.warn('⚠️ Modified order not found locally, adding it');
         // Add it as new if somehow missing
         const newOrder = {
@@ -5833,8 +5943,8 @@ if (change.type === 'modified') {
 }
             
             if (change.type === 'removed') {
-                console.log('🗑️ Order removed from Firestore:', change.doc.id);
-                const index = this.data.orders.findIndex(o => o.orderId === change.doc.id);
+                console.log('🗑️ Order removed from Firestore:', orderData.orderId || change.doc.id);
+                const index = this.data.orders.findIndex(o => o.orderId === (orderData.orderId || change.doc.id));
                 if (index !== -1) {
                     const deleted = this.data.orders.splice(index, 1)[0];
                     this.updateAllDisplays();
@@ -5947,6 +6057,133 @@ updateAllDisplays() {
         }
     }
 };
+
+        // ============ ADMIN UTILITIES ============
+        // Utility functions for debugging and cleanup
+
+        window.AdminUtils = {
+            // List all orders in Firestore
+            async listAllFirestoreOrders() {
+                try {
+                    const snapshot = await db.collection('orders').get();
+                    const orders = [];
+                    snapshot.forEach(doc => {
+                        orders.push({ docId: doc.id, ...doc.data() });
+                    });
+                    console.table(orders.map(o => ({
+                        DocID: o.docId,
+                        OrderID: o.orderId,
+                        Client: o.clientName || o.customer?.name,
+                        Date: o.date || o.customer?.dates,
+                        Status: o.status
+                    })));
+                    console.log(`📋 Found ${orders.length} orders in Firestore`);
+                    return orders;
+                } catch (error) {
+                    console.error('❌ Error listing orders:', error);
+                }
+            },
+
+            // Delete a specific order from Firestore by orderId
+            async deleteOrderFromFirestore(orderId) {
+                try {
+                    const docRef = db.collection('orders').doc(orderId);
+                    const docSnap = await docRef.get();
+
+                    if (docSnap.exists) {
+                        await docRef.delete();
+                        console.log(`✅ Deleted order ${orderId} from Firestore`);
+
+                        // Also add to deletedOrders to prevent reappearing
+                        const orderData = docSnap.data();
+                        OMS.data.deletedOrders.push({
+                            orderId: orderId,
+                            ...orderData,
+                            deletedAt: new Date().toISOString(),
+                            deleteReason: 'Manual deletion via AdminUtils'
+                        });
+                        OMS.saveToStorage();
+
+                        console.log(`✅ Added ${orderId} to deletedOrders list to prevent reappearing`);
+                        return true;
+                    } else {
+                        console.warn(`⚠️ Order ${orderId} not found in Firestore`);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('❌ Error deleting order:', error);
+                    return false;
+                }
+            },
+
+            // Find and delete demo/test orders
+            async findAndDeleteDemoOrders() {
+                try {
+                    const snapshot = await db.collection('orders').get();
+                    const demoKeywords = ['demo', 'test', 'sample', 'example'];
+                    const demoOrders = [];
+
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const clientName = (data.clientName || data.customer?.name || '').toLowerCase();
+                        const orderId = (data.orderId || '').toLowerCase();
+
+                        const isDemo = demoKeywords.some(keyword =>
+                            clientName.includes(keyword) || orderId.includes(keyword)
+                        );
+
+                        if (isDemo) {
+                            demoOrders.push({ docId: doc.id, orderId: data.orderId, clientName: data.clientName || data.customer?.name });
+                        }
+                    });
+
+                    if (demoOrders.length === 0) {
+                        console.log('✅ No demo orders found!');
+                        return [];
+                    }
+
+                    console.log(`⚠️ Found ${demoOrders.length} potential demo orders:`);
+                    console.table(demoOrders);
+
+                    const confirmed = confirm(`Delete ${demoOrders.length} demo orders? This cannot be undone.`);
+                    if (confirmed) {
+                        for (const order of demoOrders) {
+                            await this.deleteOrderFromFirestore(order.orderId || order.docId);
+                        }
+                        console.log(`✅ Deleted ${demoOrders.length} demo orders`);
+                    }
+
+                    return demoOrders;
+                } catch (error) {
+                    console.error('❌ Error finding demo orders:', error);
+                }
+            },
+
+            // Clear all deleted orders from local storage
+            clearDeletedOrdersList() {
+                OMS.data.deletedOrders = [];
+                OMS.saveToStorage();
+                console.log('✅ Cleared deletedOrders list');
+            },
+
+            // View deleted orders list
+            viewDeletedOrders() {
+                console.table(OMS.data.deletedOrders.map(o => ({
+                    OrderID: o.orderId,
+                    Client: o.clientName,
+                    DeletedAt: o.deletedAt,
+                    Reason: o.deleteReason
+                })));
+                console.log(`📋 Total deleted orders: ${OMS.data.deletedOrders.length}`);
+            }
+        };
+
+        console.log('🛠️ Admin utilities loaded. Available commands:');
+        console.log('  - AdminUtils.listAllFirestoreOrders() - List all orders in Firestore');
+        console.log('  - AdminUtils.deleteOrderFromFirestore("ORDER_ID") - Delete specific order');
+        console.log('  - AdminUtils.findAndDeleteDemoOrders() - Find and delete demo/test orders');
+        console.log('  - AdminUtils.viewDeletedOrders() - View locally deleted orders');
+        console.log('  - AdminUtils.clearDeletedOrdersList() - Clear deleted orders list');
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
