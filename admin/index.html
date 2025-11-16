@@ -6714,6 +6714,139 @@ updateAllDisplays() {
                     console.error('❌ CRITICAL: Inventory exists locally but NOT in Firestore!');
                     console.log('Run: AdminUtils.recoverInventoryFromLocalStorage() to sync to Firestore');
                 }
+            },
+
+            // COMPREHENSIVE DIAGNOSTIC - Find all bugs
+            async debugEverything() {
+                console.log('🔍🔍🔍 COMPREHENSIVE SYSTEM DIAGNOSTIC 🔍🔍🔍\n');
+
+                // 1. Check localStorage
+                console.log('═══════════════════════════════════════');
+                console.log('1️⃣ LOCALSTORAGE CHECK');
+                console.log('═══════════════════════════════════════');
+                const saved = localStorage.getItem('oms_data');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    console.log('✅ localStorage exists');
+                    console.log(`  📦 Inventory categories: ${parsed.inventory?.categories?.length || 0}`);
+                    console.log(`  📦 Inventory items: ${parsed.inventory?.items?.length || 0}`);
+                    console.log(`  📋 Orders: ${parsed.orders?.length || 0}`);
+                    console.log(`  🗑️ Deleted orders: ${parsed.deletedOrders?.length || 0}`);
+
+                    if (parsed.deletedOrders && parsed.deletedOrders.length > 0) {
+                        console.log('\n  Deleted Orders List:');
+                        console.table(parsed.deletedOrders.map(o => ({
+                            OrderID: o.orderId,
+                            Client: o.clientName,
+                            DeletedAt: o.deletedAt
+                        })));
+                    }
+                } else {
+                    console.error('❌ NO localStorage data found!');
+                }
+
+                // 2. Check current memory
+                console.log('\n═══════════════════════════════════════');
+                console.log('2️⃣ CURRENT MEMORY (OMS.data)');
+                console.log('═══════════════════════════════════════');
+                console.log(`  📦 Inventory categories: ${OMS.data.inventory.categories.length}`);
+                console.log(`  📦 Inventory items: ${OMS.data.inventory.items.length}`);
+                console.log(`  📋 Orders: ${OMS.data.orders.length}`);
+                console.log(`  🗑️ Deleted orders: ${OMS.data.deletedOrders.length}`);
+
+                // 3. Check Firestore
+                console.log('\n═══════════════════════════════════════');
+                console.log('3️⃣ FIRESTORE CHECK');
+                console.log('═══════════════════════════════════════');
+
+                // Orders
+                const ordersSnapshot = await db.collection('orders').get();
+                console.log(`  📋 Orders in Firestore: ${ordersSnapshot.size}`);
+                if (ordersSnapshot.size > 0) {
+                    console.log('\n  Firestore Orders:');
+                    const firestoreOrders = [];
+                    ordersSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        firestoreOrders.push({
+                            DocID: doc.id,
+                            OrderID: data.orderId,
+                            Client: data.clientName || data.customer?.name,
+                            Date: data.date || data.customer?.dates
+                        });
+                    });
+                    console.table(firestoreOrders);
+                }
+
+                // Inventory
+                const categoriesSnapshot = await db.collection('inventory').doc('categories').collection('items').get();
+                const itemsSnapshot = await db.collection('inventory').doc('items').collection('list').get();
+                console.log(`  📦 Categories in Firestore: ${categoriesSnapshot.size}`);
+                console.log(`  📦 Items in Firestore: ${itemsSnapshot.size}`);
+
+                // 4. Find mismatches
+                console.log('\n═══════════════════════════════════════');
+                console.log('4️⃣ MISMATCH ANALYSIS');
+                console.log('═══════════════════════════════════════');
+
+                // Check if deleted orders are in Firestore
+                if (OMS.data.deletedOrders.length > 0) {
+                    console.log('  Checking if deleted orders still exist in Firestore...');
+                    for (const delOrder of OMS.data.deletedOrders) {
+                        const snapshot = await db.collection('orders')
+                            .where('orderId', '==', delOrder.orderId)
+                            .get();
+
+                        if (!snapshot.empty) {
+                            console.error(`  ❌ DELETED ORDER STILL IN FIRESTORE: ${delOrder.orderId}`);
+                            snapshot.forEach(doc => {
+                                console.error(`     Firestore Doc ID: ${doc.id}`);
+                            });
+                        } else {
+                            console.log(`  ✅ ${delOrder.orderId} - properly deleted from Firestore`);
+                        }
+                    }
+                }
+
+                // Check ghost orders
+                const firestoreOrderIds = new Set();
+                ordersSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    firestoreOrderIds.add(data.orderId || doc.id);
+                    firestoreOrderIds.add(doc.id);
+                });
+
+                const ghostOrders = OMS.data.orders.filter(order =>
+                    !firestoreOrderIds.has(order.orderId) && !firestoreOrderIds.has(order.docId)
+                );
+
+                if (ghostOrders.length > 0) {
+                    console.warn(`  ⚠️ Found ${ghostOrders.length} GHOST ORDERS (in local but NOT in Firestore):`);
+                    console.table(ghostOrders.map(o => ({
+                        OrderID: o.orderId,
+                        Client: o.clientName
+                    })));
+                }
+
+                // 5. Final recommendations
+                console.log('\n═══════════════════════════════════════');
+                console.log('5️⃣ RECOMMENDATIONS');
+                console.log('═══════════════════════════════════════');
+
+                if (categoriesSnapshot.size === 0 && itemsSnapshot.size === 0) {
+                    console.error('  ❌ INVENTORY EMPTY IN FIRESTORE!');
+                    if (OMS.data.inventory.categories.length > 0 || OMS.data.inventory.items.length > 0) {
+                        console.log('  💡 Run: await OMS.syncInventoryToFirestore()');
+                    }
+                } else if (OMS.data.inventory.categories.length === 0 && OMS.data.inventory.items.length === 0) {
+                    console.error('  ❌ INVENTORY EMPTY IN MEMORY!');
+                    console.log('  💡 Run: await AdminUtils.recoverInventoryFromFirestore()');
+                }
+
+                if (ghostOrders.length > 0) {
+                    console.log('  💡 Run: AdminUtils.removeGhostOrders() to clean them up');
+                }
+
+                console.log('\n✅ Diagnostic complete!\n');
             }
         };
 
@@ -6733,6 +6866,7 @@ updateAllDisplays() {
         console.log('  - AdminUtils.recoverInventoryFromLocalStorage() - Restore from localStorage backup');
         console.log('\n🔍 DIAGNOSTIC COMMANDS:');
         console.log('  - await AdminUtils.checkDataConsistency() - Check for data mismatches');
+        console.log('  - await AdminUtils.debugEverything() - ⭐ FULL SYSTEM DIAGNOSTIC (find all bugs)');
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
