@@ -5731,22 +5731,23 @@ async loadOrdersFromFirestore() {
         ordersSnapshot.forEach(doc => {
             const orderData = doc.data();
             const customer = orderData.customer || {};
-            const orderId = orderData.orderId || doc.id;
+            const orderId = orderData.orderId || ''; // FIXED: Keep blank if no orderId
+            const docId = doc.id;
 
             // CRITICAL: Skip orders that are in deletedOrders list
             const wasDeleted = this.data.deletedOrders.some(o =>
-                o.orderId === orderId || o.docId === doc.id
+                o.docId === docId || (orderId && o.orderId === orderId)
             );
 
             if (wasDeleted) {
-                console.warn(`⚠️ Skipping deleted order: ${orderId} (found in deletedOrders list)`);
+                console.warn(`⚠️ Skipping deleted order: ${orderId || docId} (found in deletedOrders list)`);
                 skippedDeleted++;
                 return;
             }
 
             this.data.orders.push({
-                orderId: orderId,
-                docId: doc.id, // Store document ID for deletion
+                orderId: orderId, // Can be blank for pending/confirmed
+                docId: docId, // CRITICAL: Always store docId
                 date: Utils.convertDateFormat(customer.dates) || '',
                 readyTime: customer.timeSlot || '',
                 clientName: customer.name || '',
@@ -6279,19 +6280,30 @@ setupRealtimeListeners() {
             const customer = orderData.customer || {};
             
             if (change.type === 'added') {
-                const exists = this.data.orders.some(o => o.orderId === orderData.orderId);
+                const docId = change.doc.id;
+                const orderId = orderData.orderId || '';
+
+                // FIXED: Check by docId (primary) or orderId (if exists)
+                const exists = this.data.orders.some(o =>
+                    o.docId === docId || (orderId && o.orderId === orderId)
+                );
+
                 if (!exists) {
-                    // Check if this order was previously deleted
-                    const wasDeleted = this.data.deletedOrders.some(o => o.orderId === orderData.orderId);
+                    // FIXED: Check deletedOrders by docId AND orderId
+                    const wasDeleted = this.data.deletedOrders.some(o =>
+                        o.docId === docId || (orderId && o.orderId === orderId)
+                    );
+
                     if (wasDeleted) {
-                        console.warn('⚠️ New order was previously deleted - ignoring to prevent reappearing');
+                        console.warn('⚠️ Order was previously deleted - ignoring:', docId);
                         return;
                     }
 
-                    console.log('🆕 New order detected:', orderData.orderId);
+                    console.log('🆕 New order detected:', orderId || `[docId: ${docId}]`);
 
                     const newOrder = {
-                        orderId: orderData.orderId || change.doc.id,
+                        orderId: orderId,
+                        docId: docId, // CRITICAL: Always store docId
                         isMultiDay: orderData.isMultiDay || false,
                         startDate: orderData.startDate || null,
                         endDate: orderData.endDate || null,
@@ -6320,31 +6332,43 @@ setupRealtimeListeners() {
 
                     this.data.orders.unshift(newOrder);
                     this.updateCustomerDatabase(newOrder);
+                    this.saveToStorage(); // Save to local storage
                     this.updateAllDisplays();
-                    this.showToast(`🆕 New order: ${newOrder.orderId}`, 'success');
+                    this.showToast(`🆕 New order: ${newOrder.clientName}`, 'success');
                 }
             }
             
 if (change.type === 'modified') {
-    console.log('✏️ Order modified:', orderData.orderId);
-    const index = this.data.orders.findIndex(o => o.orderId === orderData.orderId);
+    const docId = change.doc.id;
+    const orderId = orderData.orderId || '';
+    console.log('✏️ Order modified:', orderId || `[docId: ${docId}]`);
+
+    // FIXED: Find by docId or orderId
+    const index = this.data.orders.findIndex(o =>
+        o.docId === docId || (orderId && o.orderId === orderId)
+    );
 
     if (index !== -1) {
         // Update existing order
         this.data.orders[index] = {
-            orderId: orderData.orderId || change.doc.id,
-            date: Utils.convertDateFormat(customer.dates) || '',
+            orderId: orderId,
+            docId: docId, // CRITICAL: Always keep docId
+            isMultiDay: orderData.isMultiDay || false,
+            startDate: orderData.startDate || null,
+            endDate: orderData.endDate || null,
+            dayWiseData: orderData.dayWiseData || [],
+            date: orderData.isMultiDay ? '' : (Utils.convertDateFormat(customer.dates) || ''),
             readyTime: customer.timeSlot || '',
             clientName: customer.name || '',
             contact: customer.phone || '',
             venue: customer.venue || '',
             eventType: orderData.functionType || customer.functionType || '',
-            transport: '',
-            driverName: '',
-            operator: '',
-            helper: '',
+            transport: orderData.transport || '',
+            driverName: orderData.driverName || '',
+            operator: orderData.operator || '',
+            helper: orderData.helper || '',
             status: orderData.status || 'Confirmed',
-            notes: '',
+            notes: orderData.notes || '',
             items: (orderData.items || []).map(item => ({
                 name: item.name || '',
                 quantity: item.qty || 0,
@@ -6355,13 +6379,17 @@ if (change.type === 'modified') {
             totalAmount: orderData.totalAmount || 0
         };
 
+        this.saveToStorage(); // Save to local storage
         this.updateAllDisplays();
-        this.showToast(`✏️ Order updated: ${orderData.orderId}`, 'success');
+        this.showToast(`✏️ Order updated: ${this.data.orders[index].clientName}`, 'success');
     } else {
-        // Check if this order was previously deleted
-        const wasDeleted = this.data.deletedOrders.some(o => o.orderId === orderData.orderId);
+        // FIXED: Check deletedOrders by docId AND orderId
+        const wasDeleted = this.data.deletedOrders.some(o =>
+            o.docId === docId || (orderId && o.orderId === orderId)
+        );
+
         if (wasDeleted) {
-            console.warn('⚠️ Modified order was previously deleted - ignoring to prevent reappearing');
+            console.warn('⚠️ Modified order was previously deleted - ignoring:', docId);
             return;
         }
 
@@ -6640,6 +6668,28 @@ updateAllDisplays() {
         // Utility functions for debugging and cleanup
 
         window.AdminUtils = {
+            // SYNC FIX: Clear deletedOrders list (use if orders not syncing)
+            clearDeletedOrdersList() {
+                const count = OMS.data.deletedOrders.length;
+                OMS.data.deletedOrders = [];
+                OMS.saveToStorage();
+                console.log(`✅ Cleared ${count} entries from deletedOrders list`);
+                console.log('🔄 Refreshing from Firestore...');
+                OMS.loadOrdersFromFirestore().then(() => {
+                    OMS.updateAllDisplays();
+                    console.log('✅ Sync complete! All Firestore orders should now be visible.');
+                });
+            },
+
+            // Force full sync from Firestore (ignore localStorage)
+            async forceFullSync() {
+                console.log('🔄 Force syncing from Firestore...');
+                OMS.data.deletedOrders = [];
+                await OMS.loadOrdersFromFirestore();
+                OMS.updateAllDisplays();
+                console.log('✅ Full sync complete!');
+            },
+
             // List all orders in Firestore
             async listAllFirestoreOrders() {
                 try {
