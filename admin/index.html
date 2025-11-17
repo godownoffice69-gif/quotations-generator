@@ -5465,7 +5465,7 @@ convertToQuotationDateFormat(dateStr) {
                 `;
             },
 
-            saveSettings() {
+            async saveSettings() {
                 // Save table settings
                 this.data.settings.tableSettings = {
                     columnWidthSr: parseInt(Utils.get('columnWidthSr')) || 8,
@@ -5493,10 +5493,19 @@ convertToQuotationDateFormat(dateStr) {
                 this.data.settings.lowStockThreshold = parseInt(Utils.get('lowStockThreshold')) || 5;
                 this.data.settings.language = Utils.get('appLanguage') || 'en';
                 this.data.settings.invoicePrefix = Utils.get('invoiceFormat') || 'FP';
-                
+
+                // Save to localStorage
                 this.saveToStorage();
-                this.refreshOrderId();
-                this.showToast('All settings saved successfully!');
+
+                // Save to Firestore for persistence across devices
+                const saved = await this.saveSettingsToFirestore();
+
+                if (saved) {
+                    this.refreshOrderId();
+                    this.showToast('All settings saved successfully!');
+                } else {
+                    this.showToast('Settings saved locally, but Firestore sync failed. Check permissions.');
+                }
             },
 
             resetAllData() {
