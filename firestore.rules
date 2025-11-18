@@ -47,6 +47,12 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // Tracking collection - allow public writes for analytics, authenticated reads
+    match /tracking/{trackingId} {
+      allow write: if true;  // Allow public writes for tracking
+      allow read: if isAuthenticated();  // Only authenticated users can read
+    }
+
     // User profiles - users can read/write their own profile
     match /users/{userId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;

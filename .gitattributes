@@ -1,0 +1,3 @@
+# Git attributes for secret scanning
+# Firebase config files contain public API keys (not secrets)
+firebase-config.js linguist-generated=true
