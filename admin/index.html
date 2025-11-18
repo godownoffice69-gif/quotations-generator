@@ -1380,21 +1380,24 @@ const OMS = {
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Driver</label>
-                        <input type="text" id="${functionId}Driver" class="form-input" 
-                               placeholder="Driver name"
+                        <select id="${functionId}Driver" class="form-select"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'driver', this.value)">
+                            <option value="">Select Driver</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Operator</label>
-                        <input type="text" id="${functionId}Operator" class="form-input" 
-                               placeholder="Operator name"
+                        <select id="${functionId}Operator" class="form-select"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'operator', this.value)">
+                            <option value="">Select Operator</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Helper</label>
-                        <input type="text" id="${functionId}Helper" class="form-input" 
-                               placeholder="Helper name"
+                        <select id="${functionId}Helper" class="form-select"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', this.value)">
+                            <option value="">Select Helper</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -1421,9 +1424,12 @@ const OMS = {
         `;
         
         container.insertAdjacentHTML('beforeend', functionHTML);
-        
+
         // Setup item search for this function
         this.setupFunctionItemSearch(dayIndex, functionIndex);
+
+        // Populate team dropdowns for this function
+        this.populateFunctionTeamDropdowns(dayIndex, functionIndex);
     },
     updateFunctionData(dayIndex, functionIndex, field, value) {
         if (!window.dayFunctionsData?.[dayIndex]?.[functionIndex]) return;
@@ -2619,38 +2625,143 @@ convertToQuotationDateFormat(dateStr) {
 
         console.log('🔍 Loading order to form:', order);
         console.log('🔍 Order status:', order.status);
-        
-                Object.entries({
-                    orderId: order.orderId,
-                    clientName: order.clientName,
-                    contact: order.contact,
-                    venue: order.venue,
-                    orderDate: order.date,
-                    readyTime: order.readyTime,
-                    eventType: order.eventType,
-                    transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
-                    customTransport: !['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : '',
-                    driverName: order.driverName,
-                    operator: order.operator,
-                    helper: order.helper,
-                    orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
-                    orderNotes: order.notes
-                }).forEach(([key, value]) => Utils.set(key, value));
+        console.log('🔍 Is Multi-Day:', order.isMultiDay);
 
-                if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
-                    document.getElementById('customTransportGroup').classList.remove('hidden');
-                }
+        // Check if this is a multi-day order
+        if (order.isMultiDay) {
+            // Load multi-day order
+            console.log('📅 Loading multi-day order with dayWiseData:', order.dayWiseData);
 
-                this.currentOrderItems = order.items ? [...order.items] : [];
-                this.updateOrderItemsTable();
-                // Trigger status change to show/hide order ID field
+            // Set event type to multi
+            Utils.set('eventTypeSelect', 'multi');
+
+            // Load basic fields
+            Object.entries({
+                orderId: order.orderId,
+                clientName: order.clientName,
+                contact: order.contact,
+                venue: order.venue,
+                startDate: order.startDate,
+                endDate: order.endDate,
+                transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
+                customTransport: !['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : '',
+                orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
+                orderNotes: order.notes
+            }).forEach(([key, value]) => Utils.set(key, value));
+
+            // Show/hide transport fields
+            if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
+                document.getElementById('customTransportGroup').classList.remove('hidden');
+            }
+
+            // Trigger event type change to show multi-day fields
+            const eventTypeSelect = document.getElementById('eventTypeSelect');
+            if (eventTypeSelect) {
+                const event = new Event('change');
+                eventTypeSelect.dispatchEvent(event);
+            }
+
+            // Wait for DOM to update, then regenerate day-wise functions
+            setTimeout(() => {
+                // Initialize dayFunctionsData
+                window.dayFunctionsData = {};
+
+                // Generate day-wise functions based on date range
+                this.generateDayWiseFunctions();
+
+                // Wait a bit more for function cards to be created
                 setTimeout(() => {
-                    const statusSelect = document.getElementById('orderStatus');
-                    if (statusSelect) {
-                        const event = new Event('change');
-                        statusSelect.dispatchEvent(event);
+                    // Populate each day's functions from order.dayWiseData
+                    if (order.dayWiseData && Array.isArray(order.dayWiseData)) {
+                        order.dayWiseData.forEach((day, dayIndex) => {
+                            if (day.functions && Array.isArray(day.functions)) {
+                                // First, add additional function cards if needed (beyond the default first one)
+                                const additionalFunctions = day.functions.length - 1;
+                                for (let i = 0; i < additionalFunctions; i++) {
+                                    this.addFunctionToDay(dayIndex, false);
+                                }
+
+                                // Now populate all functions after a short delay
+                                setTimeout(() => {
+                                    // Store function data
+                                    window.dayFunctionsData[dayIndex] = day.functions.map(f => ({...f}));
+
+                                    day.functions.forEach((func, funcIndex) => {
+                                        const functionId = `day${dayIndex}func${funcIndex}`;
+
+                                        // Populate form fields
+                                        const typeInput = document.getElementById(`${functionId}Type`);
+                                        const timeInput = document.getElementById(`${functionId}Time`);
+                                        const driverSelect = document.getElementById(`${functionId}Driver`);
+                                        const operatorSelect = document.getElementById(`${functionId}Operator`);
+                                        const helperSelect = document.getElementById(`${functionId}Helper`);
+                                        const notesTextarea = document.getElementById(`${functionId}Notes`);
+
+                                        if (typeInput) typeInput.value = func.functionType || '';
+                                        if (timeInput) timeInput.value = func.timeSlot || '';
+                                        if (driverSelect) driverSelect.value = func.driver || '';
+                                        if (operatorSelect) operatorSelect.value = func.operator || '';
+                                        if (helperSelect) helperSelect.value = func.helper || '';
+                                        if (notesTextarea) notesTextarea.value = func.notes || '';
+
+                                        // Update function data in memory
+                                        this.updateFunctionData(dayIndex, funcIndex, 'functionType', func.functionType || '');
+                                        this.updateFunctionData(dayIndex, funcIndex, 'timeSlot', func.timeSlot || '');
+                                        this.updateFunctionData(dayIndex, funcIndex, 'driver', func.driver || '');
+                                        this.updateFunctionData(dayIndex, funcIndex, 'operator', func.operator || '');
+                                        this.updateFunctionData(dayIndex, funcIndex, 'helper', func.helper || '');
+                                        this.updateFunctionData(dayIndex, funcIndex, 'notes', func.notes || '');
+
+                                        // Set items for this function
+                                        if (func.items && Array.isArray(func.items)) {
+                                            window.dayFunctionsData[dayIndex][funcIndex].items = [...func.items];
+                                            this.updateFunctionItemsList(dayIndex, funcIndex);
+                                        }
+                                    });
+                                }, 100);
+                            }
+                        });
                     }
-                }, 100);
+
+                    console.log('✅ Multi-day order loaded successfully');
+                }, 300);
+            }, 200);
+
+        } else {
+            // Load single-day order (original code)
+            Object.entries({
+                orderId: order.orderId,
+                clientName: order.clientName,
+                contact: order.contact,
+                venue: order.venue,
+                orderDate: order.date,
+                readyTime: order.readyTime,
+                eventType: order.eventType,
+                transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
+                customTransport: !['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : '',
+                driverName: order.driverName,
+                operator: order.operator,
+                helper: order.helper,
+                orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
+                orderNotes: order.notes
+            }).forEach(([key, value]) => Utils.set(key, value));
+
+            if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
+                document.getElementById('customTransportGroup').classList.remove('hidden');
+            }
+
+            this.currentOrderItems = order.items ? [...order.items] : [];
+            this.updateOrderItemsTable();
+        }
+
+        // Trigger status change to show/hide order ID field
+        setTimeout(() => {
+            const statusSelect = document.getElementById('orderStatus');
+            if (statusSelect) {
+                const event = new Event('change');
+                statusSelect.dispatchEvent(event);
+            }
+        }, 100);
             },
 
             clearForm() {
@@ -2664,6 +2775,25 @@ convertToQuotationDateFormat(dateStr) {
                 this.refreshOrderId();
                 Utils.set('orderDate', Utils.toDateString(new Date()));
                 document.getElementById('customTransportGroup').classList.add('hidden');
+
+                // Clear multi-day data
+                if (window.dayFunctionsData) {
+                    window.dayFunctionsData = {};
+                }
+
+                // Reset event type to single day
+                Utils.set('eventTypeSelect', 'single');
+                const singleDayFields = document.getElementById('singleDayFields');
+                const multiDayFields = document.getElementById('multiDayFields');
+                if (singleDayFields) singleDayFields.style.display = 'block';
+                if (multiDayFields) multiDayFields.style.display = 'none';
+
+                // Clear multi-day containers
+                const multiDayContainer = document.getElementById('multiDayContainer');
+                if (multiDayContainer) {
+                    multiDayContainer.innerHTML = '';
+                }
+
                 this.showToast('Form cleared');
             },
 
@@ -4907,6 +5037,39 @@ convertToQuotationDateFormat(dateStr) {
                     const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
                     helperSelect.innerHTML = '<option value="">Select Helper</option>' +
                         helpers.map(h => `<option value="${h.name}" data-id="${h.id}">🤝 ${h.name}</option>`).join('');
+                }
+            },
+
+            populateFunctionTeamDropdowns(dayIndex, functionIndex) {
+                // Get active team members
+                const activeTeam = this.data.team.filter(m => m.status === 'Active');
+                const functionId = `day${dayIndex}func${functionIndex}`;
+
+                // Populate Driver dropdown for this function
+                const driverSelect = document.getElementById(`${functionId}Driver`);
+                if (driverSelect) {
+                    const drivers = activeTeam.filter(m => m.roles.includes('Driver'));
+                    const currentValue = driverSelect.value;
+                    driverSelect.innerHTML = '<option value="">Select Driver</option>' +
+                        drivers.map(d => `<option value="${d.name}" data-id="${d.id}" ${d.name === currentValue ? 'selected' : ''}>🚗 ${d.name}</option>`).join('');
+                }
+
+                // Populate Operator dropdown for this function
+                const operatorSelect = document.getElementById(`${functionId}Operator`);
+                if (operatorSelect) {
+                    const operators = activeTeam.filter(m => m.roles.includes('Operator'));
+                    const currentValue = operatorSelect.value;
+                    operatorSelect.innerHTML = '<option value="">Select Operator</option>' +
+                        operators.map(o => `<option value="${o.name}" data-id="${o.id}" ${o.name === currentValue ? 'selected' : ''}>⚙️ ${o.name}</option>`).join('');
+                }
+
+                // Populate Helper dropdown for this function
+                const helperSelect = document.getElementById(`${functionId}Helper`);
+                if (helperSelect) {
+                    const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
+                    const currentValue = helperSelect.value;
+                    helperSelect.innerHTML = '<option value="">Select Helper</option>' +
+                        helpers.map(h => `<option value="${h.name}" data-id="${h.id}" ${h.name === currentValue ? 'selected' : ''}>🤝 ${h.name}</option>`).join('');
                 }
             },
 
@@ -7376,44 +7539,57 @@ updateAllDisplays() {
     singleDayFields.style.display = 'block';
     multiDayFields.style.display = 'none';
     dayWiseFunctions.style.display = 'none';
-    
+
             // Show fields needed for single day
             const readyTimeField = document.getElementById('readyTime');
             readyTimeField.parentElement.style.display = 'block';
             readyTimeField.required = true;
-    
+
             // Show single-day item search
-            const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items') 
-            ? document.querySelector('.card h3').closest('.card') 
+            const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items')
+            ? document.querySelector('.card h3').closest('.card')
             : null;
             if (itemSearchSection) itemSearchSection.style.display = 'block';
-    
+
     // Set required fields
     document.getElementById('orderDate').required = true;
     document.getElementById('startDate').required = false;
     document.getElementById('endDate').required = false;
+
+    // SAFEGUARD: Clear multi-day data when switching to single day
+    if (window.dayFunctionsData) {
+        window.dayFunctionsData = {};
+    }
+    const multiDayContainer = document.getElementById('multiDayContainer');
+    if (multiDayContainer) {
+        multiDayContainer.innerHTML = '';
+    }
 } else {
     // Show multi-day fields
     singleDayFields.style.display = 'none';
     multiDayFields.style.display = 'grid';
     dayWiseFunctions.style.display = 'block';
-    
+
             // Hide fields not needed for multi-day
             const readyTimeField = document.getElementById('readyTime');
             readyTimeField.parentElement.style.display = 'none';
             readyTimeField.required = false;
             document.getElementById('eventType').parentElement.style.display = 'none';
-    
+
     // Hide single-day item search
-    const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items') 
-        ? document.querySelector('.card h3').closest('.card') 
+    const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items')
+        ? document.querySelector('.card h3').closest('.card')
         : null;
     if (itemSearchSection) itemSearchSection.style.display = 'none';
-    
+
     // Set required fields
     document.getElementById('orderDate').required = false;
     document.getElementById('startDate').required = true;
     document.getElementById('endDate').required = true;
+
+    // SAFEGUARD: Clear single-day items when switching to multi-day
+    OMS.currentOrderItems = [];
+    OMS.updateOrderItemsTable();
 }
         });
     }    
