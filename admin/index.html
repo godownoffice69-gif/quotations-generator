@@ -3303,7 +3303,16 @@ convertToQuotationDateFormat(dateStr) {
                                 const day = i + 1;
                                 const dateStr = Utils.toDateString(new Date(year, month, day));
                                 const today = Utils.toDateString(new Date());
-                                const orders = this.data.orders.filter(o => o.date === dateStr);
+                                const orders = this.data.orders.filter(o => {
+                                    if (o.isMultiDay) {
+                                        // Check if dateStr falls within the multi-day range
+                                        const checkDate = new Date(dateStr);
+                                        const start = new Date(o.startDate);
+                                        const end = new Date(o.endDate);
+                                        return checkDate >= start && checkDate <= end;
+                                    }
+                                    return o.date === dateStr;
+                                });
                                 const tasks = this.data.tasks.filter(t => t.date === dateStr);
                                 const festival = this.festivals[dateStr];
                                 
@@ -3364,7 +3373,16 @@ convertToQuotationDateFormat(dateStr) {
             // Fixed: Use local date without timezone issues
             showDayDetails(dateStr) {
                 const date = Utils.getLocalDate(dateStr);
-                const orders = this.data.orders.filter(o => o.date === dateStr);
+                const orders = this.data.orders.filter(o => {
+                    if (o.isMultiDay) {
+                        // Check if dateStr falls within the multi-day range
+                        const checkDate = new Date(dateStr);
+                        const start = new Date(o.startDate);
+                        const end = new Date(o.endDate);
+                        return checkDate >= start && checkDate <= end;
+                    }
+                    return o.date === dateStr;
+                });
                 const tasks = this.data.tasks.filter(t => t.date === dateStr);
                 const festival = this.festivals[dateStr];
                 
@@ -3378,12 +3396,17 @@ convertToQuotationDateFormat(dateStr) {
                     content += `<h4>📋 Orders (${orders.length})</h4>`;
                     orders.forEach(o => {
                         const color = this.getOrderColor(o);
+                        let dateInfo = '';
+                        if (o.isMultiDay) {
+                            dateInfo = `<br><small style="color:#666;">📅 Multi-day: ${Utils.formatDate(o.startDate)} to ${Utils.formatDate(o.endDate)}</small>`;
+                        }
                         content += `
                             <div style="padding:10px;margin:8px 0;border-left:4px solid ${color};background:#f9f9f9;border-radius:4px;">
                                 <strong>${o.orderId || '[No ID]'}</strong> - ${o.clientName}
                                 <br>
                                 <span style="color:${color};font-weight:bold;">${o.eventType || 'Event'}</span> |
                                 <span style="background:${color};color:white;padding:2px 6px;border-radius:3px;font-size:12px;">${o.status}</span>
+                                ${dateInfo}
                             </div>
                         `;
                     });
@@ -3744,7 +3767,12 @@ convertToQuotationDateFormat(dateStr) {
                     { key: 'orderId', label: 'Order ID', render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
                     { key: 'clientName', label: 'Client' },
                     { key: 'eventType', label: 'Event', render: o => o.eventType || 'N/A' },
-                    { key: 'date', label: 'Date', render: o => Utils.formatDate(o.date) },
+                    { key: 'date', label: 'Date', render: o => {
+                        if (o.isMultiDay) {
+                            return `${Utils.formatDate(o.startDate)} to ${Utils.formatDate(o.endDate)}`;
+                        }
+                        return Utils.formatDate(o.date);
+                    }},
                     { key: 'status', label: 'Status', render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span>` }
                 ], recentOrders, (row) => `
                     <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.orderId || row.docId}">View</button>
@@ -5366,7 +5394,12 @@ convertToQuotationDateFormat(dateStr) {
                     { key: 'orderId', label: 'Order ID', render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
                     { key: 'clientName', label: 'Client' },
                     { key: 'venue', label: 'Venue' },
-                    { key: 'date', label: 'Date', render: o => Utils.formatDate(o.date) },
+                    { key: 'date', label: 'Date', render: o => {
+                        if (o.isMultiDay) {
+                            return `${Utils.formatDate(o.startDate)} to ${Utils.formatDate(o.endDate)}`;
+                        }
+                        return Utils.formatDate(o.date);
+                    }},
                     { key: 'status', label: 'Status', render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span>` }
                 ], this.data.orders, (row) => `
                     <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.orderId}">Edit</button>
