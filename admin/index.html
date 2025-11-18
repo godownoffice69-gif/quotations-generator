@@ -5917,7 +5917,7 @@ async loadOrdersFromFirestore() {
                 return;
             }
 
-            this.data.orders.push({
+            const loadedOrder = {
                 orderId: orderId, // Can be blank for pending/confirmed
                 docId: docId, // CRITICAL: Always store docId
                 date: Utils.convertDateFormat(customer.dates) || '',
@@ -5939,8 +5939,25 @@ async loadOrdersFromFirestore() {
                     price: item.price || 0
                 })),
                 createdAt: orderData.createdAt || new Date().toISOString(),
-                totalAmount: orderData.totalAmount || 0
-            });
+                totalAmount: orderData.totalAmount || 0,
+                // Multi-day order fields
+                isMultiDay: orderData.isMultiDay || false,
+                startDate: orderData.startDate || null,
+                endDate: orderData.endDate || null,
+                dayWiseData: orderData.dayWiseData || []
+            };
+
+            // Debug log multi-day orders
+            if (orderData.isMultiDay) {
+                console.log(`📅 Loaded multi-day order ${orderId}:`, {
+                    isMultiDay: loadedOrder.isMultiDay,
+                    startDate: loadedOrder.startDate,
+                    endDate: loadedOrder.endDate,
+                    dayWiseData: loadedOrder.dayWiseData?.length || 0
+                });
+            }
+
+            this.data.orders.push(loadedOrder);
         });
 
         console.log(`✅ Loaded ${this.data.orders.length} orders from Firestore (skipped ${skippedDeleted} deleted)`);
