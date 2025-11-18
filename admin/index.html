@@ -26,11 +26,45 @@
             --transition: all 0.3s ease;
         }
 
+        /* Dark Theme Variables */
+        [data-theme="dark"] {
+            --light: #1a1d23;
+            --white: #242832;
+            --text-dark: #e5e7eb;
+            --text-gray: #9ca3af;
+            --border: #374151;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.3);
+            --bg-body: #0f1117;
+            --bg-card: #1a1d23;
+            --bg-hover: #2a2d35;
+            --bg-input: #2a2d35;
+            --table-header-bg: #1f2329;
+            --modal-backdrop: rgba(0, 0, 0, 0.8);
+        }
+
+        /* Light Theme specific variables */
+        [data-theme="light"], :root {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-hover: rgba(102, 126, 234, 0.05);
+            --bg-input: #ffffff;
+            --table-header-bg: #f8f9fa;
+            --modal-backdrop: rgba(0, 0, 0, 0.5);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* Smooth transitions for theme switching */
+        body, .card, .modal-content, .table-container, .form-input, .form-select, .form-textarea,
+        .search-global input, .search-results, .search-dropdown, .stat-card, .calendar-container,
+        .calendar-day, .toast, .loading, .nav-tabs, .table th {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
 
         body {
             font-family: 'Segoe UI', 'Noto Sans Gujarati', sans-serif;
-            background: var(--light);
+            background: var(--bg-body);
             color: var(--text-dark);
             line-height: 1.6;
         }
@@ -91,7 +125,7 @@
             top: 100%;
             left: 0;
             right: 0;
-            background: var(--white);
+            background: var(--bg-card);
             border: 2px solid var(--border);
             border-radius: var(--radius);
             max-height: 400px;
@@ -109,9 +143,10 @@
             border-bottom: 1px solid var(--border);
             cursor: pointer;
             transition: var(--transition);
+            color: var(--text-dark);
         }
 
-        .search-result-item:hover { background: var(--light); }
+        .search-result-item:hover { background: var(--bg-hover); }
 
         .search-result-type {
             font-size: 0.75rem;
@@ -121,7 +156,7 @@
 
         /* Navigation */
         .nav-tabs {
-            background: var(--white);
+            background: var(--bg-card);
             border-bottom: 2px solid var(--border);
             overflow-x: auto;
         }
@@ -149,8 +184,8 @@
             gap: 0.5rem;
         }
 
-        .nav-tab:hover { color: var(--primary); background: rgba(102, 126, 234, 0.05); }
-        .nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: rgba(102, 126, 234, 0.05); }
+        .nav-tab:hover { color: var(--primary); background: var(--bg-hover); }
+        .nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--bg-hover); }
 
         .main-content {
             flex: 1;
@@ -170,7 +205,7 @@
 
         /* Cards */
         .card {
-            background: var(--white);
+            background: var(--bg-card);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             padding: 1.5rem;
@@ -228,7 +263,8 @@
             border-radius: var(--radius);
             font-size: 1rem;
             transition: var(--transition);
-            background: var(--white);
+            background: var(--bg-input);
+            color: var(--text-dark);
         }
 
         .form-input:focus, .form-select:focus, .form-textarea:focus {
@@ -288,7 +324,7 @@
         }
 
         .stat-card {
-            background: var(--white);
+            background: var(--bg-card);
             border-radius: var(--radius);
             padding: 1.5rem;
             box-shadow: var(--shadow);
@@ -320,7 +356,7 @@
             overflow-x: auto;
             border-radius: var(--radius);
             border: 1px solid var(--border);
-            background: var(--white);
+            background: var(--bg-card);
         }
 
         .table {
@@ -335,12 +371,13 @@
         }
 
         .table th {
-            background: #f8f9fa;
+            background: var(--table-header-bg);
             font-weight: 600;
             font-size: 0.85rem;
+            color: var(--text-dark);
         }
 
-        .table tr:hover { background: rgba(102, 126, 234, 0.05); }
+        .table tr:hover { background: var(--bg-hover); }
         .table tr:last-child td { border-bottom: none; }
 
         /* Status Badges */
@@ -364,7 +401,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: var(--modal-backdrop);
             z-index: 2000;
             overflow: auto;
         }
@@ -377,7 +414,7 @@
         }
 
         .modal-content {
-            background: var(--white);
+            background: var(--bg-card);
             border-radius: var(--radius);
             padding: 2rem;
             max-width: 90vw;
@@ -402,7 +439,7 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: var(--white);
+            background: var(--bg-card);
             border-left: 4px solid var(--success);
             padding: 1rem;
             border-radius: var(--radius);
@@ -414,6 +451,7 @@
             align-items: center;
             gap: 1rem;
             min-width: 300px;
+            color: var(--text-dark);
         }
 
         .toast.show { transform: translateX(0); }
@@ -427,12 +465,13 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: var(--white);
+            background: var(--bg-card);
             padding: 2rem;
             border-radius: var(--radius);
             box-shadow: var(--shadow-lg);
             z-index: 3000;
             text-align: center;
+            color: var(--text-dark);
         }
 
         .spinner {
@@ -453,7 +492,7 @@
 
         /* Calendar */
         .calendar-container {
-            background: var(--white);
+            background: var(--bg-card);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             padding: 1rem;
@@ -494,7 +533,7 @@
         }
 
         .calendar-day {
-            background: var(--white);
+            background: var(--bg-card);
             min-height: 100px;
             padding: 0.5rem;
             cursor: pointer;
@@ -502,8 +541,8 @@
             position: relative;
         }
 
-        .calendar-day:hover { background: var(--light); }
-        .calendar-day.today { background: rgba(102, 126, 234, 0.1); }
+        .calendar-day:hover { background: var(--bg-hover); }
+        .calendar-day.today { background: rgba(102, 126, 234, 0.2); }
         .calendar-day.has-orders { border-left: 4px solid var(--success); }
         .calendar-day.has-tasks { border-right: 4px solid var(--warning); }
         .calendar-day.has-festival { border-top: 4px solid var(--danger); }
@@ -550,10 +589,11 @@
             width: 30px;
             height: 30px;
             border: 1px solid var(--border);
-            background: var(--white);
+            background: var(--bg-input);
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
+            color: var(--text-dark);
         }
 
         /* Search Dropdown */
@@ -564,7 +604,7 @@
             top: 100%;
             left: 0;
             right: 0;
-            background: var(--white);
+            background: var(--bg-card);
             border: 2px solid var(--border);
             border-top: none;
             border-radius: 0 0 var(--radius) var(--radius);
@@ -583,9 +623,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            color: var(--text-dark);
         }
 
-        .search-item:hover { background: var(--light); }
+        .search-item:hover { background: var(--bg-hover); }
 
         /* Progress Bar */
         .progress-bar {
@@ -728,6 +769,47 @@
             background: rgba(102, 126, 234, 0.05);
         }
 
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            padding: 2px;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .theme-toggle-slider {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        [data-theme="dark"] .theme-toggle-slider {
+            transform: translateX(30px);
+        }
+
+        .theme-toggle-icon {
+            font-size: 14px;
+        }
+
         /* Mobile Responsive */
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
@@ -790,6 +872,11 @@
                         <div class="search-results" id="globalSearchResults"></div>
                     </div>
                     <span id="currentOrderId" style="font-weight: bold;">Next: FP001</span>
+                    <div class="theme-toggle" onclick="ThemeManager.toggleTheme()" title="Toggle Dark Mode">
+                        <div class="theme-toggle-slider">
+                            <span class="theme-toggle-icon" id="themeIcon">☀️</span>
+                        </div>
+                    </div>
                     <button class="btn btn-secondary btn-small" onclick="OMS.showShortcuts()">⌨️</button>
                     <button class="btn btn-danger btn-small" onclick="auth.signOut()">🚪 Logout</button>
                 </div>
@@ -817,7 +904,7 @@
                 <div class="stats-grid" id="dashboardStats"></div>
 
                 <!-- Smart Notifications Panel -->
-                <div id="notificationsPanel" class="card" style="display:none; border-left: 4px solid var(--warning); background: #fffbeb;">
+                <div id="notificationsPanel" class="card" style="display:none; border-left: 4px solid var(--warning);">
                     <div class="card-header" style="background: transparent;">
                         <h2 class="card-title">🔔 Action Required</h2>
                         <button class="btn btn-sm" onclick="OMS.dismissNotifications()">Dismiss All</button>
@@ -1136,6 +1223,47 @@ debounce: (func, wait) => {
             }
         };
 
+        // ============ THEME MANAGER ============
+        const ThemeManager = {
+            init: () => {
+                // Load saved theme from localStorage or default to 'light'
+                const savedTheme = localStorage.getItem('admin-theme') || 'light';
+                ThemeManager.setTheme(savedTheme);
+            },
+
+            setTheme: (theme) => {
+                // Set the theme attribute on the HTML element
+                document.documentElement.setAttribute('data-theme', theme);
+
+                // Update the icon
+                const icon = document.getElementById('themeIcon');
+                if (icon) {
+                    icon.textContent = theme === 'dark' ? '🌙' : '☀️';
+                }
+
+                // Save to localStorage
+                localStorage.setItem('admin-theme', theme);
+            },
+
+            toggleTheme: () => {
+                // Get current theme
+                const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+
+                // Toggle to opposite theme
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+                // Apply new theme
+                ThemeManager.setTheme(newTheme);
+            },
+
+            getTheme: () => {
+                return document.documentElement.getAttribute('data-theme') || 'light';
+            }
+        };
+
+        // Initialize theme on page load
+        ThemeManager.init();
+
         // ============ MAIN APP ============
 const OMS = {
             initialized: false,
@@ -1356,7 +1484,7 @@ const OMS = {
         
         // Create function HTML
         const functionHTML = `
-            <div class="card" style="background: white; margin-bottom: 1rem; border: 1px solid var(--border);" id="${functionId}Card">
+            <div class="card" style="margin-bottom: 1rem;" id="${functionId}Card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h5 style="color: var(--primary); margin: 0;">Function ${functionIndex + 1}</h5>
                     ${!isFirst ? `<button type="button" class="btn btn-danger btn-small" onclick="OMS.removeFunctionFromDay(${dayIndex}, ${functionIndex})">🗑️ Remove</button>` : ''}
@@ -2920,7 +3048,7 @@ convertToQuotationDateFormat(dateStr) {
                                     '<h5 style="color: var(--primary);">Day ' + day.dayNumber + ' - ' + Utils.formatDate(day.date) + '</h5>' +
                                     (day.functions && day.functions.length > 0 ? 
                                         day.functions.map((func, funcIdx) => 
-                                            '<div style="background: white; padding: 15px; border: 1px solid var(--border); border-radius: 6px; margin-top: ' + (funcIdx > 0 ? '15px' : '10px') + ';">' +
+                                            '<div style="background: var(--bg-card); padding: 15px; border: 1px solid var(--border); border-radius: 6px; margin-top: ' + (funcIdx > 0 ? '15px' : '10px') + ';">' +
                                                 '<h6 style="color: var(--primary); margin-bottom: 10px;">Function ' + (funcIdx + 1) + '</h6>' +
                                                 '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">' +
                                                     '<div><strong>Type:</strong> ' + (func.functionType || '-') + '</div>' +
@@ -4331,7 +4459,7 @@ convertToQuotationDateFormat(dateStr) {
                                 }[order.status] || 'var(--warning)';
 
                                 return `
-                                    <div style="border: 2px solid var(--border); border-radius: var(--radius); padding: 1rem; background: white;">
+                                    <div style="border: 2px solid var(--border); border-radius: var(--radius); padding: 1rem; background: var(--bg-card);">
                                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
                                             <div>
                                                 <div style="font-size: 1.1rem; font-weight: 600; color: var(--primary);">${order.orderId}</div>
@@ -6793,7 +6921,7 @@ updateAllDisplays() {
         }).sort((a, b) => a.daysUntil - b.daysUntil);
 
         content.innerHTML = notifications.map(({ order, urgency, color }) => `
-            <div style="padding: 12px; margin: 8px 0; background: white; border-left: 3px solid ${color}; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="padding: 12px; margin: 8px 0; background: var(--bg-card); border-left: 3px solid ${color}; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark);">
                 <div>
                     <strong style="color: ${color};">${urgency}</strong>
                     <span style="margin: 0 8px;">|</span>
