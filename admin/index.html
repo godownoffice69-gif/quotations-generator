@@ -6427,30 +6427,30 @@ setupRealtimeListeners() {
         console.log('⚠️ Listener already active - preventing duplicate!');
         return;
     }
-    
+
     // Unsubscribe from any previous listener
     if (OMS.ordersUnsubscribe) {
         console.log('🛑 Unsubscribing from previous listener');
         OMS.ordersUnsubscribe();
     }
-    
+
     console.log('🔄 Setting up real-time listener (SINGLE INSTANCE)');
     OMS.realtimeListenerActive = true;
-    
-    // Track initial load to avoid processing existing orders as "new"
+
+    // Track initial load to avoid showing toast notifications for existing orders
     let isInitialLoad = true;
-    
+
     OMS.ordersUnsubscribe = db.collection('orders').onSnapshot((snapshot) => {
+        const isFirstLoad = isInitialLoad;
         if (isInitialLoad) {
-            console.log('📋 Initial snapshot received - skipping "added" events');
+            console.log(`📋 Initial snapshot received - loading ${snapshot.size} existing orders from Firebase`);
             isInitialLoad = false;
-            return; // Skip processing the initial snapshot
         }
-        
+
         snapshot.docChanges().forEach((change) => {
             const orderData = change.doc.data();
             const customer = orderData.customer || {};
-            
+
             if (change.type === 'added') {
                 const docId = change.doc.id;
                 const orderId = orderData.orderId || '';
@@ -6471,7 +6471,9 @@ setupRealtimeListeners() {
                         return;
                     }
 
-                    console.log('🆕 New order detected:', orderId || `[docId: ${docId}]`);
+                    if (!isFirstLoad) {
+                        console.log('🆕 New order detected:', orderId || `[docId: ${docId}]`);
+                    }
 
                     const newOrder = {
                         orderId: orderId,
@@ -6505,8 +6507,12 @@ setupRealtimeListeners() {
                     this.data.orders.unshift(newOrder);
                     this.updateCustomerDatabase(newOrder);
                     this.saveToStorage(); // Save to local storage
-                    this.updateAllDisplays();
-                    this.showToast(`🆕 New order: ${newOrder.clientName}`, 'success');
+
+                    // Only show toast for newly added orders (not initial load)
+                    if (!isFirstLoad) {
+                        this.updateAllDisplays();
+                        this.showToast(`🆕 New order: ${newOrder.clientName}`, 'success');
+                    }
                 }
             }
             
@@ -6568,19 +6574,24 @@ if (change.type === 'modified') {
         console.warn('⚠️ Modified order not found locally, adding it');
         // Add it as new if somehow missing
         const newOrder = {
-            orderId: orderData.orderId || change.doc.id,
-            date: Utils.convertDateFormat(customer.dates) || '',
+            orderId: orderId,
+            docId: docId, // CRITICAL: Always store docId
+            isMultiDay: orderData.isMultiDay || false,
+            startDate: orderData.startDate || null,
+            endDate: orderData.endDate || null,
+            dayWiseData: orderData.dayWiseData || [],
+            date: orderData.isMultiDay ? '' : (Utils.convertDateFormat(customer.dates) || ''),
             readyTime: customer.timeSlot || '',
             clientName: customer.name || '',
             contact: customer.phone || '',
             venue: customer.venue || '',
             eventType: orderData.functionType || customer.functionType || '',
-            transport: '',
-            driverName: '',
-            operator: '',
-            helper: '',
+            transport: orderData.transport || '',
+            driverName: orderData.driverName || '',
+            operator: orderData.operator || '',
+            helper: orderData.helper || '',
             status: orderData.status || 'Confirmed',
-            notes: '',
+            notes: orderData.notes || '',
             items: (orderData.items || []).map(item => ({
                 name: item.name || '',
                 quantity: item.qty || 0,
@@ -6605,8 +6616,14 @@ if (change.type === 'modified') {
                 }
             }
         });
+
+        // After processing all changes, update displays if this was the initial load
+        if (isFirstLoad) {
+            this.updateAllDisplays();
+            console.log(`✅ Initial load complete - ${this.data.orders.length} orders loaded from Firebase`);
+        }
     });
-    
+
     console.log('✅ Real-time listener active (SINGLE INSTANCE CONFIRMED)');
 },
 
