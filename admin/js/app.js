@@ -1,4 +1,3 @@
-ThemeManager.init();
 // ============ MAIN APP ============
 const OMS = {
     initialized: false,
