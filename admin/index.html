@@ -2408,6 +2408,23 @@ if (this.editingOrderId || this.editingDocId) {
     existingSnapshot = { empty: true };
 }
 
+        // Calculate total amount from items
+        const totalAmount = orderData.isMultiDay
+            ? (orderData.dayWiseData || []).reduce((sum, day) => {
+                const dayTotal = (day.functions || []).reduce((daySum, func) => {
+                    const funcTotal = (func.items || []).reduce((itemSum, item) => {
+                        return itemSum + ((item.price || 0) * (item.quantity || 0));
+                    }, 0);
+                    return daySum + funcTotal;
+                }, 0);
+                return sum + dayTotal;
+            }, 0)
+            : (orderData.items || []).reduce((sum, item) => {
+                return sum + ((item.price || 0) * (item.quantity || 0));
+            }, 0);
+
+        console.log('💰 Calculated total amount:', totalAmount);
+
         // Convert admin format to quotation format for Firestore
 const firestoreData = {
     orderId: finalOrderId,
@@ -2419,7 +2436,7 @@ const firestoreData = {
         name: orderData.clientName,
         phone: orderData.contact,
         venue: orderData.venue,
-        dates: orderData.isMultiDay 
+        dates: orderData.isMultiDay
             ? `${Utils.formatDate(orderData.startDate)} to ${Utils.formatDate(orderData.endDate)}`
             : this.convertToQuotationDateFormat(orderData.date),
         timeSlot: orderData.readyTime || '',
@@ -2433,6 +2450,7 @@ const firestoreData = {
         desc: item.remarks || '',
         price: item.price || 0
     })),
+    totalAmount: totalAmount,  // CRITICAL: Add totalAmount field
     clientName: orderData.clientName,
     contact: orderData.contact,
     venue: orderData.venue,
@@ -2476,7 +2494,8 @@ const completeOrderData = {
         isMultiDay: orderData.isMultiDay || false,
         startDate: orderData.startDate || null,
         endDate: orderData.endDate || null,
-        dayWiseData: orderData.dayWiseData || []
+        dayWiseData: orderData.dayWiseData || [],
+        totalAmount: totalAmount  // Include totalAmount in local data
 };
 
 const localIndex = this.data.orders.findIndex(o =>
@@ -2499,7 +2518,8 @@ if (localIndex !== -1) {
             isMultiDay: orderData.isMultiDay || false,
             startDate: orderData.startDate || null,
             endDate: orderData.endDate || null,
-            dayWiseData: orderData.dayWiseData || []
+            dayWiseData: orderData.dayWiseData || [],
+            totalAmount: totalAmount  // Include totalAmount in local data
         };
 
         const localIndex = this.data.orders.findIndex(o =>
@@ -2540,7 +2560,8 @@ const completeOrderData = {
         isMultiDay: orderData.isMultiDay || false,
         startDate: orderData.startDate || null,
         endDate: orderData.endDate || null,
-        dayWiseData: orderData.dayWiseData || []
+        dayWiseData: orderData.dayWiseData || [],
+        totalAmount: totalAmount  // Include totalAmount in local data
 };
 
 const localExists = this.data.orders.some(o =>
@@ -2549,6 +2570,7 @@ const localExists = this.data.orders.some(o =>
 );
 if (!localExists) {
     this.data.orders.push(completeOrderData);
+    console.log('✅ Order added to local array with totalAmount:', totalAmount);
 }
 
                 const displayId = finalOrderId || `[${status.toUpperCase()}]`;
@@ -6048,6 +6070,7 @@ async loadOrdersFromFirestore() {
 
             if (wasDeleted) {
                 console.warn(`⚠️ Skipping deleted order: ${orderId || docId} (found in deletedOrders list)`);
+                console.warn(`   Customer: ${customer.name}, Date: ${customer.dates}`);
                 skippedDeleted++;
                 return;
             }
@@ -6111,6 +6134,13 @@ async loadTrackingFromFirestore() {
     try {
         console.log('📊 Loading tracking data from Firestore...');
 
+        // Check if user is authenticated
+        if (!auth.currentUser) {
+            console.warn('⚠️ Not authenticated yet - skipping tracking data load');
+            this.data.trackingData = [];
+            return;
+        }
+
         // Load without orderBy to avoid index requirement
         // We'll sort in JavaScript instead
         const trackingSnapshot = await db.collection('tracking')
@@ -6134,10 +6164,23 @@ async loadTrackingFromFirestore() {
         this.data.trackingData.sort((a, b) => b.timestamp - a.timestamp);
 
         console.log(`✅ Loaded ${this.data.trackingData.length} tracking events from website`);
+        console.log(`📍 Sample data:`, this.data.trackingData.slice(0, 3));
 
     } catch (error) {
         console.error('❌ Error loading tracking data:', error);
-        console.log('⚠️ Make sure Firestore rules allow reading "tracking" collection');
+        console.error('Error details:', error.code, error.message);
+
+        // If permissions error, try reloading after a delay
+        if (error.code === 'permission-denied') {
+            console.log('🔄 Permissions denied - will retry after authentication completes');
+            setTimeout(() => {
+                if (auth.currentUser) {
+                    console.log('🔄 Retrying tracking data load...');
+                    this.loadTrackingFromFirestore();
+                }
+            }, 2000);
+        }
+
         this.data.trackingData = [];
     }
 },
