@@ -5438,41 +5438,47 @@ convertToQuotationDateFormat(dateStr) {
             renderAnalytics() {
     const container = document.getElementById('analytics');
     const trackingData = this.data.trackingData || [];
-    
-    // Calculate stats
+    const orders = this.data.orders || [];
+
+    // Website visitor analytics
     const pageViews = trackingData.filter(t => t.type === 'page_view').length;
     const cartActions = trackingData.filter(t => t.type === 'cart_add' || t.type === 'cart_remove').length;
     const uniqueSessions = [...new Set(trackingData.map(t => t.sessionId))].length;
-    
+
     // Get device breakdown
     const devices = {};
     trackingData.forEach(t => {
-        const device = t.userInfo?.device || 'unknown';
+        const device = t.userInfo?.device || 'Unknown';
         devices[device] = (devices[device] || 0) + 1;
     });
-    
+
     // Get location breakdown
     const locations = {};
     trackingData.forEach(t => {
         const city = t.userInfo?.city || 'Unknown';
         locations[city] = (locations[city] || 0) + 1;
     });
+
+    // Order-based analytics
+    const totalOrders = orders.length;
+    const confirmedOrders = orders.filter(o => o.status === 'Confirmed').length;
+    const completedOrders = orders.filter(o => o.status === 'Completed').length;
+    const cancelledOrders = orders.filter(o => o.status === 'Cancelled').length;
+
+    // Get event type breakdown
+    const eventTypes = {};
+    orders.forEach(o => {
+        const type = o.eventType || 'Other';
+        eventTypes[type] = (eventTypes[type] || 0) + 1;
+    });
     
     container.innerHTML = `
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">📈 Business Analytics</h2>
+                <h2 class="card-title">🌐 Website Visitor Analytics</h2>
             </div>
-            
+
             <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value">${this.data.orders.length}</div>
-                    <div class="stat-label">Total Orders</div>
-                </div>
-                <div class="stat-card success">
-                    <div class="stat-value">${this.data.customers.filter(c => c.totalOrders > 1).length}</div>
-                    <div class="stat-label">Repeat Customers</div>
-                </div>
                 <div class="stat-card info">
                     <div class="stat-value">${pageViews}</div>
                     <div class="stat-label">Page Views</div>
@@ -5481,36 +5487,45 @@ convertToQuotationDateFormat(dateStr) {
                     <div class="stat-value">${uniqueSessions}</div>
                     <div class="stat-label">Unique Visitors</div>
                 </div>
+                <div class="stat-card success">
+                    <div class="stat-value">${cartActions}</div>
+                    <div class="stat-label">Cart Actions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${trackingData.length}</div>
+                    <div class="stat-label">Total Events</div>
+                </div>
             </div>
         </div>
-        
+
         <div class="card">
             <h3 class="card-title">📱 Device Breakdown</h3>
             <div class="stats-grid">
-                ${Object.entries(devices).map(([device, count]) => `
+                ${Object.entries(devices).length > 0 ? Object.entries(devices).map(([device, count]) => `
                     <div class="stat-card">
                         <div class="stat-value">${count}</div>
-                        <div class="stat-label">${device.charAt(0).toUpperCase() + device.slice(1)}</div>
+                        <div class="stat-label">${device}</div>
                     </div>
-                `).join('')}
+                `).join('') : '<p style="text-align: center; color: var(--text-gray); padding: 2rem;">No device data yet</p>'}
             </div>
         </div>
-        
+
         <div class="card">
             <h3 class="card-title">📍 Visitor Locations</h3>
             <div class="stats-grid">
-                ${Object.entries(locations).slice(0, 6).map(([city, count]) => `
+                ${Object.entries(locations).length > 0 ? Object.entries(locations).slice(0, 8).map(([city, count]) => `
                     <div class="stat-card">
                         <div class="stat-value">${count}</div>
                         <div class="stat-label">${city}</div>
                     </div>
-                `).join('')}
+                `).join('') : '<p style="text-align: center; color: var(--text-gray); padding: 2rem;">No location data yet</p>'}
             </div>
         </div>
-        
+
         <div class="card">
-            <h3 class="card-title">🕐 Recent Activity</h3>
+            <h3 class="card-title">🕐 Recent Visitor Activity</h3>
             <div class="table-container">
+                ${trackingData.length > 0 ? `
                 <table class="table">
                     <thead>
                         <tr>
@@ -5521,24 +5536,84 @@ convertToQuotationDateFormat(dateStr) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${trackingData.slice(0, 10).map(t => {
-    const date = new Date(t.timestamp);
-    const formattedDate = date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB');
-    const formattedType = t.type.replace(/_/g, ' ').split(' ').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-    
-    return `
-        <tr>
-            <td>${formattedDate}</td>
-            <td><span class="status-badge">${formattedType}</span></td>
-            <td>${t.userInfo?.device || 'N/A'}</td>
-            <td>${t.userInfo?.city || 'N/A'}, ${t.userInfo?.country || 'N/A'}</td>
-        </tr>
-    `;
-}).join('')}
+                        ${trackingData.slice(0, 20).map(t => {
+                            const date = t.timestamp instanceof Date ? t.timestamp : new Date(t.timestamp);
+                            const formattedDate = date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                            const formattedType = (t.type || 'unknown').replace(/_/g, ' ').split(' ').map(word =>
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                            ).join(' ');
+
+                            return `
+                                <tr>
+                                    <td>${formattedDate}</td>
+                                    <td><span class="status-badge">${formattedType}</span></td>
+                                    <td>${t.userInfo?.device || 'N/A'}</td>
+                                    <td>${t.userInfo?.city || 'N/A'}${t.userInfo?.country ? ', ' + t.userInfo.country : ''}</td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
+                ` : '<p style="text-align: center; color: var(--text-gray); padding: 2rem;">No visitor tracking data yet. Visitors will appear here when they use your quotation website.</p>'}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📈 Order Management Analytics</h2>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">${totalOrders}</div>
+                    <div class="stat-label">Total Orders</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value">${confirmedOrders}</div>
+                    <div class="stat-label">Confirmed</div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-value">${completedOrders}</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-value">${cancelledOrders}</div>
+                    <div class="stat-label">Cancelled</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">🎉 Event Type Distribution</h3>
+            <div class="stats-grid">
+                ${Object.entries(eventTypes).length > 0 ? Object.entries(eventTypes).map(([type, count]) => `
+                    <div class="stat-card">
+                        <div class="stat-value">${count}</div>
+                        <div class="stat-label">${type}</div>
+                    </div>
+                `).join('') : '<p style="text-align: center; color: var(--text-gray); padding: 2rem;">No order data yet</p>'}
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">👥 Customer Insights</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">${this.data.customers.length}</div>
+                    <div class="stat-label">Total Customers</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value">${this.data.customers.filter(c => c.totalOrders > 1).length}</div>
+                    <div class="stat-label">Repeat Customers</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value">${this.data.customers.filter(c => c.totalOrders === 1).length}</div>
+                    <div class="stat-label">New Customers</div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-value">${this.data.customers.length > 0 ? Math.round(orders.length / this.data.customers.length * 10) / 10 : 0}</div>
+                    <div class="stat-label">Avg Orders/Customer</div>
+                </div>
             </div>
         </div>
     `;
@@ -6035,12 +6110,13 @@ async loadOrdersFromFirestore() {
 async loadTrackingFromFirestore() {
     try {
         console.log('📊 Loading tracking data from Firestore...');
-        
+
+        // Load without orderBy to avoid index requirement
+        // We'll sort in JavaScript instead
         const trackingSnapshot = await db.collection('tracking')
-            .orderBy('timestamp', 'desc')
-            .limit(100)
+            .limit(500)  // Get more data, will sort client-side
             .get();
-        
+
         this.data.trackingData = [];
         trackingSnapshot.forEach(doc => {
             const data = doc.data();
@@ -6048,16 +6124,20 @@ async loadTrackingFromFirestore() {
                 id: doc.id,
                 sessionId: data.sessionId,
                 type: data.type,
-                timestamp: data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : data.timestamp,
+                timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp),
                 url: data.url,
                 userInfo: data.userInfo || {}
             });
         });
-        
-        console.log(`✅ Loaded ${this.data.trackingData.length} tracking events`);
-        
+
+        // Sort by timestamp in JavaScript (newest first)
+        this.data.trackingData.sort((a, b) => b.timestamp - a.timestamp);
+
+        console.log(`✅ Loaded ${this.data.trackingData.length} tracking events from website`);
+
     } catch (error) {
         console.error('❌ Error loading tracking data:', error);
+        console.log('⚠️ Make sure Firestore rules allow reading "tracking" collection');
         this.data.trackingData = [];
     }
 },
