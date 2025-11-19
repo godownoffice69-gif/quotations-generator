@@ -3752,7 +3752,7 @@ convertToQuotationDateFormat(dateStr) {
 
                 const toast = Utils.elem('div', {
                     class: `toast show ${type === 'error' ? 'error' : ''} ${type === 'warning' ? 'warning' : ''}`,
-                    style: `top: ${topOffset}px;`
+                    style: { top: `${topOffset}px` }
                 }, [
                     Utils.elem('div', {}, [message]),
                     actions.length > 0 ? Utils.elem('div', { class: 'toast-actions' },
