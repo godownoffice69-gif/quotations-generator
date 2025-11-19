@@ -53,6 +53,11 @@ service cloud.firestore {
       allow read: if isAuthenticated();  // Only authenticated users can read
     }
 
+    // Notifications collection - authenticated users can read/write
+    match /notifications/{notificationId} {
+      allow read, write: if isAuthenticated();
+    }
+
     // User profiles - users can read/write their own profile
     match /users/{userId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
