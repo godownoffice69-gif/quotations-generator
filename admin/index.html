@@ -937,8 +937,8 @@
                                 <input type="tel" id="contact" class="form-input" required>
                             </div>
                             <div class="form-group">
-                                <label class="form-label required">Venue</label>
-                                <input type="text" id="venue" class="form-input" required>
+                                <label class="form-label">Venue</label>
+                                <input type="text" id="venue" class="form-input">
                             </div>
                         </div>
 
@@ -2342,7 +2342,7 @@ async saveOrder() {
     const eventType = Utils.get('eventTypeSelect');
     const isMultiDay = eventType === 'multi';
     
-    let requiredFields = ['clientName', 'contact', 'venue', 'orderStatus'];
+    let requiredFields = ['clientName', 'contact', 'orderStatus'];
 
     if (isMultiDay) {
         requiredFields.push('startDate', 'endDate');
@@ -2911,7 +2911,7 @@ convertToQuotationDateFormat(dateStr) {
                 this.showToast('Last order duplicated');
             },
             previewOrder() {
-                const errors = Utils.validateRequired(['clientName', 'contact', 'venue']);
+                const errors = Utils.validateRequired(['clientName', 'contact']);
                 if (errors.length > 0) {
                 this.showToast('Fill required fields first', 'error');
                 return;
