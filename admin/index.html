@@ -422,7 +422,7 @@
             box-shadow: var(--shadow-lg);
             z-index: 3000;
             transform: translateX(400px);
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 1rem;
@@ -432,6 +432,7 @@
 
         .toast.show { transform: translateX(0); }
         .toast.error { border-left-color: var(--danger); }
+        .toast.warning { border-left-color: #ff9800; }
         .toast-actions { display: flex; gap: 0.5rem; }
         .toast-btn { background: none; border: none; color: var(--primary); cursor: pointer; font-weight: 500; }
 
@@ -3740,19 +3741,46 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             showToast(message, type = 'success', actions = []) {
-                const toast = Utils.elem('div', { class: `toast show ${type === 'error' ? 'error' : ''}` }, [
+                // Calculate position based on existing toasts
+                const existingToasts = document.querySelectorAll('.toast');
+                let topOffset = 20; // Initial top position
+
+                existingToasts.forEach(existingToast => {
+                    const rect = existingToast.getBoundingClientRect();
+                    topOffset = Math.max(topOffset, rect.bottom - document.documentElement.scrollTop + 10);
+                });
+
+                const toast = Utils.elem('div', {
+                    class: `toast show ${type === 'error' ? 'error' : ''} ${type === 'warning' ? 'warning' : ''}`,
+                    style: `top: ${topOffset}px;`
+                }, [
                     Utils.elem('div', {}, [message]),
-                    actions.length > 0 ? Utils.elem('div', { class: 'toast-actions' }, 
+                    actions.length > 0 ? Utils.elem('div', { class: 'toast-actions' },
                         actions.map(a => Utils.elem('button', { class: 'toast-btn', onclick: a.handler }, [a.label]))
                     ) : null
                 ].filter(Boolean));
-                
+
                 document.body.appendChild(toast);
-                
+
                 setTimeout(() => {
                     toast.classList.remove('show');
-                    setTimeout(() => toast.remove(), 300);
+                    setTimeout(() => {
+                        toast.remove();
+                        // Reposition remaining toasts
+                        this.repositionToasts();
+                    }, 300);
                 }, 3000);
+            },
+
+            repositionToasts() {
+                const toasts = document.querySelectorAll('.toast');
+                let topOffset = 20;
+
+                toasts.forEach(toast => {
+                    toast.style.top = `${topOffset}px`;
+                    const rect = toast.getBoundingClientRect();
+                    topOffset = rect.bottom - document.documentElement.scrollTop + 10;
+                });
             },
 
             showLoading(message) {
