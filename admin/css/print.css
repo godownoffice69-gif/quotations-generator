@@ -1,0 +1,25 @@
+/* ============================================
+   PRINT TEMPLATE STYLES
+   ============================================ */
+
+/* Print Template - Force Light Theme Colors */
+.print-template {
+    display: none;
+    width: 2480px;
+    min-height: 3508px;
+    background: white !important;
+    color: #000000 !important;
+    padding: 354px 118px 118px 590px;
+    font-family: 'Noto Sans Gujarati', Arial, sans-serif;
+    font-size: 32px;
+    line-height: 1.4;
+    /* Force light theme - prevent dark theme inheritance */
+    --text-dark: #1f2937 !important;
+    --text-gray: #6b7280 !important;
+    --border: #e5e7eb !important;
+}
+
+/* Ensure all text within print template is black */
+.print-template * {
+    color: inherit;
+}

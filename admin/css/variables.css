@@ -1,0 +1,48 @@
+/* ============================================
+   CSS VARIABLES & THEME DEFINITIONS
+   ============================================ */
+
+:root {
+    --primary: #667eea;
+    --secondary: #764ba2;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --light: #f8fafc;
+    --white: #ffffff;
+    --text-dark: #1f2937;
+    --text-gray: #6b7280;
+    --border: #e5e7eb;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+    --radius: 8px;
+    --transition: all 0.3s ease;
+}
+
+/* Dark Theme Variables */
+[data-theme="dark"] {
+    --light: #1a1d23;
+    --white: #242832;
+    --text-dark: #e5e7eb;
+    --text-gray: #9ca3af;
+    --border: #374151;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.3);
+    --bg-body: #0f1117;
+    --bg-card: #1a1d23;
+    --bg-hover: #2a2d35;
+    --bg-input: #2a2d35;
+    --table-header-bg: #1f2329;
+    --modal-backdrop: rgba(0, 0, 0, 0.8);
+}
+
+/* Light Theme specific variables */
+[data-theme="light"], :root {
+    --bg-body: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-hover: rgba(102, 126, 234, 0.05);
+    --bg-input: #ffffff;
+    --table-header-bg: #f8f9fa;
+    --modal-backdrop: rgba(0, 0, 0, 0.5);
+}
