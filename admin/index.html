@@ -6170,15 +6170,10 @@ async loadTrackingFromFirestore() {
         console.error('❌ Error loading tracking data:', error);
         console.error('Error details:', error.code, error.message);
 
-        // If permissions error, try reloading after a delay
+        // If permissions error, log it but don't retry
+        // (retrying won't help if Firestore rules don't allow access)
         if (error.code === 'permission-denied') {
-            console.log('🔄 Permissions denied - will retry after authentication completes');
-            setTimeout(() => {
-                if (auth.currentUser) {
-                    console.log('🔄 Retrying tracking data load...');
-                    this.loadTrackingFromFirestore();
-                }
-            }, 2000);
+            console.warn('⚠️ Insufficient permissions to access tracking data. Please check Firestore security rules.');
         }
 
         this.data.trackingData = [];
