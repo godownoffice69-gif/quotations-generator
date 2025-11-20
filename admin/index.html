@@ -4093,11 +4093,11 @@ convertToQuotationDateFormat(dateStr) {
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; font-size: ${fontSize}px; margin-bottom: 20px; color: #000000;">
                             <div>
                                 ${order.isMultiDay ? `
-                                    <strong style="color: #000000;">Start Date:</strong> <span style="background: #ffeb3b; padding: 2px 4px;">${Utils.formatDate(order.startDate) || 'N/A'}</span><br>
-                                    <strong style="color: #000000;">End Date:</strong> <span style="background: #ffeb3b; padding: 2px 4px;">${Utils.formatDate(order.endDate) || 'N/A'}</span><br>
+                                    <strong style="color: #000000;">Start Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.startDate) || 'N/A'}</span><br>
+                                    <strong style="color: #000000;">End Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.endDate) || 'N/A'}</span><br>
                                 ` : `
-                                    <strong style="color: #000000;">Date:</strong> <span style="background: #ffeb3b; padding: 2px 4px;">${Utils.formatDate(order.date) || 'N/A'}</span><br>
-                                    <strong style="color: #000000;">Time:</strong> <span style="background: #ffeb3b; padding: 2px 4px;">${order.readyTime || '-'}</span><br>
+                                    <strong style="color: #000000;">Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.date) || 'N/A'}</span><br>
+                                    <strong style="color: #000000;">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${order.readyTime || '-'}</span><br>
                                 `}
                                 <strong style="color: #000000;">Client:</strong> ${order.clientName || '-'}<br>
                                 <strong style="color: #000000;">Contact:</strong> ${order.contact || '-'}<br>
@@ -4122,14 +4122,14 @@ convertToQuotationDateFormat(dateStr) {
                                 '<h3 style="color: ' + colors.headerText + '; background: ' + colors.headerBg + '; padding: 15px; text-align: center;">Day-wise Details</h3>' +
                                 order.dayWiseData.map((day, idx) =>
                                     '<div style="margin-top: 25px; border: 2px solid ' + colors.tableBorder + '; padding: 15px; background: rgba(102, 126, 234, 0.05);">' +
-                                        '<h4 style="color: ' + orderIdBg + '; margin-bottom: 15px;">Day ' + day.dayNumber + ' - <span style="background: #ffeb3b; padding: 2px 4px;">' + Utils.formatDate(day.date) + '</span></h4>' +
+                                        '<h4 style="color: ' + orderIdBg + '; margin-bottom: 15px;">Day ' + day.dayNumber + ' - <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + Utils.formatDate(day.date) + '</span></h4>' +
                                         (day.functions && day.functions.length > 0 ?
                                             day.functions.map((func, funcIdx) =>
                                                 '<div style="background: white; padding: 15px; border: 1px solid ' + colors.tableBorder + '; border-radius: 6px; margin-top: ' + (funcIdx > 0 ? '15px' : '0') + '; color: #000000;">' +
                                                     '<h5 style="color: ' + functionColor + '; margin-bottom: 10px; font-size: ' + (fontSize - 2) + 'px;">Function ' + (funcIdx + 1) + '</h5>' +
                                                     '<div style="font-size: ' + fontSize + 'px; margin-bottom: 10px; color: #000000;">' +
                                                         '<strong style="color: #000000;">Type:</strong> ' + (func.functionType || '-') + '<br>' +
-                                                        '<strong style="color: #000000;">Time:</strong> <span style="background: #ffeb3b; padding: 2px 4px;">' + (func.timeSlot || '-') + '</span><br>' +
+                                                        '<strong style="color: #000000;">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + (func.timeSlot || '-') + '</span><br>' +
                                                         '<strong style="color: #000000;">Driver:</strong> ' + (func.driver || '-') + '<br>' +
                                                         '<strong style="color: #000000;">Operator:</strong> ' + (func.operator || '-') + '<br>' +
                                                         '<strong style="color: #000000;">Helper:</strong> ' + (func.helper || '-') + '<br>' +
