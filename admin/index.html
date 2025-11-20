@@ -638,7 +638,7 @@
             min-height: 3508px;
             background: white !important;
             color: #000000 !important;
-            padding: 80px 80px 80px 120px;
+            padding: 80px 80px 80px 590px;
             font-family: 'Noto Sans Gujarati', Arial, sans-serif;
             font-size: 32px;
             line-height: 1.4;
@@ -3042,6 +3042,15 @@ convertToQuotationDateFormat(dateStr) {
                     // Get paper dimensions based on settings
                     const paperDimensions = this.getPaperDimensions();
 
+                    // Apply left margin from settings (convert mm to pixels: 1mm = 11.811px at 300 DPI)
+                    const leftMarginMm = this.data.settings.tableSettings?.leftMargin || 50;
+                    const leftMarginPx = Math.round(leftMarginMm * 11.811);
+                    template.style.paddingLeft = leftMarginPx + 'px';
+
+                    // Set template width to match paper dimensions
+                    template.style.width = paperDimensions.width + 'px';
+                    template.style.paddingRight = '80px';
+
                     template.innerHTML = this.buildOrderHTML(order, fontSize, colors);
                     template.style.display = 'block';
 
@@ -3096,6 +3105,15 @@ convertToQuotationDateFormat(dateStr) {
 
                     // Get paper dimensions based on settings
                     const paperDimensions = this.getPaperDimensions();
+
+                    // Apply left margin from settings (convert mm to pixels: 1mm = 11.811px at 300 DPI)
+                    const leftMarginMm = this.data.settings.tableSettings?.leftMargin || 50;
+                    const leftMarginPx = Math.round(leftMarginMm * 11.811);
+                    template.style.paddingLeft = leftMarginPx + 'px';
+
+                    // Set template width to match paper dimensions
+                    template.style.width = paperDimensions.width + 'px';
+                    template.style.paddingRight = '80px';
 
                     // Smart quality adjustment for multi-order images to prevent memory issues
                     let qualityScale = this.data.settings.imageQuality || 2;
