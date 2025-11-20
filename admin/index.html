@@ -985,10 +985,9 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Helper</label>
-                                <select id="helper" class="form-select">
-                                    <option value="">Select Helper</option>
-                                </select>
+                                <label class="form-label">Helper(s)</label>
+                                <input type="text" id="helper" class="form-input" placeholder="Enter helper name(s), separate multiple with commas">
+                                <small style="color: var(--text-gray);">You can add multiple helpers separated by commas (e.g., John, Mary, David)</small>
                             </div>
                         </div>
 
@@ -1185,6 +1184,10 @@ const OMS = {
                     language: 'en',
                     defaultOrderStatus: 'Confirmed',
                     lowStockThreshold: 5,
+                    paperFormat: 'A4',
+                    paperOrientation: 'portrait',
+                    imageQuality: 2,
+                    functionColor: '#667eea',
                     tableSettings: {
                         columnWidthSr: 8,
                         columnWidthItem: 40,
@@ -1421,11 +1424,11 @@ const OMS = {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Helper</label>
-                        <select id="${functionId}Helper" class="form-select"
+                        <label class="form-label">Helper(s)</label>
+                        <input type="text" id="${functionId}Helper" class="form-input"
+                               placeholder="Enter helper name(s), separate multiple with commas"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', this.value)">
-                            <option value="">Select Helper</option>
-                        </select>
+                        <small style="color: var(--text-gray);">You can add multiple helpers separated by commas</small>
                     </div>
                 </div>
                 
@@ -3030,25 +3033,28 @@ convertToQuotationDateFormat(dateStr) {
             // ============ IMAGE GENERATION ============
             async generateSingleOrderImage(order) {
                 const loading = this.showLoading('Generating image...');
-                
+
                 try {
                     const template = document.getElementById('printTemplate');
                     const colors = this.data.settings.printColors;
                     const fontSize = this.data.settings.printFontSize || 32;
-                    
+
+                    // Get paper dimensions based on settings
+                    const paperDimensions = this.getPaperDimensions();
+
                     template.innerHTML = this.buildOrderHTML(order, fontSize, colors);
                     template.style.display = 'block';
-                    
+
                     await new Promise(r => setTimeout(r, 1000));
-                    
+
                     const canvas = await html2canvas(template, {
-                        scale: 2,
+                        scale: this.data.settings.imageQuality || 2,
                         backgroundColor: '#ffffff',
-                        width: 2480
+                        width: paperDimensions.width
                     });
-                    
+
                     template.style.display = 'none';
-                    
+
                     canvas.toBlob(blob => {
                         const url = URL.createObjectURL(blob);
                         const link = document.createElement('a');
@@ -3056,7 +3062,7 @@ convertToQuotationDateFormat(dateStr) {
                         link.download = `Order_${order.orderId}.png`;
                         link.click();
                         URL.revokeObjectURL(url);
-                        
+
                         this.hideLoading(loading);
                         this.showToast('Image downloaded!');
                     });
@@ -3068,11 +3074,14 @@ convertToQuotationDateFormat(dateStr) {
 
             async generateMultiOrderImage(orders, date) {
                 const loading = this.showLoading('Generating multi-order image...');
-                
+
                 try {
                     const template = document.getElementById('printTemplate');
                     const colors = this.data.settings.printColors;
-                    
+
+                    // Get paper dimensions based on settings
+                    const paperDimensions = this.getPaperDimensions();
+
                     let html = `
                         <div style="text-align: center; margin-bottom: 40px;">
                             <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px;">
@@ -3080,27 +3089,27 @@ convertToQuotationDateFormat(dateStr) {
                             </h1>
                         </div>
                     `;
-                    
+
                     orders.forEach((order, i) => {
                         html += this.buildOrderHTML(order, 28, colors, true);
                         if (i < orders.length - 1) {
                             html += '<div style="page-break-before: always;"></div>';
                         }
                     });
-                    
+
                     template.innerHTML = html;
                     template.style.display = 'block';
-                    
+
                     await new Promise(r => setTimeout(r, 2000));
-                    
+
                     const canvas = await html2canvas(template, {
-                        scale: 2,
+                        scale: this.data.settings.imageQuality || 2,
                         backgroundColor: '#ffffff',
-                        width: 2480
+                        width: paperDimensions.width
                     });
-                    
+
                     template.style.display = 'none';
-                    
+
                     canvas.toBlob(blob => {
                         const url = URL.createObjectURL(blob);
                         const link = document.createElement('a');
@@ -3108,7 +3117,7 @@ convertToQuotationDateFormat(dateStr) {
                         link.download = `Orders_${date}.png`;
                         link.click();
                         URL.revokeObjectURL(url);
-                        
+
                         this.hideLoading(loading);
                         this.showToast(`${orders.length} orders downloaded!`);
                     });
@@ -3118,6 +3127,34 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            // Get paper dimensions based on format and orientation
+            getPaperDimensions() {
+                const format = this.data.settings.paperFormat || 'A4';
+                const orientation = this.data.settings.paperOrientation || 'portrait';
+
+                // Paper dimensions in pixels (at 300 DPI)
+                const formats = {
+                    'A4': { width: 2480, height: 3508 },
+                    'Legal': { width: 2550, height: 4200 },
+                    'Letter': { width: 2550, height: 3300 },
+                    'A3': { width: 3508, height: 4960 },
+                    'A5': { width: 1748, height: 2480 },
+                    'Tabloid': { width: 3300, height: 5100 }
+                };
+
+                let dimensions = formats[format] || formats['A4'];
+
+                // Swap dimensions for landscape
+                if (orientation === 'landscape') {
+                    return {
+                        width: dimensions.height,
+                        height: dimensions.width
+                    };
+                }
+
+                return dimensions;
+            },
+
             buildOrderHTML(order, fontSize, colors, compact = false) {
                 console.log('🖼️ Building image for order:', order.orderId);
                 console.log('🖼️ isMultiDay:', order.isMultiDay);
@@ -3125,7 +3162,8 @@ convertToQuotationDateFormat(dateStr) {
                 const ts = this.data.settings.tableSettings;
                 const orderIdBg = colors.orderIdBg || '#667eea';
                 const orderIdText = colors.orderIdText || '#ffffff';
-                
+                const functionColor = this.data.settings.functionColor || '#667eea';
+
                 return `
                     <div style="margin-bottom: ${compact ? '40px' : '60px'}; ${compact ? 'border: 2px solid ' + colors.tableBorder + '; padding: 20px;' : ''}; color: #000000;">
                         ${!compact ? `<div style="text-align: center; margin-bottom: 40px;">
@@ -3177,7 +3215,7 @@ convertToQuotationDateFormat(dateStr) {
                                         (day.functions && day.functions.length > 0 ?
                                             day.functions.map((func, funcIdx) =>
                                                 '<div style="background: white; padding: 15px; border: 1px solid ' + colors.tableBorder + '; border-radius: 6px; margin-top: ' + (funcIdx > 0 ? '15px' : '0') + '; color: #000000;">' +
-                                                    '<h5 style="color: ' + orderIdBg + '; margin-bottom: 10px; font-size: ' + (fontSize - 2) + 'px;">Function ' + (funcIdx + 1) + '</h5>' +
+                                                    '<h5 style="color: ' + functionColor + '; margin-bottom: 10px; font-size: ' + (fontSize - 2) + 'px;">Function ' + (funcIdx + 1) + '</h5>' +
                                                     '<div style="font-size: ' + fontSize + 'px; margin-bottom: 10px; color: #000000;">' +
                                                         '<strong style="color: #000000;">Type:</strong> ' + (func.functionType || '-') + '<br>' +
                                                         '<strong style="color: #000000;">Time:</strong> ' + (func.timeSlot || '-') + '<br>' +
@@ -5136,13 +5174,7 @@ convertToQuotationDateFormat(dateStr) {
                         operators.map(o => `<option value="${o.name}" data-id="${o.id}">⚙️ ${o.name}</option>`).join('');
                 }
 
-                // Populate Helper dropdown
-                const helperSelect = document.getElementById('helper');
-                if (helperSelect) {
-                    const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
-                    helperSelect.innerHTML = '<option value="">Select Helper</option>' +
-                        helpers.map(h => `<option value="${h.name}" data-id="${h.id}">🤝 ${h.name}</option>`).join('');
-                }
+                // Helper is now a text input field, no need to populate dropdown
             },
 
             populateFunctionTeamDropdowns(dayIndex, functionIndex) {
@@ -5168,14 +5200,7 @@ convertToQuotationDateFormat(dateStr) {
                         operators.map(o => `<option value="${o.name}" data-id="${o.id}" ${o.name === currentValue ? 'selected' : ''}>⚙️ ${o.name}</option>`).join('');
                 }
 
-                // Populate Helper dropdown for this function
-                const helperSelect = document.getElementById(`${functionId}Helper`);
-                if (helperSelect) {
-                    const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
-                    const currentValue = helperSelect.value;
-                    helperSelect.innerHTML = '<option value="">Select Helper</option>' +
-                        helpers.map(h => `<option value="${h.name}" data-id="${h.id}" ${h.name === currentValue ? 'selected' : ''}>🤝 ${h.name}</option>`).join('');
-                }
+                // Helper is now a text input field, no need to populate dropdown
             },
 
             notifyAllocatedTeam() {
@@ -5752,11 +5777,52 @@ convertToQuotationDateFormat(dateStr) {
 
                         <div class="card">
                             <h3>🖨️ Print Settings</h3>
-                            <div class="form-group">
-                                <label class="form-label">Default Font Size: <span id="fontSizeValue">${s.printFontSize}px</span></label>
-                                <input type="range" id="printFontSize" class="form-input" min="16" max="80" value="${s.printFontSize}" 
-                                       oninput="document.getElementById('fontSizeValue').textContent = this.value + 'px'">
-                                <small style="color: var(--text-gray);">Note: Multi-order images use smart auto-sizing</small>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Default Font Size: <span id="fontSizeValue">${s.printFontSize}px</span></label>
+                                    <input type="range" id="printFontSize" class="form-input" min="16" max="80" value="${s.printFontSize}"
+                                           oninput="document.getElementById('fontSizeValue').textContent = this.value + 'px'">
+                                    <small style="color: var(--text-gray);">Note: Multi-order images use smart auto-sizing</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Paper Format</label>
+                                    <select id="paperFormat" class="form-select">
+                                        <option value="A4" ${s.paperFormat === 'A4' ? 'selected' : ''}>A4 (210 × 297 mm)</option>
+                                        <option value="Legal" ${s.paperFormat === 'Legal' ? 'selected' : ''}>Legal (216 × 356 mm)</option>
+                                        <option value="Letter" ${s.paperFormat === 'Letter' ? 'selected' : ''}>Letter (216 × 279 mm)</option>
+                                        <option value="A3" ${s.paperFormat === 'A3' ? 'selected' : ''}>A3 (297 × 420 mm)</option>
+                                        <option value="A5" ${s.paperFormat === 'A5' ? 'selected' : ''}>A5 (148 × 210 mm)</option>
+                                        <option value="Tabloid" ${s.paperFormat === 'Tabloid' ? 'selected' : ''}>Tabloid (279 × 432 mm)</option>
+                                    </select>
+                                    <small style="color: var(--text-gray);">Choose paper size for print layout</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Page Orientation</label>
+                                    <select id="paperOrientation" class="form-select">
+                                        <option value="portrait" ${s.paperOrientation === 'portrait' ? 'selected' : ''}>📄 Portrait</option>
+                                        <option value="landscape" ${s.paperOrientation === 'landscape' ? 'selected' : ''}>📃 Landscape</option>
+                                    </select>
+                                    <small style="color: var(--text-gray);">Portrait or landscape mode</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Image Quality</label>
+                                    <select id="imageQuality" class="form-select">
+                                        <option value="1" ${s.imageQuality === 1 ? 'selected' : ''}>Low (Faster)</option>
+                                        <option value="2" ${s.imageQuality === 2 ? 'selected' : ''}>Medium (Balanced)</option>
+                                        <option value="3" ${s.imageQuality === 3 ? 'selected' : ''}>High (Better Quality)</option>
+                                        <option value="4" ${s.imageQuality === 4 ? 'selected' : ''}>Ultra (Best Quality)</option>
+                                    </select>
+                                    <small style="color: var(--text-gray);">Higher quality = larger file size</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Function Slot Color</label>
+                                    <input type="color" id="functionColor" class="form-input" value="${s.functionColor || '#667eea'}" style="height: 50px;">
+                                    <small style="color: var(--text-gray);">Custom color for function slots</small>
+                                </div>
                             </div>
                         </div>
 
@@ -5842,6 +5908,12 @@ convertToQuotationDateFormat(dateStr) {
                 this.data.settings.language = Utils.get('appLanguage') || 'en';
                 this.data.settings.invoicePrefix = Utils.get('invoiceFormat') || 'FP';
 
+                // Save new print settings
+                this.data.settings.paperFormat = Utils.get('paperFormat') || 'A4';
+                this.data.settings.paperOrientation = Utils.get('paperOrientation') || 'portrait';
+                this.data.settings.imageQuality = parseInt(Utils.get('imageQuality')) || 2;
+                this.data.settings.functionColor = Utils.get('functionColor') || '#667eea';
+
                 // Save to localStorage
                 this.saveToStorage();
 
@@ -5867,7 +5939,7 @@ convertToQuotationDateFormat(dateStr) {
 
             resetSettings() {
                 if (!confirm('Reset all settings?')) return;
-                
+
                 this.data.settings = {
                     printFontSize: 32,
                     orderIdCounter: this.data.settings.orderIdCounter,
@@ -5875,6 +5947,10 @@ convertToQuotationDateFormat(dateStr) {
                     lowStockThreshold: 5,
                     language: 'en',
                     defaultOrderStatus: 'Confirmed',
+                    paperFormat: 'A4',
+                    paperOrientation: 'portrait',
+                    imageQuality: 2,
+                    functionColor: '#667eea',
                     tableSettings: {
                         columnWidthSr: 8,
                         columnWidthItem: 40,
@@ -5891,9 +5967,26 @@ convertToQuotationDateFormat(dateStr) {
                         tableHeaderText: '#333333',
                         tableBorder: '#333333',
                         notesBg: '#f9f9f9'
+                    },
+                    eventTypeColors: {
+                        'Wedding': '#e91e63',
+                        'Birthday': '#ff9800',
+                        'Corporate': '#2196f3',
+                        'Anniversary': '#9c27b0',
+                        'Festival': '#4caf50',
+                        'Party': '#ff5722',
+                        'Meeting': '#607d8b',
+                        'Conference': '#3f51b5',
+                        'default': '#667eea'
+                    },
+                    statusColors: {
+                        'pending': '#ff9800',
+                        'confirmed': '#2196f3',
+                        'completed': '#4caf50',
+                        'cancelled': '#f44336'
                     }
                 };
-                
+
                 this.saveToStorage();
                 this.renderSettings();
                 this.showToast('Settings reset!');
