@@ -2904,7 +2904,8 @@ async deleteItem(type, id) {
 
     const handlers = {
 order: async () => {
-    const index = this.data.orders.findIndex(o => o.orderId === id);
+    // FIXED: Search by docId first (always unique), then orderId as fallback
+    const index = this.data.orders.findIndex(o => o.docId === id || o.orderId === id);
     if (index === -1) {
         console.warn('⚠️ Order not found in local array:', id);
         return false;
@@ -2913,8 +2914,9 @@ order: async () => {
     try {
         console.log('🔄 Attempting to delete orderId:', id);
 
-        // Delete directly by document ID (since doc ID = orderId)
-        const docRef = db.collection('orders').doc(id);
+        // Use the actual docId from the found order
+        const orderToDelete = this.data.orders[index];
+        const docRef = db.collection('orders').doc(orderToDelete.docId || id);
         const docSnap = await docRef.get();
 
         if (docSnap.exists) {
@@ -3010,7 +3012,8 @@ async editItem(type, id) {
                     order: () => {
                         console.log('🔍 EditItem called with ID:', id);
                         console.log('📋 All order IDs in data.orders:', this.data.orders.map(o => o.orderId));
-                        const order = this.data.orders.find(o => o.orderId === id);
+                        // FIXED: Search by docId first (always unique), then orderId as fallback
+                        const order = this.data.orders.find(o => o.docId === id || o.orderId === id);
                         console.log('✅ Found order:', order ? order.orderId + ' - ' + order.clientName : 'NOT FOUND');
                         if (!order) return;
                         this.switchTab('orders');
@@ -3849,7 +3852,8 @@ convertToQuotationDateFormat(dateStr) {
             downloadOrderImage(orderId) {
                 console.log('🖨️ DownloadOrderImage called with ID:', orderId);
                 console.log('📋 All order IDs in data.orders:', this.data.orders.map(o => o.orderId));
-                const order = this.data.orders.find(o => o.orderId === orderId);
+                // FIXED: Search by docId first (always unique), then orderId as fallback
+                const order = this.data.orders.find(o => o.docId === orderId || o.orderId === orderId);
                 console.log('✅ Found order:', order ? order.orderId + ' - ' + order.clientName : 'NOT FOUND');
                 if (!order) return;
                 this.generateSingleOrderImage(order);
@@ -4772,9 +4776,9 @@ convertToQuotationDateFormat(dateStr) {
                     }},
                     { key: 'status', label: this.t('status'), render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span>` }
                 ], recentOrders, (row) => `
-                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.orderId || row.docId}">${this.t('view')}</button>
-                    <button class="btn btn-info btn-small" onclick="OMS.duplicateOrder('${row.orderId || row.docId}')">📋 ${this.t('duplicate')}</button>
-                    <button class="btn btn-success btn-small" data-action="print" data-id="${row.orderId}">${this.t('print')}</button>
+                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.docId || row.orderId}">${this.t('view')}</button>
+                    <button class="btn btn-info btn-small" onclick="OMS.duplicateOrder('${row.docId || row.orderId}')">📋 ${this.t('duplicate')}</button>
+                    <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
                 `);
 
                 // Top customer
@@ -6386,9 +6390,9 @@ convertToQuotationDateFormat(dateStr) {
                     }},
                     { key: 'status', label: this.t('status'), render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${this.t(o.status.toLowerCase())}</span>` }
                 ], this.data.orders, (row) => `
-                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.orderId}">${this.t('edit')}</button>
-                    <button class="btn btn-success btn-small" data-action="print" data-id="${row.orderId}">${this.t('print')}</button>
-                    <button class="btn btn-danger btn-small" data-action="delete" data-type="order" data-id="${row.orderId}">${this.t('delete')}</button>
+                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.docId || row.orderId}">${this.t('edit')}</button>
+                    <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
+                    <button class="btn btn-danger btn-small" data-action="delete" data-type="order" data-id="${row.docId || row.orderId}">${this.t('delete')}</button>
                 `);
             },
 
