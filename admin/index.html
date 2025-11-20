@@ -1795,10 +1795,84 @@ const OMS = {
                     }
                 });
 
+                // Update Orders tab static labels using data-translate attributes
+                this.updateOrdersTabLabels();
+
+                // Update action buttons
+                this.updateActionButtons();
+
                 // Re-render current tab to apply translations
                 if (this.currentTab) {
                     this.switchTab(this.currentTab);
                 }
+            },
+
+            updateOrdersTabLabels() {
+                // Helper function to update label text
+                const updateLabel = (selector, translationKey) => {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(el => {
+                        if (el) el.textContent = this.t(translationKey);
+                    });
+                };
+
+                // Update form labels by finding them with specific text patterns
+                // This will update all label elements in the orders tab
+                const labels = {
+                    'Client Name': 'clientName',
+                    'Contact': 'contact',
+                    'Venue': 'venue',
+                    'Ready Time': 'readyTime',
+                    'Order Status': 'orderStatus',
+                    'Notes': 'notes',
+                    'Driver Name': 'driverName',
+                    'Operator': 'operator',
+                    'Helper(s)': 'helpers',
+                    'Transport': 'transport'
+                };
+
+                document.querySelectorAll('.form-label').forEach(label => {
+                    const text = label.textContent.trim();
+                    Object.keys(labels).forEach(key => {
+                        if (text.includes(key)) {
+                            const translatedText = this.t(labels[key]);
+                            label.textContent = label.textContent.replace(key, translatedText);
+                        }
+                    });
+                });
+
+                // Update helper placeholder
+                const helperInput = document.getElementById('helper');
+                if (helperInput) {
+                    helperInput.placeholder = this.t('helperPlaceholder');
+                }
+
+                // Update client name placeholder
+                const clientInput = document.getElementById('clientName');
+                if (clientInput) {
+                    clientInput.placeholder = this.t('enterClientName');
+                }
+            },
+
+            updateActionButtons() {
+                // Update button texts by finding buttons with specific onclick handlers
+                const updateButton = (selector, translationKey) => {
+                    const btn = document.querySelector(selector);
+                    if (btn) btn.textContent = this.t(translationKey);
+                };
+
+                // Update form action buttons
+                const buttons = document.querySelectorAll('.btn');
+                buttons.forEach(btn => {
+                    const text = btn.textContent.trim();
+                    if (text.includes('Save Order')) btn.textContent = this.t('saveOrderShortcut');
+                    else if (text.includes('Duplicate Last')) btn.textContent = this.t('duplicateLast');
+                    else if (text.includes('Same Day')) btn.textContent = this.t('sameDay');
+                    else if (text.includes('Clear') && text.includes('Ctrl')) btn.textContent = this.t('clearFormShortcut');
+                    else if (text.includes('Preview')) btn.textContent = `👁️ ${this.t('preview')}`;
+                    else if (text.includes('Notify')) btn.textContent = this.t('notifyTeam');
+                    else if (text.includes('Send Manager')) btn.textContent = this.t('sendReport');
+                });
             },
 
             // Helper function to get translations
@@ -6297,94 +6371,94 @@ convertToQuotationDateFormat(dateStr) {
                 const s = this.data.settings;
                 const ts = s.tableSettings;
                 const colors = s.printColors;
-                
+
                 container.innerHTML = `
                     <div class="card">
                         <div class="card-header">
-                            <h2 class="card-title">⚙️ System Settings</h2>
+                            <h2 class="card-title">${this.t('systemSettings')}</h2>
                         </div>
-                        
+
                         <div class="card">
-                            <h3>📋 Table Layout Settings</h3>
+                            <h3>${this.t('tableLayoutSettings')}</h3>
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
                                 <div class="form-group">
-                                    <label class="form-label">Sr.No Column Width: <span id="srWidthValue">${ts.columnWidthSr}%</span></label>
-                                    <input type="range" id="columnWidthSr" class="form-input" min="5" max="25" value="${ts.columnWidthSr}" 
+                                    <label class="form-label">${this.t('srColumnWidth')}: <span id="srWidthValue">${ts.columnWidthSr}%</span></label>
+                                    <input type="range" id="columnWidthSr" class="form-input" min="5" max="25" value="${ts.columnWidthSr}"
                                            oninput="document.getElementById('srWidthValue').textContent = this.value + '%'">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Item Name Width: <span id="itemWidthValue">${ts.columnWidthItem}%</span></label>
-                                    <input type="range" id="columnWidthItem" class="form-input" min="15" max="60" value="${ts.columnWidthItem}" 
+                                    <label class="form-label">${this.t('itemColumnWidth')}: <span id="itemWidthValue">${ts.columnWidthItem}%</span></label>
+                                    <input type="range" id="columnWidthItem" class="form-input" min="15" max="60" value="${ts.columnWidthItem}"
                                            oninput="document.getElementById('itemWidthValue').textContent = this.value + '%'">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Quantity Width: <span id="qtyWidthValue">${ts.columnWidthQty}%</span></label>
-                                    <input type="range" id="columnWidthQty" class="form-input" min="5" max="30" value="${ts.columnWidthQty}" 
+                                    <label class="form-label">${this.t('qtyColumnWidth')}: <span id="qtyWidthValue">${ts.columnWidthQty}%</span></label>
+                                    <input type="range" id="columnWidthQty" class="form-input" min="5" max="30" value="${ts.columnWidthQty}"
                                            oninput="document.getElementById('qtyWidthValue').textContent = this.value + '%'">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Remarks Width: <span id="remarksWidthValue">${ts.columnWidthRemarks}%</span></label>
-                                    <input type="range" id="columnWidthRemarks" class="form-input" min="15" max="60" value="${ts.columnWidthRemarks}" 
+                                    <label class="form-label">${this.t('remarksColumnWidth')}: <span id="remarksWidthValue">${ts.columnWidthRemarks}%</span></label>
+                                    <input type="range" id="columnWidthRemarks" class="form-input" min="15" max="60" value="${ts.columnWidthRemarks}"
                                            oninput="document.getElementById('remarksWidthValue').textContent = this.value + '%'">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Left Margin (filing): <span id="leftMarginValue">${ts.leftMargin}mm</span></label>
-                                    <input type="range" id="leftMargin" class="form-input" min="30" max="100" value="${ts.leftMargin}" 
+                                    <label class="form-label">${this.t('leftMarginFiling')}: <span id="leftMarginValue">${ts.leftMargin}mm</span></label>
+                                    <input type="range" id="leftMargin" class="form-input" min="30" max="100" value="${ts.leftMargin}"
                                            oninput="document.getElementById('leftMarginValue').textContent = this.value + 'mm'">
                                 </div>
                             </div>
                         </div>
 
                         <div class="card">
-                            <h3>🎨 Color Customization</h3>
+                            <h3>${this.t('colorCustomization')}</h3>
                             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
                                 <div class="form-group">
-                                    <label class="form-label">Header Background</label>
+                                    <label class="form-label">${this.t('headerBackground')}</label>
                                     <input type="color" id="printHeaderBg" class="form-input" value="${colors.headerBg}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Header Text</label>
+                                    <label class="form-label">${this.t('headerText')}</label>
                                     <input type="color" id="printHeaderText" class="form-input" value="${colors.headerText}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Order ID Background</label>
+                                    <label class="form-label">${this.t('orderIdBackground')}</label>
                                     <input type="color" id="printOrderIdBg" class="form-input" value="${colors.orderIdBg || '#667eea'}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Order ID Text</label>
+                                    <label class="form-label">${this.t('orderIdText')}</label>
                                     <input type="color" id="printOrderIdText" class="form-input" value="${colors.orderIdText || '#ffffff'}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Table Header Background</label>
+                                    <label class="form-label">${this.t('tableHeaderBackground')}</label>
                                     <input type="color" id="printTableHeaderBg" class="form-input" value="${colors.tableHeaderBg}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Table Header Text</label>
+                                    <label class="form-label">${this.t('tableHeaderText')}</label>
                                     <input type="color" id="printTableHeaderText" class="form-input" value="${colors.tableHeaderText}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Table Border</label>
+                                    <label class="form-label">${this.t('tableBorder')}</label>
                                     <input type="color" id="printTableBorder" class="form-input" value="${colors.tableBorder}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Notes Background</label>
+                                    <label class="form-label">${this.t('notesBackground')}</label>
                                     <input type="color" id="printNotesBg" class="form-input" value="${colors.notesBg}" style="height: 50px;">
                                 </div>
                             </div>
                         </div>
 
                         <div class="card">
-                            <h3>🖨️ Print Settings</h3>
+                            <h3>${this.t('printSettings')}</h3>
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
                                 <div class="form-group">
-                                    <label class="form-label">Default Font Size: <span id="fontSizeValue">${s.printFontSize}px</span></label>
+                                    <label class="form-label">${this.t('fontSize')}: <span id="fontSizeValue">${s.printFontSize}px</span></label>
                                     <input type="range" id="printFontSize" class="form-input" min="16" max="80" value="${s.printFontSize}"
                                            oninput="document.getElementById('fontSizeValue').textContent = this.value + 'px'">
-                                    <small style="color: var(--text-gray);">Note: Multi-order images use smart auto-sizing</small>
+                                    <small style="color: var(--text-gray);">${this.t('multiOrderNote')}</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Paper Format</label>
+                                    <label class="form-label">${this.t('paperFormat')}</label>
                                     <select id="paperFormat" class="form-select">
                                         <option value="A4" ${s.paperFormat === 'A4' ? 'selected' : ''}>A4 (210 × 297 mm)</option>
                                         <option value="Legal" ${s.paperFormat === 'Legal' ? 'selected' : ''}>Legal (216 × 356 mm)</option>
@@ -6393,63 +6467,63 @@ convertToQuotationDateFormat(dateStr) {
                                         <option value="A5" ${s.paperFormat === 'A5' ? 'selected' : ''}>A5 (148 × 210 mm)</option>
                                         <option value="Tabloid" ${s.paperFormat === 'Tabloid' ? 'selected' : ''}>Tabloid (279 × 432 mm)</option>
                                     </select>
-                                    <small style="color: var(--text-gray);">Choose paper size for print layout</small>
+                                    <small style="color: var(--text-gray);">${this.t('chooseFormat')}</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Page Orientation</label>
+                                    <label class="form-label">${this.t('pageOrientation')}</label>
                                     <select id="paperOrientation" class="form-select">
-                                        <option value="portrait" ${s.paperOrientation === 'portrait' ? 'selected' : ''}>📄 Portrait</option>
-                                        <option value="landscape" ${s.paperOrientation === 'landscape' ? 'selected' : ''}>📃 Landscape</option>
+                                        <option value="portrait" ${s.paperOrientation === 'portrait' ? 'selected' : ''}>${this.t('portrait')}</option>
+                                        <option value="landscape" ${s.paperOrientation === 'landscape' ? 'selected' : ''}>${this.t('landscape')}</option>
                                     </select>
-                                    <small style="color: var(--text-gray);">Portrait or landscape mode</small>
+                                    <small style="color: var(--text-gray);">${this.t('portraitOrLandscape')}</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Image Quality</label>
+                                    <label class="form-label">${this.t('imageQuality')}</label>
                                     <select id="imageQuality" class="form-select">
-                                        <option value="1" ${s.imageQuality === 1 ? 'selected' : ''}>Low (Faster)</option>
-                                        <option value="2" ${s.imageQuality === 2 ? 'selected' : ''}>Medium (Balanced)</option>
-                                        <option value="3" ${s.imageQuality === 3 ? 'selected' : ''}>High (Better Quality)</option>
-                                        <option value="4" ${s.imageQuality === 4 ? 'selected' : ''}>Ultra (Best Quality)</option>
+                                        <option value="1" ${s.imageQuality === 1 ? 'selected' : ''}>${this.t('low')} (${this.t('faster')})</option>
+                                        <option value="2" ${s.imageQuality === 2 ? 'selected' : ''}>${this.t('medium')} (${this.t('balanced')})</option>
+                                        <option value="3" ${s.imageQuality === 3 ? 'selected' : ''}>${this.t('high')} (${this.t('betterQuality')})</option>
+                                        <option value="4" ${s.imageQuality === 4 ? 'selected' : ''}>${this.t('ultra')} (${this.t('bestQuality')})</option>
                                     </select>
-                                    <small style="color: var(--text-gray);">Higher quality = larger file size</small>
+                                    <small style="color: var(--text-gray);">${this.t('higherQualityNote')}</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Function Slot Color</label>
+                                    <label class="form-label">${this.t('functionColor')}</label>
                                     <input type="color" id="functionColor" class="form-input" value="${s.functionColor || '#667eea'}" style="height: 50px;">
-                                    <small style="color: var(--text-gray);">Custom color for function slots</small>
+                                    <small style="color: var(--text-gray);">${this.t('customColorNote')}</small>
                                 </div>
                             </div>
                         </div>
 
                         <div class="card">
-                            <h3>🔧 System Preferences</h3>
+                            <h3>${this.t('systemPreferences')}</h3>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Default Order Status</label>
+                                    <label class="form-label">${this.t('defaultOrderStatus')}</label>
                                     <select id="defaultOrderStatus" class="form-select">
-                                        <option value="Confirmed" ${s.defaultOrderStatus === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
-                                        <option value="Completed" ${s.defaultOrderStatus === 'Completed' ? 'selected' : ''}>Completed</option>
-                                        <option value="Cancelled" ${s.defaultOrderStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                                        <option value="Confirmed" ${s.defaultOrderStatus === 'Confirmed' ? 'selected' : ''}>${this.t('confirmed')}</option>
+                                        <option value="Completed" ${s.defaultOrderStatus === 'Completed' ? 'selected' : ''}>${this.t('completed')}</option>
+                                        <option value="Cancelled" ${s.defaultOrderStatus === 'Cancelled' ? 'selected' : ''}>${this.t('cancelled')}</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Low Stock Threshold</label>
+                                    <label class="form-label">${this.t('lowStockThreshold')}</label>
                                     <input type="number" id="lowStockThreshold" class="form-input" value="${s.lowStockThreshold}" min="1">
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Language</label>
+                                    <label class="form-label">${this.t('language')}</label>
                                     <select id="appLanguage" class="form-select">
                                         <option value="en" ${s.language === 'en' ? 'selected' : ''}>English</option>
                                         <option value="gu" ${s.language === 'gu' ? 'selected' : ''}>ગુજરાતી</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Invoice Number Format</label>
+                                    <label class="form-label">${this.t('invoiceFormat')}</label>
                                     <select id="invoiceFormat" class="form-select">
                                         <option value="FP" ${s.invoicePrefix === 'FP' ? 'selected' : ''}>FP001</option>
                                         <option value="ORD" ${s.invoicePrefix === 'ORD' ? 'selected' : ''}>ORD001</option>
@@ -6460,17 +6534,17 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
 
                         <div class="btn-group">
-                            <button class="btn btn-primary" onclick="OMS.saveSettings()">💾 Save All Settings</button>
-                            <button class="btn btn-secondary" onclick="OMS.resetSettings()">🔄 Reset to Defaults</button>
+                            <button class="btn btn-primary" onclick="OMS.saveSettings()">${this.t('saveAllSettings')}</button>
+                            <button class="btn btn-secondary" onclick="OMS.resetSettings()">${this.t('resetToDefaults')}</button>
                         </div>
 
                         <div class="card">
-                            <h3>📊 Data Management</h3>
+                            <h3>${this.t('dataManagement')}</h3>
                             <div class="btn-group">
-                                <button class="btn btn-info" data-action="exportData">📤 Export JSON</button>
-                                <button class="btn btn-success" onclick="OMS.exportData('csv')">📊 Export CSV</button>
-                                <button class="btn btn-warning" data-action="importData">📥 Import Backup</button>
-                                <button class="btn btn-danger" onclick="OMS.resetAllData()">🗑️ Reset All Data</button>
+                                <button class="btn btn-info" data-action="exportData">${this.t('exportJSON')}</button>
+                                <button class="btn btn-success" onclick="OMS.exportData('csv')">${this.t('exportCSV')}</button>
+                                <button class="btn btn-warning" data-action="importData">${this.t('importBackup')}</button>
+                                <button class="btn btn-danger" onclick="OMS.resetAllData()">${this.t('resetAllData')}</button>
                             </div>
                         </div>
                     </div>
