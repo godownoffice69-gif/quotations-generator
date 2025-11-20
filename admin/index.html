@@ -2084,11 +2084,13 @@ const OMS = {
             // ============ EVENT DELEGATION ============
     setupEventDelegation() {
                 document.addEventListener('click', (e) => {
-                    const action = e.target.closest('[data-action]')?.dataset.action;
-                    const id = e.target.closest('[data-id]')?.dataset.id;
-                    const type = e.target.closest('[data-type]')?.dataset.type;
+                    // FIXED: Get all data attributes from the same element to avoid mismatched selections
+                    const actionElement = e.target.closest('[data-action]');
+                    if (!actionElement) return;
 
-                    if (!action) return;
+                    const action = actionElement.dataset.action;
+                    const id = actionElement.dataset.id;
+                    const type = actionElement.dataset.type;
 
                     e.preventDefault();
                     const handlers = {
