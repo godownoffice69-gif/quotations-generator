@@ -818,6 +818,9 @@
                         <div class="search-results" id="globalSearchResults"></div>
                     </div>
                     <span id="currentOrderId" style="font-weight: bold;">Next: FP001</span>
+                    <button class="btn btn-info btn-small" onclick="OMS.toggleLanguage()" id="languageToggle" title="Switch Language">
+                        🌐 EN
+                    </button>
                     <button class="btn btn-secondary btn-small" onclick="OMS.showShortcuts()">⌨️</button>
                     <button class="btn btn-danger btn-small" onclick="auth.signOut()">🚪 Logout</button>
                 </div>
@@ -1163,6 +1166,186 @@ debounce: (func, wait) => {
             }
         };
 
+        // ============ TRANSLATIONS ============
+        const translations = {
+            en: {
+                // Header
+                companyName: 'Order Management System',
+                searchPlaceholder: '🔍 Search everything...',
+                next: 'Next',
+                logout: '🚪 Logout',
+
+                // Tabs
+                dashboard: '📊 Dashboard',
+                orders: '📋 Orders',
+                inventory: '📦 Inventory',
+                preparation: '🍳 Preparation',
+                customers: '👥 Customers',
+                team: '👨‍💼 Team',
+                calendar: '📅 Calendar',
+                history: '🕒 History',
+                analytics: '📈 Analytics',
+                settings: '⚙️ Settings',
+
+                // Common Buttons
+                save: 'Save',
+                cancel: 'Cancel',
+                edit: 'Edit',
+                delete: 'Delete',
+                add: 'Add',
+                close: 'Close',
+                confirm: 'Confirm',
+                clear: 'Clear',
+                preview: 'Preview',
+                duplicate: 'Duplicate',
+                export: 'Export',
+                import: 'Import',
+                reset: 'Reset',
+                search: 'Search',
+
+                // Order Form
+                orderDetails: 'Order Details',
+                clientName: 'Client Name',
+                contact: 'Contact',
+                venue: 'Venue',
+                orderDate: 'Order Date',
+                readyTime: 'Ready Time',
+                eventType: 'Event Type',
+                transport: 'Transport',
+                driverName: 'Driver Name',
+                operator: 'Operator',
+                helpers: 'Helper(s)',
+                orderStatus: 'Order Status',
+                notes: 'Notes',
+                items: 'Items',
+
+                // Status
+                confirmed: 'Confirmed',
+                completed: 'Completed',
+                cancelled: 'Cancelled',
+                pending: 'Pending',
+
+                // Actions
+                saveOrder: '💾 Save Order',
+                duplicateLast: '📋 Duplicate Last',
+                sameDay: '📅 Same Day',
+                clearForm: '🗑️ Clear',
+
+                // Settings
+                printSettings: '🖨️ Print Settings',
+                fontSize: 'Default Font Size',
+                paperFormat: 'Paper Format',
+                pageOrientation: 'Page Orientation',
+                imageQuality: 'Image Quality',
+                functionColor: 'Function Slot Color',
+                portrait: 'Portrait',
+                landscape: 'Landscape',
+                saveAllSettings: '💾 Save All Settings',
+                resetToDefaults: '🔄 Reset to Defaults',
+
+                // Multi-day
+                multiDayOrder: 'Multi-day Order',
+                startDate: 'Start Date',
+                endDate: 'End Date',
+                addDay: '➕ Add Day',
+                addFunction: '➕ Add Function',
+
+                // Messages
+                orderSaved: 'Order saved successfully!',
+                settingsSaved: 'Settings saved successfully!',
+                error: 'Error',
+                success: 'Success'
+            },
+            gu: {
+                // Header
+                companyName: 'ઓર્ડર મેનેજમેન્ટ સિસ્ટમ',
+                searchPlaceholder: '🔍 બધું શોધો...',
+                next: 'આગળ',
+                logout: '🚪 લોગઆઉટ',
+
+                // Tabs
+                dashboard: '📊 ડેશબોર્ડ',
+                orders: '📋 ઓર્ડર્સ',
+                inventory: '📦 ઇન્વેન્ટરી',
+                preparation: '🍳 તૈયારી',
+                customers: '👥 ગ્રાહકો',
+                team: '👨‍💼 ટીમ',
+                calendar: '📅 કેલેન્ડર',
+                history: '🕒 ઇતિહાસ',
+                analytics: '📈 વિશ્લેષણ',
+                settings: '⚙️ સેટિંગ્સ',
+
+                // Common Buttons
+                save: 'સાચવો',
+                cancel: 'રદ કરો',
+                edit: 'સુધારો',
+                delete: 'કાઢી નાખો',
+                add: 'ઉમેરો',
+                close: 'બંધ કરો',
+                confirm: 'પુષ્ટિ કરો',
+                clear: 'સાફ કરો',
+                preview: 'પૂર્વાવલોકન',
+                duplicate: 'નકલ',
+                export: 'નિકાસ કરો',
+                import: 'આયાત કરો',
+                reset: 'રીસેટ કરો',
+                search: 'શોધો',
+
+                // Order Form
+                orderDetails: 'ઓર્ડરની વિગતો',
+                clientName: 'ગ્રાહકનું નામ',
+                contact: 'સંપર્ક',
+                venue: 'સ્થળ',
+                orderDate: 'ઓર્ડરની તારીખ',
+                readyTime: 'તૈયાર સમય',
+                eventType: 'ઇવેન્ટનો પ્રકાર',
+                transport: 'ટ્રાન્સપોર્ટ',
+                driverName: 'ડ્રાઈવરનું નામ',
+                operator: 'ઓપરેટર',
+                helpers: 'હેલ્પર(સ)',
+                orderStatus: 'ઓર્ડર સ્થિતિ',
+                notes: 'નોંધ',
+                items: 'આઇટમ્સ',
+
+                // Status
+                confirmed: 'પુષ્ટિ થયેલ',
+                completed: 'પૂર્ણ થયું',
+                cancelled: 'રદ કર્યું',
+                pending: 'બાકી',
+
+                // Actions
+                saveOrder: '💾 ઓર્ડર સાચવો',
+                duplicateLast: '📋 છેલ્લી નકલ',
+                sameDay: '📅 સમાન દિવસ',
+                clearForm: '🗑️ સાફ કરો',
+
+                // Settings
+                printSettings: '🖨️ પ્રિન્ટ સેટિંગ્સ',
+                fontSize: 'ડિફૉલ્ટ ફોન્ટ સાઇઝ',
+                paperFormat: 'પેપર ફોર્મેટ',
+                pageOrientation: 'પેજ ઓરિએન્ટેશન',
+                imageQuality: 'ઇમેજ ગુણવત્તા',
+                functionColor: 'ફંક્શન સ્લોટ રંગ',
+                portrait: 'પોર્ટ્રેટ',
+                landscape: 'લેન્ડસ્કેપ',
+                saveAllSettings: '💾 બધી સેટિંગ્સ સાચવો',
+                resetToDefaults: '🔄 ડિફૉલ્ટ પર રીસેટ કરો',
+
+                // Multi-day
+                multiDayOrder: 'મલ્ટિ-ડે ઓર્ડર',
+                startDate: 'શરૂઆતની તારીખ',
+                endDate: 'અંતિમ તારીખ',
+                addDay: '➕ દિવસ ઉમેરો',
+                addFunction: '➕ ફંક્શન ઉમેરો',
+
+                // Messages
+                orderSaved: 'ઓર્ડર સફળતાપૂર્વક સાચવ્યો!',
+                settingsSaved: 'સેટિંગ્સ સફળતાપૂર્વક સાચવી!',
+                error: 'ભૂલ',
+                success: 'સફળતા'
+            }
+        };
+
         // ============ MAIN APP ============
 const OMS = {
             initialized: false,
@@ -1264,6 +1447,56 @@ const OMS = {
                 this.loadDemoData();
                 this.updateAllDisplays();
                 this.initGlobalSearch();
+                this.applyLanguage(); // Apply saved language
+            },
+
+            // ============ LANGUAGE SWITCHING ============
+            toggleLanguage() {
+                const currentLang = this.data.settings.language || 'en';
+                const newLang = currentLang === 'en' ? 'gu' : 'en';
+                this.data.settings.language = newLang;
+                this.saveToStorage();
+                this.applyLanguage();
+                this.showToast(newLang === 'en' ? 'Language switched to English' : 'ભાષા ગુજરાતીમાં બદલાઈ ગઈ', 'success');
+            },
+
+            applyLanguage() {
+                const lang = this.data.settings.language || 'en';
+                const t = translations[lang];
+
+                // Update language toggle button
+                const toggleBtn = document.getElementById('languageToggle');
+                if (toggleBtn) {
+                    toggleBtn.textContent = lang === 'en' ? '🌐 EN' : '🌐 ગુ';
+                    toggleBtn.title = lang === 'en' ? 'Switch to Gujarati' : 'અંગ્રેજીમાં બદલો';
+                }
+
+                // Update header
+                const companyName = document.querySelector('.company-name');
+                if (companyName) companyName.textContent = t.companyName;
+
+                const searchInput = document.getElementById('globalSearch');
+                if (searchInput) searchInput.placeholder = t.searchPlaceholder;
+
+                // Update tabs
+                const tabs = document.querySelectorAll('.nav-tab');
+                const tabKeys = ['dashboard', 'orders', 'inventory', 'preparation', 'customers', 'team', 'calendar', 'history', 'analytics', 'settings'];
+                tabs.forEach((tab, index) => {
+                    if (tabKeys[index] && t[tabKeys[index]]) {
+                        tab.textContent = t[tabKeys[index]];
+                    }
+                });
+
+                // Re-render current tab to apply translations
+                if (this.currentTab) {
+                    this.switchTab(this.currentTab);
+                }
+            },
+
+            // Helper function to get translations
+            t(key) {
+                const lang = this.data.settings.language || 'en';
+                return translations[lang][key] || translations.en[key] || key;
             },
 
             // ============ EVENT DELEGATION ============
