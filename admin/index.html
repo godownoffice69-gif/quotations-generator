@@ -249,6 +249,12 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
+        /* Highlighted Date & Time Fields */
+        .highlight-datetime {
+            background-color: #fef3c7 !important;
+            font-weight: 500;
+        }
+
         .form-textarea {
             min-height: 100px;
             resize: vertical;
@@ -895,18 +901,18 @@
 <!-- Single Day Fields -->
 <div id="singleDayFields" class="form-group">
     <label class="form-label required">Event Date</label>
-    <input type="date" id="orderDate" class="form-input" required>
+    <input type="date" id="orderDate" class="form-input highlight-datetime" required>
 </div>
 
 <!-- Multi-Day Fields -->
 <div id="multiDayFields" class="form-grid" style="display: none;">
     <div class="form-group">
         <label class="form-label required">Start Date</label>
-        <input type="date" id="startDate" class="form-input">
+        <input type="date" id="startDate" class="form-input highlight-datetime">
     </div>
     <div class="form-group">
         <label class="form-label required">End Date</label>
-        <input type="date" id="endDate" class="form-input">
+        <input type="date" id="endDate" class="form-input highlight-datetime">
     </div>
     <div class="form-group">
         <label class="form-label">Total Days</label>
@@ -923,7 +929,7 @@
 </div>
                             <div class="form-group">
                                 <label class="form-label required">Ready Time</label>
-                                <select id="readyTime" class="form-select" required></select>
+                                <select id="readyTime" class="form-select highlight-datetime" required></select>
                             </div>
                         </div>
 
@@ -2223,7 +2229,7 @@ const OMS = {
                     </div>
                     <div class="form-group">
                         <label class="form-label">${this.t('timeSlot')}</label>
-                        <input type="text" id="${functionId}Time" class="form-input"
+                        <input type="text" id="${functionId}Time" class="form-input highlight-datetime"
                                placeholder="${this.t('enterTimeSlot')}"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'timeSlot', this.value)">
                     </div>
