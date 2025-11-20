@@ -6254,18 +6254,35 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
-                // Get today's and upcoming orders
-                const today = new Date();
-                const todayStr = today.toISOString().split('T')[0];
-                const next7Days = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                // Check if we have a current order in the form
+                const currentOrderDate = Utils.get('orderDate');
+                const currentStartDate = Utils.get('startDate');
+                const eventType = Utils.get('eventTypeSelect');
+                const isMultiDay = eventType === 'multi';
+                const clientName = Utils.get('clientName');
+
+                // If there's an order in the form, use that date for same-day orders
+                let targetDate = null;
+                let reportTitle = '';
+
+                if (currentOrderDate || currentStartDate) {
+                    // Use the order date from the form
+                    targetDate = isMultiDay ? currentStartDate : currentOrderDate;
+                    reportTitle = 'SAME DAY ORDERS';
+                } else {
+                    // No order in form, show error
+                    this.showToast('Please open/select an order first to send report for that date', 'warning');
+                    return;
+                }
 
                 // Filter keywords for demo/test orders
                 const demoKeywords = ['demo', 'test', 'sample', 'example', 'blank'];
 
-                const upcomingOrders = this.data.orders.filter(order => {
-                    // Filter by date
+                // Get orders for the target date
+                const ordersForDate = this.data.orders.filter(order => {
+                    // Filter by date - must match target date
                     const orderDate = order.isMultiDay ? order.startDate : order.date;
-                    if (!orderDate || orderDate < todayStr || orderDate > next7Days) {
+                    if (orderDate !== targetDate) {
                         return false;
                     }
 
@@ -6276,10 +6293,10 @@ convertToQuotationDateFormat(dateStr) {
                     }
 
                     // Filter out demo/test orders
-                    const clientName = (order.clientName || '').toLowerCase();
+                    const orderClientName = (order.clientName || '').toLowerCase();
                     const orderId = (order.orderId || '').toLowerCase();
                     const isDemo = demoKeywords.some(keyword =>
-                        clientName.includes(keyword) || orderId.includes(keyword)
+                        orderClientName.includes(keyword) || orderId.includes(keyword)
                     );
                     if (isDemo) {
                         return false;
@@ -6292,61 +6309,46 @@ convertToQuotationDateFormat(dateStr) {
 
                     return true;
                 }).sort((a, b) => {
-                    const dateA = a.isMultiDay ? a.startDate : a.date;
-                    const dateB = b.isMultiDay ? b.startDate : b.date;
-                    return dateA.localeCompare(dateB);
+                    // Sort by ready time if available
+                    const timeA = a.readyTime || '';
+                    const timeB = b.readyTime || '';
+                    return timeA.localeCompare(timeB);
                 });
 
-                if (upcomingOrders.length === 0) {
-                    this.showToast('No upcoming orders in next 7 days to report', 'info');
+                if (ordersForDate.length === 0) {
+                    this.showToast('No orders found for this date', 'info');
                     return;
                 }
 
                 // Build manager report
-                let message = `📊 *TEAM ALLOCATION REPORT*\n`;
-                message += `📅 *Date:* ${new Date().toLocaleDateString()}\n`;
-                message += `📋 *Period:* Next 7 Days\n\n`;
-                message += `*Total Orders:* ${upcomingOrders.length}\n`;
+                let message = `📊 *${reportTitle}*\n`;
+                message += `📅 *Date:* ${Utils.formatDate(targetDate)}\n`;
+                message += `*Total Orders:* ${ordersForDate.length}\n`;
                 message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-                // Group orders by date
-                const ordersByDate = {};
-                upcomingOrders.forEach(order => {
-                    const orderDate = order.isMultiDay ? order.startDate : order.date;
-                    if (!ordersByDate[orderDate]) {
-                        ordersByDate[orderDate] = [];
+                ordersForDate.forEach((order, index) => {
+                    message += `*ORDER #${index + 1}: ${order.orderId}*\n`;
+                    message += `👤 Client: ${order.clientName}\n`;
+                    message += `📍 Venue: ${order.venue}\n`;
+                    message += `🕐 ${order.readyTime || 'TBD'}\n`;
+                    message += `📊 Status: ${order.status || 'Pending'}\n`;
+
+                    if (order.driverName || order.operator || order.helper) {
+                        message += `👷 Team:\n`;
+                        if (order.driverName) message += `  • Driver: ${order.driverName}\n`;
+                        if (order.operator) message += `  • Operator: ${order.operator}\n`;
+                        if (order.helper) message += `  • Helper: ${order.helper}\n`;
+                    } else {
+                        message += `⚠️ *Not Allocated Yet*\n`;
                     }
-                    ordersByDate[orderDate].push(order);
-                });
-
-                // Add orders to message
-                Object.keys(ordersByDate).sort().forEach(date => {
-                    message += `📅 *${Utils.formatDate(date)}*\n\n`;
-
-                    ordersByDate[date].forEach((order, index) => {
-                        message += `*ORDER #${index + 1}: ${order.orderId}*\n`;
-                        message += `👤 Client: ${order.clientName}\n`;
-                        message += `📍 Venue: ${order.venue}\n`;
-                        message += `🕐 ${order.readyTime || 'TBD'}\n`;
-                        message += `📊 Status: ${order.status || 'Pending'}\n`;
-
-                        if (order.driverName || order.operator || order.helper) {
-                            message += `👷 Team:\n`;
-                            if (order.driverName) message += `  • Driver: ${order.driverName}\n`;
-                            if (order.operator) message += `  • Operator: ${order.operator}\n`;
-                            if (order.helper) message += `  • Helper: ${order.helper}\n`;
-                        } else {
-                            message += `⚠️ *Not Allocated Yet*\n`;
-                        }
-                        message += `\n`;
-                    });
+                    message += `\n`;
                 });
 
                 message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
 
                 // Workload summary
                 const workload = {};
-                upcomingOrders.forEach(order => {
+                ordersForDate.forEach(order => {
                     if (order.driverName) {
                         workload[order.driverName] = (workload[order.driverName] || 0) + 1;
                     }
@@ -6354,7 +6356,11 @@ convertToQuotationDateFormat(dateStr) {
                         workload[order.operator] = (workload[order.operator] || 0) + 1;
                     }
                     if (order.helper) {
-                        workload[order.helper] = (workload[order.helper] || 0) + 1;
+                        // Handle comma-separated helpers
+                        const helpers = order.helper.split(',').map(h => h.trim()).filter(h => h);
+                        helpers.forEach(helperName => {
+                            workload[helperName] = (workload[helperName] || 0) + 1;
+                        });
                     }
                 });
 
@@ -6382,7 +6388,8 @@ convertToQuotationDateFormat(dateStr) {
                     id: Utils.generateId(),
                     type: 'manager_report',
                     recipients: managers.map(m => m.name),
-                    orderCount: upcomingOrders.length,
+                    orderCount: ordersForDate.length,
+                    targetDate: targetDate,
                     timestamp: new Date().toISOString()
                 };
                 this.data.notifications.push(notification);
@@ -6391,7 +6398,7 @@ convertToQuotationDateFormat(dateStr) {
                 // Save to Firestore
                 this.saveNotificationToFirestore(notification);
 
-                this.showToast(`Manager report sent to ${managers.length} manager(s)`, 'success');
+                this.showToast(`Manager report sent to ${managers.length} manager(s) for ${ordersForDate.length} order(s)`, 'success');
             },
 
             renderCalendarTab() {
