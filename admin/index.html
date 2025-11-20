@@ -1202,6 +1202,10 @@ debounce: (func, wait) => {
                 import: 'Import',
                 reset: 'Reset',
                 search: 'Search',
+                download: 'Download',
+                upload: 'Upload',
+                filter: 'Filter',
+                print: 'Print',
 
                 // Order Form
                 orderDetails: 'Order Details',
@@ -1212,49 +1216,199 @@ debounce: (func, wait) => {
                 readyTime: 'Ready Time',
                 eventType: 'Event Type',
                 transport: 'Transport',
+                customTransport: 'Custom Transport',
                 driverName: 'Driver Name',
                 operator: 'Operator',
                 helpers: 'Helper(s)',
+                helperPlaceholder: 'Enter helper name(s), separate multiple with commas',
                 orderStatus: 'Order Status',
                 notes: 'Notes',
                 items: 'Items',
+                addItem: 'Add Item',
+                itemName: 'Item Name',
+                quantity: 'Quantity',
+                remarks: 'Remarks',
+                serialNumber: 'Sr. No.',
 
                 // Status
                 confirmed: 'Confirmed',
                 completed: 'Completed',
                 cancelled: 'Cancelled',
                 pending: 'Pending',
+                active: 'Active',
+                inactive: 'Inactive',
 
                 // Actions
                 saveOrder: '💾 Save Order',
+                saveOrderShortcut: '💾 Save Order (Ctrl+S)',
                 duplicateLast: '📋 Duplicate Last',
                 sameDay: '📅 Same Day',
                 clearForm: '🗑️ Clear',
+                clearFormShortcut: '🗑️ Clear (Ctrl+D)',
+                notifyTeam: '📱 Notify Allocated Team',
+                sendReport: '📊 Send Manager Report',
 
                 // Settings
+                systemSettings: '⚙️ System Settings',
                 printSettings: '🖨️ Print Settings',
+                tableLayoutSettings: '📋 Table Layout Settings',
+                colorCustomization: '🎨 Color Customization',
+                systemPreferences: '🔧 System Preferences',
+                dataManagement: '📊 Data Management',
+
                 fontSize: 'Default Font Size',
                 paperFormat: 'Paper Format',
                 pageOrientation: 'Page Orientation',
                 imageQuality: 'Image Quality',
                 functionColor: 'Function Slot Color',
-                portrait: 'Portrait',
-                landscape: 'Landscape',
+                portrait: '📄 Portrait',
+                landscape: '📃 Landscape',
+                low: 'Low',
+                medium: 'Medium',
+                high: 'High',
+                ultra: 'Ultra',
+                faster: 'Faster',
+                balanced: 'Balanced',
+                betterQuality: 'Better Quality',
+                bestQuality: 'Best Quality',
+
+                srColumnWidth: 'Sr.No Column Width',
+                itemColumnWidth: 'Item Name Width',
+                qtyColumnWidth: 'Quantity Width',
+                remarksColumnWidth: 'Remarks Width',
+                leftMarginFiling: 'Left Margin (filing)',
+
+                headerBackground: 'Header Background',
+                headerText: 'Header Text',
+                orderIdBackground: 'Order ID Background',
+                orderIdText: 'Order ID Text',
+                tableHeaderBackground: 'Table Header Background',
+                tableHeaderText: 'Table Header Text',
+                tableBorder: 'Table Border',
+                notesBackground: 'Notes Background',
+
+                defaultOrderStatus: 'Default Order Status',
+                lowStockThreshold: 'Low Stock Threshold',
+                language: 'Language',
+                invoiceFormat: 'Invoice Number Format',
+
                 saveAllSettings: '💾 Save All Settings',
                 resetToDefaults: '🔄 Reset to Defaults',
+                exportJSON: '📤 Export JSON',
+                exportCSV: '📊 Export CSV',
+                importBackup: '📥 Import Backup',
+                resetAllData: '🗑️ Reset All Data',
 
                 // Multi-day
                 multiDayOrder: 'Multi-day Order',
+                singleDayOrder: 'Single-day Order',
                 startDate: 'Start Date',
                 endDate: 'End Date',
                 addDay: '➕ Add Day',
                 addFunction: '➕ Add Function',
+                removeDay: '🗑️ Remove Day',
+                removeFunction: '🗑️ Remove Function',
+                dayNumber: 'Day',
+                functionNumber: 'Function',
+                functionType: 'Function Type',
+                timeSlot: 'Time Slot',
+                driver: 'Driver',
+
+                // Dashboard
+                totalOrders: 'Total Orders',
+                confirmedOrders: 'Confirmed',
+                completedOrders: 'Completed',
+                cancelledOrders: 'Cancelled',
+                pendingOrders: 'Pending',
+                recentOrders: 'Recent Orders',
+                quickStats: 'Quick Stats',
+                thisMonth: 'This Month',
+                thisWeek: 'This Week',
+                today: 'Today',
+
+                // Team
+                teamManagement: 'Team Management',
+                addTeamMember: 'Add Team Member',
+                memberName: 'Member Name',
+                role: 'Role',
+                roles: 'Roles',
+                phoneNumber: 'Phone Number',
+                email: 'Email',
+                status: 'Status',
+                actions: 'Actions',
+
+                // Inventory
+                inventoryManagement: 'Inventory Management',
+                addCategory: 'Add Category',
+                addInventoryItem: 'Add Inventory Item',
+                categoryName: 'Category Name',
+                currentStock: 'Current Stock',
+                unit: 'Unit',
+                reorderLevel: 'Reorder Level',
+
+                // Calendar
+                month: 'Month',
+                week: 'Week',
+                day: 'Day',
+                ordersFor: 'Orders for',
+                noOrders: 'No orders for this date',
+
+                // History
+                orderHistory: 'Order History',
+                deletedOrders: 'Deleted Orders',
+                restore: 'Restore',
+                permanentlyDelete: 'Permanently Delete',
+
+                // Analytics
+                analyticsReport: 'Analytics Report',
+                dateRange: 'Date Range',
+                from: 'From',
+                to: 'To',
+                generateReport: 'Generate Report',
+                topItems: 'Top Items',
+                orderTrends: 'Order Trends',
 
                 // Messages
                 orderSaved: 'Order saved successfully!',
-                settingsSaved: 'Settings saved successfully!',
+                orderDeleted: 'Order deleted!',
+                settingsSaved: 'All settings saved successfully!',
+                itemAdded: 'Item added!',
+                itemRemoved: 'Item removed!',
                 error: 'Error',
-                success: 'Success'
+                success: 'Success',
+                warning: 'Warning',
+                info: 'Info',
+                loading: 'Loading...',
+                generatingImage: 'Generating image...',
+                downloadComplete: 'Download complete!',
+
+                // Placeholders
+                enterClientName: 'Enter client name',
+                enterContact: 'Enter contact number',
+                enterVenue: 'Enter venue',
+                selectDate: 'Select date',
+                selectTime: 'Select time',
+                selectEventType: 'Select event type',
+                selectTransport: 'Select transport',
+                selectDriver: 'Select Driver',
+                selectOperator: 'Select Operator',
+                selectHelper: 'Select Helper',
+                enterNotes: 'Enter notes...',
+                searchItem: 'Search item...',
+
+                // Confirmations
+                confirmDelete: 'Are you sure you want to delete?',
+                confirmReset: 'Reset all settings?',
+                confirmClear: 'Clear form?',
+                cannotUndo: 'This action cannot be undone.',
+
+                // Info messages
+                multiOrderNote: 'Note: Multi-order images use smart auto-sizing',
+                higherQualityNote: 'Higher quality = larger file size',
+                multipleHelpersNote: 'You can add multiple helpers separated by commas (e.g., John, Mary, David)',
+                chooseFormat: 'Choose paper size for print layout',
+                portraitOrLandscape: 'Portrait or landscape mode',
+                customColorNote: 'Custom color for function slots'
             },
             gu: {
                 // Header
@@ -1290,6 +1444,10 @@ debounce: (func, wait) => {
                 import: 'આયાત કરો',
                 reset: 'રીસેટ કરો',
                 search: 'શોધો',
+                download: 'ડાઉનલોડ કરો',
+                upload: 'અપલોડ કરો',
+                filter: 'ફિલ્ટર',
+                print: 'પ્રિન્ટ',
 
                 // Order Form
                 orderDetails: 'ઓર્ડરની વિગતો',
@@ -1300,49 +1458,199 @@ debounce: (func, wait) => {
                 readyTime: 'તૈયાર સમય',
                 eventType: 'ઇવેન્ટનો પ્રકાર',
                 transport: 'ટ્રાન્સપોર્ટ',
+                customTransport: 'કસ્ટમ ટ્રાન્સપોર્ટ',
                 driverName: 'ડ્રાઈવરનું નામ',
                 operator: 'ઓપરેટર',
                 helpers: 'હેલ્પર(સ)',
+                helperPlaceholder: 'હેલ્પરના નામ દાખલ કરો, વધુ માટે અલ્પવિરામથી અલગ કરો',
                 orderStatus: 'ઓર્ડર સ્થિતિ',
                 notes: 'નોંધ',
                 items: 'આઇટમ્સ',
+                addItem: 'આઇટમ ઉમેરો',
+                itemName: 'આઇટમનું નામ',
+                quantity: 'જથ્થો',
+                remarks: 'ટિપ્પણી',
+                serialNumber: 'ક્રમાંક',
 
                 // Status
                 confirmed: 'પુષ્ટિ થયેલ',
                 completed: 'પૂર્ણ થયું',
                 cancelled: 'રદ કર્યું',
                 pending: 'બાકી',
+                active: 'સક્રિય',
+                inactive: 'નિષ્ક્રિય',
 
                 // Actions
                 saveOrder: '💾 ઓર્ડર સાચવો',
+                saveOrderShortcut: '💾 ઓર્ડર સાચવો (Ctrl+S)',
                 duplicateLast: '📋 છેલ્લી નકલ',
                 sameDay: '📅 સમાન દિવસ',
                 clearForm: '🗑️ સાફ કરો',
+                clearFormShortcut: '🗑️ સાફ કરો (Ctrl+D)',
+                notifyTeam: '📱 ટીમને સૂચના',
+                sendReport: '📊 મેનેજર રિપોર્ટ મોકલો',
 
                 // Settings
+                systemSettings: '⚙️ સિસ્ટમ સેટિંગ્સ',
                 printSettings: '🖨️ પ્રિન્ટ સેટિંગ્સ',
+                tableLayoutSettings: '📋 ટેબલ લેઆઉટ સેટિંગ્સ',
+                colorCustomization: '🎨 રંગ કસ્ટમાઇઝેશન',
+                systemPreferences: '🔧 સિસ્ટમ પસંદગીઓ',
+                dataManagement: '📊 ડેટા મેનેજમેન્ટ',
+
                 fontSize: 'ડિફૉલ્ટ ફોન્ટ સાઇઝ',
                 paperFormat: 'પેપર ફોર્મેટ',
                 pageOrientation: 'પેજ ઓરિએન્ટેશન',
                 imageQuality: 'ઇમેજ ગુણવત્તા',
                 functionColor: 'ફંક્શન સ્લોટ રંગ',
-                portrait: 'પોર્ટ્રેટ',
-                landscape: 'લેન્ડસ્કેપ',
+                portrait: '📄 પોર્ટ્રેટ',
+                landscape: '📃 લેન્ડસ્કેપ',
+                low: 'ઓછી',
+                medium: 'મધ્યમ',
+                high: 'ઉચ્ચ',
+                ultra: 'અલ્ટ્રા',
+                faster: 'ઝડપી',
+                balanced: 'સંતુલિત',
+                betterQuality: 'સારી ગુણવત્તા',
+                bestQuality: 'શ્રેષ્ઠ ગુણવત્તા',
+
+                srColumnWidth: 'ક્રમાંક કૉલમ પહોળાઈ',
+                itemColumnWidth: 'આઇટમ નામ પહોળાઈ',
+                qtyColumnWidth: 'જથ્થો પહોળાઈ',
+                remarksColumnWidth: 'ટિપ્પણી પહોળાઈ',
+                leftMarginFiling: 'ડાબો માર્જિન (ફાઇલિંગ)',
+
+                headerBackground: 'હેડર પૃષ્ઠભૂમિ',
+                headerText: 'હેડર ટેક્સ્ટ',
+                orderIdBackground: 'ઓર્ડર ID પૃષ્ઠભૂમિ',
+                orderIdText: 'ઓર્ડર ID ટેક્સ્ટ',
+                tableHeaderBackground: 'ટેબલ હેડર પૃષ્ઠભૂમિ',
+                tableHeaderText: 'ટેબલ હેડર ટેક્સ્ટ',
+                tableBorder: 'ટેબલ બોર્ડર',
+                notesBackground: 'નોંધ પૃષ્ઠભૂમિ',
+
+                defaultOrderStatus: 'ડિફૉલ્ટ ઓર્ડર સ્થિતિ',
+                lowStockThreshold: 'ઓછા સ્ટૉકની મર્યાદા',
+                language: 'ભાષા',
+                invoiceFormat: 'ઇન્વૉઇસ નંબર ફોર્મેટ',
+
                 saveAllSettings: '💾 બધી સેટિંગ્સ સાચવો',
                 resetToDefaults: '🔄 ડિફૉલ્ટ પર રીસેટ કરો',
+                exportJSON: '📤 JSON નિકાસ કરો',
+                exportCSV: '📊 CSV નિકાસ કરો',
+                importBackup: '📥 બેકઅપ આયાત કરો',
+                resetAllData: '🗑️ બધો ડેટા રીસેટ કરો',
 
                 // Multi-day
                 multiDayOrder: 'મલ્ટિ-ડે ઓર્ડર',
+                singleDayOrder: 'સિંગલ-ડે ઓર્ડર',
                 startDate: 'શરૂઆતની તારીખ',
                 endDate: 'અંતિમ તારીખ',
                 addDay: '➕ દિવસ ઉમેરો',
                 addFunction: '➕ ફંક્શન ઉમેરો',
+                removeDay: '🗑️ દિવસ દૂર કરો',
+                removeFunction: '🗑️ ફંક્શન દૂર કરો',
+                dayNumber: 'દિવસ',
+                functionNumber: 'ફંક્શન',
+                functionType: 'ફંક્શનનો પ્રકાર',
+                timeSlot: 'સમય',
+                driver: 'ડ્રાઈવર',
+
+                // Dashboard
+                totalOrders: 'કુલ ઓર્ડર્સ',
+                confirmedOrders: 'પુષ્ટિ થયેલ',
+                completedOrders: 'પૂર્ણ થયું',
+                cancelledOrders: 'રદ કર્યું',
+                pendingOrders: 'બાકી',
+                recentOrders: 'તાજેતરના ઓર્ડર્સ',
+                quickStats: 'ઝડપી આંકડા',
+                thisMonth: 'આ મહિને',
+                thisWeek: 'આ અઠવાડિયે',
+                today: 'આજે',
+
+                // Team
+                teamManagement: 'ટીમ મેનેજમેન્ટ',
+                addTeamMember: 'ટીમ સભ્ય ઉમેરો',
+                memberName: 'સભ્યનું નામ',
+                role: 'ભૂમિકા',
+                roles: 'ભૂમિકાઓ',
+                phoneNumber: 'ફોન નંબર',
+                email: 'ઇમેઇલ',
+                status: 'સ્થિતિ',
+                actions: 'ક્રિયાઓ',
+
+                // Inventory
+                inventoryManagement: 'ઇન્વેન્ટરી મેનેજમેન્ટ',
+                addCategory: 'કેટેગરી ઉમેરો',
+                addInventoryItem: 'ઇન્વેન્ટરી આઇટમ ઉમેરો',
+                categoryName: 'કેટેગરીનું નામ',
+                currentStock: 'વર્તમાન સ્ટૉક',
+                unit: 'એકમ',
+                reorderLevel: 'ફરીથી ઓર્ડરની સ્તર',
+
+                // Calendar
+                month: 'મહિનો',
+                week: 'અઠવાડિયું',
+                day: 'દિવસ',
+                ordersFor: 'માટે ઓર્ડર્સ',
+                noOrders: 'આ તારીખ માટે કોઈ ઓર્ડર નથી',
+
+                // History
+                orderHistory: 'ઓર્ડર ઇતિહાસ',
+                deletedOrders: 'કાઢી નાખેલા ઓર્ડર્સ',
+                restore: 'પુનઃસ્થાપિત કરો',
+                permanentlyDelete: 'કાયમ માટે કાઢી નાખો',
+
+                // Analytics
+                analyticsReport: 'વિશ્લેષણ રિપોર્ટ',
+                dateRange: 'તારીખની શ્રેણી',
+                from: 'થી',
+                to: 'સુધી',
+                generateReport: 'રિપોર્ટ બનાવો',
+                topItems: 'ટોપ આઇટમ્સ',
+                orderTrends: 'ઓર્ડર ટ્રેન્ડ્સ',
 
                 // Messages
                 orderSaved: 'ઓર્ડર સફળતાપૂર્વક સાચવ્યો!',
-                settingsSaved: 'સેટિંગ્સ સફળતાપૂર્વક સાચવી!',
+                orderDeleted: 'ઓર્ડર કાઢી નાખ્યો!',
+                settingsSaved: 'બધી સેટિંગ્સ સફળતાપૂર્વક સાચવી!',
+                itemAdded: 'આઇટમ ઉમેર્યું!',
+                itemRemoved: 'આઇટમ દૂર કર્યું!',
                 error: 'ભૂલ',
-                success: 'સફળતા'
+                success: 'સફળતા',
+                warning: 'ચેતવણી',
+                info: 'માહિતી',
+                loading: 'લોડ થઈ રહ્યું છે...',
+                generatingImage: 'ઇમેજ બનાવી રહ્યા છીએ...',
+                downloadComplete: 'ડાઉનલોડ પૂર્ણ!',
+
+                // Placeholders
+                enterClientName: 'ગ્રાહકનું નામ દાખલ કરો',
+                enterContact: 'સંપર્ક નંબર દાખલ કરો',
+                enterVenue: 'સ્થળ દાખલ કરો',
+                selectDate: 'તારીખ પસંદ કરો',
+                selectTime: 'સમય પસંદ કરો',
+                selectEventType: 'ઇવેન્ટનો પ્રકાર પસંદ કરો',
+                selectTransport: 'ટ્રાન્સપોર્ટ પસંદ કરો',
+                selectDriver: 'ડ્રાઈવર પસંદ કરો',
+                selectOperator: 'ઓપરેટર પસંદ કરો',
+                selectHelper: 'હેલ્પર પસંદ કરો',
+                enterNotes: 'નોંધ દાખલ કરો...',
+                searchItem: 'આઇટમ શોધો...',
+
+                // Confirmations
+                confirmDelete: 'શું તમે ખરેખર કાઢી નાખવા માંગો છો?',
+                confirmReset: 'બધી સેટિંગ્સ રીસેટ કરવી છે?',
+                confirmClear: 'ફોર્મ સાફ કરવું છે?',
+                cannotUndo: 'આ ક્રિયા પૂર્વવત્ કરી શકાતી નથી.',
+
+                // Info messages
+                multiOrderNote: 'નોંધ: મલ્ટિ-ઓર્ડર ઇમેજીસ સ્માર્ટ ઓટો-સાઇઝિંગ વાપરે છે',
+                higherQualityNote: 'ઉચ્ચ ગુણવત્તા = મોટી ફાઇલ સાઇઝ',
+                multipleHelpersNote: 'તમે અલ્પવિરામથી અલગ કરીને ઘણા હેલ્પરો ઉમેરી શકો છો (દા.ત., જોન, મેરી, ડેવિડ)',
+                chooseFormat: 'પ્રિન્ટ લેઆઉટ માટે પેપર સાઇઝ પસંદ કરો',
+                portraitOrLandscape: 'પોર્ટ્રેટ અથવા લેન્ડસ્કેપ મોડ',
+                customColorNote: 'ફંક્શન સ્લોટ માટે કસ્ટમ રંગ'
             }
         };
 
@@ -1487,10 +1795,84 @@ const OMS = {
                     }
                 });
 
+                // Update Orders tab static labels using data-translate attributes
+                this.updateOrdersTabLabels();
+
+                // Update action buttons
+                this.updateActionButtons();
+
                 // Re-render current tab to apply translations
                 if (this.currentTab) {
                     this.switchTab(this.currentTab);
                 }
+            },
+
+            updateOrdersTabLabels() {
+                // Helper function to update label text
+                const updateLabel = (selector, translationKey) => {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(el => {
+                        if (el) el.textContent = this.t(translationKey);
+                    });
+                };
+
+                // Update form labels by finding them with specific text patterns
+                // This will update all label elements in the orders tab
+                const labels = {
+                    'Client Name': 'clientName',
+                    'Contact': 'contact',
+                    'Venue': 'venue',
+                    'Ready Time': 'readyTime',
+                    'Order Status': 'orderStatus',
+                    'Notes': 'notes',
+                    'Driver Name': 'driverName',
+                    'Operator': 'operator',
+                    'Helper(s)': 'helpers',
+                    'Transport': 'transport'
+                };
+
+                document.querySelectorAll('.form-label').forEach(label => {
+                    const text = label.textContent.trim();
+                    Object.keys(labels).forEach(key => {
+                        if (text.includes(key)) {
+                            const translatedText = this.t(labels[key]);
+                            label.textContent = label.textContent.replace(key, translatedText);
+                        }
+                    });
+                });
+
+                // Update helper placeholder
+                const helperInput = document.getElementById('helper');
+                if (helperInput) {
+                    helperInput.placeholder = this.t('helperPlaceholder');
+                }
+
+                // Update client name placeholder
+                const clientInput = document.getElementById('clientName');
+                if (clientInput) {
+                    clientInput.placeholder = this.t('enterClientName');
+                }
+            },
+
+            updateActionButtons() {
+                // Update button texts by finding buttons with specific onclick handlers
+                const updateButton = (selector, translationKey) => {
+                    const btn = document.querySelector(selector);
+                    if (btn) btn.textContent = this.t(translationKey);
+                };
+
+                // Update form action buttons
+                const buttons = document.querySelectorAll('.btn');
+                buttons.forEach(btn => {
+                    const text = btn.textContent.trim();
+                    if (text.includes('Save Order')) btn.textContent = this.t('saveOrderShortcut');
+                    else if (text.includes('Duplicate Last')) btn.textContent = this.t('duplicateLast');
+                    else if (text.includes('Same Day')) btn.textContent = this.t('sameDay');
+                    else if (text.includes('Clear') && text.includes('Ctrl')) btn.textContent = this.t('clearFormShortcut');
+                    else if (text.includes('Preview')) btn.textContent = `👁️ ${this.t('preview')}`;
+                    else if (text.includes('Notify')) btn.textContent = this.t('notifyTeam');
+                    else if (text.includes('Send Manager')) btn.textContent = this.t('sendReport');
+                });
             },
 
             // Helper function to get translations
@@ -5989,94 +6371,94 @@ convertToQuotationDateFormat(dateStr) {
                 const s = this.data.settings;
                 const ts = s.tableSettings;
                 const colors = s.printColors;
-                
+
                 container.innerHTML = `
                     <div class="card">
                         <div class="card-header">
-                            <h2 class="card-title">⚙️ System Settings</h2>
+                            <h2 class="card-title">${this.t('systemSettings')}</h2>
                         </div>
-                        
+
                         <div class="card">
-                            <h3>📋 Table Layout Settings</h3>
+                            <h3>${this.t('tableLayoutSettings')}</h3>
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
                                 <div class="form-group">
-                                    <label class="form-label">Sr.No Column Width: <span id="srWidthValue">${ts.columnWidthSr}%</span></label>
-                                    <input type="range" id="columnWidthSr" class="form-input" min="5" max="25" value="${ts.columnWidthSr}" 
+                                    <label class="form-label">${this.t('srColumnWidth')}: <span id="srWidthValue">${ts.columnWidthSr}%</span></label>
+                                    <input type="range" id="columnWidthSr" class="form-input" min="5" max="25" value="${ts.columnWidthSr}"
                                            oninput="document.getElementById('srWidthValue').textContent = this.value + '%'">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Item Name Width: <span id="itemWidthValue">${ts.columnWidthItem}%</span></label>
-                                    <input type="range" id="columnWidthItem" class="form-input" min="15" max="60" value="${ts.columnWidthItem}" 
+                                    <label class="form-label">${this.t('itemColumnWidth')}: <span id="itemWidthValue">${ts.columnWidthItem}%</span></label>
+                                    <input type="range" id="columnWidthItem" class="form-input" min="15" max="60" value="${ts.columnWidthItem}"
                                            oninput="document.getElementById('itemWidthValue').textContent = this.value + '%'">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Quantity Width: <span id="qtyWidthValue">${ts.columnWidthQty}%</span></label>
-                                    <input type="range" id="columnWidthQty" class="form-input" min="5" max="30" value="${ts.columnWidthQty}" 
+                                    <label class="form-label">${this.t('qtyColumnWidth')}: <span id="qtyWidthValue">${ts.columnWidthQty}%</span></label>
+                                    <input type="range" id="columnWidthQty" class="form-input" min="5" max="30" value="${ts.columnWidthQty}"
                                            oninput="document.getElementById('qtyWidthValue').textContent = this.value + '%'">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Remarks Width: <span id="remarksWidthValue">${ts.columnWidthRemarks}%</span></label>
-                                    <input type="range" id="columnWidthRemarks" class="form-input" min="15" max="60" value="${ts.columnWidthRemarks}" 
+                                    <label class="form-label">${this.t('remarksColumnWidth')}: <span id="remarksWidthValue">${ts.columnWidthRemarks}%</span></label>
+                                    <input type="range" id="columnWidthRemarks" class="form-input" min="15" max="60" value="${ts.columnWidthRemarks}"
                                            oninput="document.getElementById('remarksWidthValue').textContent = this.value + '%'">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Left Margin (filing): <span id="leftMarginValue">${ts.leftMargin}mm</span></label>
-                                    <input type="range" id="leftMargin" class="form-input" min="30" max="100" value="${ts.leftMargin}" 
+                                    <label class="form-label">${this.t('leftMarginFiling')}: <span id="leftMarginValue">${ts.leftMargin}mm</span></label>
+                                    <input type="range" id="leftMargin" class="form-input" min="30" max="100" value="${ts.leftMargin}"
                                            oninput="document.getElementById('leftMarginValue').textContent = this.value + 'mm'">
                                 </div>
                             </div>
                         </div>
 
                         <div class="card">
-                            <h3>🎨 Color Customization</h3>
+                            <h3>${this.t('colorCustomization')}</h3>
                             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
                                 <div class="form-group">
-                                    <label class="form-label">Header Background</label>
+                                    <label class="form-label">${this.t('headerBackground')}</label>
                                     <input type="color" id="printHeaderBg" class="form-input" value="${colors.headerBg}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Header Text</label>
+                                    <label class="form-label">${this.t('headerText')}</label>
                                     <input type="color" id="printHeaderText" class="form-input" value="${colors.headerText}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Order ID Background</label>
+                                    <label class="form-label">${this.t('orderIdBackground')}</label>
                                     <input type="color" id="printOrderIdBg" class="form-input" value="${colors.orderIdBg || '#667eea'}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Order ID Text</label>
+                                    <label class="form-label">${this.t('orderIdText')}</label>
                                     <input type="color" id="printOrderIdText" class="form-input" value="${colors.orderIdText || '#ffffff'}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Table Header Background</label>
+                                    <label class="form-label">${this.t('tableHeaderBackground')}</label>
                                     <input type="color" id="printTableHeaderBg" class="form-input" value="${colors.tableHeaderBg}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Table Header Text</label>
+                                    <label class="form-label">${this.t('tableHeaderText')}</label>
                                     <input type="color" id="printTableHeaderText" class="form-input" value="${colors.tableHeaderText}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Table Border</label>
+                                    <label class="form-label">${this.t('tableBorder')}</label>
                                     <input type="color" id="printTableBorder" class="form-input" value="${colors.tableBorder}" style="height: 50px;">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Notes Background</label>
+                                    <label class="form-label">${this.t('notesBackground')}</label>
                                     <input type="color" id="printNotesBg" class="form-input" value="${colors.notesBg}" style="height: 50px;">
                                 </div>
                             </div>
                         </div>
 
                         <div class="card">
-                            <h3>🖨️ Print Settings</h3>
+                            <h3>${this.t('printSettings')}</h3>
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
                                 <div class="form-group">
-                                    <label class="form-label">Default Font Size: <span id="fontSizeValue">${s.printFontSize}px</span></label>
+                                    <label class="form-label">${this.t('fontSize')}: <span id="fontSizeValue">${s.printFontSize}px</span></label>
                                     <input type="range" id="printFontSize" class="form-input" min="16" max="80" value="${s.printFontSize}"
                                            oninput="document.getElementById('fontSizeValue').textContent = this.value + 'px'">
-                                    <small style="color: var(--text-gray);">Note: Multi-order images use smart auto-sizing</small>
+                                    <small style="color: var(--text-gray);">${this.t('multiOrderNote')}</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Paper Format</label>
+                                    <label class="form-label">${this.t('paperFormat')}</label>
                                     <select id="paperFormat" class="form-select">
                                         <option value="A4" ${s.paperFormat === 'A4' ? 'selected' : ''}>A4 (210 × 297 mm)</option>
                                         <option value="Legal" ${s.paperFormat === 'Legal' ? 'selected' : ''}>Legal (216 × 356 mm)</option>
@@ -6085,63 +6467,63 @@ convertToQuotationDateFormat(dateStr) {
                                         <option value="A5" ${s.paperFormat === 'A5' ? 'selected' : ''}>A5 (148 × 210 mm)</option>
                                         <option value="Tabloid" ${s.paperFormat === 'Tabloid' ? 'selected' : ''}>Tabloid (279 × 432 mm)</option>
                                     </select>
-                                    <small style="color: var(--text-gray);">Choose paper size for print layout</small>
+                                    <small style="color: var(--text-gray);">${this.t('chooseFormat')}</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Page Orientation</label>
+                                    <label class="form-label">${this.t('pageOrientation')}</label>
                                     <select id="paperOrientation" class="form-select">
-                                        <option value="portrait" ${s.paperOrientation === 'portrait' ? 'selected' : ''}>📄 Portrait</option>
-                                        <option value="landscape" ${s.paperOrientation === 'landscape' ? 'selected' : ''}>📃 Landscape</option>
+                                        <option value="portrait" ${s.paperOrientation === 'portrait' ? 'selected' : ''}>${this.t('portrait')}</option>
+                                        <option value="landscape" ${s.paperOrientation === 'landscape' ? 'selected' : ''}>${this.t('landscape')}</option>
                                     </select>
-                                    <small style="color: var(--text-gray);">Portrait or landscape mode</small>
+                                    <small style="color: var(--text-gray);">${this.t('portraitOrLandscape')}</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Image Quality</label>
+                                    <label class="form-label">${this.t('imageQuality')}</label>
                                     <select id="imageQuality" class="form-select">
-                                        <option value="1" ${s.imageQuality === 1 ? 'selected' : ''}>Low (Faster)</option>
-                                        <option value="2" ${s.imageQuality === 2 ? 'selected' : ''}>Medium (Balanced)</option>
-                                        <option value="3" ${s.imageQuality === 3 ? 'selected' : ''}>High (Better Quality)</option>
-                                        <option value="4" ${s.imageQuality === 4 ? 'selected' : ''}>Ultra (Best Quality)</option>
+                                        <option value="1" ${s.imageQuality === 1 ? 'selected' : ''}>${this.t('low')} (${this.t('faster')})</option>
+                                        <option value="2" ${s.imageQuality === 2 ? 'selected' : ''}>${this.t('medium')} (${this.t('balanced')})</option>
+                                        <option value="3" ${s.imageQuality === 3 ? 'selected' : ''}>${this.t('high')} (${this.t('betterQuality')})</option>
+                                        <option value="4" ${s.imageQuality === 4 ? 'selected' : ''}>${this.t('ultra')} (${this.t('bestQuality')})</option>
                                     </select>
-                                    <small style="color: var(--text-gray);">Higher quality = larger file size</small>
+                                    <small style="color: var(--text-gray);">${this.t('higherQualityNote')}</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Function Slot Color</label>
+                                    <label class="form-label">${this.t('functionColor')}</label>
                                     <input type="color" id="functionColor" class="form-input" value="${s.functionColor || '#667eea'}" style="height: 50px;">
-                                    <small style="color: var(--text-gray);">Custom color for function slots</small>
+                                    <small style="color: var(--text-gray);">${this.t('customColorNote')}</small>
                                 </div>
                             </div>
                         </div>
 
                         <div class="card">
-                            <h3>🔧 System Preferences</h3>
+                            <h3>${this.t('systemPreferences')}</h3>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Default Order Status</label>
+                                    <label class="form-label">${this.t('defaultOrderStatus')}</label>
                                     <select id="defaultOrderStatus" class="form-select">
-                                        <option value="Confirmed" ${s.defaultOrderStatus === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
-                                        <option value="Completed" ${s.defaultOrderStatus === 'Completed' ? 'selected' : ''}>Completed</option>
-                                        <option value="Cancelled" ${s.defaultOrderStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                                        <option value="Confirmed" ${s.defaultOrderStatus === 'Confirmed' ? 'selected' : ''}>${this.t('confirmed')}</option>
+                                        <option value="Completed" ${s.defaultOrderStatus === 'Completed' ? 'selected' : ''}>${this.t('completed')}</option>
+                                        <option value="Cancelled" ${s.defaultOrderStatus === 'Cancelled' ? 'selected' : ''}>${this.t('cancelled')}</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Low Stock Threshold</label>
+                                    <label class="form-label">${this.t('lowStockThreshold')}</label>
                                     <input type="number" id="lowStockThreshold" class="form-input" value="${s.lowStockThreshold}" min="1">
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Language</label>
+                                    <label class="form-label">${this.t('language')}</label>
                                     <select id="appLanguage" class="form-select">
                                         <option value="en" ${s.language === 'en' ? 'selected' : ''}>English</option>
                                         <option value="gu" ${s.language === 'gu' ? 'selected' : ''}>ગુજરાતી</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Invoice Number Format</label>
+                                    <label class="form-label">${this.t('invoiceFormat')}</label>
                                     <select id="invoiceFormat" class="form-select">
                                         <option value="FP" ${s.invoicePrefix === 'FP' ? 'selected' : ''}>FP001</option>
                                         <option value="ORD" ${s.invoicePrefix === 'ORD' ? 'selected' : ''}>ORD001</option>
@@ -6152,17 +6534,17 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
 
                         <div class="btn-group">
-                            <button class="btn btn-primary" onclick="OMS.saveSettings()">💾 Save All Settings</button>
-                            <button class="btn btn-secondary" onclick="OMS.resetSettings()">🔄 Reset to Defaults</button>
+                            <button class="btn btn-primary" onclick="OMS.saveSettings()">${this.t('saveAllSettings')}</button>
+                            <button class="btn btn-secondary" onclick="OMS.resetSettings()">${this.t('resetToDefaults')}</button>
                         </div>
 
                         <div class="card">
-                            <h3>📊 Data Management</h3>
+                            <h3>${this.t('dataManagement')}</h3>
                             <div class="btn-group">
-                                <button class="btn btn-info" data-action="exportData">📤 Export JSON</button>
-                                <button class="btn btn-success" onclick="OMS.exportData('csv')">📊 Export CSV</button>
-                                <button class="btn btn-warning" data-action="importData">📥 Import Backup</button>
-                                <button class="btn btn-danger" onclick="OMS.resetAllData()">🗑️ Reset All Data</button>
+                                <button class="btn btn-info" data-action="exportData">${this.t('exportJSON')}</button>
+                                <button class="btn btn-success" onclick="OMS.exportData('csv')">${this.t('exportCSV')}</button>
+                                <button class="btn btn-warning" data-action="importData">${this.t('importBackup')}</button>
+                                <button class="btn btn-danger" onclick="OMS.resetAllData()">${this.t('resetAllData')}</button>
                             </div>
                         </div>
                     </div>
