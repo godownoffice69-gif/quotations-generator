@@ -2092,6 +2092,8 @@ const OMS = {
                     const id = actionElement.dataset.id;
                     const type = actionElement.dataset.type;
 
+                    console.log('🖱️ Button clicked - Action:', action, 'ID:', id, 'Type:', type);
+
                     e.preventDefault();
                     const handlers = {
     'preview': () => OMS.previewOrder(),
@@ -3006,7 +3008,10 @@ order: async () => {
 async editItem(type, id) {
                 const handlers = {
                     order: () => {
+                        console.log('🔍 EditItem called with ID:', id);
+                        console.log('📋 All order IDs in data.orders:', this.data.orders.map(o => o.orderId));
                         const order = this.data.orders.find(o => o.orderId === id);
+                        console.log('✅ Found order:', order ? order.orderId + ' - ' + order.clientName : 'NOT FOUND');
                         if (!order) return;
                         this.switchTab('orders');
                         this.loadOrderToForm(order);
@@ -3842,7 +3847,10 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             downloadOrderImage(orderId) {
+                console.log('🖨️ DownloadOrderImage called with ID:', orderId);
+                console.log('📋 All order IDs in data.orders:', this.data.orders.map(o => o.orderId));
                 const order = this.data.orders.find(o => o.orderId === orderId);
+                console.log('✅ Found order:', order ? order.orderId + ' - ' + order.clientName : 'NOT FOUND');
                 if (!order) return;
                 this.generateSingleOrderImage(order);
             },
