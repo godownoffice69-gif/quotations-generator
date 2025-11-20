@@ -989,8 +989,10 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Helper(s)</label>
-                                <input type="text" id="helper" class="form-input" placeholder="Enter helper name(s), separate multiple with commas">
-                                <small style="color: var(--text-gray);">You can add multiple helpers separated by commas (e.g., John, Mary, David)</small>
+                                <select id="helper" class="form-select" multiple style="min-height: 80px;">
+                                    <option value="">Select Helper(s)</option>
+                                </select>
+                                <small style="color: var(--text-gray);">Hold Ctrl/Cmd to select multiple helpers</small>
                             </div>
                         </div>
 
@@ -3104,11 +3106,15 @@ async refreshOrderId() {
             },
 
    collectFormData() {
-       
+
         const transport = Utils.get('transport');
         const eventType = Utils.get('eventTypeSelect');
         const isMultiDay = eventType === 'multi';
-        
+
+        // Get multiple selected helpers from multi-select dropdown
+        const helperSelect = document.getElementById('helper');
+        const selectedHelpers = helperSelect ? Array.from(helperSelect.selectedOptions).map(opt => opt.value).filter(v => v).join(', ') : '';
+
         // Collect day-wise data for multi-day events
         let dayWiseData = [];
         if (isMultiDay) {
@@ -3117,14 +3123,14 @@ async refreshOrderId() {
             const start = new Date(startDate);
             const end = new Date(endDate);
             const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
-            
+
             for (let i = 0; i < diffDays; i++) {
                 const currentDate = new Date(start);
                 currentDate.setDate(start.getDate() + i);
-                
+
                 // Get functions for this day
                 const dayFunctions = window.dayFunctionsData?.[i] || [];
-                
+
                 dayWiseData.push({
                     dayNumber: i + 1,
                     date: Utils.toDateString(currentDate),
@@ -3140,7 +3146,7 @@ async refreshOrderId() {
                 });
             }
         }
-        
+
         return {
             orderId: Utils.get('orderId'),
             isMultiDay: isMultiDay,
@@ -3157,7 +3163,7 @@ async refreshOrderId() {
             transport: transport === 'Other' ? Utils.get('customTransport') : transport,
             driverName: Utils.get('driverName'),
             operator: Utils.get('operator'),
-            helper: Utils.get('helper'),
+            helper: selectedHelpers,
             status: Utils.get('orderStatus'),
             notes: Utils.get('orderNotes'),
             items: isMultiDay ? [] : [...this.currentOrderItems],
@@ -3619,10 +3625,21 @@ convertToQuotationDateFormat(dateStr) {
                 customTransport: !['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : '',
                 driverName: order.driverName,
                 operator: order.operator,
-                helper: order.helper,
                 orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
+
+            // Handle multi-select helper field separately
+            if (order.helper) {
+                const helperSelect = document.getElementById('helper');
+                if (helperSelect) {
+                    // Split comma-separated helpers and select them
+                    const helperNames = order.helper.split(',').map(h => h.trim()).filter(h => h);
+                    Array.from(helperSelect.options).forEach(option => {
+                        option.selected = helperNames.includes(option.value);
+                    });
+                }
+            }
 
             if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
                 document.getElementById('customTransportGroup').classList.remove('hidden');
@@ -6060,7 +6077,16 @@ convertToQuotationDateFormat(dateStr) {
                         operators.map(o => `<option value="${o.name}" data-id="${o.id}">⚙️ ${o.name}</option>`).join('');
                 }
 
-                // Helper is now a text input field, no need to populate dropdown
+                // Populate Helper multi-select dropdown
+                const helperSelect = document.getElementById('helper');
+                if (helperSelect) {
+                    const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
+                    // Keep existing selections
+                    const currentValues = Array.from(helperSelect.selectedOptions).map(opt => opt.value);
+                    helperSelect.innerHTML = helpers.map(h =>
+                        `<option value="${h.name}" data-id="${h.id}" ${currentValues.includes(h.name) ? 'selected' : ''}>👷 ${h.name}</option>`
+                    ).join('');
+                }
             },
 
             populateFunctionTeamDropdowns(dayIndex, functionIndex) {
@@ -6093,7 +6119,10 @@ convertToQuotationDateFormat(dateStr) {
                 // Get current order form data
                 const driverName = Utils.get('driverName');
                 const operatorName = Utils.get('operator');
-                const helperName = Utils.get('helper');
+
+                // Get multiple selected helpers from multi-select dropdown
+                const helperSelect = document.getElementById('helper');
+                const helperNames = helperSelect ? Array.from(helperSelect.selectedOptions).map(opt => opt.value).filter(v => v) : [];
 
                 // Get order details
                 const orderId = Utils.get('orderId') || 'NEW';
@@ -6114,37 +6143,49 @@ convertToQuotationDateFormat(dateStr) {
                 // Find team members and send notifications
                 const notifications = [];
 
+                // Prepare team list for messages
+                const teamListForMessage = [
+                    driverName ? `Driver: ${driverName}` : null,
+                    operatorName ? `Operator: ${operatorName}` : null,
+                    helperNames.length > 0 ? `Helper(s): ${helperNames.join(', ')}` : null
+                ].filter(Boolean).join(', ');
+
+                // Send to Driver
                 if (driverName) {
                     const driver = this.data.team.find(m => m.name === driverName);
                     if (driver && driver.whatsApp) {
                         this.sendTeamMemberNotification(driver, 'Driver', {
                             orderId, clientName, venue, date, readyTime, contact, items,
-                            driverName, operatorName, helperName
+                            teamList: teamListForMessage
                         });
                         notifications.push(driver.name);
                     }
                 }
 
+                // Send to Operator
                 if (operatorName) {
                     const operator = this.data.team.find(m => m.name === operatorName);
                     if (operator && operator.whatsApp) {
                         this.sendTeamMemberNotification(operator, 'Operator', {
                             orderId, clientName, venue, date, readyTime, contact, items,
-                            driverName, operatorName, helperName
+                            teamList: teamListForMessage
                         });
                         notifications.push(operator.name);
                     }
                 }
 
-                if (helperName) {
-                    const helper = this.data.team.find(m => m.name === helperName);
-                    if (helper && helper.whatsApp) {
-                        this.sendTeamMemberNotification(helper, 'Helper', {
-                            orderId, clientName, venue, date, readyTime, contact, items,
-                            driverName, operatorName, helperName
-                        });
-                        notifications.push(helper.name);
-                    }
+                // Send to ALL Helpers
+                if (helperNames.length > 0) {
+                    helperNames.forEach(helperName => {
+                        const helper = this.data.team.find(m => m.name === helperName);
+                        if (helper && helper.whatsApp) {
+                            this.sendTeamMemberNotification(helper, 'Helper', {
+                                orderId, clientName, venue, date, readyTime, contact, items,
+                                teamList: teamListForMessage
+                            });
+                            notifications.push(helper.name);
+                        }
+                    });
                 }
 
                 if (notifications.length > 0) {
@@ -6169,19 +6210,12 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             sendTeamMemberNotification(teamMember, role, orderDetails) {
-                const { orderId, clientName, venue, date, readyTime, contact, items, driverName, operatorName, helperName } = orderDetails;
+                const { orderId, clientName, venue, date, readyTime, contact, items, teamList } = orderDetails;
 
                 // Format items list
                 const itemsList = items && items.length > 0
                     ? items.map(item => `• ${item.name}: ${item.quantity}${item.remarks ? ' (' + item.remarks + ')' : ''}`).join('\n')
                     : '• No items added yet';
-
-                // Build team members list
-                const teamList = [
-                    driverName ? `• Driver: ${driverName}` : null,
-                    operatorName ? `• Operator: ${operatorName}` : null,
-                    helperName ? `• Helper: ${helperName}` : null
-                ].filter(Boolean).join('\n');
 
                 // Create WhatsApp message
                 let message = `🎉 *NEW ORDER ASSIGNED TO YOU*\n\n`;
