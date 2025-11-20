@@ -3050,22 +3050,36 @@ convertToQuotationDateFormat(dateStr) {
                     const canvas = await html2canvas(template, {
                         scale: this.data.settings.imageQuality || 2,
                         backgroundColor: '#ffffff',
-                        width: paperDimensions.width
+                        width: paperDimensions.width,
+                        logging: false,
+                        useCORS: true
                     });
 
                     template.style.display = 'none';
 
+                    // Add error handling for blob creation
                     canvas.toBlob(blob => {
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = `Order_${order.orderId}.png`;
-                        link.click();
-                        URL.revokeObjectURL(url);
+                        if (!blob) {
+                            this.hideLoading(loading);
+                            this.showToast('Error: Image too large. Try reducing quality or paper size.', 'error');
+                            return;
+                        }
 
-                        this.hideLoading(loading);
-                        this.showToast('Image downloaded!');
-                    });
+                        try {
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `Order_${order.orderId}.png`;
+                            link.click();
+                            URL.revokeObjectURL(url);
+
+                            this.hideLoading(loading);
+                            this.showToast('Image downloaded!');
+                        } catch (e) {
+                            this.hideLoading(loading);
+                            this.showToast('Error creating download: ' + e.message, 'error');
+                        }
+                    }, 'image/png', 0.95);
                 } catch (error) {
                     this.hideLoading(loading);
                     this.showToast('Error: ' + error.message, 'error');
@@ -3078,9 +3092,17 @@ convertToQuotationDateFormat(dateStr) {
                 try {
                     const template = document.getElementById('printTemplate');
                     const colors = this.data.settings.printColors;
+                    const fontSize = this.data.settings.printFontSize || 32;
 
                     // Get paper dimensions based on settings
                     const paperDimensions = this.getPaperDimensions();
+
+                    // Smart quality adjustment for multi-order images to prevent memory issues
+                    let qualityScale = this.data.settings.imageQuality || 2;
+                    if (orders.length > 5 && qualityScale > 3) {
+                        qualityScale = 3; // Limit to High quality for more than 5 orders
+                        console.log('⚠️ Quality reduced to High due to multiple orders to prevent memory issues');
+                    }
 
                     let html = `
                         <div style="text-align: center; margin-bottom: 40px;">
@@ -3090,8 +3112,11 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
                     `;
 
+                    // Use fontSize from settings, but slightly smaller for compact multi-order view
+                    const compactFontSize = Math.max(16, fontSize - 6);
+
                     orders.forEach((order, i) => {
-                        html += this.buildOrderHTML(order, 28, colors, true);
+                        html += this.buildOrderHTML(order, compactFontSize, colors, true);
                         if (i < orders.length - 1) {
                             html += '<div style="page-break-before: always;"></div>';
                         }
@@ -3103,24 +3128,38 @@ convertToQuotationDateFormat(dateStr) {
                     await new Promise(r => setTimeout(r, 2000));
 
                     const canvas = await html2canvas(template, {
-                        scale: this.data.settings.imageQuality || 2,
+                        scale: qualityScale,
                         backgroundColor: '#ffffff',
-                        width: paperDimensions.width
+                        width: paperDimensions.width,
+                        logging: false,
+                        useCORS: true
                     });
 
                     template.style.display = 'none';
 
+                    // Add error handling for blob creation
                     canvas.toBlob(blob => {
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = `Orders_${date}.png`;
-                        link.click();
-                        URL.revokeObjectURL(url);
+                        if (!blob) {
+                            this.hideLoading(loading);
+                            this.showToast('Error: Image too large. Try reducing quality or paper size.', 'error');
+                            return;
+                        }
 
-                        this.hideLoading(loading);
-                        this.showToast(`${orders.length} orders downloaded!`);
-                    });
+                        try {
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `Orders_${date}.png`;
+                            link.click();
+                            URL.revokeObjectURL(url);
+
+                            this.hideLoading(loading);
+                            this.showToast(`${orders.length} orders downloaded!`);
+                        } catch (e) {
+                            this.hideLoading(loading);
+                            this.showToast('Error creating download: ' + e.message, 'error');
+                        }
+                    }, 'image/png', 0.95);
                 } catch (error) {
                     this.hideLoading(loading);
                     this.showToast('Error: ' + error.message, 'error');
