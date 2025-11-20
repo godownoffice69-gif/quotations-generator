@@ -6140,8 +6140,8 @@ convertToQuotationDateFormat(dateStr) {
                 // Get items from current order
                 const items = this.currentOrderItems || [];
 
-                // Find team members and send notifications
-                const notifications = [];
+                // Collect all team members to notify
+                const teamToNotify = [];
 
                 // Prepare team list for messages
                 const teamListForMessage = [
@@ -6150,63 +6150,62 @@ convertToQuotationDateFormat(dateStr) {
                     helperNames.length > 0 ? `Helper(s): ${helperNames.join(', ')}` : null
                 ].filter(Boolean).join(', ');
 
-                // Send to Driver
+                // Add Driver
                 if (driverName) {
                     const driver = this.data.team.find(m => m.name === driverName);
                     if (driver && driver.whatsApp) {
-                        this.sendTeamMemberNotification(driver, 'Driver', {
-                            orderId, clientName, venue, date, readyTime, contact, items,
-                            teamList: teamListForMessage
-                        });
-                        notifications.push(driver.name);
+                        teamToNotify.push({ member: driver, role: 'Driver' });
                     }
                 }
 
-                // Send to Operator
+                // Add Operator
                 if (operatorName) {
                     const operator = this.data.team.find(m => m.name === operatorName);
                     if (operator && operator.whatsApp) {
-                        this.sendTeamMemberNotification(operator, 'Operator', {
-                            orderId, clientName, venue, date, readyTime, contact, items,
-                            teamList: teamListForMessage
-                        });
-                        notifications.push(operator.name);
+                        teamToNotify.push({ member: operator, role: 'Operator' });
                     }
                 }
 
-                // Send to ALL Helpers
+                // Add ALL Helpers
                 if (helperNames.length > 0) {
                     helperNames.forEach(helperName => {
                         const helper = this.data.team.find(m => m.name === helperName);
                         if (helper && helper.whatsApp) {
-                            this.sendTeamMemberNotification(helper, 'Helper', {
-                                orderId, clientName, venue, date, readyTime, contact, items,
-                                teamList: teamListForMessage
-                            });
-                            notifications.push(helper.name);
+                            teamToNotify.push({ member: helper, role: 'Helper' });
                         }
                     });
                 }
 
-                if (notifications.length > 0) {
-                    this.showToast(`Notifications sent to ${notifications.join(', ')}`, 'success');
-
-                    // Log notification
-                    const notification = {
-                        id: Utils.generateId(),
-                        type: 'team_allocation',
-                        orderId,
-                        recipients: notifications,
-                        timestamp: new Date().toISOString()
-                    };
-                    this.data.notifications.push(notification);
-                    this.saveToStorage();
-
-                    // Save to Firestore
-                    this.saveNotificationToFirestore(notification);
-                } else {
+                if (teamToNotify.length === 0) {
                     this.showToast('No team members selected or no WhatsApp numbers found', 'warning');
+                    return;
                 }
+
+                // Send notifications with delay to prevent popup blocking
+                teamToNotify.forEach((item, index) => {
+                    setTimeout(() => {
+                        this.sendTeamMemberNotification(item.member, item.role, {
+                            orderId, clientName, venue, date, readyTime, contact, items,
+                            teamList: teamListForMessage
+                        });
+                    }, index * 500); // 500ms delay between each window
+                });
+
+                this.showToast(`Opening WhatsApp for ${teamToNotify.length} team member(s): ${teamToNotify.map(t => t.member.name).join(', ')}`, 'success');
+
+                // Log notification
+                const notification = {
+                    id: Utils.generateId(),
+                    type: 'team_allocation',
+                    orderId,
+                    recipients: teamToNotify.map(t => t.member.name),
+                    timestamp: new Date().toISOString()
+                };
+                this.data.notifications.push(notification);
+                this.saveToStorage();
+
+                // Save to Firestore
+                this.saveNotificationToFirestore(notification);
             },
 
             sendTeamMemberNotification(teamMember, role, orderDetails) {
@@ -6320,18 +6319,34 @@ convertToQuotationDateFormat(dateStr) {
                 message += `━━━━━━━━━━━━━━━━━━━━\n`;
                 message += `--\n_FirepowerSFX Admin_`;
 
-                // Send to all managers
-                managers.forEach(manager => {
+                // Filter managers with valid WhatsApp numbers
+                const managersWithWhatsApp = managers.filter(m => m.whatsApp && m.whatsApp.trim() !== '');
+
+                if (managersWithWhatsApp.length === 0) {
+                    this.showToast('No managers have WhatsApp numbers configured', 'warning');
+                    return;
+                }
+
+                // Send to all managers with delay to prevent popup blocking
+                const encodedMessage = encodeURIComponent(message);
+                const managerNames = [];
+
+                managersWithWhatsApp.forEach((manager, index) => {
                     const phoneNumber = manager.whatsApp.replace(/[^0-9]/g, '');
-                    const encodedMessage = encodeURIComponent(message);
-                    window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
+                    if (phoneNumber) {
+                        managerNames.push(manager.name);
+                        // Add delay between each window to prevent popup blocking
+                        setTimeout(() => {
+                            window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
+                        }, index * 500); // 500ms delay between each window
+                    }
                 });
 
                 // Log notification
                 const notification = {
                     id: Utils.generateId(),
                     type: 'manager_report',
-                    recipients: managers.map(m => m.name),
+                    recipients: managerNames,
                     orderId: currentOrderId,
                     targetDate: targetDate,
                     timestamp: new Date().toISOString()
@@ -6342,7 +6357,7 @@ convertToQuotationDateFormat(dateStr) {
                 // Save to Firestore
                 this.saveNotificationToFirestore(notification);
 
-                this.showToast(`Manager report sent to ${managers.length} manager(s) for order ${currentOrderId || 'NEW'}`, 'success');
+                this.showToast(`Opening WhatsApp for ${managerNames.length} manager(s): ${managerNames.join(', ')}`, 'success');
             },
 
             renderCalendarTab() {
