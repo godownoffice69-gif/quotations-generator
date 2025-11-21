@@ -5245,6 +5245,26 @@ convertToQuotationDateFormat(dateStr) {
                 const shortageItems = items.filter(i => i.difference < 0);
                 const okItems = items.filter(i => i.difference >= 0);
 
+                // Calculate dry ice and flowers requirements
+                // Find all dry ice machines (items containing "dry" and "ice" or "machine")
+                const dryMachineKeywords = ['dry ice machine', 'dry machine', 'ice machine'];
+                const dryMachines = items.filter(item => {
+                    const name = item.name.toLowerCase();
+                    return dryMachineKeywords.some(keyword => name.includes(keyword)) ||
+                           (name.includes('dry') && (name.includes('ice') || name.includes('machine')));
+                }).reduce((sum, item) => sum + item.required, 0);
+
+                const dryIceNeeded = dryMachines * 40; // 40 kg per dry machine
+
+                // Find all blowers (items containing "blower", "DMX", or "manual")
+                const blowerKeywords = ['blower', 'dmx', 'manual blower'];
+                const blowers = items.filter(item => {
+                    const name = item.name.toLowerCase();
+                    return blowerKeywords.some(keyword => name.includes(keyword));
+                }).reduce((sum, item) => sum + item.required, 0);
+
+                const flowersNeeded = blowers * 20; // 20 kg per blower
+
                 container.innerHTML = `
                     <!-- Summary Cards -->
                     <div class="card" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 1.5rem;">
@@ -5276,6 +5296,43 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Materials Calculation Card -->
+                    ${(dryMachines > 0 || blowers > 0) ? `
+                    <div class="card" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 1.5rem; margin-top: 1rem;">
+                        <h3 style="margin-bottom: 1rem; font-size: 1.3rem;">🧊 Materials Required</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                            ${dryMachines > 0 ? `
+                            <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: var(--radius);">
+                                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                                    <div style="font-size: 2.5rem;">❄️</div>
+                                    <div>
+                                        <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.25rem;">Dry Ice Needed</div>
+                                        <div style="font-size: 2rem; font-weight: 700;">${dryIceNeeded} kg</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
+                                    📦 ${dryMachines} dry machine(s) × 40 kg each
+                                </div>
+                            </div>
+                            ` : ''}
+                            ${blowers > 0 ? `
+                            <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: var(--radius);">
+                                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                                    <div style="font-size: 2.5rem;">🌸</div>
+                                    <div>
+                                        <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.25rem;">Flowers/Papers Needed</div>
+                                        <div style="font-size: 2rem; font-weight: 700;">${flowersNeeded} kg</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
+                                    💨 ${blowers} blower(s) × 20 kg each
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
 
                     <!-- Export Buttons -->
                     <div class="btn-group">
@@ -5427,8 +5484,7 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
                 `).join('');
 
-                this.showModal(`
-                    <h2 style="margin-bottom: 1rem;">📦 ${itemName}</h2>
+                this.showModal(`📦 ${itemName}`, `
                     <div style="margin-bottom: 1rem;">
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
                             <div style="background: var(--light); padding: 1rem; border-radius: var(--radius); text-align: center;">
