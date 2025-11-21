@@ -3981,28 +3981,82 @@ convertToQuotationDateFormat(dateStr) {
                     // Use fontSize from settings, but slightly smaller for compact multi-order view
                     const compactFontSize = Math.max(16, fontSize - 6);
 
-                    // STEP 1: Measure each order's height
-                    console.log('📏 Measuring order heights...');
-                    const orderHeights = [];
+                    console.log(`🚀 Starting PDF generation for ${orders.length} orders`);
+                    console.log(`📊 Orders to process:`, orders.map((o, i) => `${i+1}. ${o.orderId}`).join(', '));
 
-                    // Temporarily set template to auto height and proper styling for accurate measurement
+                    // NEW ALGORITHM: Dynamic page building with actual measurements
+                    // This ensures ALL orders are included and pages are packed optimally
+
                     template.style.height = 'auto';
                     template.style.minHeight = '0';
                     template.style.maxHeight = 'none';
                     template.style.overflow = 'visible';
+                    template.style.display = 'block';
+                    template.style.visibility = 'hidden';
+                    template.style.position = 'absolute';
+
+                    const headerHeight = 120; // Reduced header
+                    const separatorHeight = 25; // Space between orders
+                    const bottomMargin = 60; // Bottom margin
+                    const maxContentHeight = paperDimensions.height - headerHeight - bottomMargin;
+
+                    console.log(`📏 Max content height per page: ${maxContentHeight}px`);
+
+                    const pages = [];
+                    let currentPageOrders = [];
+                    let processedOrders = new Set(); // Track which orders we've added
 
                     for (let i = 0; i < orders.length; i++) {
-                        template.innerHTML = this.buildOrderHTML(orders[i], compactFontSize, colors, true);
-                        template.style.display = 'block';
-                        template.style.visibility = 'hidden'; // Hidden but still rendered for measurement
-                        template.style.position = 'absolute';
+                        const order = orders[i];
+                        console.log(`\n🔄 Processing order ${i + 1}/${orders.length}: ${order.orderId}`);
 
-                        await new Promise(r => setTimeout(r, 50)); // Let it render
+                        // Try adding this order to current page
+                        const testOrders = [...currentPageOrders, order];
 
-                        // Use scrollHeight for accurate content height
-                        const height = template.scrollHeight;
-                        orderHeights.push(height);
-                        console.log(`📦 Order ${i + 1} (${orders[i].orderId}) height: ${height}px`);
+                        // Build HTML with all orders on current page including this new one
+                        let testHtml = '';
+                        testOrders.forEach((o, idx) => {
+                            testHtml += this.buildOrderHTML(o, compactFontSize, colors, true);
+                            if (idx < testOrders.length - 1) {
+                                testHtml += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
+                            }
+                        });
+
+                        // Render and measure
+                        template.innerHTML = testHtml;
+                        await new Promise(r => setTimeout(r, 100));
+                        const totalHeight = template.scrollHeight;
+
+                        console.log(`   📐 Current page with ${testOrders.length} orders: ${totalHeight}px / ${maxContentHeight}px`);
+
+                        // Check if it fits
+                        if (totalHeight <= maxContentHeight || currentPageOrders.length === 0) {
+                            // Fits! Add this order to current page
+                            currentPageOrders.push(order);
+                            processedOrders.add(i);
+                            console.log(`   ✅ Order ${order.orderId} ADDED to page (${currentPageOrders.length} orders on page)`);
+
+                            // If this is the last order, save the page
+                            if (i === orders.length - 1) {
+                                console.log(`📄 Final page created with ${currentPageOrders.length} orders`);
+                                pages.push([...currentPageOrders]);
+                            }
+                        } else {
+                            // Doesn't fit! Save current page and start new page with this order
+                            console.log(`   ⚠️  Exceeds limit! Saving page ${pages.length + 1} with ${currentPageOrders.length} orders`);
+                            console.log(`   📄 Page ${pages.length + 1} orders:`, currentPageOrders.map(o => o.orderId).join(', '));
+
+                            pages.push([...currentPageOrders]);
+                            currentPageOrders = [order];
+                            processedOrders.add(i);
+                            console.log(`   ✅ Order ${order.orderId} STARTS new page ${pages.length + 1}`);
+
+                            // If this is the last order, save this new page too
+                            if (i === orders.length - 1) {
+                                console.log(`📄 Final page created with ${currentPageOrders.length} orders`);
+                                pages.push([...currentPageOrders]);
+                            }
+                        }
                     }
 
                     // Reset template
@@ -4010,45 +4064,25 @@ convertToQuotationDateFormat(dateStr) {
                     template.style.visibility = 'visible';
                     template.style.position = 'static';
 
-                    // STEP 2: Calculate pagination - group orders that fit in A4 page
-                    const headerHeight = 150; // Space for page header (reduced)
-                    const orderSpacing = 40; // Space between orders on same page (reduced)
-                    const bottomMargin = 80; // Bottom margin
-                    const maxPageHeight = paperDimensions.height - headerHeight - bottomMargin;
+                    // VERIFICATION: Check all orders are included
+                    const totalOrdersInPages = pages.reduce((sum, page) => sum + page.length, 0);
+                    console.log(`\n✅ VERIFICATION:`);
+                    console.log(`   Input orders: ${orders.length}`);
+                    console.log(`   Processed: ${processedOrders.size}`);
+                    console.log(`   Total in pages: ${totalOrdersInPages}`);
+                    console.log(`   Pages created: ${pages.length}`);
 
-                    console.log(`📄 Max page height: ${maxPageHeight}px (Paper: ${paperDimensions.height}px)`);
+                    pages.forEach((page, idx) => {
+                        console.log(`   Page ${idx + 1}: ${page.length} orders - ${page.map(o => o.orderId).join(', ')}`);
+                    });
 
-                    const pages = [];
-                    let currentPage = [];
-                    let currentPageHeight = 0;
-
-                    for (let i = 0; i < orders.length; i++) {
-                        // First order on page doesn't need spacing above it
-                        const spacing = currentPage.length > 0 ? orderSpacing : 0;
-                        const orderHeight = orderHeights[i] + spacing;
-
-                        // Check if adding this order would exceed page height
-                        if (currentPageHeight + orderHeight > maxPageHeight && currentPage.length > 0) {
-                            // Start a new page
-                            console.log(`📄 Page ${pages.length + 1}: ${currentPage.length} orders, total height: ${currentPageHeight}px`);
-                            pages.push([...currentPage]);
-                            currentPage = [i];
-                            currentPageHeight = orderHeights[i]; // No spacing for first order on new page
-                        } else {
-                            // Add to current page
-                            currentPage.push(i);
-                            currentPageHeight += orderHeight;
-                        }
-                    }
-
-                    // Add the last page
-                    if (currentPage.length > 0) {
-                        console.log(`📄 Page ${pages.length + 1}: ${currentPage.length} orders, total height: ${currentPageHeight}px`);
-                        pages.push(currentPage);
+                    if (totalOrdersInPages !== orders.length) {
+                        console.error(`❌ ERROR: Missing orders! Expected ${orders.length}, got ${totalOrdersInPages}`);
+                        throw new Error(`Missing orders in PDF! Expected ${orders.length}, but only ${totalOrdersInPages} were included.`);
                     }
 
                     const totalPages = pages.length;
-                    console.log(`✅ Final result: ${totalPages} page(s) for ${orders.length} orders`);
+                    console.log(`\n🎉 Success! Generated ${totalPages} pages for ${orders.length} orders`);
 
                     // STEP 3: Generate multi-page PDF
                     this.updateLoadingMessage(loading, 'Creating PDF document...');
@@ -4080,13 +4114,12 @@ convertToQuotationDateFormat(dateStr) {
                     for (let pageNum = 0; pageNum < totalPages; pageNum++) {
                         this.updateLoadingMessage(loading, `Adding page ${pageNum + 1} of ${totalPages} to PDF...`);
 
-                        const orderIndices = pages[pageNum];
-                        const pageOrders = orderIndices.map(idx => orders[idx]);
+                        const pageOrders = pages[pageNum];
 
                         // Build HTML for this page
                         let html = `
-                            <div style="text-align: center; margin-bottom: 30px; padding: 15px 0;">
-                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 15px; margin: 0; font-size: 28px;">
+                            <div style="text-align: center; margin-bottom: 25px; padding: 12px 0;">
+                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 12px; margin: 0; font-size: 26px;">
                                     Orders for ${Utils.formatDate(date)} - Page ${pageNum + 1} of ${totalPages}
                                 </h1>
                             </div>
@@ -4095,7 +4128,7 @@ convertToQuotationDateFormat(dateStr) {
                         pageOrders.forEach((order, i) => {
                             html += this.buildOrderHTML(order, compactFontSize, colors, true);
                             if (i < pageOrders.length - 1) {
-                                html += '<div style="margin: 20px 0; border-top: 2px dashed #ccc;"></div>';
+                                html += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
                             }
                         });
 
