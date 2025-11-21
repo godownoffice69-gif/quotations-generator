@@ -3951,7 +3951,7 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             async generateMultiOrderImage(orders, date) {
-                const loading = this.showLoading('Generating multi-order image...');
+                const loading = this.showLoading('Preparing multi-page images...');
 
                 try {
                     const template = document.getElementById('printTemplate');
@@ -3977,65 +3977,132 @@ convertToQuotationDateFormat(dateStr) {
                         console.log('⚠️ Quality reduced to High due to multiple orders to prevent memory issues');
                     }
 
-                    let html = `
-                        <div style="text-align: center; margin-bottom: 40px;">
-                            <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px;">
-                                Orders for ${Utils.formatDate(date)}
-                            </h1>
-                        </div>
-                    `;
-
                     // Use fontSize from settings, but slightly smaller for compact multi-order view
                     const compactFontSize = Math.max(16, fontSize - 6);
 
-                    orders.forEach((order, i) => {
-                        html += this.buildOrderHTML(order, compactFontSize, colors, true);
-                        if (i < orders.length - 1) {
-                            html += '<div style="page-break-before: always;"></div>';
-                        }
-                    });
-
-                    template.innerHTML = html;
-                    template.style.display = 'block';
-
-                    await new Promise(r => setTimeout(r, 2000));
-
-                    const canvas = await html2canvas(template, {
-                        scale: qualityScale,
-                        backgroundColor: '#ffffff',
-                        width: paperDimensions.width,
-                        logging: false,
-                        useCORS: true
-                    });
-
+                    // STEP 1: Measure each order's height
+                    console.log('📏 Measuring order heights...');
+                    const orderHeights = [];
+                    for (let i = 0; i < orders.length; i++) {
+                        template.innerHTML = this.buildOrderHTML(orders[i], compactFontSize, colors, true);
+                        template.style.display = 'block';
+                        await new Promise(r => setTimeout(r, 100)); // Let it render
+                        const height = template.offsetHeight;
+                        orderHeights.push(height);
+                        console.log(`Order ${i + 1} height: ${height}px`);
+                    }
                     template.style.display = 'none';
 
-                    // Add error handling for blob creation
-                    canvas.toBlob(blob => {
-                        if (!blob) {
-                            this.hideLoading(loading);
-                            this.showToast('Error: Image too large. Try reducing quality or paper size.', 'error');
-                            return;
-                        }
+                    // STEP 2: Calculate pagination - group orders that fit in A4 page
+                    const headerHeight = 200; // Space for page header
+                    const orderSpacing = 60; // Space between orders
+                    const maxPageHeight = paperDimensions.height - headerHeight - 100; // Leave margin at bottom
 
-                        try {
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = `Orders_${date}.png`;
-                            link.click();
-                            URL.revokeObjectURL(url);
+                    const pages = [];
+                    let currentPage = [];
+                    let currentPageHeight = 0;
 
-                            this.hideLoading(loading);
-                            this.showToast(`${orders.length} orders downloaded!`);
-                        } catch (e) {
-                            this.hideLoading(loading);
-                            this.showToast('Error creating download: ' + e.message, 'error');
+                    for (let i = 0; i < orders.length; i++) {
+                        const orderHeight = orderHeights[i] + orderSpacing;
+
+                        // Check if adding this order would exceed page height
+                        if (currentPageHeight + orderHeight > maxPageHeight && currentPage.length > 0) {
+                            // Start a new page
+                            pages.push([...currentPage]);
+                            currentPage = [i];
+                            currentPageHeight = orderHeight;
+                        } else {
+                            // Add to current page
+                            currentPage.push(i);
+                            currentPageHeight += orderHeight;
                         }
-                    }, 'image/png', 0.95);
+                    }
+
+                    // Add the last page
+                    if (currentPage.length > 0) {
+                        pages.push(currentPage);
+                    }
+
+                    const totalPages = pages.length;
+                    console.log(`📄 Generated ${totalPages} page(s) for ${orders.length} orders`);
+
+                    // STEP 3: Generate and download each page
+                    for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+                        this.updateLoadingMessage(loading, `Generating page ${pageNum + 1} of ${totalPages}...`);
+
+                        const orderIndices = pages[pageNum];
+                        const pageOrders = orderIndices.map(idx => orders[idx]);
+
+                        // Build HTML for this page
+                        let html = `
+                            <div style="text-align: center; margin-bottom: 40px; padding: 20px 0;">
+                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px; margin: 0;">
+                                    Orders for ${Utils.formatDate(date)} - Page ${pageNum + 1} of ${totalPages}
+                                </h1>
+                            </div>
+                        `;
+
+                        pageOrders.forEach((order, i) => {
+                            html += this.buildOrderHTML(order, compactFontSize, colors, true);
+                            if (i < pageOrders.length - 1) {
+                                html += '<div style="margin: 30px 0; border-top: 3px dashed #ccc;"></div>';
+                            }
+                        });
+
+                        template.innerHTML = html;
+                        template.style.display = 'block';
+
+                        await new Promise(r => setTimeout(r, 500));
+
+                        const canvas = await html2canvas(template, {
+                            scale: qualityScale,
+                            backgroundColor: '#ffffff',
+                            width: paperDimensions.width,
+                            logging: false,
+                            useCORS: true
+                        });
+
+                        template.style.display = 'none';
+
+                        // Download this page
+                        await new Promise((resolve, reject) => {
+                            canvas.toBlob(blob => {
+                                if (!blob) {
+                                    reject(new Error('Failed to create image blob'));
+                                    return;
+                                }
+
+                                try {
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = `Orders_${date}_Page${pageNum + 1}.png`;
+                                    link.click();
+                                    URL.revokeObjectURL(url);
+
+                                    // Small delay between downloads to ensure browser processes them
+                                    setTimeout(() => resolve(), 300);
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            }, 'image/png', 0.95);
+                        });
+                    }
+
+                    this.hideLoading(loading);
+                    this.showToast(`✅ ${totalPages} page(s) downloaded! (${orders.length} orders total)`);
+
                 } catch (error) {
                     this.hideLoading(loading);
                     this.showToast('Error: ' + error.message, 'error');
+                    console.error('Error generating multi-order images:', error);
+                }
+            },
+
+            // Helper to update loading message dynamically
+            updateLoadingMessage(loadingElement, message) {
+                if (loadingElement && loadingElement.querySelector('.loading-text')) {
+                    loadingElement.querySelector('.loading-text').textContent = message;
                 }
             },
 
@@ -4737,7 +4804,7 @@ convertToQuotationDateFormat(dateStr) {
 
             showLoading(message) {
                 const loading = Utils.elem('div', { class: 'loading' }, [
-                    Utils.elem('div', {}, [message]),
+                    Utils.elem('div', { class: 'loading-text' }, [message]),
                     Utils.elem('div', { class: 'spinner' })
                 ]);
                 document.body.appendChild(loading);
