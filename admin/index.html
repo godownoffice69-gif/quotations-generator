@@ -3983,34 +3983,56 @@ convertToQuotationDateFormat(dateStr) {
                     // STEP 1: Measure each order's height
                     console.log('📏 Measuring order heights...');
                     const orderHeights = [];
+
+                    // Temporarily set template to auto height and proper styling for accurate measurement
+                    template.style.height = 'auto';
+                    template.style.minHeight = '0';
+                    template.style.maxHeight = 'none';
+                    template.style.overflow = 'visible';
+
                     for (let i = 0; i < orders.length; i++) {
                         template.innerHTML = this.buildOrderHTML(orders[i], compactFontSize, colors, true);
                         template.style.display = 'block';
-                        await new Promise(r => setTimeout(r, 100)); // Let it render
-                        const height = template.offsetHeight;
+                        template.style.visibility = 'hidden'; // Hidden but still rendered for measurement
+                        template.style.position = 'absolute';
+
+                        await new Promise(r => setTimeout(r, 50)); // Let it render
+
+                        // Use scrollHeight for accurate content height
+                        const height = template.scrollHeight;
                         orderHeights.push(height);
-                        console.log(`Order ${i + 1} height: ${height}px`);
+                        console.log(`📦 Order ${i + 1} (${orders[i].orderId}) height: ${height}px`);
                     }
+
+                    // Reset template
                     template.style.display = 'none';
+                    template.style.visibility = 'visible';
+                    template.style.position = 'static';
 
                     // STEP 2: Calculate pagination - group orders that fit in A4 page
-                    const headerHeight = 200; // Space for page header
-                    const orderSpacing = 60; // Space between orders
-                    const maxPageHeight = paperDimensions.height - headerHeight - 100; // Leave margin at bottom
+                    const headerHeight = 150; // Space for page header (reduced)
+                    const orderSpacing = 40; // Space between orders on same page (reduced)
+                    const bottomMargin = 80; // Bottom margin
+                    const maxPageHeight = paperDimensions.height - headerHeight - bottomMargin;
+
+                    console.log(`📄 Max page height: ${maxPageHeight}px (Paper: ${paperDimensions.height}px)`);
 
                     const pages = [];
                     let currentPage = [];
                     let currentPageHeight = 0;
 
                     for (let i = 0; i < orders.length; i++) {
-                        const orderHeight = orderHeights[i] + orderSpacing;
+                        // First order on page doesn't need spacing above it
+                        const spacing = currentPage.length > 0 ? orderSpacing : 0;
+                        const orderHeight = orderHeights[i] + spacing;
 
                         // Check if adding this order would exceed page height
                         if (currentPageHeight + orderHeight > maxPageHeight && currentPage.length > 0) {
                             // Start a new page
+                            console.log(`📄 Page ${pages.length + 1}: ${currentPage.length} orders, total height: ${currentPageHeight}px`);
                             pages.push([...currentPage]);
                             currentPage = [i];
-                            currentPageHeight = orderHeight;
+                            currentPageHeight = orderHeights[i]; // No spacing for first order on new page
                         } else {
                             // Add to current page
                             currentPage.push(i);
@@ -4020,11 +4042,12 @@ convertToQuotationDateFormat(dateStr) {
 
                     // Add the last page
                     if (currentPage.length > 0) {
+                        console.log(`📄 Page ${pages.length + 1}: ${currentPage.length} orders, total height: ${currentPageHeight}px`);
                         pages.push(currentPage);
                     }
 
                     const totalPages = pages.length;
-                    console.log(`📄 Generated ${totalPages} page(s) for ${orders.length} orders`);
+                    console.log(`✅ Final result: ${totalPages} page(s) for ${orders.length} orders`);
 
                     // STEP 3: Generate and download each page
                     for (let pageNum = 0; pageNum < totalPages; pageNum++) {
@@ -4035,8 +4058,8 @@ convertToQuotationDateFormat(dateStr) {
 
                         // Build HTML for this page
                         let html = `
-                            <div style="text-align: center; margin-bottom: 40px; padding: 20px 0;">
-                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px; margin: 0;">
+                            <div style="text-align: center; margin-bottom: 30px; padding: 15px 0;">
+                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 15px; margin: 0; font-size: 28px;">
                                     Orders for ${Utils.formatDate(date)} - Page ${pageNum + 1} of ${totalPages}
                                 </h1>
                             </div>
@@ -4045,12 +4068,15 @@ convertToQuotationDateFormat(dateStr) {
                         pageOrders.forEach((order, i) => {
                             html += this.buildOrderHTML(order, compactFontSize, colors, true);
                             if (i < pageOrders.length - 1) {
-                                html += '<div style="margin: 30px 0; border-top: 3px dashed #ccc;"></div>';
+                                html += '<div style="margin: 20px 0; border-top: 2px dashed #ccc;"></div>';
                             }
                         });
 
                         template.innerHTML = html;
                         template.style.display = 'block';
+                        template.style.visibility = 'visible';
+                        template.style.position = 'static';
+                        template.style.height = 'auto';
 
                         await new Promise(r => setTimeout(r, 500));
 
