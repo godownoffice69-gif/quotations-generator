@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="shortcut icon" type="image/png" href="logo.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -3951,7 +3952,7 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             async generateMultiOrderImage(orders, date) {
-                const loading = this.showLoading('Preparing multi-page images...');
+                const loading = this.showLoading('Generating multi-page PDF...');
 
                 try {
                     const template = document.getElementById('printTemplate');
@@ -4049,9 +4050,35 @@ convertToQuotationDateFormat(dateStr) {
                     const totalPages = pages.length;
                     console.log(`✅ Final result: ${totalPages} page(s) for ${orders.length} orders`);
 
-                    // STEP 3: Generate and download each page
+                    // STEP 3: Generate multi-page PDF
+                    this.updateLoadingMessage(loading, 'Creating PDF document...');
+
+                    // Initialize jsPDF (A4 portrait by default)
+                    const { jsPDF } = window.jspdf;
+                    const orientation = this.data.settings.paperOrientation || 'portrait';
+                    const format = this.data.settings.paperFormat || 'A4';
+
+                    // Convert format names to jsPDF format
+                    let pdfFormat = 'a4';
+                    if (format === 'Letter') pdfFormat = 'letter';
+                    else if (format === 'Legal') pdfFormat = 'legal';
+                    else if (format === 'A3') pdfFormat = 'a3';
+                    else if (format === 'A5') pdfFormat = 'a5';
+
+                    const pdf = new jsPDF({
+                        orientation: orientation === 'landscape' ? 'l' : 'p',
+                        unit: 'px',
+                        format: pdfFormat,
+                        compress: true
+                    });
+
+                    // Get PDF page dimensions
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                    // Generate each page and add to PDF
                     for (let pageNum = 0; pageNum < totalPages; pageNum++) {
-                        this.updateLoadingMessage(loading, `Generating page ${pageNum + 1} of ${totalPages}...`);
+                        this.updateLoadingMessage(loading, `Adding page ${pageNum + 1} of ${totalPages} to PDF...`);
 
                         const orderIndices = pages[pageNum];
                         const pageOrders = orderIndices.map(idx => orders[idx]);
@@ -4080,6 +4107,7 @@ convertToQuotationDateFormat(dateStr) {
 
                         await new Promise(r => setTimeout(r, 500));
 
+                        // Convert HTML to canvas
                         const canvas = await html2canvas(template, {
                             scale: qualityScale,
                             backgroundColor: '#ffffff',
@@ -4090,33 +4118,26 @@ convertToQuotationDateFormat(dateStr) {
 
                         template.style.display = 'none';
 
-                        // Download this page
-                        await new Promise((resolve, reject) => {
-                            canvas.toBlob(blob => {
-                                if (!blob) {
-                                    reject(new Error('Failed to create image blob'));
-                                    return;
-                                }
+                        // Convert canvas to image and add to PDF
+                        const imgData = canvas.toDataURL('image/png', 0.95);
+                        const imgWidth = pdfWidth;
+                        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-                                try {
-                                    const url = URL.createObjectURL(blob);
-                                    const link = document.createElement('a');
-                                    link.href = url;
-                                    link.download = `Orders_${date}_Page${pageNum + 1}.png`;
-                                    link.click();
-                                    URL.revokeObjectURL(url);
+                        // Add new page if not first page
+                        if (pageNum > 0) {
+                            pdf.addPage();
+                        }
 
-                                    // Small delay between downloads to ensure browser processes them
-                                    setTimeout(() => resolve(), 300);
-                                } catch (e) {
-                                    reject(e);
-                                }
-                            }, 'image/png', 0.95);
-                        });
+                        // Add image to PDF page (centered)
+                        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
                     }
 
+                    // Save the PDF
+                    this.updateLoadingMessage(loading, 'Saving PDF...');
+                    pdf.save(`Orders_${date}.pdf`);
+
                     this.hideLoading(loading);
-                    this.showToast(`✅ ${totalPages} page(s) downloaded! (${orders.length} orders total)`);
+                    this.showToast(`✅ PDF generated with ${totalPages} page(s)! (${orders.length} orders)`);
 
                 } catch (error) {
                     this.hideLoading(loading);
