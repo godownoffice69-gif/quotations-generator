@@ -11,6 +11,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Google Maps API - REPLACE 'YOUR_API_KEY_HERE' with your actual API key -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places&callback=initMaps"></script>
+
     <style>
         :root {
             --primary: #667eea;
@@ -842,6 +845,7 @@
                 <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
                 <button class="nav-tab" data-tab="orders">📝 Orders</button>
                 <button class="nav-tab" data-tab="inventory">📦 Inventory</button>
+                <button class="nav-tab" data-tab="itemHistory">📜 Item History</button>
                 <button class="nav-tab" data-tab="preparation">📋 Preparation</button>
                 <button class="nav-tab" data-tab="customers">👥 Customers</button>
                 <button class="nav-tab" data-tab="team">👷 Team</button>
@@ -951,7 +955,19 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Venue</label>
-                                <input type="text" id="venue" class="form-input">
+                                <input type="text" id="venue" class="form-input" placeholder="Start typing venue address...">
+                                <div id="routeInfo" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: var(--light); border-radius: var(--radius); font-size: 0.9rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                        <div>
+                                            <strong>🗺️ Route Generated:</strong>
+                                            <span id="routeDistance"></span> • <span id="routeDuration"></span>
+                                        </div>
+                                        <button type="button" class="btn btn-primary btn-small" onclick="OMS.sendRouteLink()">📱 Send to Driver</button>
+                                    </div>
+                                    <div style="margin-top: 0.5rem;">
+                                        <a id="routeLink" href="#" target="_blank" style="color: var(--primary); text-decoration: underline;">View Route on Google Maps</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -964,7 +980,8 @@
                                 <label class="form-label">Transport</label>
                                 <select id="transport" class="form-select">
                                     <option value="">Select</option>
-                                    <option value="Bolero">Bolero</option>
+                                    <option value="New Bolero">New Bolero</option>
+                                    <option value="Old Bolero">Old Bolero</option>
                                     <option value="Isuzu">Isuzu</option>
                                     <option value="Porter">Porter</option>
                                     <option value="Other">Other</option>
@@ -1038,6 +1055,7 @@
 
             <!-- Other tabs will be dynamically populated -->
             <div id="inventory" class="tab-content"></div>
+            <div id="itemHistory" class="tab-content"></div>
             <div id="preparation" class="tab-content"></div>
             <div id="customers" class="tab-content"></div>
             <div id="team" class="tab-content"></div>
@@ -1876,6 +1894,7 @@ const OMS = {
                 customers: [],
                 team: [],
                 inventory: { categories: [], items: [] },
+                itemHistory: [],
                 tasks: [],
                 deletedOrders: [],
                 undoStack: [],
@@ -3375,6 +3394,24 @@ if (localIndex !== -1) {
             this.data.orders[localIndex] = completeOrderData;
         }
 
+        // ITEM HISTORY TRACKING (if order is now completed)
+        if (status === 'completed') {
+            if (orderData.items && orderData.items.length > 0) {
+                this.recordItemHistory(orderData.items, orderData);
+            }
+
+            // For multi-day orders, track items from dayWiseData
+            if (orderData.isMultiDay && orderData.dayWiseData) {
+                orderData.dayWiseData.forEach(day => {
+                    day.functions.forEach(func => {
+                        if (func.items && func.items.length > 0) {
+                            this.recordItemHistory(func.items, orderData, day.date, func.functionType);
+                        }
+                    });
+                });
+            }
+        }
+
         this.showToast('Order updated! ✏️');
     }
 
@@ -3420,9 +3457,23 @@ if (!localExists) {
 
                 const displayId = finalOrderId || `[${status.toUpperCase()}]`;
 
-                // AUTOMATIC INVENTORY DEDUCTION (if order is completed)
-                if (status === 'completed' && orderData.items) {
-                    this.deductInventory(orderData.items, orderData.orderId);
+                // AUTOMATIC INVENTORY DEDUCTION & ITEM HISTORY TRACKING (if order is completed)
+                if (status === 'completed') {
+                    if (orderData.items && orderData.items.length > 0) {
+                        this.deductInventory(orderData.items, orderData.orderId);
+                        this.recordItemHistory(orderData.items, orderData);
+                    }
+
+                    // For multi-day orders, track items from dayWiseData
+                    if (orderData.isMultiDay && orderData.dayWiseData) {
+                        orderData.dayWiseData.forEach(day => {
+                            day.functions.forEach(func => {
+                                if (func.items && func.items.length > 0) {
+                                    this.recordItemHistory(func.items, orderData, day.date, func.functionType);
+                                }
+                            });
+                        });
+                    }
                 }
 
                 // ADD TO ORDER AUDIT HISTORY
@@ -3472,6 +3523,43 @@ deductInventory(items, orderId) {
             }
         }
     });
+
+    this.saveToStorage();
+},
+
+// Item Usage History Tracking (for completed orders only)
+async recordItemHistory(items, orderData, specificDate = null, functionType = null) {
+    if (!items || items.length === 0) return;
+
+    console.log(`📜 Recording item history for order ${orderData.orderId}`);
+
+    const usedAt = new Date().toISOString();
+    const eventDate = specificDate || orderData.date || orderData.startDate;
+
+    for (const item of items) {
+        const historyRecord = {
+            itemName: item.name,
+            quantity: item.quantity,
+            orderId: orderData.orderId,
+            clientName: orderData.clientName,
+            venue: orderData.venue,
+            eventDate: eventDate,
+            functionType: functionType || orderData.eventType || '',
+            usedAt: usedAt,
+            remarks: item.remarks || ''
+        };
+
+        // Add to local array
+        this.data.itemHistory.push(historyRecord);
+
+        // Save to Firestore
+        try {
+            await db.collection('itemHistory').add(historyRecord);
+            console.log(`✅ Saved item history: ${item.name} x${item.quantity} for order ${orderData.orderId}`);
+        } catch (error) {
+            console.error('❌ Error saving item history to Firestore:', error);
+        }
+    }
 
     this.saveToStorage();
 },
@@ -3866,13 +3954,40 @@ convertToQuotationDateFormat(dateStr) {
                     this.showToast('Select date first', 'error');
                     return;
                 }
-                
-                const orders = this.data.orders.filter(o => o.date === date);
+
+                // IMPROVED FILTER: Include ALL order types for selected date
+                const orders = this.data.orders.filter(o => {
+                    // Case 1: Single-day order with matching date
+                    if (!o.isMultiDay && o.date === date) {
+                        return true;
+                    }
+
+                    // Case 2: Multi-day order - check if selected date falls within range
+                    if (o.isMultiDay && o.startDate && o.endDate) {
+                        const selectedDate = new Date(date);
+                        const start = new Date(o.startDate);
+                        const end = new Date(o.endDate);
+
+                        // Check if date is within the range (inclusive)
+                        if (selectedDate >= start && selectedDate <= end) {
+                            return true;
+                        }
+                    }
+
+                    // Case 3: Multi-day order with dayWiseData - check specific day functions
+                    if (o.isMultiDay && o.dayWiseData && Array.isArray(o.dayWiseData)) {
+                        return o.dayWiseData.some(day => day.date === date);
+                    }
+
+                    return false;
+                });
+
                 if (orders.length === 0) {
                     this.showToast('No orders for this date', 'error');
                     return;
                 }
-                
+
+                console.log(`📅 Found ${orders.length} orders for ${date}:`, orders.map(o => o.orderId || o.clientName));
                 this.generateMultiOrderImage(orders, date);
             },
 
@@ -4909,6 +5024,7 @@ convertToQuotationDateFormat(dateStr) {
                 setTimeout(() => {
                     if (tabName === 'dashboard') this.renderDashboard();
                     else if (tabName === 'inventory') this.renderInventory();
+                    else if (tabName === 'itemHistory') this.renderItemHistory();
                     else if (tabName === 'preparation') this.renderPreparation();
                     else if (tabName === 'customers') this.renderCustomers();
                     else if (tabName === 'team') this.renderTeam();
@@ -5003,6 +5119,72 @@ convertToQuotationDateFormat(dateStr) {
                 `;
 
                 this.updateInventoryDisplay();
+            },
+
+            renderItemHistory() {
+                const container = document.getElementById('itemHistory');
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📜 Item Usage History</h2>
+                            <p style="color: var(--text-gray); margin-top: 0.5rem;">
+                                Track which items were used in which completed orders
+                            </p>
+                        </div>
+                        <div class="form-row" style="margin-bottom: 1rem;">
+                            <input type="text" id="itemHistorySearch" class="form-input" placeholder="Search by item name, order ID, or client...">
+                            <select id="itemHistoryFilter" class="form-select">
+                                <option value="all">All Items</option>
+                                ${[...new Set(this.data.itemHistory.map(h => h.itemName))].sort().map(name =>
+                                    `<option value="${name}">${name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div id="itemHistoryContainer"></div>
+                    </div>
+                `;
+
+                this.renderItemHistoryTable();
+
+                // Add search and filter handlers
+                document.getElementById('itemHistorySearch')?.addEventListener('input', () => this.renderItemHistoryTable());
+                document.getElementById('itemHistoryFilter')?.addEventListener('change', () => this.renderItemHistoryTable());
+            },
+
+            renderItemHistoryTable() {
+                const searchTerm = document.getElementById('itemHistorySearch')?.value.toLowerCase() || '';
+                const filterItem = document.getElementById('itemHistoryFilter')?.value || 'all';
+
+                // Filter history
+                let filteredHistory = this.data.itemHistory;
+
+                if (filterItem !== 'all') {
+                    filteredHistory = filteredHistory.filter(h => h.itemName === filterItem);
+                }
+
+                if (searchTerm) {
+                    filteredHistory = filteredHistory.filter(h =>
+                        h.itemName.toLowerCase().includes(searchTerm) ||
+                        h.orderId.toLowerCase().includes(searchTerm) ||
+                        h.clientName.toLowerCase().includes(searchTerm) ||
+                        (h.venue && h.venue.toLowerCase().includes(searchTerm))
+                    );
+                }
+
+                // Sort by most recent first
+                filteredHistory.sort((a, b) => new Date(b.usedAt) - new Date(a.usedAt));
+
+                // Render table
+                this.renderTable('itemHistoryContainer', [
+                    { key: 'itemName', label: 'Item Name' },
+                    { key: 'quantity', label: 'Qty' },
+                    { key: 'orderId', label: 'Order ID', render: h => `<span class="order-id-highlight">${h.orderId}</span>` },
+                    { key: 'clientName', label: 'Client' },
+                    { key: 'venue', label: 'Venue', render: h => h.venue || 'N/A' },
+                    { key: 'eventDate', label: 'Event Date', render: h => Utils.formatDate(h.eventDate) },
+                    { key: 'functionType', label: 'Function', render: h => h.functionType || 'N/A' },
+                    { key: 'usedAt', label: 'Recorded On', render: h => new Date(h.usedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) }
+                ], filteredHistory, (row) => ``);
             },
 
             updateInventoryDisplay() {
@@ -7240,6 +7422,7 @@ convertToQuotationDateFormat(dateStr) {
                 customers: parsed.customers || [],
                 team: parsed.team || [],
                 inventory: parsed.inventory || { categories: [], items: [] },
+                itemHistory: [], // Will load from Firestore
                 tasks: parsed.tasks || [],
                 deletedOrders: parsed.deletedOrders || [],
                 undoStack: [],
@@ -7254,6 +7437,7 @@ convertToQuotationDateFormat(dateStr) {
             this.loadTrackingFromFirestore(),
             this.loadTeamFromFirestore(),
             this.loadInventoryFromFirestore(),
+            this.loadItemHistoryFromFirestore(),
             this.loadNotificationsFromFirestore(),
             this.loadSettingsFromFirestore()
         ]);
@@ -7557,6 +7741,25 @@ async loadInventoryFromFirestore() {
         console.error('❌ Error loading inventory from Firestore:', error);
         // On error, keep existing data
         console.log('⚠️ Keeping existing local inventory due to error');
+        return false;
+    }
+},
+
+async loadItemHistoryFromFirestore() {
+    try {
+        console.log('📜 Loading item history from Firestore...');
+
+        const snapshot = await db.collection('itemHistory').orderBy('usedAt', 'desc').get();
+        const history = [];
+        snapshot.forEach(doc => {
+            history.push({ id: doc.id, ...doc.data() });
+        });
+
+        this.data.itemHistory = history;
+        console.log(`✅ Loaded ${history.length} item history records from Firestore`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error loading item history from Firestore:', error);
         return false;
     }
 },
@@ -8266,6 +8469,207 @@ updateAllDisplays() {
             console.error('❌ Error previewing order ID:', error);
             return this.getNextOrderId();
         }
+    },
+
+    // ============ GOOGLE MAPS INTEGRATION ============
+
+    // Office address (hardcoded base location)
+    officeAddress: "FirePowerSFX Bhagatbhai No Vado, Cheharnagar, Sola Gam Rd, nr. Dayavan Mukti Dhaam, Sola, Ahmedabad, Gujarat 380060",
+
+    mapsInitialized: false,
+    autocomplete: null,
+    directionsService: null,
+    selectedVenue: null,
+    currentRouteLink: null,
+
+    initGoogleMaps() {
+        if (!window.google || !window.google.maps) {
+            console.warn('⚠️ Google Maps API not loaded yet. Waiting...');
+            return;
+        }
+
+        console.log('🗺️ Initializing Google Maps...');
+
+        try {
+            // Initialize Directions Service
+            this.directionsService = new google.maps.DirectionsService();
+
+            // Initialize Places Autocomplete on venue field
+            const venueInput = document.getElementById('venue');
+            if (venueInput) {
+                this.autocomplete = new google.maps.places.Autocomplete(venueInput, {
+                    componentRestrictions: { country: 'in' }, // Restrict to India
+                    fields: ['address_components', 'formatted_address', 'geometry', 'name']
+                });
+
+                // Listen for place selection
+                this.autocomplete.addListener('place_changed', () => {
+                    const place = this.autocomplete.getPlace();
+                    if (!place.geometry) {
+                        console.warn('⚠️ No details available for input: ' + venueInput.value);
+                        return;
+                    }
+
+                    // Store selected venue
+                    this.selectedVenue = {
+                        name: place.name || '',
+                        address: place.formatted_address || venueInput.value,
+                        lat: place.geometry.location.lat(),
+                        lng: place.geometry.location.lng()
+                    };
+
+                    console.log('✅ Venue selected:', this.selectedVenue);
+
+                    // Automatically generate route
+                    this.generateRoute();
+                });
+
+                this.mapsInitialized = true;
+                console.log('✅ Google Maps autocomplete initialized');
+            }
+        } catch (error) {
+            console.error('❌ Error initializing Google Maps:', error);
+            this.showToast('Error initializing Google Maps. Check API key.', 'error');
+        }
+    },
+
+    async generateRoute() {
+        if (!this.selectedVenue) {
+            this.showToast('Please select a venue first', 'error');
+            return;
+        }
+
+        if (!this.directionsService) {
+            this.showToast('Maps not initialized. Please refresh page.', 'error');
+            return;
+        }
+
+        console.log('🗺️ Generating route from office to venue...');
+
+        try {
+            const request = {
+                origin: this.officeAddress,
+                destination: this.selectedVenue.address,
+                travelMode: google.maps.TravelMode.DRIVING,
+                optimizeWaypoints: true,
+                provideRouteAlternatives: true
+            };
+
+            this.directionsService.route(request, (result, status) => {
+                if (status === google.maps.DirectionsStatus.OK) {
+                    console.log('✅ Route generated successfully');
+
+                    // Get the best route (shortest distance for fuel efficiency)
+                    const routes = result.routes;
+                    let bestRoute = routes[0];
+
+                    // Find shortest distance route for fuel efficiency
+                    if (routes.length > 1) {
+                        bestRoute = routes.reduce((shortest, route) => {
+                            return route.legs[0].distance.value < shortest.legs[0].distance.value ? route : shortest;
+                        }, routes[0]);
+                    }
+
+                    const leg = bestRoute.legs[0];
+                    const distance = leg.distance.text;
+                    const duration = leg.duration.text;
+
+                    // Generate Google Maps shareable link
+                    const mapsLink = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(this.officeAddress)}&destination=${encodeURIComponent(this.selectedVenue.address)}&travelmode=driving`;
+
+                    this.currentRouteLink = mapsLink;
+
+                    // Display route info
+                    document.getElementById('routeDistance').textContent = distance;
+                    document.getElementById('routeDuration').textContent = duration;
+                    document.getElementById('routeLink').href = mapsLink;
+                    document.getElementById('routeInfo').style.display = 'block';
+
+                    console.log(`📍 Route: ${distance}, ${duration}`);
+                    console.log(`🔗 Maps link: ${mapsLink}`);
+
+                    this.showToast(`Route generated: ${distance}, ${duration}`, 'success');
+                } else {
+                    console.error('❌ Route request failed:', status);
+                    this.showToast('Could not generate route. Please check addresses.', 'error');
+                }
+            });
+        } catch (error) {
+            console.error('❌ Error generating route:', error);
+            this.showToast('Error generating route: ' + error.message, 'error');
+        }
+    },
+
+    async sendRouteLink() {
+        if (!this.currentRouteLink) {
+            this.showToast('No route generated yet', 'error');
+            return;
+        }
+
+        const driverName = Utils.get('driverName') || 'Driver';
+        const operatorName = Utils.get('operator') || 'Operator';
+        const clientName = Utils.get('clientName') || '';
+        const venue = Utils.get('venue') || '';
+        const eventDate = Utils.get('orderDate') || '';
+
+        // Create custom message for WhatsApp/SMS
+        const message = `🚗 *Route to Event*
+
+📅 Date: ${Utils.formatDate(eventDate)}
+👤 Client: ${clientName}
+📍 Venue: ${venue}
+
+🗺️ Route from Office:
+${this.currentRouteLink}
+
+Driver: ${driverName}
+Operator: ${operatorName}
+
+- FirePowerSFX Team`;
+
+        // Show options to send via WhatsApp or copy link
+        const modal = Utils.elem('div', {
+            class: 'modal-overlay',
+            onclick: (e) => { if (e.target === modal) modal.remove(); }
+        }, [
+            Utils.elem('div', { class: 'modal-content', style: { maxWidth: '500px' } }, [
+                Utils.elem('h3', {}, ['📱 Send Route to Team']),
+                Utils.elem('div', { style: { marginTop: '1rem' } }, [
+                    Utils.elem('p', {}, ['Choose how to send the route:']),
+                    Utils.elem('div', { style: { display: 'flex', gap: '0.5rem', marginTop: '1rem', flexDirection: 'column' } }, [
+                        Utils.elem('button', {
+                            class: 'btn btn-success',
+                            style: { width: '100%' },
+                            onclick: () => {
+                                // Open WhatsApp with pre-filled message
+                                const phone = Utils.get('contact') || '';
+                                const whatsappLink = `https://wa.me/91${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                                window.open(whatsappLink, '_blank');
+                                modal.remove();
+                            }
+                        }, ['💬 Send via WhatsApp']),
+                        Utils.elem('button', {
+                            class: 'btn btn-primary',
+                            style: { width: '100%' },
+                            onclick: () => {
+                                // Copy link to clipboard
+                                navigator.clipboard.writeText(this.currentRouteLink).then(() => {
+                                    this.showToast('Route link copied to clipboard!', 'success');
+                                    modal.remove();
+                                });
+                            }
+                        }, ['📋 Copy Link']),
+                        Utils.elem('button', {
+                            class: 'btn btn-secondary',
+                            style: { width: '100%' },
+                            onclick: () => modal.remove()
+                        }, ['Cancel'])
+                    ])
+                ])
+            ])
+        ]);
+
+        document.body.appendChild(modal);
     }
 };
 
@@ -9303,6 +9707,26 @@ if (diffDays > 30) {
     // NO date restrictions - allow adding past, present, and future orders
     console.log('✅ Date restrictions removed - can add orders from any date');
         });
+
+        // ============ GOOGLE MAPS CALLBACK ============
+        // This function is called by Google Maps API when it's loaded
+        window.initMaps = function() {
+            console.log('🗺️ Google Maps API loaded successfully');
+            // Initialize Google Maps in OMS after a short delay to ensure DOM is ready
+            if (typeof OMS !== 'undefined') {
+                setTimeout(() => {
+                    OMS.initGoogleMaps();
+                }, 500);
+            }
+        };
+
+        // Fallback: Try to initialize Maps if API is already loaded
+        setTimeout(() => {
+            if (window.google && window.google.maps && !OMS.mapsInitialized) {
+                console.log('🗺️ Google Maps API already loaded, initializing...');
+                OMS.initGoogleMaps();
+            }
+        }, 2000);
     </script>
 </body>
 </html>
