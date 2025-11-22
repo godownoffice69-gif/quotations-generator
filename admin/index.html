@@ -1180,9 +1180,10 @@ generateId: () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 
 debounce: (func, wait) => {
     let timeout;
-    return (...args) => {
+    return function(...args) {
+        const context = this;
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
+        timeout = setTimeout(() => func.apply(context, args), wait);
     };
 },
 
@@ -7299,17 +7300,24 @@ convertToQuotationDateFormat(dateStr) {
 
                 if (!itemSearch || !dropdown) return;
 
+                // Prevent duplicate event listener registration
+                if (itemSearch.dataset.searchInitialized === 'true') return;
+                itemSearch.dataset.searchInitialized = 'true';
+
                 // Populate team member dropdowns
                 this.populateTeamDropdowns();
 
-                itemSearch.addEventListener('input', Utils.debounce((e) => {
+                // Capture OMS context
+                const self = this;
+
+                const handleSearch = (e) => {
                     const query = e.target.value.toLowerCase().trim();
-                    
+
                     if (query.length > 0) {
-                        const items = this.data.inventory.items.filter(i => 
+                        const items = self.data.inventory.items.filter(i =>
                             i.name.toLowerCase().includes(query)
                         );
-                        
+
                         if (items.length > 0) {
                             dropdown.innerHTML = items.map(i => `
                                 <div class="search-item" onclick="OMS.addItemToOrder('${i.id}')">
@@ -7324,7 +7332,9 @@ convertToQuotationDateFormat(dateStr) {
                     } else {
                         dropdown.classList.remove('show');
                     }
-                }, 300));
+                };
+
+                itemSearch.addEventListener('input', Utils.debounce(handleSearch, 300));
             },
 
             addItemToOrder(itemId) {
