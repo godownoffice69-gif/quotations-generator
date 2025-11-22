@@ -1209,6 +1209,7 @@ debounce: (func, wait) => {
                 dashboard: '📊 Dashboard',
                 orders: '📋 Orders',
                 inventory: '📦 Inventory',
+                itemHistory: '📜 Item History',
                 preparation: '🍳 Preparation',
                 customers: '👥 Customers',
                 team: '👨‍💼 Team',
@@ -1551,6 +1552,7 @@ debounce: (func, wait) => {
                 dashboard: '📊 ડેશબોર્ડ',
                 orders: '📋 ઓર્ડર્સ',
                 inventory: '📦 ઇન્વેન્ટરી',
+                itemHistory: '📜 આઇટમ ઇતિહાસ',
                 preparation: '🍳 તૈયારી',
                 customers: '👥 ગ્રાહકો',
                 team: '👨‍💼 ટીમ',
@@ -2019,7 +2021,7 @@ const OMS = {
 
                 // Update tabs
                 const tabs = document.querySelectorAll('.nav-tab');
-                const tabKeys = ['dashboard', 'orders', 'inventory', 'preparation', 'customers', 'team', 'calendar', 'history', 'analytics', 'settings'];
+                const tabKeys = ['dashboard', 'orders', 'inventory', 'itemHistory', 'preparation', 'customers', 'team', 'calendar', 'history', 'analytics', 'settings'];
                 tabs.forEach((tab, index) => {
                     if (tabKeys[index] && t[tabKeys[index]]) {
                         tab.textContent = t[tabKeys[index]];
@@ -4113,7 +4115,8 @@ convertToQuotationDateFormat(dateStr) {
                     const headerHeight = 120; // Reduced header
                     const separatorHeight = 25; // Space between orders
                     const bottomMargin = 60; // Bottom margin
-                    const maxContentHeight = paperDimensions.height - headerHeight - bottomMargin;
+                    const safetyMargin = 40; // Extra safety margin to prevent cutoff
+                    const maxContentHeight = paperDimensions.height - headerHeight - bottomMargin - safetyMargin;
 
                     console.log(`📏 Max content height per page: ${maxContentHeight}px`);
 
@@ -4129,7 +4132,14 @@ convertToQuotationDateFormat(dateStr) {
                         const testOrders = [...currentPageOrders, order];
 
                         // Build HTML with all orders on current page including this new one
-                        let testHtml = '';
+                        // Include header to get accurate height measurement
+                        let testHtml = `
+                            <div style="text-align: center; margin-bottom: 25px; padding: 12px 0;">
+                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 12px; margin: 0; font-size: 26px;">
+                                    Test Header
+                                </h1>
+                            </div>
+                        `;
                         testOrders.forEach((o, idx) => {
                             testHtml += this.buildOrderHTML(o, compactFontSize, colors, true);
                             if (idx < testOrders.length - 1) {
@@ -4268,16 +4278,24 @@ convertToQuotationDateFormat(dateStr) {
 
                         // Convert canvas to image and add to PDF
                         const imgData = canvas.toDataURL('image/png', 0.95);
-                        const imgWidth = pdfWidth;
-                        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                        let imgWidth = pdfWidth;
+                        let imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                        // CRITICAL FIX: Scale image to fit PDF page if it's too tall
+                        if (imgHeight > pdfHeight) {
+                            console.warn(`⚠️ Page ${pageNum + 1} image height (${imgHeight}px) exceeds PDF height (${pdfHeight}px). Scaling to fit.`);
+                            imgHeight = pdfHeight;
+                            imgWidth = (canvas.width * pdfHeight) / canvas.height;
+                        }
 
                         // Add new page if not first page
                         if (pageNum > 0) {
                             pdf.addPage();
                         }
 
-                        // Add image to PDF page (centered)
-                        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+                        // Add image to PDF page (centered if scaled down)
+                        const xOffset = (pdfWidth - imgWidth) / 2;
+                        pdf.addImage(imgData, 'PNG', xOffset, 0, imgWidth, imgHeight, undefined, 'FAST');
                     }
 
                     // Save the PDF
