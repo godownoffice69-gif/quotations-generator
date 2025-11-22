@@ -22,12 +22,18 @@ service cloud.firestore {
       return isAuthenticated() && exists(/databases/$(database)/documents/user_roles/$(request.auth.uid));
     }
 
-    // User roles collection - admin/owner can manage, users can read their own
+    // User roles collection - users can read their own, admin/owner can read all and manage
+    // NOTE: We don't use isAdminOrOwner() for read to avoid circular dependency
     match /user_roles/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdminOrOwner());
-      allow write: if isAuthenticated() && isAdminOrOwner();
-      allow create: if isAuthenticated() && isAdminOrOwner();
-      allow delete: if isAuthenticated() && isAdminOrOwner();
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'owner']
+      );
+      allow write, create, delete: if isAuthenticated() && (
+        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'owner']
+      );
     }
 
     // Settings collection - authenticated users can read/write
@@ -47,6 +53,11 @@ service cloud.firestore {
 
     // Inventory collection - authenticated users can read/write
     match /inventory/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Item History collection - authenticated users can read/write
+    match /itemHistory/{historyId} {
       allow read, write: if isAuthenticated();
     }
 
