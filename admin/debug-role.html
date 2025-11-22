@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Role Debugger</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .error-box {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .success-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        .danger {
+            background: #f44336;
+        }
+        .danger:hover {
+            background: #d32f2f;
+        }
+        .success {
+            background: #4CAF50;
+        }
+        .success:hover {
+            background: #388E3C;
+        }
+        #output {
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 User Role Debugger</h1>
+
+        <div class="info-box">
+            <strong>ℹ️ Purpose:</strong> This tool helps diagnose and fix user role issues.
+        </div>
+
+        <div>
+            <button onclick="checkAuth()">1️⃣ Check Authentication</button>
+            <button onclick="checkUserRole()">2️⃣ Check User Role</button>
+            <button onclick="testFirestoreRules()">3️⃣ Test Firestore Rules</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button class="success" onclick="setAdminRole()">✅ Set My Role to Admin</button>
+            <button class="danger" onclick="clearCache()">🔄 Clear Cache & Reload</button>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <!-- Firebase Configuration -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
+        import { getFirestore, doc, getDoc, setDoc, collection } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
+
+        // Load Firebase config
+        const response = await fetch('../firebase-config.js');
+        const configText = await response.text();
+        const firebaseConfig = JSON.parse(configText.match(/export default ({[\s\S]*?});/)[1]);
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Make available globally
+        window.auth = auth;
+        window.db = db;
+        window.doc = doc;
+        window.getDoc = getDoc;
+        window.setDoc = setDoc;
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            log('🚀 Debugger ready!', 'info');
+            checkAuth();
+        });
+
+        // Helper function to log
+        window.log = function(message, type = 'info') {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = type + '-box';
+            div.innerHTML = message;
+            output.appendChild(div);
+        };
+
+        // Check authentication
+        window.checkAuth = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            try {
+                const user = auth.currentUser;
+                if (user) {
+                    log(`✅ <strong>Authenticated!</strong><br>
+                        📧 Email: ${user.email}<br>
+                        🆔 UID: ${user.uid}<br>
+                        👤 Display Name: ${user.displayName || 'Not set'}`, 'success');
+                    return user;
+                } else {
+                    log('❌ <strong>Not authenticated!</strong><br>Please sign in first at <a href="index.html">admin panel</a>', 'error');
+                    return null;
+                }
+            } catch (error) {
+                log('❌ Error checking auth: ' + error.message, 'error');
+                return null;
+            }
+        };
+
+        // Check user role
+        window.checkUserRole = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    log('❌ Not authenticated! Please sign in first.', 'error');
+                    return;
+                }
+
+                log('🔍 Checking user role in Firestore...', 'info');
+
+                const userRoleRef = doc(db, 'user_roles', user.uid);
+                const userRoleDoc = await getDoc(userRoleRef);
+
+                if (userRoleDoc.exists()) {
+                    const roleData = userRoleDoc.data();
+                    log(`✅ <strong>User role found!</strong><br><pre>${JSON.stringify(roleData, null, 2)}</pre>`, 'success');
+
+                    if (roleData.role === 'admin' || roleData.role === 'owner') {
+                        log('✅ You have admin/owner access! Financial tab should be visible.', 'success');
+                    } else {
+                        log(`⚠️ <strong>Your role is "${roleData.role}"</strong><br>
+                            You need "admin" or "owner" role to see the financial tab.<br>
+                            Click "Set My Role to Admin" to fix this.`, 'error');
+                    }
+                } else {
+                    log(`❌ <strong>No role document found!</strong><br>
+                        Path: user_roles/${user.uid}<br>
+                        This means your role hasn't been set up yet.<br>
+                        Click "Set My Role to Admin" to create it.`, 'error');
+                }
+            } catch (error) {
+                log('❌ <strong>Error reading role:</strong><br>' + error.message + '<br><br>' +
+                    '<strong>Possible causes:</strong><br>' +
+                    '1. Firestore rules blocking read access<br>' +
+                    '2. Network connectivity issues<br>' +
+                    '3. Firestore not properly initialized<br><br>' +
+                    'Full error:<br><pre>' + JSON.stringify(error, null, 2) + '</pre>', 'error');
+            }
+        };
+
+        // Test Firestore rules
+        window.testFirestoreRules = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            log('🧪 Testing Firestore security rules...', 'info');
+
+            const user = auth.currentUser;
+            if (!user) {
+                log('❌ Not authenticated!', 'error');
+                return;
+            }
+
+            const tests = [
+                { name: 'Read user_roles collection', path: `user_roles/${user.uid}` },
+                { name: 'Read orders collection', path: 'orders/test' },
+                { name: 'Read payments collection', path: 'payments/test' },
+            ];
+
+            for (const test of tests) {
+                try {
+                    const docRef = doc(db, test.path);
+                    const docSnap = await getDoc(docRef);
+                    log(`✅ ${test.name}: <strong>Allowed</strong> (document ${docSnap.exists() ? 'exists' : 'does not exist'})`, 'success');
+                } catch (error) {
+                    log(`❌ ${test.name}: <strong>Denied</strong><br>${error.message}`, 'error');
+                }
+            }
+        };
+
+        // Set admin role
+        window.setAdminRole = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    log('❌ Not authenticated! Please sign in first.', 'error');
+                    return;
+                }
+
+                log('⏳ Setting your role to admin...', 'info');
+
+                const userRoleRef = doc(db, 'user_roles', user.uid);
+                await setDoc(userRoleRef, {
+                    email: user.email,
+                    name: user.displayName || user.email,
+                    role: 'admin',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                log('✅ <strong>Success!</strong> Your role has been set to admin.<br>' +
+                    'The financial tab should now be visible.<br><br>' +
+                    '<strong>Next steps:</strong><br>' +
+                    '1. Go back to the <a href="index.html">admin panel</a><br>' +
+                    '2. Refresh the page (or click "Clear Cache & Reload" below)<br>' +
+                    '3. The financial tab should now be visible', 'success');
+
+            } catch (error) {
+                log('❌ <strong>Failed to set admin role!</strong><br>' + error.message + '<br><br>' +
+                    '<strong>Possible solutions:</strong><br>' +
+                    '1. Make sure your Firestore rules allow write access to user_roles<br>' +
+                    '2. Check the browser console for detailed errors<br>' +
+                    '3. You may need to manually add the role in Firebase Console:<br>' +
+                    '   - Go to Firestore Database<br>' +
+                    '   - Navigate to user_roles collection<br>' +
+                    '   - Add/edit document with ID: ' + user.uid + '<br>' +
+                    '   - Set field "role" to "admin"<br><br>' +
+                    'Full error:<br><pre>' + JSON.stringify(error, null, 2) + '</pre>', 'error');
+            }
+        };
+
+        // Clear cache
+        window.clearCache = function() {
+            if (confirm('This will clear local storage and reload the page. Continue?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                location.reload(true);
+            }
+        };
+    </script>
+</body>
+</html>
