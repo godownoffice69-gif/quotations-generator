@@ -7,6 +7,29 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper function to get user role from user_roles collection
+    function getUserRole() {
+      return get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role;
+    }
+
+    // Helper function to check if user is admin or owner
+    function isAdminOrOwner() {
+      return isAuthenticated() && getUserRole() in ['admin', 'owner'];
+    }
+
+    // Helper function to check if user has any role
+    function hasRole() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/user_roles/$(request.auth.uid));
+    }
+
+    // User roles collection - admin/owner can manage, users can read their own
+    match /user_roles/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdminOrOwner());
+      allow write: if isAuthenticated() && isAdminOrOwner();
+      allow create: if isAuthenticated() && isAdminOrOwner();
+      allow delete: if isAuthenticated() && isAdminOrOwner();
+    }
+
     // Settings collection - authenticated users can read/write
     match /settings/{document=**} {
       allow read, write: if isAuthenticated();
@@ -63,19 +86,21 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Payments collection - authenticated users can read/write
+    // FINANCIAL COLLECTIONS - RESTRICTED TO ADMIN/OWNER ONLY
+
+    // Payments collection - only admin/owner can access
     match /payments/{paymentId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isAdminOrOwner();
     }
 
-    // Expenses collection - authenticated users can read/write
+    // Expenses collection - only admin/owner can access
     match /expenses/{expenseId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isAdminOrOwner();
     }
 
-    // Financial summary collection - authenticated users can read/write
+    // Financial summary collection - only admin/owner can access
     match /financial_summary/{summaryId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isAdminOrOwner();
     }
 
     // Default deny all other collections
