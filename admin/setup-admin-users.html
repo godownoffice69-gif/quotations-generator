@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Admin Users - FirepowersFX</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .error-box {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .success-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .user-card {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .user-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .user-card .email {
+            font-family: 'Courier New', monospace;
+            color: #2196F3;
+            font-size: 1.1rem;
+            margin: 10px 0;
+        }
+        .user-card .role {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            margin: 10px 0;
+        }
+        .role.admin {
+            background: #f44336;
+            color: white;
+        }
+        .role.owner {
+            background: #ff9800;
+            color: white;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .success {
+            background: #4CAF50;
+        }
+        .success:hover {
+            background: #388E3C;
+        }
+        .warning {
+            background: #ff9800;
+        }
+        .warning:hover {
+            background: #f57c00;
+        }
+        #output {
+            margin-top: 30px;
+        }
+        .status {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .status.pending {
+            background: #e0e0e0;
+            color: #666;
+        }
+        .status.checking {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        .status.exists {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status.missing {
+            background: #ffebee;
+            color: #c62828;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fafafa;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+        }
+        .step h4 {
+            margin: 0 0 10px 0;
+            color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Setup Admin Users</h1>
+        <p class="subtitle">FirepowersFX Quotations Generator - User Role Configuration</p>
+
+        <div class="info-box">
+            <strong>📋 Purpose:</strong> This tool helps you set up and verify admin access for the following users:
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li><strong>Admin:</strong> admin@firepowersfx.com</li>
+                <li><strong>Owner:</strong> owner@firepowersfx.com</li>
+            </ul>
+        </div>
+
+        <div class="warning-box">
+            <strong>⚠️ Important Setup Requirements:</strong>
+            <ol style="margin: 10px 0; padding-left: 20px;">
+                <li>Both users must be registered in Firebase Authentication first</li>
+                <li>You must be signed in as an admin/owner to configure roles</li>
+                <li>Firestore security rules must allow user_roles write access for admins</li>
+            </ol>
+        </div>
+
+        <div class="user-card">
+            <h3>👤 Admin User</h3>
+            <div class="email">admin@firepowersfx.com</div>
+            <div class="role admin">ADMIN</div>
+            <div style="margin-top: 10px; color: #666;">
+                Full access to financial data, user management, and all system features
+            </div>
+            <div id="adminStatus" class="status pending">⏳ Not checked yet</div>
+        </div>
+
+        <div class="user-card">
+            <h3>👤 Owner User</h3>
+            <div class="email">owner@firepowersfx.com</div>
+            <div class="role owner">OWNER</div>
+            <div style="margin-top: 10px; color: #666;">
+                Full access to financial data, user management, and all system features
+            </div>
+            <div id="ownerStatus" class="status pending">⏳ Not checked yet</div>
+        </div>
+
+        <div style="margin: 30px 0; text-align: center;">
+            <button onclick="checkCurrentAuth()">1️⃣ Check Current Authentication</button>
+            <button onclick="checkBothUsers()">2️⃣ Check User Roles Status</button>
+            <button onclick="setupBothUsers()" class="success">3️⃣ Setup Both Users</button>
+        </div>
+
+        <div id="output"></div>
+
+        <div class="step">
+            <h4>📖 Manual Setup Instructions (if needed)</h4>
+            <p>If automatic setup doesn't work, follow these steps in Firebase Console:</p>
+            <ol>
+                <li><strong>Create users in Firebase Authentication:</strong>
+                    <ul>
+                        <li>Go to Firebase Console → Authentication → Users</li>
+                        <li>Click "Add user" and create: admin@firepowersfx.com</li>
+                        <li>Click "Add user" and create: owner@firepowersfx.com</li>
+                    </ul>
+                </li>
+                <li><strong>Get the User UIDs:</strong> Note the UID for each user from the Authentication page</li>
+                <li><strong>Add roles in Firestore:</strong>
+                    <ul>
+                        <li>Go to Firestore Database → user_roles collection</li>
+                        <li>Create document with ID = admin user's UID</li>
+                        <li>Add fields: email (admin@firepowersfx.com), role (admin), name (Admin User)</li>
+                        <li>Repeat for owner user with role "owner"</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Firebase Configuration -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
+        import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
+
+        // Load Firebase config
+        const response = await fetch('../firebase-config.js');
+        const configText = await response.text();
+        const configMatch = configText.match(/export (?:const|default) (?:firebaseConfig = )?({[\s\S]*?});/);
+        const firebaseConfig = JSON.parse(configMatch[1]);
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Make available globally
+        window.auth = auth;
+        window.db = db;
+
+        // Target users
+        const TARGET_USERS = [
+            { email: 'admin@firepowersfx.com', role: 'admin', name: 'Admin User' },
+            { email: 'owner@firepowersfx.com', role: 'owner', name: 'Owner User' }
+        ];
+
+        // Helper function to log
+        window.log = function(message, type = 'info') {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = type + '-box';
+            div.innerHTML = message;
+            output.appendChild(div);
+            // Scroll to bottom
+            div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+
+        // Check current authentication
+        window.checkCurrentAuth = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            try {
+                const user = auth.currentUser;
+                if (user) {
+                    log(`✅ <strong>Currently signed in as:</strong><br>
+                        📧 Email: ${user.email}<br>
+                        🆔 UID: ${user.uid}`, 'success');
+
+                    // Check if current user has admin/owner role
+                    try {
+                        const userRoleRef = doc(db, 'user_roles', user.uid);
+                        const userRoleDoc = await getDoc(userRoleRef);
+                        if (userRoleDoc.exists()) {
+                            const roleData = userRoleDoc.data();
+                            if (roleData.role === 'admin' || roleData.role === 'owner') {
+                                log(`✅ You have <strong>${roleData.role}</strong> access. You can configure other users.`, 'success');
+                            } else {
+                                log(`⚠️ <strong>Warning:</strong> You are signed in as "${roleData.role}". You may not have permission to configure user roles.`, 'warning');
+                            }
+                        } else {
+                            log(`⚠️ <strong>Warning:</strong> No role found for your account. You may not have permission to configure user roles.`, 'warning');
+                        }
+                    } catch (error) {
+                        log(`⚠️ Could not check your role: ${error.message}`, 'warning');
+                    }
+                } else {
+                    log('❌ <strong>Not authenticated!</strong><br>Please sign in first at <a href="index.html">admin panel</a>', 'error');
+                }
+            } catch (error) {
+                log('❌ Error checking auth: ' + error.message, 'error');
+            }
+        };
+
+        // Check if a user role exists by email
+        async function checkUserRoleByEmail(email) {
+            try {
+                // Query user_roles collection for this email
+                const userRolesRef = collection(db, 'user_roles');
+                const q = query(userRolesRef, where('email', '==', email));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    const docData = querySnapshot.docs[0].data();
+                    return {
+                        exists: true,
+                        uid: querySnapshot.docs[0].id,
+                        data: docData
+                    };
+                }
+                return { exists: false };
+            } catch (error) {
+                console.error(`Error checking ${email}:`, error);
+                return { exists: false, error: error.message };
+            }
+        }
+
+        // Check both users
+        window.checkBothUsers = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            log('🔍 Checking user roles in Firestore...', 'info');
+
+            for (const targetUser of TARGET_USERS) {
+                const statusDiv = document.getElementById(targetUser.role + 'Status');
+                statusDiv.className = 'status checking';
+                statusDiv.textContent = '⏳ Checking...';
+
+                const result = await checkUserRoleByEmail(targetUser.email);
+
+                if (result.error) {
+                    statusDiv.className = 'status missing';
+                    statusDiv.textContent = `❌ Error: ${result.error}`;
+                    log(`❌ <strong>${targetUser.email}</strong><br>Error: ${result.error}`, 'error');
+                } else if (result.exists) {
+                    statusDiv.className = 'status exists';
+                    statusDiv.innerHTML = `✅ Configured with role: <strong>${result.data.role}</strong>`;
+                    log(`✅ <strong>${targetUser.email}</strong><br>
+                        Role: ${result.data.role}<br>
+                        Name: ${result.data.name || 'Not set'}<br>
+                        UID: ${result.uid}`, 'success');
+                } else {
+                    statusDiv.className = 'status missing';
+                    statusDiv.textContent = '❌ Not configured';
+                    log(`❌ <strong>${targetUser.email}</strong><br>
+                        No role configuration found in Firestore.<br>
+                        <strong>Note:</strong> User must first be created in Firebase Authentication.`, 'error');
+                }
+            }
+
+            log(`<strong>💡 Next Steps:</strong><br>
+                • If users are not configured, click "Setup Both Users"<br>
+                • If users don't exist in Firebase Auth, you'll need to create them manually in Firebase Console first`, 'info');
+        };
+
+        // Setup both users
+        window.setupBothUsers = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            // Check authentication first
+            const user = auth.currentUser;
+            if (!user) {
+                log('❌ Not authenticated! Please sign in first.', 'error');
+                return;
+            }
+
+            log('🚀 Starting setup for both users...', 'info');
+            log('<strong>⚠️ Important:</strong> This will create/update role documents in Firestore.<br>' +
+                'Make sure both users are already created in Firebase Authentication!', 'warning');
+
+            if (!confirm('Continue with setup? Make sure both users exist in Firebase Authentication.')) {
+                log('⏸️ Setup cancelled by user', 'info');
+                return;
+            }
+
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const targetUser of TARGET_USERS) {
+                try {
+                    log(`⏳ Setting up ${targetUser.email}...`, 'info');
+
+                    // First check if user exists in Authentication by querying user_roles
+                    const result = await checkUserRoleByEmail(targetUser.email);
+
+                    let userUid;
+                    if (result.exists) {
+                        userUid = result.uid;
+                        log(`📝 Found existing user with UID: ${userUid}`, 'info');
+                    } else {
+                        // We can't get UID without Authentication access, so we'll ask user
+                        const uid = prompt(`Enter the Firebase Authentication UID for ${targetUser.email}\n\n` +
+                            `To find this:\n` +
+                            `1. Go to Firebase Console → Authentication → Users\n` +
+                            `2. Find ${targetUser.email}\n` +
+                            `3. Copy the UID`);
+
+                        if (!uid) {
+                            log(`⏭️ Skipped ${targetUser.email} - UID not provided`, 'warning');
+                            failCount++;
+                            continue;
+                        }
+                        userUid = uid.trim();
+                    }
+
+                    // Create/update the role document
+                    const userRoleRef = doc(db, 'user_roles', userUid);
+                    await setDoc(userRoleRef, {
+                        email: targetUser.email,
+                        name: targetUser.name,
+                        role: targetUser.role,
+                        createdAt: result.exists ? result.data.createdAt : new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+
+                    const statusDiv = document.getElementById(targetUser.role + 'Status');
+                    statusDiv.className = 'status exists';
+                    statusDiv.innerHTML = `✅ Successfully configured with role: <strong>${targetUser.role}</strong>`;
+
+                    log(`✅ <strong>Success!</strong> ${targetUser.email} configured as ${targetUser.role}`, 'success');
+                    successCount++;
+
+                } catch (error) {
+                    const statusDiv = document.getElementById(targetUser.role + 'Status');
+                    statusDiv.className = 'status missing';
+                    statusDiv.textContent = `❌ Setup failed: ${error.message}`;
+
+                    log(`❌ <strong>Failed to setup ${targetUser.email}</strong><br>
+                        Error: ${error.message}<br><br>
+                        <strong>Possible causes:</strong><br>
+                        • User doesn't exist in Firebase Authentication<br>
+                        • Firestore security rules blocking write access<br>
+                        • Invalid UID provided<br><br>
+                        Please use manual setup instructions below.`, 'error');
+                    failCount++;
+                }
+            }
+
+            // Summary
+            if (successCount === TARGET_USERS.length) {
+                log(`🎉 <strong>All Done!</strong><br>
+                    Successfully configured ${successCount} user(s).<br><br>
+                    <strong>Next steps:</strong><br>
+                    1. Users can now sign in at the <a href="index.html">admin panel</a><br>
+                    2. They will have full access to financial features<br>
+                    3. They can manage other user roles`, 'success');
+            } else {
+                log(`📊 <strong>Setup Summary:</strong><br>
+                    ✅ Success: ${successCount}<br>
+                    ❌ Failed: ${failCount}<br><br>
+                    Please check the errors above and try manual setup if needed.`, 'warning');
+            }
+        };
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            log('🚀 Setup tool ready!', 'info');
+            checkCurrentAuth();
+        });
+    </script>
+</body>
+</html>
