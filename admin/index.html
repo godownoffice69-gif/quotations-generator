@@ -1112,11 +1112,11 @@
                 Object.entries(props).forEach(([key, val]) => {
                     if (key === 'class') el.className = val;
                     else if (key === 'style') Object.assign(el.style, val);
-                    else if (key.startsWith('on')) el.addEventListener(key.slice(2), val);
+                    else if (key.startsWith('on')) el.addEventListener(key.slice(2).toLowerCase(), val);
                     else if (key.startsWith('data-')) el.dataset[key.slice(5)] = val;
                     else el[key] = val;
                 });
-                children.forEach(child => {
+                children.filter(child => child != null).forEach(child => {
                     el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
                 });
                 return el;
@@ -5047,19 +5047,27 @@ convertToQuotationDateFormat(dateStr) {
             showModal(title, content) {
                 const existing = document.getElementById('dynamicModal');
                 if (existing) existing.remove();
-                
+
+                // Create close button
+                const closeBtn = Utils.elem('button', { class: 'modal-close' }, ['×']);
+                closeBtn.addEventListener('click', () => this.closeModal());
+
                 const modal = Utils.elem('div', { id: 'dynamicModal', class: 'modal show' }, [
                     Utils.elem('div', { class: 'modal-content' }, [
-                        Utils.elem('button', { 
-                            class: 'modal-close', 
-                            onclick: () => this.closeModal() 
-                        }, ['×']),
+                        closeBtn,
                         Utils.elem('h2', {}, [title]),
                         Utils.elem('div', { innerHTML: content })
                     ])
                 ]);
-                
+
                 document.getElementById('modalsContainer').appendChild(modal);
+
+                // Also allow closing by clicking the backdrop
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        this.closeModal();
+                    }
+                });
             },
 
             closeModal() {
@@ -5077,14 +5085,21 @@ convertToQuotationDateFormat(dateStr) {
                     topOffset = Math.max(topOffset, rect.bottom - document.documentElement.scrollTop + 10);
                 });
 
+                // Create action buttons if provided
+                const actionButtons = actions.length > 0 ? Utils.elem('div', { class: 'toast-actions' },
+                    actions.map(a => {
+                        const btn = Utils.elem('button', { class: 'toast-btn' }, [a.label]);
+                        btn.addEventListener('click', a.handler);
+                        return btn;
+                    })
+                ) : null;
+
                 const toast = Utils.elem('div', {
                     class: `toast show ${type === 'error' ? 'error' : ''} ${type === 'warning' ? 'warning' : ''}`,
                     style: { top: `${topOffset}px` }
                 }, [
                     Utils.elem('div', {}, [message]),
-                    actions.length > 0 ? Utils.elem('div', { class: 'toast-actions' },
-                        actions.map(a => Utils.elem('button', { class: 'toast-btn', onclick: a.handler }, [a.label]))
-                    ) : null
+                    actionButtons
                 ].filter(Boolean));
 
                 document.body.appendChild(toast);
