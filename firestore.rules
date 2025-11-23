@@ -43,14 +43,8 @@ service cloud.firestore {
          get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'owner'])
       );
 
-      // Allow authenticated users to create/update their OWN user_role document
-      // This enables self-service admin setup via Firestore console or debug tools
-      // SECURITY NOTE: In production, you may want to remove this and manage roles via backend
-      allow create, update: if isAuthenticated() &&
-                              request.auth.uid == userId &&
-                              request.resource.data.role in ['admin', 'owner', 'staff'];
-
-      // Allow admin/owner to manage all user roles (including delete)
+      // ONLY admin/owner can manage user roles (create, update, delete)
+      // Users CANNOT set their own roles - this prevents privilege escalation
       allow write, delete: if isAuthenticated() && (
         exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'owner']
