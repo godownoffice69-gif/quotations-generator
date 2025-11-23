@@ -5129,17 +5129,6 @@ convertToQuotationDateFormat(dateStr) {
                 modal._escapeHandler = escapeHandler;
             },
 
-            closeModal() {
-                const modal = document.getElementById('dynamicModal');
-                if (modal) {
-                    // Remove escape handler if it exists
-                    if (modal._escapeHandler) {
-                        document.removeEventListener('keydown', modal._escapeHandler);
-                    }
-                    modal.remove();
-                }
-            },
-
             showToast(message, type = 'success', actions = []) {
                 // Calculate position based on existing toasts
                 const existingToasts = document.querySelectorAll('.toast');
@@ -8461,9 +8450,15 @@ convertToQuotationDateFormat(dateStr) {
                 document.getElementById('modalsContainer').innerHTML = modalHTML;
             },
 
-            closeModal(modalId) {
+            closeModal(modalId = 'dynamicModal') {
                 const modal = document.getElementById(modalId);
-                if (modal) modal.remove();
+                if (modal) {
+                    // Remove escape handler if it exists (for dynamicModal)
+                    if (modal._escapeHandler) {
+                        document.removeEventListener('keydown', modal._escapeHandler);
+                    }
+                    modal.remove();
+                }
             },
 
             // ============ STORAGE ============
