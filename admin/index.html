@@ -1219,6 +1219,7 @@ debounce: (func, wait) => {
                 calendar: '📅 Calendar',
                 history: '🕒 History',
                 analytics: '📈 Analytics',
+                financials: '💰 Financials',
                 settings: '⚙️ Settings',
 
                 // Common Buttons
@@ -1562,6 +1563,7 @@ debounce: (func, wait) => {
                 calendar: '📅 કેલેન્ડર',
                 history: '🕒 ઇતિહાસ',
                 analytics: '📈 વિશ્લેષણ',
+                financials: '💰 નાણાકીય',
                 settings: '⚙️ સેટિંગ્સ',
 
                 // Common Buttons
@@ -2034,7 +2036,7 @@ const OMS = {
 
                 // Update tabs
                 const tabs = document.querySelectorAll('.nav-tab');
-                const tabKeys = ['dashboard', 'orders', 'inventory', 'itemHistory', 'preparation', 'customers', 'team', 'calendar', 'history', 'analytics', 'settings'];
+                const tabKeys = ['dashboard', 'orders', 'inventory', 'itemHistory', 'preparation', 'customers', 'team', 'calendar', 'history', 'analytics', 'financials', 'settings'];
                 tabs.forEach((tab, index) => {
                     if (tabKeys[index] && t[tabKeys[index]]) {
                         tab.textContent = t[tabKeys[index]];
