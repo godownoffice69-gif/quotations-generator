@@ -5127,15 +5127,27 @@ convertToQuotationDateFormat(dateStr) {
             async applyRBACToNavigation() {
                 const canViewFinancials = await this.canViewFinancials();
                 const financialsTab = document.querySelector('[data-tab="financials"]');
+                const user = await this.getCurrentUser();
 
-                if (!canViewFinancials && financialsTab) {
-                    // Hide financials tab for non-admin/owner users
-                    financialsTab.style.display = 'none';
-                    console.log('🔒 Financials tab hidden for non-admin/owner user');
+                console.log('🔐 RBAC Check:', {
+                    userRole: user?.role,
+                    canViewFinancials: canViewFinancials,
+                    tabExists: !!financialsTab
+                });
+
+                if (financialsTab) {
+                    if (canViewFinancials) {
+                        // Show financials tab for admin/owner users
+                        financialsTab.style.display = '';
+                        console.log('✅ Financials tab VISIBLE for admin/owner user');
+                    } else {
+                        // Hide financials tab for non-admin/owner users
+                        financialsTab.style.display = 'none';
+                        console.log('🔒 Financials tab HIDDEN for non-admin/owner user');
+                    }
                 }
 
                 // Display current user role in header
-                const user = await this.getCurrentUser();
                 if (user) {
                     const userInfoDiv = document.createElement('div');
                     userInfoDiv.id = 'userRoleInfo';

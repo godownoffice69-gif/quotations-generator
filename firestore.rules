@@ -2,40 +2,55 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if user is authenticated
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+
+    // Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper function to get user role from user_roles collection
+    // Get user role from user_roles collection
+    // Returns the role string (e.g., 'admin', 'owner', 'staff')
     function getUserRole() {
       return get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role;
     }
 
-    // Helper function to check if user is admin or owner
+    // Check if user is admin or owner (has elevated privileges)
     function isAdminOrOwner() {
-      return isAuthenticated() && getUserRole() in ['admin', 'owner'];
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+             getUserRole() in ['admin', 'owner'];
     }
 
-    // Helper function to check if user has any role
+    // Check if user has any role assigned
     function hasRole() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/user_roles/$(request.auth.uid));
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/user_roles/$(request.auth.uid));
     }
 
-    // User roles collection - users can read their own, admin/owner can read all and manage
-    // NOTE: We don't use isAdminOrOwner() for read to avoid circular dependency
+    // ========================================
+    // USER ROLES COLLECTION
+    // ========================================
+    // Critical: This collection controls access to all other resources
+
     match /user_roles/{userId} {
+      // Users can read their own role, admin/owner can read all roles
       allow read: if isAuthenticated() && (
         request.auth.uid == userId ||
-        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'owner']
+        (exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'owner'])
       );
 
       // Allow authenticated users to create/update their OWN user_role document
-      // This enables self-service admin setup via console
-      allow create, update: if isAuthenticated() && request.auth.uid == userId;
+      // This enables self-service admin setup via Firestore console or debug tools
+      // SECURITY NOTE: In production, you may want to remove this and manage roles via backend
+      allow create, update: if isAuthenticated() &&
+                              request.auth.uid == userId &&
+                              request.resource.data.role in ['admin', 'owner', 'staff'];
 
-      // Allow admin/owner to manage all user roles
+      // Allow admin/owner to manage all user roles (including delete)
       allow write, delete: if isAuthenticated() && (
         exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'owner']
@@ -103,19 +118,23 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    // FINANCIAL COLLECTIONS - RESTRICTED TO ADMIN/OWNER ONLY
+    // ========================================
+    // FINANCIAL COLLECTIONS - ADMIN/OWNER ONLY
+    // ========================================
+    // These collections contain sensitive financial data
+    // Only users with 'admin' or 'owner' role can access
 
-    // Payments collection - only admin/owner can access
+    // Payments collection - tracks customer payments
     match /payments/{paymentId} {
       allow read, write: if isAdminOrOwner();
     }
 
-    // Expenses collection - only admin/owner can access
+    // Expenses collection - tracks business expenses
     match /expenses/{expenseId} {
       allow read, write: if isAdminOrOwner();
     }
 
-    // Financial summary collection - only admin/owner can access
+    // Financial summary collection - aggregated financial data
     match /financial_summary/{summaryId} {
       allow read, write: if isAdminOrOwner();
     }
