@@ -3613,6 +3613,23 @@ async getCurrentUser() {
             console.warn('⚠️ No role document found for:', email);
             console.warn('⚠️ User will have limited access. Use admin panel to set role.');
             console.warn('⚠️ Or manually create role in Firestore: user_roles/' + authUser.uid);
+            console.warn('💡 TIP: You can set up your role by calling: appManager.showRoleSetupDialog()');
+
+            // Show a one-time notification about role setup
+            if (!sessionStorage.getItem('roleSetupNotificationShown')) {
+                sessionStorage.setItem('roleSetupNotificationShown', 'true');
+                setTimeout(() => {
+                    this.showToast('⚠️ No role configured. Click here to set up your role.', 'warning', 10000);
+                    // Add click handler to toast
+                    const toastEl = document.querySelector('.toast:last-child');
+                    if (toastEl) {
+                        toastEl.style.cursor = 'pointer';
+                        toastEl.onclick = () => {
+                            this.showRoleSetupDialog();
+                        };
+                    }
+                }, 2000);
+            }
         }
 
         this.data.currentUser = {
@@ -3686,6 +3703,89 @@ async isAdminOrOwner() {
     const user = await this.getCurrentUser();
     if (!user) return false;
     return user.role === 'admin' || user.role === 'owner';
+},
+
+// Self-service role setup - allows users to set their own role in Firestore
+async setupUserRole(role = 'admin') {
+    try {
+        const authUser = auth.currentUser;
+        if (!authUser) {
+            this.showToast('❌ Not authenticated. Please sign in first.', 'error');
+            return false;
+        }
+
+        // Validate role
+        if (!['admin', 'owner', 'staff'].includes(role)) {
+            this.showToast('❌ Invalid role. Must be admin, owner, or staff.', 'error');
+            return false;
+        }
+
+        // Create/update user_roles document
+        await db.collection('user_roles').doc(authUser.uid).set({
+            email: authUser.email,
+            name: authUser.displayName || authUser.email,
+            role: role,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        console.log(`✅ Role set to ${role} for ${authUser.email}`);
+        this.showToast(`✅ Successfully set role to ${role}! Reloading page...`, 'success');
+
+        // Reload the page to apply changes
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+
+        return true;
+    } catch (error) {
+        console.error('❌ Error setting up user role:', error);
+        this.showToast('❌ Error setting up role: ' + error.message, 'error');
+        return false;
+    }
+},
+
+// Show role setup dialog
+showRoleSetupDialog() {
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+
+    dialog.innerHTML = `
+        <div style="background: white; padding: 2rem; border-radius: 1rem; max-width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <h2 style="margin: 0 0 1rem 0; color: #333;">🔐 Setup Your Role</h2>
+            <p style="color: #666; margin-bottom: 1.5rem;">
+                You need to set up your role to access financial features.
+                This will create a user_roles document in Firestore for your account.
+            </p>
+            <div style="margin: 1.5rem 0;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: #333;">Select Your Role:</label>
+                <select id="roleSelect" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 0.5rem; font-size: 1rem;">
+                    <option value="admin">Admin - Full access including financials</option>
+                    <option value="owner">Owner - Full access including financials</option>
+                    <option value="staff">Staff - Limited access (no financials)</option>
+                </select>
+            </div>
+            <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 1rem; margin: 1rem 0; border-radius: 0.5rem;">
+                <strong style="color: #f57c00;">⚠️ Note:</strong>
+                <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.9rem;">
+                    In production, roles should be managed by an administrator.
+                    This self-service feature is for initial setup only.
+                </p>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button onclick="appManager.setupUserRole(document.getElementById('roleSelect').value); document.body.removeChild(this.closest('[style*=fixed]'))"
+                        style="flex: 1; background: #4CAF50; color: white; border: none; padding: 0.75rem; border-radius: 0.5rem; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                    ✅ Setup Role
+                </button>
+                <button onclick="document.body.removeChild(this.closest('[style*=fixed]'))"
+                        style="flex: 1; background: #f44336; color: white; border: none; padding: 0.75rem; border-radius: 0.5rem; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                    ❌ Cancel
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(dialog);
 },
 
 convertToQuotationDateFormat(dateStr) {
@@ -7411,7 +7511,32 @@ convertToQuotationDateFormat(dateStr) {
 
     const metrics = calculateFinancials();
 
+    // Check if user has no financial data - might indicate permission issues
+    const hasNoFinancialData = expenses.length === 0 && payments.length === 0;
+    const roleSetupWarning = hasNoFinancialData ? `
+        <div class="card" style="background: #fff3e0; border-left: 4px solid #ff9800; margin-bottom: 1.5rem;">
+            <div style="padding: 1.5rem;">
+                <h3 style="color: #f57c00; margin: 0 0 0.5rem 0;">⚠️ No Financial Data Found</h3>
+                <p style="margin: 0.5rem 0; color: #666;">
+                    If you're seeing this message and can't load expenses or payments, you might not have the proper role configured in Firestore.
+                </p>
+                <p style="margin: 0.5rem 0; color: #666;">
+                    <strong>Check the browser console for permission errors.</strong>
+                </p>
+                <button onclick="appManager.showRoleSetupDialog()"
+                        style="background: #ff9800; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-weight: bold; margin-top: 1rem;">
+                    🔐 Setup Your Role
+                </button>
+                <button onclick="window.location.href='setup-admin-users.html'"
+                        style="background: #2196F3; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-weight: bold; margin-top: 1rem; margin-left: 0.5rem;">
+                    📖 View Setup Guide
+                </button>
+            </div>
+        </div>
+    ` : '';
+
     container.innerHTML = `
+        ${roleSetupWarning}
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">💰 Financial Management</h2>
@@ -8473,17 +8598,28 @@ convertToQuotationDateFormat(dateStr) {
         }
 
         // Load ALL data from Firestore (primary source)
-        await Promise.all([
+        // Check if user has permission to load financial data
+        const canViewFinancials = await this.canViewFinancials();
+
+        const loadPromises = [
             this.loadOrdersFromFirestore(),
             this.loadTrackingFromFirestore(),
             this.loadTeamFromFirestore(),
             this.loadInventoryFromFirestore(),
             this.loadItemHistoryFromFirestore(),
-            this.loadPaymentsFromFirestore(),
-            this.loadExpensesFromFirestore(),
             this.loadNotificationsFromFirestore(),
             this.loadSettingsFromFirestore()
-        ]);
+        ];
+
+        // Only load financial data if user has permission
+        if (canViewFinancials) {
+            loadPromises.push(this.loadPaymentsFromFirestore());
+            loadPromises.push(this.loadExpensesFromFirestore());
+        } else {
+            console.log('ℹ️ Skipping financial data - user does not have admin/owner role');
+        }
+
+        await Promise.all(loadPromises);
 
         // Setup real-time listeners for all collections
         this.setupAllRealtimeListeners();
@@ -8822,6 +8958,13 @@ async loadPaymentsFromFirestore() {
         return true;
     } catch (error) {
         console.error('❌ Error loading payments from Firestore:', error);
+
+        // Check if it's a permission error
+        if (error.code === 'permission-denied') {
+            console.error('🔒 Permission Denied: You need admin/owner role to access financial data');
+            console.error('💡 Solution: Run the setup script or create your user_roles document manually');
+            console.error('📖 Visit admin/setup-admin-users.html for help');
+        }
         return false;
     }
 },
@@ -8841,6 +8984,13 @@ async loadExpensesFromFirestore() {
         return true;
     } catch (error) {
         console.error('❌ Error loading expenses from Firestore:', error);
+
+        // Check if it's a permission error
+        if (error.code === 'permission-denied') {
+            console.error('🔒 Permission Denied: You need admin/owner role to access financial data');
+            console.error('💡 Solution: Run the setup script or create your user_roles document manually');
+            console.error('📖 Visit admin/setup-admin-users.html for help');
+        }
         return false;
     }
 },
