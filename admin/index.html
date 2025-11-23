@@ -3613,7 +3613,7 @@ async getCurrentUser() {
             console.warn('⚠️ No role document found for:', email);
             console.warn('⚠️ User will have limited access. Use admin panel to set role.');
             console.warn('⚠️ Or manually create role in Firestore: user_roles/' + authUser.uid);
-            console.warn('💡 TIP: You can set up your role by calling: appManager.showRoleSetupDialog()');
+            console.warn('💡 TIP: You can set up your role by calling: OMS.showRoleSetupDialog()');
 
             // Show a one-time notification about role setup
             if (!sessionStorage.getItem('roleSetupNotificationShown')) {
@@ -3773,7 +3773,7 @@ showRoleSetupDialog() {
                 </p>
             </div>
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                <button onclick="appManager.setupUserRole(document.getElementById('roleSelect').value); document.body.removeChild(this.closest('[style*=fixed]'))"
+                <button onclick="OMS.setupUserRole(document.getElementById('roleSelect').value); document.body.removeChild(this.closest('[style*=fixed]'))"
                         style="flex: 1; background: #4CAF50; color: white; border: none; padding: 0.75rem; border-radius: 0.5rem; cursor: pointer; font-weight: bold; font-size: 1rem;">
                     ✅ Setup Role
                 </button>
@@ -7523,7 +7523,7 @@ convertToQuotationDateFormat(dateStr) {
                 <p style="margin: 0.5rem 0; color: #666;">
                     <strong>Check the browser console for permission errors.</strong>
                 </p>
-                <button onclick="appManager.showRoleSetupDialog()"
+                <button onclick="OMS.showRoleSetupDialog()"
                         style="background: #ff9800; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-weight: bold; margin-top: 1rem;">
                     🔐 Setup Your Role
                 </button>
@@ -9702,6 +9702,10 @@ updateAllDisplays() {
         }
     }
 };
+
+        // Expose OMS globally for console access and backward compatibility
+        window.OMS = OMS;
+        window.appManager = OMS;
 
         // ============ ADMIN UTILITIES ============
         // Utility functions for debugging and cleanup
