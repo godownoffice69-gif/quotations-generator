@@ -2141,7 +2141,13 @@ const OMS = {
                     const id = actionElement.dataset.id;
                     const type = actionElement.dataset.type;
 
-                    console.log('🖱️ Button clicked - Action:', action, 'ID:', id, 'Type:', type);
+                    // Log only relevant data for each action type
+                    const actionsNeedingIdType = ['edit', 'delete', 'print', 'quickAction'];
+                    if (actionsNeedingIdType.includes(action)) {
+                        console.log('🖱️ Button clicked - Action:', action, 'ID:', id, 'Type:', type);
+                    } else {
+                        console.log('🖱️ Button clicked - Action:', action);
+                    }
 
                     e.preventDefault();
                     const handlers = {
