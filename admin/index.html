@@ -720,6 +720,21 @@
         .quick-menu-item:hover { background: var(--light); }
 
         /* Keyboard Shortcuts Panel */
+        .shortcuts-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--modal-backdrop);
+            z-index: 2499;
+            display: none;
+        }
+
+        .shortcuts-backdrop.show {
+            display: block;
+        }
+
         .shortcuts-panel {
             position: fixed;
             top: 50%;
@@ -1066,6 +1081,7 @@
     </div>
 
     <!-- Shortcuts Panel -->
+    <div id="shortcutsBackdrop" class="shortcuts-backdrop" onclick="OMS.hideShortcuts()"></div>
     <div id="shortcutsPanel" class="shortcuts-panel">
         <button class="modal-close" onclick="OMS.hideShortcuts()">×</button>
         <h2>⌨️ Keyboard Shortcuts</h2>
@@ -2635,11 +2651,33 @@ const OMS = {
             },
 
             showShortcuts() {
-                document.getElementById('shortcutsPanel').classList.add('show');
+                const panel = document.getElementById('shortcutsPanel');
+                const backdrop = document.getElementById('shortcutsBackdrop');
+                panel.classList.add('show');
+                backdrop.classList.add('show');
+
+                // Add Escape key handler
+                const escapeHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        this.hideShortcuts();
+                        document.removeEventListener('keydown', escapeHandler);
+                    }
+                };
+                document.addEventListener('keydown', escapeHandler);
+                panel._escapeHandler = escapeHandler;
             },
 
             hideShortcuts() {
-                document.getElementById('shortcutsPanel').classList.remove('show');
+                const panel = document.getElementById('shortcutsPanel');
+                const backdrop = document.getElementById('shortcutsBackdrop');
+                panel.classList.remove('show');
+                backdrop.classList.remove('show');
+
+                // Remove escape handler
+                if (panel._escapeHandler) {
+                    document.removeEventListener('keydown', panel._escapeHandler);
+                    panel._escapeHandler = null;
+                }
             },
 
             // ============ AUTO-SAVE ============
@@ -5050,7 +5088,10 @@ convertToQuotationDateFormat(dateStr) {
 
                 // Create close button
                 const closeBtn = Utils.elem('button', { class: 'modal-close' }, ['×']);
-                closeBtn.addEventListener('click', () => this.closeModal());
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.closeModal();
+                });
 
                 const modal = Utils.elem('div', { id: 'dynamicModal', class: 'modal show' }, [
                     Utils.elem('div', { class: 'modal-content' }, [
@@ -5068,11 +5109,29 @@ convertToQuotationDateFormat(dateStr) {
                         this.closeModal();
                     }
                 });
+
+                // Add keyboard handler for Escape key
+                const escapeHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeModal();
+                        document.removeEventListener('keydown', escapeHandler);
+                    }
+                };
+                document.addEventListener('keydown', escapeHandler);
+
+                // Store handler to remove later
+                modal._escapeHandler = escapeHandler;
             },
 
             closeModal() {
                 const modal = document.getElementById('dynamicModal');
-                if (modal) modal.remove();
+                if (modal) {
+                    // Remove escape handler if it exists
+                    if (modal._escapeHandler) {
+                        document.removeEventListener('keydown', modal._escapeHandler);
+                    }
+                    modal.remove();
+                }
             },
 
             showToast(message, type = 'success', actions = []) {
