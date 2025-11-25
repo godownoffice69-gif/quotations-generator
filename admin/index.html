@@ -2417,11 +2417,464 @@ debounce: (func, wait) => {
             }
         }
 
+        /**
+         * FilterRatingSystem - User feedback system for filter algorithm
+         * Allows users to rate filtering results and helps system learn from mistakes
+         */
+        class FilterRatingSystem {
+            constructor() {
+                this.ratings = this.loadRatings();
+                this.currentFilterContext = null;
+                this.maxRatings = 500; // Keep last 500 ratings
+            }
+
+            loadRatings() {
+                try {
+                    const saved = localStorage.getItem('oms_filter_ratings');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (error) {
+                    console.warn('Failed to load filter ratings:', error);
+                    return [];
+                }
+            }
+
+            saveRatings() {
+                try {
+                    if (this.ratings.length > this.maxRatings) {
+                        this.ratings = this.ratings.slice(-this.maxRatings);
+                    }
+                    localStorage.setItem('oms_filter_ratings', JSON.stringify(this.ratings));
+                } catch (error) {
+                    console.warn('Failed to save filter ratings:', error);
+                }
+            }
+
+            // Store context of current filter operation for rating
+            setFilterContext(context) {
+                this.currentFilterContext = {
+                    timestamp: new Date().toISOString(),
+                    date: context.date,
+                    normalizedDate: context.normalizedDate,
+                    matchedOrders: context.matchedOrders.map(o => ({
+                        orderId: o.orderId,
+                        docId: o.docId,
+                        clientName: o.clientName,
+                        date: o.date,
+                        startDate: o.startDate,
+                        endDate: o.endDate,
+                        isMultiDay: o.isMultiDay
+                    })),
+                    totalOrders: context.totalOrders,
+                    filterDetails: context.filterDetails,
+                    allOrderIds: context.allOrders.map(o => ({
+                        orderId: o.orderId,
+                        docId: o.docId,
+                        clientName: o.clientName,
+                        date: o.date,
+                        startDate: o.startDate,
+                        endDate: o.endDate,
+                        isMultiDay: o.isMultiDay
+                    }))
+                };
+            }
+
+            // Record user rating with feedback
+            recordRating(rating, feedback = {}) {
+                if (!this.currentFilterContext) {
+                    console.warn('No filter context available for rating');
+                    return;
+                }
+
+                const ratingEntry = {
+                    ...this.currentFilterContext,
+                    rating, // 1-5 stars or thumbs up/down
+                    feedback: {
+                        userComment: feedback.comment || '',
+                        incorrectlyIncluded: feedback.incorrectlyIncluded || [], // Order IDs that shouldn't be there
+                        incorrectlyExcluded: feedback.incorrectlyExcluded || [], // Order IDs that should be there
+                        ratingType: feedback.ratingType || 'numeric', // 'numeric', 'thumbs', 'words'
+                        sentimentScore: this.calculateSentiment(rating, feedback),
+                        tags: feedback.tags || [] // ['wrong_date', 'missing_orders', 'extra_orders', 'perfect']
+                    },
+                    ratedAt: new Date().toISOString()
+                };
+
+                this.ratings.push(ratingEntry);
+                this.saveRatings();
+
+                console.log('✨ Rating recorded:', ratingEntry);
+
+                // Learn from this feedback
+                this.learnFromRating(ratingEntry);
+
+                return ratingEntry;
+            }
+
+            // Calculate sentiment score from rating
+            calculateSentiment(rating, feedback) {
+                let score = 0;
+
+                // Numeric rating (1-5 stars)
+                if (typeof rating === 'number') {
+                    score = (rating - 1) / 4; // Normalize to 0-1
+                }
+                // Thumbs up/down
+                else if (rating === 'up') {
+                    score = 1;
+                } else if (rating === 'down') {
+                    score = 0;
+                }
+                // Word-based rating
+                else if (typeof rating === 'string') {
+                    const wordScores = {
+                        'perfect': 1.0,
+                        'excellent': 1.0,
+                        'good': 0.75,
+                        'okay': 0.5,
+                        'bad': 0.25,
+                        'terrible': 0
+                    };
+                    score = wordScores[rating.toLowerCase()] || 0.5;
+                }
+
+                // Adjust based on specific feedback
+                if (feedback.incorrectlyIncluded && feedback.incorrectlyIncluded.length > 0) {
+                    score *= 0.5; // Penalty for wrong inclusions
+                }
+                if (feedback.incorrectlyExcluded && feedback.incorrectlyExcluded.length > 0) {
+                    score *= 0.5; // Penalty for missing orders
+                }
+
+                return score;
+            }
+
+            // Learn from user rating
+            learnFromRating(ratingEntry) {
+                const { date, normalizedDate, feedback, rating } = ratingEntry;
+
+                // Create learning rules based on feedback
+                const learningRules = [];
+
+                // Rule 1: Learn from incorrectly included orders
+                if (feedback.incorrectlyIncluded && feedback.incorrectlyIncluded.length > 0) {
+                    feedback.incorrectlyIncluded.forEach(badOrder => {
+                        learningRules.push({
+                            type: 'exclusion',
+                            targetDate: normalizedDate,
+                            orderId: badOrder.orderId,
+                            reason: 'User marked as incorrectly included',
+                            orderDate: badOrder.date || badOrder.startDate,
+                            weight: 1.0
+                        });
+                    });
+                }
+
+                // Rule 2: Learn from incorrectly excluded orders
+                if (feedback.incorrectlyExcluded && feedback.incorrectlyExcluded.length > 0) {
+                    feedback.incorrectlyExcluded.forEach(missedOrder => {
+                        learningRules.push({
+                            type: 'inclusion',
+                            targetDate: normalizedDate,
+                            orderId: missedOrder.orderId,
+                            reason: 'User marked as incorrectly excluded',
+                            orderDate: missedOrder.date || missedOrder.startDate,
+                            weight: 1.0
+                        });
+                    });
+                }
+
+                // Rule 3: Learn from overall sentiment
+                if (feedback.sentimentScore < 0.5) {
+                    learningRules.push({
+                        type: 'anomaly',
+                        targetDate: normalizedDate,
+                        reason: 'Low user satisfaction',
+                        sentimentScore: feedback.sentimentScore,
+                        weight: 0.5
+                    });
+                }
+
+                // Store learning rules
+                if (learningRules.length > 0) {
+                    this.storeLearningRules(learningRules);
+                }
+
+                console.log('🧠 Learned from rating:', learningRules.length, 'new rules');
+            }
+
+            // Store learning rules for future use
+            storeLearningRules(rules) {
+                try {
+                    let existingRules = JSON.parse(localStorage.getItem('oms_filter_learning_rules') || '[]');
+                    existingRules = [...existingRules, ...rules];
+
+                    // Keep only last 1000 rules
+                    if (existingRules.length > 1000) {
+                        existingRules = existingRules.slice(-1000);
+                    }
+
+                    localStorage.setItem('oms_filter_learning_rules', JSON.stringify(existingRules));
+                } catch (error) {
+                    console.warn('Failed to store learning rules:', error);
+                }
+            }
+
+            // Get learning rules for a specific date
+            getLearningRules(date) {
+                try {
+                    const rules = JSON.parse(localStorage.getItem('oms_filter_learning_rules') || '[]');
+                    return rules.filter(rule => rule.targetDate === date);
+                } catch (error) {
+                    console.warn('Failed to get learning rules:', error);
+                    return [];
+                }
+            }
+
+            // Apply learning rules to filter results
+            applyLearningRules(date, orders, allOrders) {
+                const rules = this.getLearningRules(date);
+                if (rules.length === 0) return { orders, corrections: [] };
+
+                console.log(`🧠 Applying ${rules.length} learning rules for ${date}`);
+
+                const corrections = [];
+                let correctedOrders = [...orders];
+
+                // Apply exclusion rules
+                const exclusionRules = rules.filter(r => r.type === 'exclusion');
+                exclusionRules.forEach(rule => {
+                    const idx = correctedOrders.findIndex(o => o.orderId === rule.orderId || o.docId === rule.orderId);
+                    if (idx !== -1) {
+                        corrections.push({
+                            type: 'removed',
+                            order: correctedOrders[idx],
+                            reason: rule.reason
+                        });
+                        correctedOrders.splice(idx, 1);
+                    }
+                });
+
+                // Apply inclusion rules
+                const inclusionRules = rules.filter(r => r.type === 'inclusion');
+                inclusionRules.forEach(rule => {
+                    const order = allOrders.find(o => o.orderId === rule.orderId || o.docId === rule.orderId);
+                    if (order && !correctedOrders.find(o => o.orderId === order.orderId)) {
+                        corrections.push({
+                            type: 'added',
+                            order: order,
+                            reason: rule.reason
+                        });
+                        correctedOrders.push(order);
+                    }
+                });
+
+                if (corrections.length > 0) {
+                    console.log(`✅ Applied ${corrections.length} corrections:`, corrections);
+                }
+
+                return { orders: correctedOrders, corrections };
+            }
+
+            // Show rating UI modal
+            showRatingUI(OMS) {
+                if (!this.currentFilterContext) return;
+
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'flex';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                        <div class="modal-header">
+                            <h3>⭐ Rate Filter Results</h3>
+                            <button onclick="this.closest('.modal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <p style="margin-bottom: 20px; color: var(--text-secondary);">
+                                Found <strong>${this.currentFilterContext.matchedOrders.length}</strong> orders for
+                                <strong>${this.currentFilterContext.date}</strong>
+                            </p>
+
+                            <!-- Star Rating -->
+                            <div style="margin-bottom: 25px;">
+                                <label style="display: block; margin-bottom: 10px; font-weight: 600;">How accurate was this filter?</label>
+                                <div id="starRating" style="font-size: 36px; cursor: pointer;">
+                                    ${[1, 2, 3, 4, 5].map(i => `<span data-rating="${i}" style="color: #ddd;">⭐</span>`).join('')}
+                                </div>
+                                <div style="margin-top: 8px; color: var(--text-secondary); font-size: 14px;">
+                                    <span id="ratingLabel">Click to rate</span>
+                                </div>
+                            </div>
+
+                            <!-- Quick Feedback Buttons -->
+                            <div style="margin-bottom: 25px;">
+                                <label style="display: block; margin-bottom: 10px; font-weight: 600;">Quick Feedback:</label>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="btn btn-sm feedback-tag" data-tag="perfect">✅ Perfect</button>
+                                    <button class="btn btn-sm feedback-tag" data-tag="missing_orders">❌ Missing Orders</button>
+                                    <button class="btn btn-sm feedback-tag" data-tag="extra_orders">➕ Extra Orders</button>
+                                    <button class="btn btn-sm feedback-tag" data-tag="wrong_date">📅 Wrong Date</button>
+                                </div>
+                            </div>
+
+                            <!-- Matched Orders List -->
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; margin-bottom: 10px; font-weight: 600;">
+                                    Matched Orders (Click to mark as incorrect):
+                                </label>
+                                <div id="matchedOrdersList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; padding: 10px;">
+                                    ${this.currentFilterContext.matchedOrders.map(o => `
+                                        <div class="order-item" data-order-id="${o.orderId}" data-doc-id="${o.docId}" style="padding: 8px; margin: 5px 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+                                            <strong>${o.orderId || o.clientName}</strong>
+                                            <span style="color: var(--text-secondary); margin-left: 10px; font-size: 12px;">
+                                                ${o.date || o.startDate || 'No date'}
+                                            </span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <!-- Comment -->
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; margin-bottom: 10px; font-weight: 600;">Additional Comments (Optional):</label>
+                                <textarea id="ratingComment" rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; resize: vertical;" placeholder="Tell us what went wrong or what was good..."></textarea>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                                <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Skip</button>
+                                <button id="submitRating" class="btn btn-primary">Submit Rating</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                // Star rating interaction
+                let selectedRating = 0;
+                const stars = modal.querySelectorAll('#starRating span');
+                const ratingLabel = modal.querySelector('#ratingLabel');
+                const labels = ['Terrible', 'Bad', 'Okay', 'Good', 'Excellent'];
+
+                stars.forEach(star => {
+                    star.addEventListener('mouseenter', function() {
+                        const rating = parseInt(this.dataset.rating);
+                        stars.forEach((s, i) => {
+                            s.style.color = i < rating ? '#ffc107' : '#ddd';
+                        });
+                        ratingLabel.textContent = labels[rating - 1];
+                    });
+
+                    star.addEventListener('click', function() {
+                        selectedRating = parseInt(this.dataset.rating);
+                        stars.forEach((s, i) => {
+                            s.style.color = i < selectedRating ? '#ffc107' : '#ddd';
+                        });
+                        ratingLabel.textContent = labels[selectedRating - 1] + ' ⭐'.repeat(selectedRating);
+                    });
+                });
+
+                modal.querySelector('#starRating').addEventListener('mouseleave', function() {
+                    stars.forEach((s, i) => {
+                        s.style.color = i < selectedRating ? '#ffc107' : '#ddd';
+                    });
+                    ratingLabel.textContent = selectedRating > 0 ? labels[selectedRating - 1] + ' ⭐'.repeat(selectedRating) : 'Click to rate';
+                });
+
+                // Feedback tags interaction
+                const selectedTags = new Set();
+                modal.querySelectorAll('.feedback-tag').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const tag = this.dataset.tag;
+                        if (selectedTags.has(tag)) {
+                            selectedTags.delete(tag);
+                            this.style.background = '';
+                            this.style.color = '';
+                        } else {
+                            selectedTags.add(tag);
+                            this.style.background = 'var(--primary)';
+                            this.style.color = 'white';
+                        }
+                    });
+                });
+
+                // Order selection interaction
+                const incorrectOrders = new Set();
+                modal.querySelectorAll('.order-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const orderId = this.dataset.orderId || this.dataset.docId;
+                        if (incorrectOrders.has(orderId)) {
+                            incorrectOrders.delete(orderId);
+                            this.style.background = 'var(--bg-card)';
+                            this.style.border = '1px solid var(--border)';
+                        } else {
+                            incorrectOrders.add(orderId);
+                            this.style.background = '#ffebee';
+                            this.style.border = '2px solid #f44336';
+                        }
+                    });
+                });
+
+                // Submit rating
+                modal.querySelector('#submitRating').addEventListener('click', () => {
+                    if (selectedRating === 0) {
+                        OMS.showToast('Please select a rating', 'error');
+                        return;
+                    }
+
+                    const incorrectlyIncluded = Array.from(incorrectOrders).map(orderId => {
+                        return this.currentFilterContext.matchedOrders.find(o =>
+                            o.orderId === orderId || o.docId === orderId
+                        );
+                    }).filter(Boolean);
+
+                    this.recordRating(selectedRating, {
+                        comment: modal.querySelector('#ratingComment').value,
+                        incorrectlyIncluded,
+                        incorrectlyExcluded: [], // Can be enhanced to allow selecting missing orders
+                        ratingType: 'numeric',
+                        tags: Array.from(selectedTags)
+                    });
+
+                    OMS.showToast('✨ Thank you! The system has learned from your feedback.', 'success');
+                    modal.remove();
+                });
+            }
+
+            // Get statistics about ratings
+            getStats() {
+                if (this.ratings.length === 0) {
+                    return { avgRating: 0, totalRatings: 0, recentRatings: [] };
+                }
+
+                const numericRatings = this.ratings.filter(r => typeof r.rating === 'number');
+                const avgRating = numericRatings.length > 0
+                    ? numericRatings.reduce((sum, r) => sum + r.rating, 0) / numericRatings.length
+                    : 0;
+
+                return {
+                    avgRating: avgRating.toFixed(2),
+                    totalRatings: this.ratings.length,
+                    recentRatings: this.ratings.slice(-10),
+                    sentimentTrend: this.ratings.slice(-20).map(r => r.feedback.sentimentScore)
+                };
+            }
+
+            // Clear all ratings
+            clearAllRatings() {
+                this.ratings = [];
+                this.saveRatings();
+                localStorage.removeItem('oms_filter_learning_rules');
+                console.log('🗑️ All ratings and learning rules cleared');
+            }
+        }
+
         // Initialize global instances
         const filterLogger = new FilterLogger();
         const patternLearner = new PatternLearner();
         const fuzzyDateMatcher = new FuzzyDateMatcher();
         const orderValidator = new OrderValidator(patternLearner);
+        const filterRatingSystem = new FilterRatingSystem();
 
         // Clean up old logs periodically (keep last 30 days)
         filterLogger.clearOldLogs(30);
@@ -4923,21 +5376,56 @@ convertToQuotationDateFormat(dateStr) {
                     'downloadSameDayOrders'
                 );
 
+                // APPLY LEARNING RULES FROM PREVIOUS USER FEEDBACK
+                const learningResult = filterRatingSystem.applyLearningRules(
+                    normalizedDate,
+                    orders,
+                    this.data.orders
+                );
+
+                let finalOrders = learningResult.orders;
+                const hasCorrections = learningResult.corrections.length > 0;
+
+                if (hasCorrections) {
+                    console.log(`🧠 Smart Learning Applied: ${learningResult.corrections.length} corrections made based on your previous feedback`);
+                    learningResult.corrections.forEach(correction => {
+                        if (correction.type === 'added') {
+                            console.log(`  ✅ Added: ${correction.order.orderId} - ${correction.reason}`);
+                        } else if (correction.type === 'removed') {
+                            console.log(`  ❌ Removed: ${correction.order.orderId} - ${correction.reason}`);
+                        }
+                    });
+                    this.showToast(`🧠 Smart filter applied ${learningResult.corrections.length} learned corrections`, 'info');
+                }
+
+                // STORE FILTER CONTEXT FOR RATING
+                filterRatingSystem.setFilterContext({
+                    date,
+                    normalizedDate,
+                    matchedOrders: finalOrders,
+                    totalOrders: this.data.orders.length,
+                    filterDetails,
+                    allOrders: this.data.orders
+                });
+
                 // Validate results and show alerts
                 const validationResult = orderValidator.validate({
                     date: normalizedDate,
-                    orderCount: orders.length,
+                    orderCount: finalOrders.length,
                     totalAvailable: this.data.orders.length,
-                    matchedOrders,
+                    matchedOrders: finalOrders,
                     allOrders: this.data.orders
                 });
                 orderValidator.showAlerts(validationResult, date);
 
                 // Show enhanced console summary
                 console.group(`📊 Filter Summary for ${date}`);
-                console.log(`✅ Matched: ${orders.length} orders in ${filterTime}ms`);
+                console.log(`✅ Matched: ${finalOrders.length} orders in ${filterTime}ms`);
+                if (hasCorrections) {
+                    console.log(`🧠 Corrections: ${learningResult.corrections.length} (from your previous ratings)`);
+                }
                 console.log(`📋 Breakdown:`, filterDetails);
-                console.log(`🎯 Match rate: ${((orders.length / this.data.orders.length) * 100).toFixed(1)}%`);
+                console.log(`🎯 Match rate: ${((finalOrders.length / this.data.orders.length) * 100).toFixed(1)}%`);
 
                 const expectedCount = patternLearner.getExpectedCount(normalizedDate);
                 if (expectedCount !== null) {
@@ -4947,13 +5435,25 @@ convertToQuotationDateFormat(dateStr) {
                 if (validationResult.length > 0) {
                     console.log(`⚠️ Validation alerts: ${validationResult.length}`);
                 }
+
+                // Show rating option in console
+                console.log(`⭐ To rate this filter result, use: AdminUtils.rateLastFilter()`);
                 console.groupEnd();
                 // ============ END ENHANCED FILTERING ============
 
-                if (orders.length === 0) {
+                if (finalOrders.length === 0) {
                     this.showToast('No orders for this date', 'error');
+                    // Still show rating UI for zero results (user can report this as wrong)
+                    setTimeout(() => {
+                        if (confirm('No orders found. Would you like to rate this filter result?')) {
+                            filterRatingSystem.showRatingUI(this);
+                        }
+                    }, 500);
                     return;
                 }
+
+                // Replace orders with finalOrders for rest of the function
+                orders = finalOrders;
 
                 // FILTER MULTIDAY ORDERS TO ONLY INCLUDE SELECTED DATE'S DATA
                 const filteredOrders = orders.map(order => {
@@ -4978,7 +5478,83 @@ convertToQuotationDateFormat(dateStr) {
                 });
 
                 console.log(`📅 Found ${filteredOrders.length} orders for ${date}:`, filteredOrders.map(o => o.orderId || o.clientName));
+
+                // Show rating prompt after a short delay
+                const showRatingPrompt = () => {
+                    setTimeout(() => {
+                        const ratingDiv = document.createElement('div');
+                        ratingDiv.style.cssText = `
+                            position: fixed;
+                            bottom: 20px;
+                            right: 20px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            padding: 15px 20px;
+                            border-radius: 12px;
+                            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+                            z-index: 10000;
+                            display: flex;
+                            align-items: center;
+                            gap: 15px;
+                            animation: slideInUp 0.3s ease-out;
+                            max-width: 400px;
+                        `;
+
+                        ratingDiv.innerHTML = `
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; margin-bottom: 5px;">⭐ Rate This Filter</div>
+                                <div style="font-size: 13px; opacity: 0.9;">Help the smart system learn from your feedback</div>
+                            </div>
+                            <button id="rateNowBtn" style="background: white; color: #667eea; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+                                Rate Now
+                            </button>
+                            <button id="rateLaterBtn" style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 12px; border-radius: 6px; cursor: pointer;">
+                                ✕
+                            </button>
+                        `;
+
+                        document.body.appendChild(ratingDiv);
+
+                        // Add animation
+                        const style = document.createElement('style');
+                        style.textContent = `
+                            @keyframes slideInUp {
+                                from {
+                                    transform: translateY(100px);
+                                    opacity: 0;
+                                }
+                                to {
+                                    transform: translateY(0);
+                                    opacity: 1;
+                                }
+                            }
+                        `;
+                        document.head.appendChild(style);
+
+                        // Add event listeners
+                        document.getElementById('rateNowBtn').addEventListener('click', () => {
+                            ratingDiv.remove();
+                            filterRatingSystem.showRatingUI(this);
+                        });
+
+                        document.getElementById('rateLaterBtn').addEventListener('click', () => {
+                            ratingDiv.remove();
+                        });
+
+                        // Auto-hide after 15 seconds
+                        setTimeout(() => {
+                            if (ratingDiv.parentNode) {
+                                ratingDiv.style.animation = 'slideInUp 0.3s ease-out reverse';
+                                setTimeout(() => ratingDiv.remove(), 300);
+                            }
+                        }, 15000);
+                    }, 2000);
+                };
+
                 this.generateMultiOrderImage(filteredOrders, date);
+
+                // Show rating prompt after generation
+                showRatingPrompt();
             },
 
             downloadOrderImage(orderId) {
@@ -11654,6 +12230,210 @@ updateAllDisplays() {
                 console.log('  - AdminUtils.resetLearnedPatterns() - Reset all patterns');
 
                 console.groupEnd();
+            },
+
+            // ============ RATING & LEARNING UTILITIES ============
+
+            // Show rating UI for last filter result
+            rateLastFilter() {
+                if (!filterRatingSystem.currentFilterContext) {
+                    console.warn('⚠️ No filter result available to rate. Run a filter first.');
+                    return;
+                }
+                filterRatingSystem.showRatingUI(OMS);
+            },
+
+            // View all ratings
+            viewRatings(count = 20) {
+                const ratings = filterRatingSystem.ratings.slice(-count);
+                if (ratings.length === 0) {
+                    console.log('📭 No ratings yet. Use AdminUtils.rateLastFilter() after filtering orders.');
+                    return;
+                }
+
+                console.group(`⭐ Recent Ratings (${ratings.length})`);
+                console.table(ratings.map(r => ({
+                    Date: r.date,
+                    Rating: typeof r.rating === 'number' ? '⭐'.repeat(r.rating) : r.rating,
+                    Matched: r.matchedOrders.length,
+                    WrongIncluded: r.feedback.incorrectlyIncluded.length,
+                    WrongExcluded: r.feedback.incorrectlyExcluded.length,
+                    Tags: r.feedback.tags.join(', '),
+                    RatedAt: new Date(r.ratedAt).toLocaleString()
+                })));
+
+                const stats = filterRatingSystem.getStats();
+                console.log(`\n📊 Overall Statistics:`);
+                console.log(`  Average Rating: ${stats.avgRating} / 5`);
+                console.log(`  Total Ratings: ${stats.totalRatings}`);
+                console.log(`  Sentiment Trend: ${stats.sentimentTrend.slice(-5).map(s => (s * 5).toFixed(1)).join(' → ')}`);
+
+                console.groupEnd();
+            },
+
+            // View learning rules
+            viewLearningRules(date = null) {
+                const rules = date
+                    ? filterRatingSystem.getLearningRules(date)
+                    : JSON.parse(localStorage.getItem('oms_filter_learning_rules') || '[]');
+
+                if (rules.length === 0) {
+                    console.log(`📭 No learning rules${date ? ' for ' + date : ''}.`);
+                    return;
+                }
+
+                console.group(`🧠 Learning Rules${date ? ' for ' + date : ''} (${rules.length})`);
+                console.table(rules.map(r => ({
+                    Type: r.type,
+                    Date: r.targetDate,
+                    OrderID: r.orderId || 'N/A',
+                    Reason: r.reason,
+                    Weight: r.weight
+                })));
+                console.groupEnd();
+            },
+
+            // View rating statistics
+            getRatingStats() {
+                const stats = filterRatingSystem.getStats();
+                console.group('📊 Rating System Statistics');
+                console.log(`Average Rating: ${stats.avgRating} / 5`);
+                console.log(`Total Ratings: ${stats.totalRatings}`);
+                console.log(`Recent Sentiment: ${stats.sentimentTrend.slice(-5).map(s => (s * 5).toFixed(1)).join(' → ')}`);
+
+                const learningRules = JSON.parse(localStorage.getItem('oms_filter_learning_rules') || '[]');
+                console.log(`\nLearning Rules: ${learningRules.length}`);
+                console.log(`  - Exclusions: ${learningRules.filter(r => r.type === 'exclusion').length}`);
+                console.log(`  - Inclusions: ${learningRules.filter(r => r.type === 'inclusion').length}`);
+                console.log(`  - Anomalies: ${learningRules.filter(r => r.type === 'anomaly').length}`);
+
+                console.log('\n💡 Available commands:');
+                console.log('  - AdminUtils.rateLastFilter() - Rate the last filter result');
+                console.log('  - AdminUtils.viewRatings(20) - View recent ratings');
+                console.log('  - AdminUtils.viewLearningRules("2024-12-25") - View learning rules for a date');
+                console.log('  - AdminUtils.clearAllRatings() - Clear all ratings and learning rules');
+                console.log('  - AdminUtils.testLearning("2024-12-25") - Test learning corrections for a date');
+
+                console.groupEnd();
+            },
+
+            // Test learning corrections for a date
+            testLearning(date) {
+                console.group(`🧪 Testing Learning Corrections for ${date}`);
+
+                const normalizedDate = fuzzyDateMatcher.normalize(date);
+                const learningRules = filterRatingSystem.getLearningRules(normalizedDate);
+
+                if (learningRules.length === 0) {
+                    console.log('📭 No learning rules for this date yet. Rate a filter result first.');
+                    console.groupEnd();
+                    return;
+                }
+
+                console.log(`🧠 Found ${learningRules.length} learning rules`);
+                console.table(learningRules);
+
+                // Run filter without corrections
+                const originalOrders = OMS.data.orders.filter(o => {
+                    if (!o.isMultiDay && o.date) {
+                        if (fuzzyDateMatcher.matches(o.date, date)) return true;
+                    }
+                    if (o.isMultiDay && o.startDate && o.endDate) {
+                        if (fuzzyDateMatcher.isInRange(date, o.startDate, o.endDate)) return true;
+                    }
+                    return false;
+                });
+
+                console.log(`\n📋 Original filter: ${originalOrders.length} orders`);
+
+                // Apply learning corrections
+                const result = filterRatingSystem.applyLearningRules(normalizedDate, originalOrders, OMS.data.orders);
+
+                console.log(`🧠 After learning: ${result.orders.length} orders`);
+                console.log(`✅ Corrections applied: ${result.corrections.length}`);
+
+                if (result.corrections.length > 0) {
+                    console.log('\n📝 Corrections:');
+                    console.table(result.corrections.map(c => ({
+                        Type: c.type,
+                        OrderID: c.order.orderId,
+                        Client: c.order.clientName,
+                        Reason: c.reason
+                    })));
+                }
+
+                console.groupEnd();
+                return result;
+            },
+
+            // Clear all ratings and learning rules
+            clearAllRatings() {
+                const confirmed = confirm('Clear all ratings and learning rules? This cannot be undone.');
+                if (confirmed) {
+                    filterRatingSystem.clearAllRatings();
+                    console.log('✅ All ratings and learning rules cleared');
+                }
+            },
+
+            // Export ratings and learning data
+            exportLearningData() {
+                const data = {
+                    ratings: filterRatingSystem.ratings,
+                    learningRules: JSON.parse(localStorage.getItem('oms_filter_learning_rules') || '[]'),
+                    patterns: patternLearner.patterns,
+                    exportedAt: new Date().toISOString()
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `filter-learning-data-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                console.log('✅ Learning data exported');
+            },
+
+            // Import ratings and learning data
+            async importLearningData() {
+                return new Promise((resolve, reject) => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'application/json';
+
+                    input.onchange = async (e) => {
+                        try {
+                            const file = e.target.files[0];
+                            const text = await file.text();
+                            const data = JSON.parse(text);
+
+                            if (data.ratings) {
+                                filterRatingSystem.ratings = data.ratings;
+                                filterRatingSystem.saveRatings();
+                            }
+
+                            if (data.learningRules) {
+                                localStorage.setItem('oms_filter_learning_rules', JSON.stringify(data.learningRules));
+                            }
+
+                            if (data.patterns) {
+                                localStorage.setItem('oms_filter_patterns', JSON.stringify(data.patterns));
+                            }
+
+                            console.log('✅ Learning data imported successfully');
+                            console.log(`  - Ratings: ${data.ratings?.length || 0}`);
+                            console.log(`  - Learning Rules: ${data.learningRules?.length || 0}`);
+
+                            resolve(data);
+                        } catch (error) {
+                            console.error('❌ Failed to import learning data:', error);
+                            reject(error);
+                        }
+                    };
+
+                    input.click();
+                });
             }
         };
 
@@ -11682,6 +12462,15 @@ updateAllDisplays() {
         console.log('  - AdminUtils.testFilterAccuracy("2024-12-25") - Test filter for a specific date');
         console.log('  - AdminUtils.clearFilterLogs() - Clear all filter logs');
         console.log('  - AdminUtils.resetLearnedPatterns() - Reset learned patterns');
+        console.log('\n⭐ RATING & LEARNING SYSTEM:');
+        console.log('  - AdminUtils.rateLastFilter() - ⭐ Rate the last filter result');
+        console.log('  - AdminUtils.viewRatings(20) - View recent ratings');
+        console.log('  - AdminUtils.getRatingStats() - View rating statistics and trends');
+        console.log('  - AdminUtils.viewLearningRules("2024-12-25") - View learning rules for a date');
+        console.log('  - AdminUtils.testLearning("2024-12-25") - Test learning corrections for a date');
+        console.log('  - AdminUtils.clearAllRatings() - Clear all ratings and learning rules');
+        console.log('  - AdminUtils.exportLearningData() - Export learning data to JSON');
+        console.log('  - await AdminUtils.importLearningData() - Import learning data from JSON');
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
