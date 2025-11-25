@@ -4353,8 +4353,30 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
-                console.log(`📅 Found ${orders.length} orders for ${date}:`, orders.map(o => o.orderId || o.clientName));
-                this.generateMultiOrderImage(orders, date);
+                // FILTER MULTIDAY ORDERS TO ONLY INCLUDE SELECTED DATE'S DATA
+                const filteredOrders = orders.map(order => {
+                    // For single-day orders, return as is
+                    if (!order.isMultiDay) {
+                        return order;
+                    }
+
+                    // For multiday orders, create a filtered copy with only the selected date's data
+                    const filteredOrder = { ...order };
+
+                    // Filter dayWiseData to only include the selected date
+                    if (order.dayWiseData && Array.isArray(order.dayWiseData)) {
+                        filteredOrder.dayWiseData = order.dayWiseData.filter(day => day.date === date);
+                    }
+
+                    // Update the order to show only selected date info
+                    filteredOrder.date = date;
+                    filteredOrder.isMultiDay = false; // Treat as single day for display purposes
+
+                    return filteredOrder;
+                });
+
+                console.log(`📅 Found ${filteredOrders.length} orders for ${date}:`, filteredOrders.map(o => o.orderId || o.clientName));
+                this.generateMultiOrderImage(filteredOrders, date);
             },
 
             downloadOrderImage(orderId) {
