@@ -1055,6 +1055,7 @@
 
                         <div class="btn-group">
                             <button type="submit" class="btn btn-primary">💾 Save Order (Ctrl+S)</button>
+                            <button type="button" class="btn btn-success" onclick="OMS.quickAddPayment()">💵 Quick Payment</button>
                             <button type="button" class="btn btn-secondary" data-action="preview">👁️ Preview</button>
                             <button type="button" class="btn btn-info" data-action="duplicate">📋 Duplicate Last</button>
                             <button type="button" class="btn btn-warning" data-action="sameDay">📅 Same Day</button>
@@ -2015,6 +2016,9 @@ const OMS = {
                 this.updateAllDisplays();
                 this.initGlobalSearch();
                 this.applyLanguage(); // Apply saved language
+
+                // Check for draft order after initialization
+                setTimeout(() => this.checkForDraft(), 1000);
             },
 
             // ============ LANGUAGE SWITCHING ============
@@ -2302,23 +2306,23 @@ const OMS = {
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Transport</label>
-                        <select id="${functionId}Transport" class="form-select"
-                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'transport', this.value)">
-                            <option value="">Select Transport</option>
+                        <label class="form-label">Transport (Multiple)</label>
+                        <select id="${functionId}Transport" class="form-select" multiple style="min-height: 80px;"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'transport', Array.from(this.selectedOptions).map(opt => opt.value).join(', '))">
                             <option value="New Bolero">New Bolero</option>
                             <option value="Old Bolero">Old Bolero</option>
                             <option value="Isuzu">Isuzu</option>
                             <option value="Porter">Porter</option>
                             <option value="Other">Other</option>
                         </select>
+                        <small style="color: var(--text-gray);">Hold Ctrl/Cmd to select multiple transports</small>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">${this.t('driver')}</label>
-                        <select id="${functionId}Driver" class="form-select"
-                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'driver', this.value)">
-                            <option value="">${this.t('selectDriver')}</option>
+                        <label class="form-label">${this.t('driver')} (Multiple)</label>
+                        <select id="${functionId}Driver" class="form-select" multiple style="min-height: 80px;"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'driver', Array.from(this.selectedOptions).map(opt => opt.value).join(', '))">
                         </select>
+                        <small style="color: var(--text-gray);">Hold Ctrl/Cmd to select multiple drivers</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">${this.t('operator')}</label>
@@ -2334,7 +2338,6 @@ const OMS = {
                         <label class="form-label">${this.t('helpers')}</label>
                         <select id="${functionId}Helper" class="form-select" multiple style="min-height: 80px;"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', Array.from(this.selectedOptions).map(opt => opt.value).join(', '))">
-                            <option value="">Select Helper(s)</option>
                         </select>
                         <small style="color: var(--text-gray);">Hold Ctrl/Cmd to select multiple helpers</small>
                     </div>
@@ -2726,12 +2729,118 @@ const OMS = {
                     const form = document.getElementById('orderForm');
                     if (form && this.hasUnsavedChanges()) {
                         localStorage.setItem('oms_draft', JSON.stringify(this.collectFormData()));
+                        console.log('📝 Draft auto-saved');
                     }
                 }, 30000); // Auto-save every 30 seconds
             },
 
             hasUnsavedChanges() {
                 return Utils.get('clientName') || this.currentOrderItems.length > 0;
+            },
+
+            checkForDraft() {
+                const draft = localStorage.getItem('oms_draft');
+                if (draft) {
+                    try {
+                        const draftData = JSON.parse(draft);
+                        // Only show restore option if draft has meaningful data
+                        if (draftData.clientName || (draftData.items && draftData.items.length > 0)) {
+                            const draftDate = new Date(draftData.createdAt || Date.now()).toLocaleString();
+                            const message = `
+                                <div style="text-align: left;">
+                                    <h3 style="margin-top: 0;">📋 Draft Order Found</h3>
+                                    <p>You have an unsaved draft from: <strong>${draftDate}</strong></p>
+                                    <p><strong>Client:</strong> ${draftData.clientName || 'Not specified'}</p>
+                                    <p><strong>Items:</strong> ${draftData.items?.length || 0} items</p>
+                                    <p>Would you like to restore this draft?</p>
+                                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                                        <button class="btn btn-success" onclick="OMS.restoreDraft(); OMS.closeModal('draftModal');">✅ Restore Draft</button>
+                                        <button class="btn btn-danger" onclick="OMS.discardDraft(); OMS.closeModal('draftModal');">🗑️ Discard Draft</button>
+                                        <button class="btn btn-secondary" onclick="OMS.closeModal('draftModal');">⏭️ Ignore for Now</button>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Show modal with draft info
+                            const modalHTML = `
+                                <div class="modal-overlay" id="draftModal">
+                                    <div class="modal-content" style="max-width: 500px;">
+                                        ${message}
+                                    </div>
+                                </div>
+                            `;
+                            document.body.insertAdjacentHTML('beforeend', modalHTML);
+                        }
+                    } catch (error) {
+                        console.error('Error checking draft:', error);
+                    }
+                }
+            },
+
+            restoreDraft() {
+                const draft = localStorage.getItem('oms_draft');
+                if (draft) {
+                    try {
+                        const draftData = JSON.parse(draft);
+                        console.log('📋 Restoring draft:', draftData);
+
+                        // Switch to orders tab
+                        this.showTab('orders');
+
+                        // Wait for tab to be visible
+                        setTimeout(() => {
+                            // Populate form fields
+                            if (draftData.clientName) Utils.set('clientName', draftData.clientName);
+                            if (draftData.contact) Utils.set('contact', draftData.contact);
+                            if (draftData.venue) Utils.set('venue', draftData.venue);
+                            if (draftData.eventType) Utils.set('eventType', draftData.eventType);
+                            if (draftData.date) Utils.set('orderDate', draftData.date);
+                            if (draftData.readyTime) Utils.set('readyTime', draftData.readyTime);
+                            if (draftData.transport) Utils.set('transport', draftData.transport);
+                            if (draftData.driverName) Utils.set('driverName', draftData.driverName);
+                            if (draftData.operator) Utils.set('operator', draftData.operator);
+                            if (draftData.status) Utils.set('orderStatus', draftData.status);
+                            if (draftData.notes) Utils.set('notes', draftData.notes);
+
+                            // Restore items
+                            if (draftData.items && Array.isArray(draftData.items)) {
+                                this.currentOrderItems = draftData.items;
+                                this.updateOrderItemsList();
+                            }
+
+                            // Restore multiday data if exists
+                            if (draftData.isMultiDay) {
+                                Utils.set('eventTypeSelect', 'multi');
+                                if (draftData.startDate) Utils.set('startDate', draftData.startDate);
+                                if (draftData.endDate) Utils.set('endDate', draftData.endDate);
+
+                                // Trigger multiday form generation
+                                const event = new Event('change');
+                                document.getElementById('eventTypeSelect')?.dispatchEvent(event);
+
+                                // Restore day-wise data after form is generated
+                                if (draftData.dayWiseData) {
+                                    setTimeout(() => {
+                                        window.dayFunctionsData = draftData.dayWiseData;
+                                        console.log('📅 Restored multiday data');
+                                    }, 500);
+                                }
+                            }
+
+                            this.showToast('✅ Draft restored successfully!', 'success');
+                        }, 100);
+
+                    } catch (error) {
+                        console.error('Error restoring draft:', error);
+                        this.showToast('❌ Error restoring draft', 'error');
+                    }
+                }
+            },
+
+            discardDraft() {
+                localStorage.removeItem('oms_draft');
+                this.showToast('🗑️ Draft discarded', 'info');
+                console.log('🗑️ Draft discarded by user');
             },
 
             // ============ DRAG & DROP ============
@@ -3867,6 +3976,8 @@ convertToQuotationDateFormat(dateStr) {
                                         // Populate form fields
                                         const typeInput = document.getElementById(`${functionId}Type`);
                                         const timeInput = document.getElementById(`${functionId}Time`);
+                                        const venueInput = document.getElementById(`${functionId}Venue`);
+                                        const transportSelect = document.getElementById(`${functionId}Transport`);
                                         const driverSelect = document.getElementById(`${functionId}Driver`);
                                         const operatorSelect = document.getElementById(`${functionId}Operator`);
                                         const helperSelect = document.getElementById(`${functionId}Helper`);
@@ -3874,14 +3985,39 @@ convertToQuotationDateFormat(dateStr) {
 
                                         if (typeInput) typeInput.value = func.functionType || '';
                                         if (timeInput) timeInput.value = func.timeSlot || '';
-                                        if (driverSelect) driverSelect.value = func.driver || '';
+                                        if (venueInput) venueInput.value = func.venue || '';
+
+                                        // Handle multi-select fields (transport, driver, helper)
+                                        if (transportSelect && func.transport) {
+                                            const transports = func.transport.split(',').map(t => t.trim());
+                                            Array.from(transportSelect.options).forEach(option => {
+                                                option.selected = transports.includes(option.value);
+                                            });
+                                        }
+
+                                        if (driverSelect && func.driver) {
+                                            const drivers = func.driver.split(',').map(d => d.trim());
+                                            Array.from(driverSelect.options).forEach(option => {
+                                                option.selected = drivers.includes(option.value);
+                                            });
+                                        }
+
                                         if (operatorSelect) operatorSelect.value = func.operator || '';
-                                        if (helperSelect) helperSelect.value = func.helper || '';
+
+                                        if (helperSelect && func.helper) {
+                                            const helpers = func.helper.split(',').map(h => h.trim());
+                                            Array.from(helperSelect.options).forEach(option => {
+                                                option.selected = helpers.includes(option.value);
+                                            });
+                                        }
+
                                         if (notesTextarea) notesTextarea.value = func.notes || '';
 
                                         // Update function data in memory
                                         this.updateFunctionData(dayIndex, funcIndex, 'functionType', func.functionType || '');
                                         this.updateFunctionData(dayIndex, funcIndex, 'timeSlot', func.timeSlot || '');
+                                        this.updateFunctionData(dayIndex, funcIndex, 'venue', func.venue || '');
+                                        this.updateFunctionData(dayIndex, funcIndex, 'transport', func.transport || '');
                                         this.updateFunctionData(dayIndex, funcIndex, 'driver', func.driver || '');
                                         this.updateFunctionData(dayIndex, funcIndex, 'operator', func.operator || '');
                                         this.updateFunctionData(dayIndex, funcIndex, 'helper', func.helper || '');
@@ -5341,8 +5477,8 @@ convertToQuotationDateFormat(dateStr) {
             renderDashboard() {
                 const stats = [
                     { label: this.t('totalOrders'), value: this.data.orders.length, class: '' },
-                    { label: this.t('confirmedOrders'), value: this.data.orders.filter(o => o.status === 'Confirmed').length, class: 'success' },
-                    { label: this.t('completedOrders'), value: this.data.orders.filter(o => o.status === 'Completed').length, class: 'info' },
+                    { label: this.t('confirmedOrders'), value: this.data.orders.filter(o => o.status && o.status.toLowerCase() === 'confirmed').length, class: 'success' },
+                    { label: this.t('completedOrders'), value: this.data.orders.filter(o => o.status && o.status.toLowerCase() === 'completed').length, class: 'info' },
                     { label: this.t('customers'), value: this.data.customers.length, class: '' },
                     { label: this.t('lowStock'), value: this.data.inventory.items.filter(i => i.quantity <= this.data.settings.lowStockThreshold).length, class: 'warning' },
                     { label: this.t('today'), value: this.data.orders.filter(o => o.date === Utils.toDateString(new Date())).length, class: 'danger' }
@@ -6890,13 +7026,14 @@ convertToQuotationDateFormat(dateStr) {
                 const activeTeam = this.data.team.filter(m => m.status === 'Active');
                 const functionId = `day${dayIndex}func${functionIndex}`;
 
-                // Populate Driver dropdown for this function
+                // Populate Driver multi-select for this function
                 const driverSelect = document.getElementById(`${functionId}Driver`);
                 if (driverSelect) {
                     const drivers = activeTeam.filter(m => m.roles.includes('Driver'));
-                    const currentValue = driverSelect.value;
-                    driverSelect.innerHTML = '<option value="">Select Driver</option>' +
-                        drivers.map(d => `<option value="${d.name}" data-id="${d.id}" ${d.name === currentValue ? 'selected' : ''}>🚗 ${d.name}</option>`).join('');
+                    const currentValues = Array.from(driverSelect.selectedOptions).map(opt => opt.value);
+                    driverSelect.innerHTML = drivers.map(d =>
+                        `<option value="${d.name}" data-id="${d.id}" ${currentValues.includes(d.name) ? 'selected' : ''}>🚗 ${d.name}</option>`
+                    ).join('');
                 }
 
                 // Populate Operator dropdown for this function
@@ -6908,7 +7045,30 @@ convertToQuotationDateFormat(dateStr) {
                         operators.map(o => `<option value="${o.name}" data-id="${o.id}" ${o.name === currentValue ? 'selected' : ''}>⚙️ ${o.name}</option>`).join('');
                 }
 
-                // Helper is now a text input field, no need to populate dropdown
+                // Populate Helper multi-select for this function
+                const helperSelect = document.getElementById(`${functionId}Helper`);
+                if (helperSelect) {
+                    const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
+                    const currentValues = Array.from(helperSelect.selectedOptions).map(opt => opt.value);
+                    helperSelect.innerHTML = helpers.map(h =>
+                        `<option value="${h.name}" data-id="${h.id}" ${currentValues.includes(h.name) ? 'selected' : ''}>👷 ${h.name}</option>`
+                    ).join('');
+                }
+            },
+
+            updateTeamDropdowns() {
+                // Update single-day order form dropdowns
+                this.populateTeamDropdowns();
+
+                // Update multiday function dropdowns if they exist
+                const multidayData = this.data.multidayOrders || [];
+                multidayData.forEach((day, dayIndex) => {
+                    if (day.functions) {
+                        day.functions.forEach((func, functionIndex) => {
+                            this.populateFunctionTeamDropdowns(dayIndex, functionIndex);
+                        });
+                    }
+                });
             },
 
             notifyAllocatedTeam() {
@@ -7188,6 +7348,8 @@ convertToQuotationDateFormat(dateStr) {
                 ], this.data.orders, (row) => `
                     <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.docId || row.orderId}">${this.t('edit')}</button>
                     <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
+                    <button class="btn btn-primary btn-small" onclick="OMS.addPaymentForOrder('${row.docId || row.orderId}')">💵 Payment</button>
+                    <button class="btn btn-warning btn-small" onclick="OMS.addExpenseForOrder('${row.docId || row.orderId}')">💸 Expense</button>
                     <button class="btn btn-danger btn-small" data-action="delete" data-type="order" data-id="${row.docId || row.orderId}">${this.t('delete')}</button>
                 `);
             },
@@ -7564,12 +7726,12 @@ convertToQuotationDateFormat(dateStr) {
                     <div class="stat-label">Orders</div>
                 </div>
                 <div class="stat-card warning">
-                    <div class="stat-value">${metrics.paymentsCount}</div>
-                    <div class="stat-label">Payments</div>
+                    <div class="stat-value">${metrics.paymentsCount} / ${payments.length}</div>
+                    <div class="stat-label">Payments (Period / Total)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${metrics.expensesCount}</div>
-                    <div class="stat-label">Expenses</div>
+                    <div class="stat-value">${metrics.expensesCount} / ${expenses.length}</div>
+                    <div class="stat-label">Expenses (Period / Total)</div>
                 </div>
             </div>
 
@@ -8400,6 +8562,163 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            addPaymentForOrder(orderId) {
+                // Open payment modal with pre-selected order
+                this.showAddPaymentModal();
+                setTimeout(() => {
+                    Utils.set('paymentOrderId', orderId);
+                    this.updatePaymentOrderInfo();
+                }, 100);
+            },
+
+            addExpenseForOrder(orderId) {
+                // Open expense modal with order info in notes
+                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+                this.showAddExpenseModal();
+                if (order) {
+                    setTimeout(() => {
+                        const notes = `Related to Order: ${order.orderId || 'Pending'} - ${order.clientName}`;
+                        Utils.set('expenseDescription', notes);
+                    }, 100);
+                }
+            },
+
+            quickAddPayment() {
+                // Check if there's a current order being edited or if we need to save first
+                const clientName = Utils.get('clientName');
+                const orderId = Utils.get('orderId');
+                const orderStatus = Utils.get('orderStatus');
+
+                if (!clientName) {
+                    this.showToast('⚠️ Please fill in client name first', 'warning');
+                    return;
+                }
+
+                // Show a simplified payment modal for the current order
+                const modalHTML = `
+                    <div class="modal-overlay" id="quickPaymentModal">
+                        <div class="modal-content" style="max-width: 500px;">
+                            <button class="modal-close" onclick="OMS.closeModal('quickPaymentModal')">×</button>
+                            <h2>💵 Quick Payment</h2>
+                            <p style="color: var(--text-gray); margin-bottom: 1rem;">
+                                For order: <strong>${orderId || 'New Order'} - ${clientName}</strong>
+                            </p>
+                            <form id="quickPaymentForm" onsubmit="OMS.saveQuickPayment(event)">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Date</label>
+                                        <input type="date" id="quickPaymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label required">Amount (₹)</label>
+                                        <input type="number" id="quickPaymentAmount" class="form-input" min="1" step="0.01" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Method</label>
+                                        <select id="quickPaymentMethod" class="form-select" required>
+                                            <option value="Cash">Cash</option>
+                                            <option value="UPI">UPI</option>
+                                            <option value="Bank Transfer">Bank Transfer</option>
+                                            <option value="Cheque">Cheque</option>
+                                            <option value="Card">Card</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Transaction ID</label>
+                                        <input type="text" id="quickPaymentTransactionId" class="form-input">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Notes</label>
+                                    <textarea id="quickPaymentNotes" class="form-textarea" rows="2"></textarea>
+                                </div>
+                                <div class="alert" style="background: #e3f2fd; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                                    <strong>ℹ️ Note:</strong> The order will be saved first before recording the payment.
+                                </div>
+                                <div class="btn-group">
+                                    <button type="submit" class="btn btn-success">💾 Save Payment</button>
+                                    <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('quickPaymentModal')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalsContainer').innerHTML = modalHTML;
+            },
+
+            async saveQuickPayment(event) {
+                event.preventDefault();
+
+                try {
+                    // First, save the current order if it doesn't have a docId
+                    if (!this.editingDocId) {
+                        this.showToast('📝 Saving order first...', 'info');
+                        await this.saveOrder();
+
+                        // Wait a bit for the order to be saved and assigned a docId
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+
+                        // Check if we have a saved order now
+                        const clientName = Utils.get('clientName');
+                        const recentOrder = this.data.orders.find(o => o.clientName === clientName);
+
+                        if (!recentOrder || !recentOrder.docId) {
+                            this.showToast('❌ Could not find saved order. Please try again.', 'error');
+                            return;
+                        }
+
+                        this.editingDocId = recentOrder.docId;
+                    }
+
+                    // Now save the payment
+                    const order = this.data.orders.find(o => o.docId === this.editingDocId);
+
+                    if (!order) {
+                        this.showToast('Order not found!', 'error');
+                        return;
+                    }
+
+                    const payment = {
+                        orderId: order.orderId || 'Pending',
+                        orderDocId: order.docId,
+                        customerName: order.clientName,
+                        amount: parseFloat(Utils.get('quickPaymentAmount')),
+                        paymentDate: Utils.get('quickPaymentDate'),
+                        paymentMethod: Utils.get('quickPaymentMethod'),
+                        transactionId: Utils.get('quickPaymentTransactionId'),
+                        notes: Utils.get('quickPaymentNotes'),
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    const docRef = await db.collection('payments').add(payment);
+                    payment.id = docRef.id;
+                    this.data.payments.push(payment);
+
+                    // Update order balance
+                    const currentBalance = parseFloat(order.financials?.balanceDue || order.totalAmount || 0);
+                    const newBalance = currentBalance - payment.amount;
+                    const advancePaid = parseFloat(order.financials?.advancePaid || 0) + payment.amount;
+
+                    await db.collection('orders').doc(order.docId).update({
+                        'financials.advancePaid': advancePaid,
+                        'financials.balanceDue': Math.max(0, newBalance),
+                        'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < (order.financials?.grandTotal || order.totalAmount || 0) ? 'partial' : 'pending'
+                    });
+
+                    this.showToast('✅ Payment recorded successfully!', 'success');
+                    this.closeModal('quickPaymentModal');
+                    await this.loadOrdersFromFirestore();
+
+                } catch (error) {
+                    console.error('Error saving quick payment:', error);
+                    this.showToast('Error saving payment: ' + error.message, 'error');
+                }
+            },
+
             async deletePayment(paymentId) {
                 if (!confirm('Are you sure you want to delete this payment record?')) return;
 
@@ -8635,12 +8954,12 @@ async loadOrdersFromFirestore() {
                 contact: customer.phone || '',
                 venue: customer.venue || '',
                 eventType: orderData.functionType || customer.functionType || '',
-                transport: '',
-                driverName: '',
-                operator: '',
-                helper: '',
+                transport: orderData.transport || '',
+                driverName: orderData.driverName || '',
+                operator: orderData.operator || '',
+                helper: orderData.helper || '',
                 status: orderData.status || 'Confirmed',
-                notes: '',
+                notes: orderData.notes || '',
                 items: (orderData.items || []).map(item => ({
                     name: item.name || '',
                     quantity: item.qty || 0,
