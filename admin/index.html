@@ -2785,7 +2785,7 @@ const OMS = {
                         console.log('📋 Restoring draft:', draftData);
 
                         // Switch to orders tab
-                        this.showTab('orders');
+                        this.switchTab('orders');
 
                         // Wait for tab to be visible
                         setTimeout(() => {
@@ -3903,6 +3903,22 @@ convertToQuotationDateFormat(dateStr) {
 },
 
             loadOrderToForm(order) {
+        // Clear the form first to prevent data mixing between orders
+        const wasCleared = !this.hasUnsavedChanges();
+        if (!wasCleared) {
+            // Clear without confirmation since we're loading a different order
+            document.getElementById('orderForm').reset();
+            this.currentOrderItems = [];
+            this.updateOrderItemsTable();
+            window.dayFunctionsData = {};
+
+            // Clear multiday containers
+            const multiDayContainer = document.getElementById('multiDayContainer');
+            if (multiDayContainer) multiDayContainer.innerHTML = '';
+            const functionsContainer = document.getElementById('functionsContainer');
+            if (functionsContainer) functionsContainer.innerHTML = '';
+        }
+
         // Store original order ID and docId for updates
         this.editingOrderId = order.orderId;
         this.editingDocId = order.docId;
@@ -4039,7 +4055,16 @@ convertToQuotationDateFormat(dateStr) {
             }, 200);
 
         } else {
-            // Load single-day order (original code)
+            // Load single-day order
+            // IMPORTANT: Set event type to single day first to ensure proper form display
+            Utils.set('eventTypeSelect', 'single');
+
+            // Show single day fields, hide multiday fields
+            const singleDayFields = document.getElementById('singleDayFields');
+            const multiDayFields = document.getElementById('multiDayFields');
+            if (singleDayFields) singleDayFields.style.display = 'block';
+            if (multiDayFields) multiDayFields.style.display = 'none';
+
             Object.entries({
                 orderId: order.orderId,
                 clientName: order.clientName,
@@ -4366,7 +4391,8 @@ convertToQuotationDateFormat(dateStr) {
                     template.innerHTML = this.buildOrderHTML(order, fontSize, colors);
                     template.style.display = 'block';
 
-                    await new Promise(r => setTimeout(r, 1000));
+                    // Reduced wait time for faster generation (300ms is enough for DOM to settle)
+                    await new Promise(r => setTimeout(r, 300));
 
                     const canvas = await html2canvas(template, {
                         scale: this.data.settings.imageQuality || 2,
@@ -4486,9 +4512,9 @@ convertToQuotationDateFormat(dateStr) {
                             }
                         });
 
-                        // Render and measure
+                        // Render and measure (reduced wait time for faster processing)
                         template.innerHTML = testHtml;
-                        await new Promise(r => setTimeout(r, 100));
+                        await new Promise(r => setTimeout(r, 50)); // 50ms is enough for DOM update
                         const totalHeight = template.scrollHeight;
 
                         console.log(`   📐 Current page with ${testOrders.length} orders: ${totalHeight}px / ${maxContentHeight}px`);
@@ -4602,7 +4628,8 @@ convertToQuotationDateFormat(dateStr) {
                         template.style.position = 'static';
                         template.style.height = 'auto';
 
-                        await new Promise(r => setTimeout(r, 500));
+                        // Reduced wait time for faster PDF generation
+                        await new Promise(r => setTimeout(r, 200));
 
                         // Convert HTML to canvas
                         const canvas = await html2canvas(template, {
@@ -7579,8 +7606,11 @@ convertToQuotationDateFormat(dateStr) {
             return sum + amount;
         }, 0);
 
-        // Calculate payments received
+        // Calculate payments received (filtered by date range)
         const paymentsReceived = filteredPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+        // Calculate total payments received (all time)
+        const totalPaymentsReceived = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
         // Calculate outstanding dues
         const outstandingDues = filteredOrders.reduce((sum, o) => {
@@ -7611,6 +7641,7 @@ convertToQuotationDateFormat(dateStr) {
         return {
             totalRevenue,
             paymentsReceived,
+            totalPaymentsReceived,
             outstandingDues,
             directCosts,
             indirectCosts,
@@ -7690,8 +7721,8 @@ convertToQuotationDateFormat(dateStr) {
                     <div class="stat-label">Total Revenue</div>
                 </div>
                 <div class="stat-card info">
-                    <div class="stat-value">₹${metrics.paymentsReceived.toLocaleString('en-IN')}</div>
-                    <div class="stat-label">Payments Received</div>
+                    <div class="stat-value">₹${metrics.paymentsReceived.toLocaleString('en-IN')} / ₹${metrics.totalPaymentsReceived.toLocaleString('en-IN')}</div>
+                    <div class="stat-label">Payments Received (Period / All Time)</div>
                 </div>
                 <div class="stat-card warning">
                     <div class="stat-value">₹${metrics.outstandingDues.toLocaleString('en-IN')}</div>
