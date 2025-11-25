@@ -2262,6 +2262,8 @@ const OMS = {
         window.dayFunctionsData[dayIndex].push({
             functionType: '',
             timeSlot: '',
+            venue: '',
+            transport: '',
             driver: '',
             operator: '',
             helper: '',
@@ -2290,9 +2292,27 @@ const OMS = {
                                placeholder="${this.t('enterTimeSlot')}"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'timeSlot', this.value)">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">${this.t('venue')}</label>
+                        <input type="text" id="${functionId}Venue" class="form-input"
+                               placeholder="Enter venue address"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'venue', this.value)">
+                    </div>
                 </div>
 
                 <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Transport</label>
+                        <select id="${functionId}Transport" class="form-select"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'transport', this.value)">
+                            <option value="">Select Transport</option>
+                            <option value="New Bolero">New Bolero</option>
+                            <option value="Old Bolero">Old Bolero</option>
+                            <option value="Isuzu">Isuzu</option>
+                            <option value="Porter">Porter</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">${this.t('driver')}</label>
                         <select id="${functionId}Driver" class="form-select"
@@ -2307,12 +2327,16 @@ const OMS = {
                             <option value="">${this.t('selectOperator')}</option>
                         </select>
                     </div>
+                </div>
+
+                <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">${this.t('helpers')}</label>
-                        <input type="text" id="${functionId}Helper" class="form-input"
-                               placeholder="${this.t('helperPlaceholder')}"
-                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', this.value)">
-                        <small style="color: var(--text-gray);">${this.t('multipleHelpersSeparated')}</small>
+                        <select id="${functionId}Helper" class="form-select" multiple style="min-height: 80px;"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', Array.from(this.selectedOptions).map(opt => opt.value).join(', '))">
+                            <option value="">Select Helper(s)</option>
+                        </select>
+                        <small style="color: var(--text-gray);">Hold Ctrl/Cmd to select multiple helpers</small>
                     </div>
                 </div>
 
@@ -5863,14 +5887,15 @@ convertToQuotationDateFormat(dateStr) {
 
                 const dryIceNeeded = dryMachines * 40; // 40 kg per dry machine
 
-                // Find all blowers (items containing "blower", "DMX", or "manual")
-                const blowerKeywords = ['blower', 'dmx', 'manual blower'];
-                const blowers = items.filter(item => {
+                // Find all flower shower machines (items containing "flower shower" or "flower" and "shower")
+                const flowerShowerKeywords = ['flower shower', 'flower shower machine'];
+                const flowerShowerMachines = items.filter(item => {
                     const name = item.name.toLowerCase();
-                    return blowerKeywords.some(keyword => name.includes(keyword));
+                    return flowerShowerKeywords.some(keyword => name.includes(keyword)) ||
+                           (name.includes('flower') && name.includes('shower'));
                 }).reduce((sum, item) => sum + item.required, 0);
 
-                const flowersNeeded = blowers * 20; // 20 kg per blower
+                const flowersNeeded = flowerShowerMachines * 20; // 20 kg per flower shower machine
 
                 container.innerHTML = `
                     <!-- Summary Cards -->
@@ -5905,7 +5930,7 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
 
                     <!-- Materials Calculation Card -->
-                    ${(dryMachines > 0 || blowers > 0) ? `
+                    ${(dryMachines > 0 || flowerShowerMachines > 0) ? `
                     <div class="card" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 1.5rem; margin-top: 1rem;">
                         <h3 style="margin-bottom: 1rem; font-size: 1.3rem;">🧊 Materials Required</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
@@ -5923,17 +5948,17 @@ convertToQuotationDateFormat(dateStr) {
                                 </div>
                             </div>
                             ` : ''}
-                            ${blowers > 0 ? `
+                            ${flowerShowerMachines > 0 ? `
                             <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: var(--radius);">
                                 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
                                     <div style="font-size: 2.5rem;">🌸</div>
                                     <div>
-                                        <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.25rem;">Flowers/Papers Needed</div>
+                                        <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.25rem;">Flowers Needed</div>
                                         <div style="font-size: 2rem; font-weight: 700;">${flowersNeeded} kg</div>
                                     </div>
                                 </div>
                                 <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
-                                    💨 ${blowers} blower(s) × 20 kg each
+                                    🌺 ${flowerShowerMachines} flower shower machine(s) × 20 kg each
                                 </div>
                             </div>
                             ` : ''}
