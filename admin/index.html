@@ -77,6 +77,16 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        #currentOrderId {
+            font-weight: bold;
+            white-space: nowrap;
+            padding: 0.5rem;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .search-global {
@@ -1901,7 +1911,7 @@ const OMS = {
                 orders: [],
                 customers: [],
                 team: [],
-                inventory: { categories: [], items: [] },
+                inventory: { categories: [], items: [], deletedItems: [], deletedCategories: [] },
                 itemHistory: [],
                 tasks: [],
                 deletedOrders: [],
@@ -3039,6 +3049,15 @@ order: async () => {
                 this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
                 this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
 
+                // Track deleted category to prevent re-addition
+                if (!this.data.inventory.deletedCategories) {
+                    this.data.inventory.deletedCategories = [];
+                }
+                if (!this.data.inventory.deletedCategories.includes(id)) {
+                    this.data.inventory.deletedCategories.push(id);
+                }
+                this.saveToStorage();
+
                 return true;
             } catch (error) {
                 console.error('❌ Error deleting category:', error);
@@ -3053,6 +3072,15 @@ order: async () => {
 
                 // Delete from local array
                 this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
+
+                // Track deleted item to prevent re-addition
+                if (!this.data.inventory.deletedItems) {
+                    this.data.inventory.deletedItems = [];
+                }
+                if (!this.data.inventory.deletedItems.includes(id)) {
+                    this.data.inventory.deletedItems.push(id);
+                }
+                this.saveToStorage();
 
                 return true;
             } catch (error) {
@@ -3926,6 +3954,18 @@ convertToQuotationDateFormat(dateStr) {
                 const multiDayContainer = document.getElementById('multiDayContainer');
                 if (multiDayContainer) {
                     multiDayContainer.innerHTML = '';
+                }
+
+                // Clear functions container for multiday events
+                const functionsContainer = document.getElementById('functionsContainer');
+                if (functionsContainer) {
+                    functionsContainer.innerHTML = '';
+                }
+
+                // Hide day-wise functions section
+                const dayWiseFunctions = document.getElementById('dayWiseFunctions');
+                if (dayWiseFunctions) {
+                    dayWiseFunctions.style.display = 'none';
                 }
 
                 this.showToast('Form cleared');
@@ -7546,6 +7586,7 @@ convertToQuotationDateFormat(dateStr) {
                                     <td>${p.paymentMethod || 'N/A'}</td>
                                     <td>${p.transactionId || 'N/A'}</td>
                                     <td>
+                                        <button class="btn btn-info btn-small" onclick="OMS.editPayment('${p.id}')">Edit</button>
                                         <button class="btn btn-danger btn-small" onclick="OMS.deletePayment('${p.id}')">Delete</button>
                                     </td>
                                 </tr>
@@ -7585,6 +7626,7 @@ convertToQuotationDateFormat(dateStr) {
                                     <td>${e.vendor || 'N/A'}</td>
                                     <td>${e.paymentMethod || 'N/A'}</td>
                                     <td>
+                                        <button class="btn btn-info btn-small" onclick="OMS.editExpense('${e.id}')">Edit</button>
                                         <button class="btn btn-danger btn-small" onclick="OMS.deleteExpense('${e.id}')">Delete</button>
                                     </td>
                                 </tr>
@@ -9037,19 +9079,20 @@ setupAllRealtimeListeners() {
                     console.log('👷 Team member added/updated:', teamMember.name);
                 } else {
                     this.data.team[index] = teamMember;
+                    console.log('👷 Team member updated:', teamMember.name);
                 }
-                // Update UI if on team tab
-                if (this.currentTab === 'team') {
-                    this.renderTeamTable();
-                }
+                // Update UI in real-time - always render when data changes
+                this.renderTeamTable();
+                // Also update dropdowns in order form
+                this.updateTeamDropdowns();
             } else if (change.type === 'removed') {
                 const index = this.data.team.findIndex(t => t.id === teamMember.id);
                 if (index !== -1) {
                     this.data.team.splice(index, 1);
                     console.log('👷 Team member removed:', teamMember.name);
-                    if (this.currentTab === 'team') {
-                        this.renderTeamTable();
-                    }
+                    // Update UI in real-time
+                    this.renderTeamTable();
+                    this.updateTeamDropdowns();
                 }
             }
         });
@@ -9082,6 +9125,14 @@ setupAllRealtimeListeners() {
                 const category = { id: change.doc.id, ...change.doc.data() };
 
                 if (change.type === 'added' || change.type === 'modified') {
+                    // Check if category was marked as deleted locally
+                    const wasDeleted = this.data.inventory.deletedCategories &&
+                                      this.data.inventory.deletedCategories.includes(category.id);
+                    if (wasDeleted) {
+                        console.warn('⚠️ Category was previously deleted - ignoring:', category.name);
+                        return;
+                    }
+
                     const index = this.data.inventory.categories.findIndex(c => c.id === category.id);
                     if (index === -1) {
                         this.data.inventory.categories.push(category);
@@ -9093,6 +9144,13 @@ setupAllRealtimeListeners() {
                     const index = this.data.inventory.categories.findIndex(c => c.id === category.id);
                     if (index !== -1) {
                         this.data.inventory.categories.splice(index, 1);
+                        // Track deleted categories to prevent re-addition
+                        if (!this.data.inventory.deletedCategories) {
+                            this.data.inventory.deletedCategories = [];
+                        }
+                        if (!this.data.inventory.deletedCategories.includes(category.id)) {
+                            this.data.inventory.deletedCategories.push(category.id);
+                        }
                         console.log(`🗑️ Category removed:`, category.name);
                     }
                 }
@@ -9129,6 +9187,14 @@ setupAllRealtimeListeners() {
                 const item = { id: change.doc.id, ...change.doc.data() };
 
                 if (change.type === 'added' || change.type === 'modified') {
+                    // Check if item was marked as deleted locally
+                    const wasDeleted = this.data.inventory.deletedItems &&
+                                      this.data.inventory.deletedItems.includes(item.id);
+                    if (wasDeleted) {
+                        console.warn('⚠️ Inventory item was previously deleted - ignoring:', item.name);
+                        return;
+                    }
+
                     const index = this.data.inventory.items.findIndex(i => i.id === item.id);
                     if (index === -1) {
                         this.data.inventory.items.push(item);
@@ -9140,6 +9206,13 @@ setupAllRealtimeListeners() {
                     const index = this.data.inventory.items.findIndex(i => i.id === item.id);
                     if (index !== -1) {
                         this.data.inventory.items.splice(index, 1);
+                        // Track deleted items to prevent re-addition
+                        if (!this.data.inventory.deletedItems) {
+                            this.data.inventory.deletedItems = [];
+                        }
+                        if (!this.data.inventory.deletedItems.includes(item.id)) {
+                            this.data.inventory.deletedItems.push(item.id);
+                        }
                         console.log(`🗑️ Item removed:`, item.name);
                     }
                 }
@@ -9258,6 +9331,10 @@ setupRealtimeListeners() {
                     // Only show toast for newly added orders (not initial load)
                     if (!isFirstLoad) {
                         this.updateAllDisplays();
+                        // Update dashboard statistics in real-time
+                        if (this.currentTab === 'dashboard') {
+                            this.renderDashboard();
+                        }
                         this.showToast(`🆕 New order: ${newOrder.clientName}`, 'success');
                     }
                 }
@@ -9306,6 +9383,10 @@ if (change.type === 'modified') {
 
         this.saveToStorage(); // Save to local storage
         this.updateAllDisplays();
+        // Update dashboard statistics in real-time
+        if (this.currentTab === 'dashboard') {
+            this.renderDashboard();
+        }
         this.showToast(`✏️ Order updated: ${this.data.orders[index].clientName}`, 'success');
     } else {
         // FIXED: Check deletedOrders by docId AND orderId
