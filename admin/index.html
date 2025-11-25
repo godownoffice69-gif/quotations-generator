@@ -1903,6 +1903,529 @@ debounce: (func, wait) => {
             }
         };
 
+        // ============ FILTERING INFRASTRUCTURE ============
+
+        /**
+         * FilterLogger - Detailed logging system for all filtering operations
+         * Tracks every filter with timestamp, parameters, results, and performance metrics
+         */
+        class FilterLogger {
+            constructor() {
+                this.logs = this.loadLogs();
+                this.maxLogs = 1000; // Keep last 1000 operations
+            }
+
+            loadLogs() {
+                try {
+                    const saved = localStorage.getItem('oms_filter_logs');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (error) {
+                    console.warn('Failed to load filter logs:', error);
+                    return [];
+                }
+            }
+
+            saveLogs() {
+                try {
+                    // Keep only the most recent logs
+                    if (this.logs.length > this.maxLogs) {
+                        this.logs = this.logs.slice(-this.maxLogs);
+                    }
+                    localStorage.setItem('oms_filter_logs', JSON.stringify(this.logs));
+                } catch (error) {
+                    console.warn('Failed to save filter logs:', error);
+                }
+            }
+
+            log(operation, details) {
+                const logEntry = {
+                    timestamp: new Date().toISOString(),
+                    operation,
+                    ...details
+                };
+
+                this.logs.push(logEntry);
+                this.saveLogs();
+
+                // Also log to console for debugging
+                console.log(`🔍 [FilterLog] ${operation}:`, details);
+
+                return logEntry;
+            }
+
+            getRecentLogs(count = 50) {
+                return this.logs.slice(-count);
+            }
+
+            getLogsByDate(date) {
+                return this.logs.filter(log => log.filterDate === date);
+            }
+
+            clearOldLogs(daysToKeep = 30) {
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - daysToKeep);
+                const cutoffTime = cutoff.toISOString();
+
+                this.logs = this.logs.filter(log => log.timestamp > cutoffTime);
+                this.saveLogs();
+            }
+        }
+
+        /**
+         * PatternLearner - Machine learning-style pattern recognition system
+         * Learns from filtering patterns to detect anomalies and improve accuracy
+         */
+        class PatternLearner {
+            constructor() {
+                this.patterns = this.loadPatterns();
+                this.anomalyThreshold = 0.3; // 30% deviation triggers alert
+            }
+
+            loadPatterns() {
+                try {
+                    const saved = localStorage.getItem('oms_filter_patterns');
+                    return saved ? JSON.parse(saved) : {
+                        datePatterns: {}, // date -> expected order count
+                        filterResults: [], // historical filter results
+                        dateFormats: {}, // learned date format variations
+                        typicalOrderCounts: {
+                            weekday: { min: 0, max: 0, avg: 0, samples: 0 },
+                            weekend: { min: 0, max: 0, avg: 0, samples: 0 }
+                        }
+                    };
+                } catch (error) {
+                    console.warn('Failed to load patterns:', error);
+                    return {
+                        datePatterns: {},
+                        filterResults: [],
+                        dateFormats: {},
+                        typicalOrderCounts: {
+                            weekday: { min: 0, max: 0, avg: 0, samples: 0 },
+                            weekend: { min: 0, max: 0, avg: 0, samples: 0 }
+                        }
+                    };
+                }
+            }
+
+            savePatterns() {
+                try {
+                    localStorage.setItem('oms_filter_patterns', JSON.stringify(this.patterns));
+                } catch (error) {
+                    console.warn('Failed to save patterns:', error);
+                }
+            }
+
+            recordFilterResult(date, orderCount, totalAvailable, filterType = 'date') {
+                // Update date-specific patterns
+                if (!this.patterns.datePatterns[date]) {
+                    this.patterns.datePatterns[date] = {
+                        counts: [],
+                        avgCount: 0,
+                        lastSeen: new Date().toISOString()
+                    };
+                }
+
+                const pattern = this.patterns.datePatterns[date];
+                pattern.counts.push(orderCount);
+                pattern.lastSeen = new Date().toISOString();
+
+                // Keep only last 10 observations per date
+                if (pattern.counts.length > 10) {
+                    pattern.counts = pattern.counts.slice(-10);
+                }
+
+                // Calculate average
+                pattern.avgCount = pattern.counts.reduce((sum, c) => sum + c, 0) / pattern.counts.length;
+
+                // Update weekday/weekend patterns
+                const dateObj = new Date(date);
+                const dayOfWeek = dateObj.getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                const key = isWeekend ? 'weekend' : 'weekday';
+                const stats = this.patterns.typicalOrderCounts[key];
+
+                if (stats.samples === 0) {
+                    stats.min = orderCount;
+                    stats.max = orderCount;
+                    stats.avg = orderCount;
+                    stats.samples = 1;
+                } else {
+                    stats.min = Math.min(stats.min, orderCount);
+                    stats.max = Math.max(stats.max, orderCount);
+                    stats.avg = (stats.avg * stats.samples + orderCount) / (stats.samples + 1);
+                    stats.samples++;
+                }
+
+                // Record in filter results history
+                this.patterns.filterResults.push({
+                    timestamp: new Date().toISOString(),
+                    date,
+                    orderCount,
+                    totalAvailable,
+                    filterType,
+                    dayOfWeek,
+                    isWeekend
+                });
+
+                // Keep only last 500 results
+                if (this.patterns.filterResults.length > 500) {
+                    this.patterns.filterResults = this.patterns.filterResults.slice(-500);
+                }
+
+                this.savePatterns();
+            }
+
+            learnDateFormat(originalDate, normalizedDate) {
+                if (!this.patterns.dateFormats[originalDate]) {
+                    this.patterns.dateFormats[originalDate] = {
+                        normalized: normalizedDate,
+                        count: 1,
+                        lastSeen: new Date().toISOString()
+                    };
+                } else {
+                    this.patterns.dateFormats[originalDate].count++;
+                    this.patterns.dateFormats[originalDate].lastSeen = new Date().toISOString();
+                }
+                this.savePatterns();
+            }
+
+            detectAnomaly(date, actualCount) {
+                // Check if we have historical data for this date
+                const pattern = this.patterns.datePatterns[date];
+
+                if (pattern && pattern.counts.length >= 3) {
+                    const expected = pattern.avgCount;
+                    const deviation = Math.abs(actualCount - expected) / Math.max(expected, 1);
+
+                    if (deviation > this.anomalyThreshold) {
+                        return {
+                            isAnomaly: true,
+                            expected,
+                            actual: actualCount,
+                            deviation: (deviation * 100).toFixed(1) + '%',
+                            message: `⚠️ Unusual order count! Expected ~${Math.round(expected)} orders, found ${actualCount}`
+                        };
+                    }
+                }
+
+                // Check against weekday/weekend patterns
+                const dateObj = new Date(date);
+                const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+                const stats = this.patterns.typicalOrderCounts[isWeekend ? 'weekend' : 'weekday'];
+
+                if (stats.samples >= 10) {
+                    if (actualCount < stats.min * 0.5 || actualCount > stats.max * 1.5) {
+                        return {
+                            isAnomaly: true,
+                            expected: `${stats.min}-${stats.max}`,
+                            actual: actualCount,
+                            message: `⚠️ Order count outside normal range! Typical ${isWeekend ? 'weekend' : 'weekday'}: ${stats.min}-${stats.max}, found ${actualCount}`
+                        };
+                    }
+                }
+
+                return { isAnomaly: false };
+            }
+
+            getExpectedCount(date) {
+                const pattern = this.patterns.datePatterns[date];
+                if (pattern && pattern.counts.length > 0) {
+                    return Math.round(pattern.avgCount);
+                }
+
+                // Fallback to weekday/weekend average
+                const dateObj = new Date(date);
+                const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+                const stats = this.patterns.typicalOrderCounts[isWeekend ? 'weekend' : 'weekday'];
+
+                return stats.samples > 0 ? Math.round(stats.avg) : null;
+            }
+        }
+
+        /**
+         * FuzzyDateMatcher - Handles date format variations and near-matches
+         * Provides error tolerance for date matching
+         */
+        class FuzzyDateMatcher {
+            constructor() {
+                this.dateFormats = [
+                    'YYYY-MM-DD',
+                    'DD-MM-YYYY',
+                    'MM-DD-YYYY',
+                    'DD/MM/YYYY',
+                    'MM/DD/YYYY',
+                    'YYYY/MM/DD'
+                ];
+            }
+
+            // Normalize various date formats to YYYY-MM-DD
+            normalize(dateStr) {
+                if (!dateStr) return null;
+
+                try {
+                    // If already a Date object
+                    if (dateStr instanceof Date) {
+                        return this.toYYYYMMDD(dateStr);
+                    }
+
+                    // If ISO format
+                    if (dateStr.includes('T') || dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        const d = new Date(dateStr);
+                        return this.toYYYYMMDD(d);
+                    }
+
+                    // Try different formats
+                    const formats = [
+                        // DD-MM-YYYY or DD/MM/YYYY
+                        /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/,
+                        // MM-DD-YYYY or MM/DD/YYYY (US format)
+                        /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/,
+                        // YYYY-MM-DD or YYYY/MM/DD
+                        /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/
+                    ];
+
+                    for (const format of formats) {
+                        const match = dateStr.match(format);
+                        if (match) {
+                            let year, month, day;
+
+                            if (match[1].length === 4) {
+                                // YYYY-MM-DD format
+                                [, year, month, day] = match;
+                            } else {
+                                // Assume DD-MM-YYYY (more common internationally)
+                                [, day, month, year] = match;
+                            }
+
+                            const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                            if (!isNaN(d.getTime())) {
+                                return this.toYYYYMMDD(d);
+                            }
+                        }
+                    }
+
+                    // Fallback: try native Date parsing
+                    const d = new Date(dateStr);
+                    if (!isNaN(d.getTime())) {
+                        return this.toYYYYMMDD(d);
+                    }
+
+                } catch (error) {
+                    console.warn('Failed to normalize date:', dateStr, error);
+                }
+
+                return null;
+            }
+
+            toYYYYMMDD(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Check if two dates are the same, handling various formats
+            matches(date1, date2) {
+                const norm1 = this.normalize(date1);
+                const norm2 = this.normalize(date2);
+                return norm1 && norm2 && norm1 === norm2;
+            }
+
+            // Check if date is within range (inclusive)
+            isInRange(dateToCheck, startDate, endDate) {
+                const check = new Date(this.normalize(dateToCheck));
+                const start = new Date(this.normalize(startDate));
+                const end = new Date(this.normalize(endDate));
+
+                return check >= start && check <= end;
+            }
+
+            // Find near matches (within N days)
+            findNearMatches(targetDate, dates, daysTolerance = 1) {
+                const target = new Date(this.normalize(targetDate));
+                const matches = [];
+
+                for (const date of dates) {
+                    const d = new Date(this.normalize(date));
+                    const diffDays = Math.abs((d - target) / (1000 * 60 * 60 * 24));
+
+                    if (diffDays <= daysTolerance) {
+                        matches.push({
+                            date,
+                            daysAway: diffDays,
+                            isExact: diffDays === 0
+                        });
+                    }
+                }
+
+                return matches.sort((a, b) => a.daysAway - b.daysAway);
+            }
+
+            // Get date variations that should be checked
+            getVariations(dateStr) {
+                const normalized = this.normalize(dateStr);
+                if (!normalized) return [dateStr];
+
+                const d = new Date(normalized);
+                const variations = new Set();
+
+                // Add normalized version
+                variations.add(normalized);
+
+                // Add original
+                variations.add(dateStr);
+
+                // Add common formats
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+
+                variations.add(`${year}-${month}-${day}`);
+                variations.add(`${day}-${month}-${year}`);
+                variations.add(`${month}-${day}-${year}`);
+                variations.add(`${day}/${month}/${year}`);
+                variations.add(`${month}/${day}/${year}`);
+
+                return Array.from(variations);
+            }
+        }
+
+        /**
+         * OrderValidator - Validation system to detect missing orders
+         * Alerts when filtering results seem incomplete
+         */
+        class OrderValidator {
+            constructor(patternLearner) {
+                this.patternLearner = patternLearner;
+            }
+
+            validate(filterResult) {
+                const alerts = [];
+                const { date, orderCount, totalAvailable, matchedOrders, allOrders } = filterResult;
+
+                // Alert 1: Check for anomalies based on learned patterns
+                const anomaly = this.patternLearner.detectAnomaly(date, orderCount);
+                if (anomaly.isAnomaly) {
+                    alerts.push({
+                        level: 'warning',
+                        type: 'anomaly',
+                        message: anomaly.message,
+                        details: anomaly
+                    });
+                }
+
+                // Alert 2: Check if there are orders with similar dates that weren't matched
+                const targetDate = new Date(date);
+                const nearbyOrders = allOrders.filter(order => {
+                    if (matchedOrders.includes(order)) return false;
+
+                    const orderDate = new Date(order.date || order.startDate);
+                    const diffDays = Math.abs((orderDate - targetDate) / (1000 * 60 * 60 * 24));
+                    return diffDays <= 2; // Within 2 days
+                });
+
+                if (nearbyOrders.length > 0) {
+                    alerts.push({
+                        level: 'info',
+                        type: 'nearby_dates',
+                        message: `ℹ️ Found ${nearbyOrders.length} order(s) within 2 days of ${date}`,
+                        details: {
+                            nearbyOrders: nearbyOrders.map(o => ({
+                                orderId: o.orderId,
+                                clientName: o.clientName,
+                                date: o.date || o.startDate
+                            }))
+                        }
+                    });
+                }
+
+                // Alert 3: Check for orders with blank/missing dates
+                const ordersWithoutDates = allOrders.filter(o =>
+                    !o.date && !o.startDate && o.status !== 'Completed'
+                );
+
+                if (ordersWithoutDates.length > 0) {
+                    alerts.push({
+                        level: 'warning',
+                        type: 'missing_dates',
+                        message: `⚠️ Found ${ordersWithoutDates.length} order(s) without dates`,
+                        details: {
+                            orders: ordersWithoutDates.map(o => ({
+                                orderId: o.orderId,
+                                clientName: o.clientName,
+                                status: o.status
+                            }))
+                        }
+                    });
+                }
+
+                // Alert 4: Check for multiday orders that might be partially matched
+                const multidayOrders = allOrders.filter(o =>
+                    o.isMultiDay && !matchedOrders.includes(o)
+                );
+
+                for (const order of multidayOrders) {
+                    if (order.startDate && order.endDate) {
+                        const checkDate = new Date(date);
+                        const start = new Date(order.startDate);
+                        const end = new Date(order.endDate);
+
+                        // Check if date should fall in range but wasn't matched
+                        if (checkDate >= start && checkDate <= end) {
+                            alerts.push({
+                                level: 'error',
+                                type: 'missed_multiday',
+                                message: `🚨 Multi-day order "${order.orderId || order.clientName}" should include ${date} but wasn't matched!`,
+                                details: {
+                                    orderId: order.orderId,
+                                    clientName: order.clientName,
+                                    startDate: order.startDate,
+                                    endDate: order.endDate
+                                }
+                            });
+                        }
+                    }
+                }
+
+                return alerts;
+            }
+
+            showAlerts(alerts, date) {
+                if (alerts.length === 0) return;
+
+                console.group(`🔔 Validation Alerts for ${date}`);
+
+                for (const alert of alerts) {
+                    const emoji = alert.level === 'error' ? '🚨' :
+                                 alert.level === 'warning' ? '⚠️' : 'ℹ️';
+                    console.log(`${emoji} [${alert.type}] ${alert.message}`);
+                    if (alert.details) {
+                        console.log('Details:', alert.details);
+                    }
+                }
+
+                console.groupEnd();
+
+                // Show toast for critical alerts
+                const criticalAlerts = alerts.filter(a => a.level === 'error');
+                if (criticalAlerts.length > 0 && window.OMS) {
+                    window.OMS.showToast(
+                        `${criticalAlerts.length} critical validation issue(s) detected!`,
+                        'error'
+                    );
+                }
+            }
+        }
+
+        // Initialize global instances
+        const filterLogger = new FilterLogger();
+        const patternLearner = new PatternLearner();
+        const fuzzyDateMatcher = new FuzzyDateMatcher();
+        const orderValidator = new OrderValidator(patternLearner);
+
+        // Clean up old logs periodically (keep last 30 days)
+        filterLogger.clearOldLogs(30);
+
         // ============ MAIN APP ============
 const OMS = {
             initialized: false,
@@ -4321,32 +4844,111 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
-                // IMPROVED FILTER: Include ALL order types for selected date
+                // ============ START ENHANCED FILTERING WITH LOGGING & VALIDATION ============
+                const startTime = performance.now();
+
+                // Normalize the target date using fuzzy matcher
+                const normalizedDate = fuzzyDateMatcher.normalize(date);
+                filterLogger.log('filter_started', {
+                    operation: 'downloadSameDayOrders',
+                    filterDate: date,
+                    normalizedDate,
+                    totalOrdersAvailable: this.data.orders.length
+                });
+
+                // IMPROVED FILTER: Include ALL order types for selected date with fuzzy matching
+                const matchedOrders = [];
+                const filterDetails = {
+                    singleDayMatches: 0,
+                    multiDayRangeMatches: 0,
+                    dayWiseDataMatches: 0,
+                    fuzzyMatches: 0,
+                    skipped: 0
+                };
+
                 const orders = this.data.orders.filter(o => {
-                    // Case 1: Single-day order with matching date
-                    if (!o.isMultiDay && o.date === date) {
-                        return true;
+                    // Case 1: Single-day order with matching date (use fuzzy matcher)
+                    if (!o.isMultiDay && o.date) {
+                        if (fuzzyDateMatcher.matches(o.date, date)) {
+                            filterDetails.singleDayMatches++;
+                            matchedOrders.push(o);
+                            return true;
+                        }
                     }
 
                     // Case 2: Multi-day order - check if selected date falls within range
                     if (o.isMultiDay && o.startDate && o.endDate) {
-                        const selectedDate = new Date(date);
-                        const start = new Date(o.startDate);
-                        const end = new Date(o.endDate);
-
-                        // Check if date is within the range (inclusive)
-                        if (selectedDate >= start && selectedDate <= end) {
+                        if (fuzzyDateMatcher.isInRange(date, o.startDate, o.endDate)) {
+                            filterDetails.multiDayRangeMatches++;
+                            matchedOrders.push(o);
                             return true;
                         }
                     }
 
                     // Case 3: Multi-day order with dayWiseData - check specific day functions
                     if (o.isMultiDay && o.dayWiseData && Array.isArray(o.dayWiseData)) {
-                        return o.dayWiseData.some(day => day.date === date);
+                        const hasMatch = o.dayWiseData.some(day => fuzzyDateMatcher.matches(day.date, date));
+                        if (hasMatch) {
+                            filterDetails.dayWiseDataMatches++;
+                            matchedOrders.push(o);
+                            return true;
+                        }
                     }
 
+                    filterDetails.skipped++;
                     return false;
                 });
+
+                // Calculate performance metrics
+                const endTime = performance.now();
+                const filterTime = (endTime - startTime).toFixed(2);
+
+                // Log detailed filter results
+                filterLogger.log('filter_completed', {
+                    operation: 'downloadSameDayOrders',
+                    filterDate: date,
+                    normalizedDate,
+                    matchedCount: orders.length,
+                    totalAvailable: this.data.orders.length,
+                    filterTimeMs: filterTime,
+                    breakdown: filterDetails,
+                    matchedOrderIds: orders.map(o => o.orderId || o.docId)
+                });
+
+                // Record pattern for learning
+                patternLearner.recordFilterResult(
+                    normalizedDate,
+                    orders.length,
+                    this.data.orders.length,
+                    'downloadSameDayOrders'
+                );
+
+                // Validate results and show alerts
+                const validationResult = orderValidator.validate({
+                    date: normalizedDate,
+                    orderCount: orders.length,
+                    totalAvailable: this.data.orders.length,
+                    matchedOrders,
+                    allOrders: this.data.orders
+                });
+                orderValidator.showAlerts(validationResult, date);
+
+                // Show enhanced console summary
+                console.group(`📊 Filter Summary for ${date}`);
+                console.log(`✅ Matched: ${orders.length} orders in ${filterTime}ms`);
+                console.log(`📋 Breakdown:`, filterDetails);
+                console.log(`🎯 Match rate: ${((orders.length / this.data.orders.length) * 100).toFixed(1)}%`);
+
+                const expectedCount = patternLearner.getExpectedCount(normalizedDate);
+                if (expectedCount !== null) {
+                    console.log(`🧠 Expected based on learning: ~${expectedCount} orders`);
+                }
+
+                if (validationResult.length > 0) {
+                    console.log(`⚠️ Validation alerts: ${validationResult.length}`);
+                }
+                console.groupEnd();
+                // ============ END ENHANCED FILTERING ============
 
                 if (orders.length === 0) {
                     this.showToast('No orders for this date', 'error');
@@ -4973,15 +5575,17 @@ convertToQuotationDateFormat(dateStr) {
                                 const day = i + 1;
                                 const dateStr = Utils.toDateString(new Date(year, month, day));
                                 const today = Utils.toDateString(new Date());
+
+                                // ENHANCED CALENDAR FILTERING with fuzzy date matching
                                 const orders = this.data.orders.filter(o => {
                                     if (o.isMultiDay) {
-                                        // Check if dateStr falls within the multi-day range
-                                        const checkDate = new Date(dateStr);
-                                        const start = new Date(o.startDate);
-                                        const end = new Date(o.endDate);
-                                        return checkDate >= start && checkDate <= end;
+                                        // Use fuzzy date matcher for multi-day range check
+                                        if (o.startDate && o.endDate) {
+                                            return fuzzyDateMatcher.isInRange(dateStr, o.startDate, o.endDate);
+                                        }
                                     }
-                                    return o.date === dateStr;
+                                    // Use fuzzy date matcher for single-day check
+                                    return o.date && fuzzyDateMatcher.matches(o.date, dateStr);
                                 });
                                 const tasks = this.data.tasks.filter(t => t.date === dateStr);
                                 const festival = this.festivals[dateStr];
@@ -5043,16 +5647,61 @@ convertToQuotationDateFormat(dateStr) {
             // Fixed: Use local date without timezone issues
             showDayDetails(dateStr) {
                 const date = Utils.getLocalDate(dateStr);
+
+                // ============ ENHANCED FILTERING WITH LOGGING ============
+                const startTime = performance.now();
+                const normalizedDate = fuzzyDateMatcher.normalize(dateStr);
+
+                filterLogger.log('showDayDetails_started', {
+                    operation: 'showDayDetails',
+                    filterDate: dateStr,
+                    normalizedDate,
+                    totalOrdersAvailable: this.data.orders.length
+                });
+
+                const matchedOrders = [];
                 const orders = this.data.orders.filter(o => {
                     if (o.isMultiDay) {
-                        // Check if dateStr falls within the multi-day range
-                        const checkDate = new Date(dateStr);
-                        const start = new Date(o.startDate);
-                        const end = new Date(o.endDate);
-                        return checkDate >= start && checkDate <= end;
+                        // Use fuzzy date matcher for multi-day range check
+                        if (o.startDate && o.endDate && fuzzyDateMatcher.isInRange(dateStr, o.startDate, o.endDate)) {
+                            matchedOrders.push(o);
+                            return true;
+                        }
                     }
-                    return o.date === dateStr;
+                    // Use fuzzy date matcher for single-day check
+                    if (o.date && fuzzyDateMatcher.matches(o.date, dateStr)) {
+                        matchedOrders.push(o);
+                        return true;
+                    }
+                    return false;
                 });
+
+                const filterTime = (performance.now() - startTime).toFixed(2);
+
+                // Log and learn from this filter
+                filterLogger.log('showDayDetails_completed', {
+                    operation: 'showDayDetails',
+                    filterDate: dateStr,
+                    matchedCount: orders.length,
+                    filterTimeMs: filterTime
+                });
+
+                patternLearner.recordFilterResult(normalizedDate, orders.length, this.data.orders.length, 'showDayDetails');
+
+                // Validate and alert if needed
+                const validationResult = orderValidator.validate({
+                    date: normalizedDate,
+                    orderCount: orders.length,
+                    totalAvailable: this.data.orders.length,
+                    matchedOrders,
+                    allOrders: this.data.orders
+                });
+
+                if (validationResult.some(a => a.level === 'error' || a.level === 'warning')) {
+                    orderValidator.showAlerts(validationResult, dateStr);
+                }
+                // ============ END ENHANCED FILTERING ============
+
                 const tasks = this.data.tasks.filter(t => t.date === dateStr);
                 const festival = this.festivals[dateStr];
 
@@ -10818,6 +11467,193 @@ updateAllDisplays() {
                 }
 
                 console.log('\n✅ Diagnostic complete!\n');
+            },
+
+            // ============ FILTERING DIAGNOSTICS ============
+
+            // View filter logs
+            viewFilterLogs(count = 50) {
+                const logs = filterLogger.getRecentLogs(count);
+                console.group(`📊 Recent Filter Logs (${logs.length})`);
+                console.table(logs.map(log => ({
+                    Time: new Date(log.timestamp).toLocaleString(),
+                    Operation: log.operation,
+                    Date: log.filterDate,
+                    Matched: log.matchedCount,
+                    Total: log.totalAvailable,
+                    Time_ms: log.filterTimeMs
+                })));
+                console.groupEnd();
+                return logs;
+            },
+
+            // View learned patterns
+            viewLearnedPatterns() {
+                const patterns = patternLearner.patterns;
+                console.group('🧠 Learned Patterns');
+
+                console.log('\n📅 Date-specific patterns:');
+                const datePatterns = Object.entries(patterns.datePatterns)
+                    .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+                    .slice(0, 20);
+                console.table(datePatterns.map(([date, data]) => ({
+                    Date: date,
+                    AvgOrders: data.avgCount.toFixed(1),
+                    Observations: data.counts.length,
+                    LastSeen: new Date(data.lastSeen).toLocaleDateString()
+                })));
+
+                console.log('\n📊 Typical order counts:');
+                console.table({
+                    Weekday: {
+                        Min: patterns.typicalOrderCounts.weekday.min,
+                        Avg: patterns.typicalOrderCounts.weekday.avg.toFixed(1),
+                        Max: patterns.typicalOrderCounts.weekday.max,
+                        Samples: patterns.typicalOrderCounts.weekday.samples
+                    },
+                    Weekend: {
+                        Min: patterns.typicalOrderCounts.weekend.min,
+                        Avg: patterns.typicalOrderCounts.weekend.avg.toFixed(1),
+                        Max: patterns.typicalOrderCounts.weekend.max,
+                        Samples: patterns.typicalOrderCounts.weekend.samples
+                    }
+                });
+
+                console.log('\n🔄 Learned date formats:');
+                const dateFormats = Object.entries(patterns.dateFormats).slice(0, 10);
+                if (dateFormats.length > 0) {
+                    console.table(dateFormats.map(([original, data]) => ({
+                        Original: original,
+                        Normalized: data.normalized,
+                        Count: data.count
+                    })));
+                } else {
+                    console.log('  No custom date formats learned yet');
+                }
+
+                console.groupEnd();
+                return patterns;
+            },
+
+            // Clear all filter logs
+            clearFilterLogs() {
+                const count = filterLogger.logs.length;
+                filterLogger.logs = [];
+                filterLogger.saveLogs();
+                console.log(`✅ Cleared ${count} filter logs`);
+            },
+
+            // Reset learned patterns
+            resetLearnedPatterns() {
+                const confirmed = confirm('Reset all learned patterns? This cannot be undone.');
+                if (confirmed) {
+                    localStorage.removeItem('oms_filter_patterns');
+                    location.reload();
+                    console.log('✅ Patterns reset. Page reloading...');
+                }
+            },
+
+            // Test filter accuracy for a specific date
+            async testFilterAccuracy(date) {
+                console.group(`🧪 Testing Filter Accuracy for ${date}`);
+
+                const normalizedDate = fuzzyDateMatcher.normalize(date);
+                console.log(`📅 Normalized date: ${normalizedDate}`);
+
+                // Test all date variations
+                const variations = fuzzyDateMatcher.getVariations(date);
+                console.log(`🔄 Testing ${variations.length} date variations:`, variations);
+
+                // Run the actual filter
+                const startTime = performance.now();
+                const matchedOrders = [];
+                const orders = OMS.data.orders.filter(o => {
+                    if (!o.isMultiDay && o.date) {
+                        if (fuzzyDateMatcher.matches(o.date, date)) {
+                            matchedOrders.push(o);
+                            return true;
+                        }
+                    }
+                    if (o.isMultiDay && o.startDate && o.endDate) {
+                        if (fuzzyDateMatcher.isInRange(date, o.startDate, o.endDate)) {
+                            matchedOrders.push(o);
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+                const filterTime = (performance.now() - startTime).toFixed(2);
+
+                console.log(`✅ Found ${orders.length} orders in ${filterTime}ms`);
+
+                // Show expected count
+                const expectedCount = patternLearner.getExpectedCount(normalizedDate);
+                if (expectedCount !== null) {
+                    console.log(`🧠 Expected based on learning: ~${expectedCount} orders`);
+                    const deviation = Math.abs(orders.length - expectedCount);
+                    if (deviation > 0) {
+                        console.log(`📊 Deviation: ${deviation} orders (${((deviation / Math.max(expectedCount, 1)) * 100).toFixed(1)}%)`);
+                    }
+                }
+
+                // Run validation
+                const validationResult = orderValidator.validate({
+                    date: normalizedDate,
+                    orderCount: orders.length,
+                    totalAvailable: OMS.data.orders.length,
+                    matchedOrders,
+                    allOrders: OMS.data.orders
+                });
+
+                if (validationResult.length > 0) {
+                    console.log(`\n⚠️ Validation Issues (${validationResult.length}):`);
+                    validationResult.forEach(alert => {
+                        console.log(`  ${alert.level.toUpperCase()}: ${alert.message}`);
+                    });
+                } else {
+                    console.log('\n✅ No validation issues detected');
+                }
+
+                console.log(`\n📋 Matched orders:`);
+                console.table(orders.map(o => ({
+                    OrderID: o.orderId,
+                    Client: o.clientName,
+                    Date: o.date || `${o.startDate} to ${o.endDate}`,
+                    Status: o.status,
+                    MultiDay: o.isMultiDay ? 'Yes' : 'No'
+                })));
+
+                console.groupEnd();
+                return { orders, validationResult, filterTime };
+            },
+
+            // Show filtering statistics
+            showFilteringStats() {
+                console.group('📊 Filtering System Statistics');
+
+                const logs = filterLogger.logs;
+                const patterns = patternLearner.patterns;
+
+                console.log(`📝 Total filter operations logged: ${logs.length}`);
+                console.log(`🧠 Patterns learned for ${Object.keys(patterns.datePatterns).length} dates`);
+                console.log(`📅 Date formats learned: ${Object.keys(patterns.dateFormats).length}`);
+                console.log(`📈 Filter results history: ${patterns.filterResults.length} entries`);
+
+                if (logs.length > 0) {
+                    const avgTime = logs
+                        .filter(l => l.filterTimeMs)
+                        .reduce((sum, l) => sum + parseFloat(l.filterTimeMs), 0) / logs.filter(l => l.filterTimeMs).length;
+                    console.log(`⚡ Average filter time: ${avgTime.toFixed(2)}ms`);
+                }
+
+                console.log('\n💡 Available commands:');
+                console.log('  - AdminUtils.viewFilterLogs() - View recent filter operations');
+                console.log('  - AdminUtils.viewLearnedPatterns() - View learned patterns');
+                console.log('  - AdminUtils.testFilterAccuracy("2024-12-25") - Test filter for a date');
+                console.log('  - AdminUtils.clearFilterLogs() - Clear all logs');
+                console.log('  - AdminUtils.resetLearnedPatterns() - Reset all patterns');
+
+                console.groupEnd();
             }
         };
 
@@ -10839,6 +11675,13 @@ updateAllDisplays() {
         console.log('\n🔍 DIAGNOSTIC COMMANDS:');
         console.log('  - await AdminUtils.checkDataConsistency() - Check for data mismatches');
         console.log('  - await AdminUtils.debugEverything() - ⭐ FULL SYSTEM DIAGNOSTIC (find all bugs)');
+        console.log('\n🎯 FILTERING DIAGNOSTICS:');
+        console.log('  - AdminUtils.showFilteringStats() - Show filtering system overview');
+        console.log('  - AdminUtils.viewFilterLogs() - View recent filter operations');
+        console.log('  - AdminUtils.viewLearnedPatterns() - View learned patterns');
+        console.log('  - AdminUtils.testFilterAccuracy("2024-12-25") - Test filter for a specific date');
+        console.log('  - AdminUtils.clearFilterLogs() - Clear all filter logs');
+        console.log('  - AdminUtils.resetLearnedPatterns() - Reset learned patterns');
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
