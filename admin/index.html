@@ -77,6 +77,16 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        #currentOrderId {
+            font-weight: bold;
+            white-space: nowrap;
+            padding: 0.5rem;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .search-global {
@@ -1901,7 +1911,7 @@ const OMS = {
                 orders: [],
                 customers: [],
                 team: [],
-                inventory: { categories: [], items: [] },
+                inventory: { categories: [], items: [], deletedItems: [], deletedCategories: [] },
                 itemHistory: [],
                 tasks: [],
                 deletedOrders: [],
@@ -2252,6 +2262,8 @@ const OMS = {
         window.dayFunctionsData[dayIndex].push({
             functionType: '',
             timeSlot: '',
+            venue: '',
+            transport: '',
             driver: '',
             operator: '',
             helper: '',
@@ -2280,9 +2292,27 @@ const OMS = {
                                placeholder="${this.t('enterTimeSlot')}"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'timeSlot', this.value)">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">${this.t('venue')}</label>
+                        <input type="text" id="${functionId}Venue" class="form-input"
+                               placeholder="Enter venue address"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'venue', this.value)">
+                    </div>
                 </div>
 
                 <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Transport</label>
+                        <select id="${functionId}Transport" class="form-select"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'transport', this.value)">
+                            <option value="">Select Transport</option>
+                            <option value="New Bolero">New Bolero</option>
+                            <option value="Old Bolero">Old Bolero</option>
+                            <option value="Isuzu">Isuzu</option>
+                            <option value="Porter">Porter</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">${this.t('driver')}</label>
                         <select id="${functionId}Driver" class="form-select"
@@ -2297,12 +2327,16 @@ const OMS = {
                             <option value="">${this.t('selectOperator')}</option>
                         </select>
                     </div>
+                </div>
+
+                <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">${this.t('helpers')}</label>
-                        <input type="text" id="${functionId}Helper" class="form-input"
-                               placeholder="${this.t('helperPlaceholder')}"
-                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', this.value)">
-                        <small style="color: var(--text-gray);">${this.t('multipleHelpersSeparated')}</small>
+                        <select id="${functionId}Helper" class="form-select" multiple style="min-height: 80px;"
+                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', Array.from(this.selectedOptions).map(opt => opt.value).join(', '))">
+                            <option value="">Select Helper(s)</option>
+                        </select>
+                        <small style="color: var(--text-gray);">Hold Ctrl/Cmd to select multiple helpers</small>
                     </div>
                 </div>
 
@@ -3039,6 +3073,15 @@ order: async () => {
                 this.data.inventory.categories = this.data.inventory.categories.filter(c => c.id !== id);
                 this.data.inventory.items = this.data.inventory.items.filter(i => i.categoryId !== id);
 
+                // Track deleted category to prevent re-addition
+                if (!this.data.inventory.deletedCategories) {
+                    this.data.inventory.deletedCategories = [];
+                }
+                if (!this.data.inventory.deletedCategories.includes(id)) {
+                    this.data.inventory.deletedCategories.push(id);
+                }
+                this.saveToStorage();
+
                 return true;
             } catch (error) {
                 console.error('❌ Error deleting category:', error);
@@ -3053,6 +3096,15 @@ order: async () => {
 
                 // Delete from local array
                 this.data.inventory.items = this.data.inventory.items.filter(i => i.id !== id);
+
+                // Track deleted item to prevent re-addition
+                if (!this.data.inventory.deletedItems) {
+                    this.data.inventory.deletedItems = [];
+                }
+                if (!this.data.inventory.deletedItems.includes(id)) {
+                    this.data.inventory.deletedItems.push(id);
+                }
+                this.saveToStorage();
 
                 return true;
             } catch (error) {
@@ -3926,6 +3978,18 @@ convertToQuotationDateFormat(dateStr) {
                 const multiDayContainer = document.getElementById('multiDayContainer');
                 if (multiDayContainer) {
                     multiDayContainer.innerHTML = '';
+                }
+
+                // Clear functions container for multiday events
+                const functionsContainer = document.getElementById('functionsContainer');
+                if (functionsContainer) {
+                    functionsContainer.innerHTML = '';
+                }
+
+                // Hide day-wise functions section
+                const dayWiseFunctions = document.getElementById('dayWiseFunctions');
+                if (dayWiseFunctions) {
+                    dayWiseFunctions.style.display = 'none';
                 }
 
                 this.showToast('Form cleared');
@@ -5823,14 +5887,15 @@ convertToQuotationDateFormat(dateStr) {
 
                 const dryIceNeeded = dryMachines * 40; // 40 kg per dry machine
 
-                // Find all blowers (items containing "blower", "DMX", or "manual")
-                const blowerKeywords = ['blower', 'dmx', 'manual blower'];
-                const blowers = items.filter(item => {
+                // Find all flower shower machines (items containing "flower shower" or "flower" and "shower")
+                const flowerShowerKeywords = ['flower shower', 'flower shower machine'];
+                const flowerShowerMachines = items.filter(item => {
                     const name = item.name.toLowerCase();
-                    return blowerKeywords.some(keyword => name.includes(keyword));
+                    return flowerShowerKeywords.some(keyword => name.includes(keyword)) ||
+                           (name.includes('flower') && name.includes('shower'));
                 }).reduce((sum, item) => sum + item.required, 0);
 
-                const flowersNeeded = blowers * 20; // 20 kg per blower
+                const flowersNeeded = flowerShowerMachines * 20; // 20 kg per flower shower machine
 
                 container.innerHTML = `
                     <!-- Summary Cards -->
@@ -5865,7 +5930,7 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
 
                     <!-- Materials Calculation Card -->
-                    ${(dryMachines > 0 || blowers > 0) ? `
+                    ${(dryMachines > 0 || flowerShowerMachines > 0) ? `
                     <div class="card" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 1.5rem; margin-top: 1rem;">
                         <h3 style="margin-bottom: 1rem; font-size: 1.3rem;">🧊 Materials Required</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
@@ -5883,17 +5948,17 @@ convertToQuotationDateFormat(dateStr) {
                                 </div>
                             </div>
                             ` : ''}
-                            ${blowers > 0 ? `
+                            ${flowerShowerMachines > 0 ? `
                             <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: var(--radius);">
                                 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
                                     <div style="font-size: 2.5rem;">🌸</div>
                                     <div>
-                                        <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.25rem;">Flowers/Papers Needed</div>
+                                        <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.25rem;">Flowers Needed</div>
                                         <div style="font-size: 2rem; font-weight: 700;">${flowersNeeded} kg</div>
                                     </div>
                                 </div>
                                 <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
-                                    💨 ${blowers} blower(s) × 20 kg each
+                                    🌺 ${flowerShowerMachines} flower shower machine(s) × 20 kg each
                                 </div>
                             </div>
                             ` : ''}
@@ -7546,6 +7611,7 @@ convertToQuotationDateFormat(dateStr) {
                                     <td>${p.paymentMethod || 'N/A'}</td>
                                     <td>${p.transactionId || 'N/A'}</td>
                                     <td>
+                                        <button class="btn btn-info btn-small" onclick="OMS.editPayment('${p.id}')">Edit</button>
                                         <button class="btn btn-danger btn-small" onclick="OMS.deletePayment('${p.id}')">Delete</button>
                                     </td>
                                 </tr>
@@ -7585,6 +7651,7 @@ convertToQuotationDateFormat(dateStr) {
                                     <td>${e.vendor || 'N/A'}</td>
                                     <td>${e.paymentMethod || 'N/A'}</td>
                                     <td>
+                                        <button class="btn btn-info btn-small" onclick="OMS.editExpense('${e.id}')">Edit</button>
                                         <button class="btn btn-danger btn-small" onclick="OMS.deleteExpense('${e.id}')">Delete</button>
                                     </td>
                                 </tr>
@@ -9037,19 +9104,20 @@ setupAllRealtimeListeners() {
                     console.log('👷 Team member added/updated:', teamMember.name);
                 } else {
                     this.data.team[index] = teamMember;
+                    console.log('👷 Team member updated:', teamMember.name);
                 }
-                // Update UI if on team tab
-                if (this.currentTab === 'team') {
-                    this.renderTeamTable();
-                }
+                // Update UI in real-time - always render when data changes
+                this.renderTeamTable();
+                // Also update dropdowns in order form
+                this.updateTeamDropdowns();
             } else if (change.type === 'removed') {
                 const index = this.data.team.findIndex(t => t.id === teamMember.id);
                 if (index !== -1) {
                     this.data.team.splice(index, 1);
                     console.log('👷 Team member removed:', teamMember.name);
-                    if (this.currentTab === 'team') {
-                        this.renderTeamTable();
-                    }
+                    // Update UI in real-time
+                    this.renderTeamTable();
+                    this.updateTeamDropdowns();
                 }
             }
         });
@@ -9082,6 +9150,14 @@ setupAllRealtimeListeners() {
                 const category = { id: change.doc.id, ...change.doc.data() };
 
                 if (change.type === 'added' || change.type === 'modified') {
+                    // Check if category was marked as deleted locally
+                    const wasDeleted = this.data.inventory.deletedCategories &&
+                                      this.data.inventory.deletedCategories.includes(category.id);
+                    if (wasDeleted) {
+                        console.warn('⚠️ Category was previously deleted - ignoring:', category.name);
+                        return;
+                    }
+
                     const index = this.data.inventory.categories.findIndex(c => c.id === category.id);
                     if (index === -1) {
                         this.data.inventory.categories.push(category);
@@ -9093,6 +9169,13 @@ setupAllRealtimeListeners() {
                     const index = this.data.inventory.categories.findIndex(c => c.id === category.id);
                     if (index !== -1) {
                         this.data.inventory.categories.splice(index, 1);
+                        // Track deleted categories to prevent re-addition
+                        if (!this.data.inventory.deletedCategories) {
+                            this.data.inventory.deletedCategories = [];
+                        }
+                        if (!this.data.inventory.deletedCategories.includes(category.id)) {
+                            this.data.inventory.deletedCategories.push(category.id);
+                        }
                         console.log(`🗑️ Category removed:`, category.name);
                     }
                 }
@@ -9129,6 +9212,14 @@ setupAllRealtimeListeners() {
                 const item = { id: change.doc.id, ...change.doc.data() };
 
                 if (change.type === 'added' || change.type === 'modified') {
+                    // Check if item was marked as deleted locally
+                    const wasDeleted = this.data.inventory.deletedItems &&
+                                      this.data.inventory.deletedItems.includes(item.id);
+                    if (wasDeleted) {
+                        console.warn('⚠️ Inventory item was previously deleted - ignoring:', item.name);
+                        return;
+                    }
+
                     const index = this.data.inventory.items.findIndex(i => i.id === item.id);
                     if (index === -1) {
                         this.data.inventory.items.push(item);
@@ -9140,6 +9231,13 @@ setupAllRealtimeListeners() {
                     const index = this.data.inventory.items.findIndex(i => i.id === item.id);
                     if (index !== -1) {
                         this.data.inventory.items.splice(index, 1);
+                        // Track deleted items to prevent re-addition
+                        if (!this.data.inventory.deletedItems) {
+                            this.data.inventory.deletedItems = [];
+                        }
+                        if (!this.data.inventory.deletedItems.includes(item.id)) {
+                            this.data.inventory.deletedItems.push(item.id);
+                        }
                         console.log(`🗑️ Item removed:`, item.name);
                     }
                 }
@@ -9258,6 +9356,10 @@ setupRealtimeListeners() {
                     // Only show toast for newly added orders (not initial load)
                     if (!isFirstLoad) {
                         this.updateAllDisplays();
+                        // Update dashboard statistics in real-time
+                        if (this.currentTab === 'dashboard') {
+                            this.renderDashboard();
+                        }
                         this.showToast(`🆕 New order: ${newOrder.clientName}`, 'success');
                     }
                 }
@@ -9306,6 +9408,10 @@ if (change.type === 'modified') {
 
         this.saveToStorage(); // Save to local storage
         this.updateAllDisplays();
+        // Update dashboard statistics in real-time
+        if (this.currentTab === 'dashboard') {
+            this.renderDashboard();
+        }
         this.showToast(`✏️ Order updated: ${this.data.orders[index].clientName}`, 'success');
     } else {
         // FIXED: Check deletedOrders by docId AND orderId
