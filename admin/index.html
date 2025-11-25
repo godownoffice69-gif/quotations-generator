@@ -5319,7 +5319,7 @@ convertToQuotationDateFormat(dateStr) {
                     skipped: 0
                 };
 
-                const orders = this.data.orders.filter(o => {
+                let orders = this.data.orders.filter(o => {
                     // Case 1: Single-day order with matching date (use fuzzy matcher)
                     if (!o.isMultiDay && o.date) {
                         if (fuzzyDateMatcher.matches(o.date, date)) {
