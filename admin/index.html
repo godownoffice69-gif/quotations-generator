@@ -5284,19 +5284,19 @@ convertToQuotationDateFormat(dateStr) {
                 if (user) {
                     const userInfoDiv = document.createElement('div');
                     userInfoDiv.id = 'userRoleInfo';
-                    userInfoDiv.style.cssText = 'position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.1); padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem;';
+                    userInfoDiv.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.1); padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; white-space: nowrap; margin-right: 0.5rem;';
                     userInfoDiv.innerHTML = `
-                        <span style="opacity: 0.7;">${user.email}</span>
-                        <span style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; background: ${user.role === 'admin' ? '#f44336' : user.role === 'owner' ? '#ff9800' : '#2196f3'}; color: white; border-radius: 0.25rem; font-weight: bold; text-transform: uppercase; font-size: 0.75rem;">
+                        <span style="opacity: 0.7; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${user.email}</span>
+                        <span style="padding: 0.25rem 0.5rem; background: ${user.role === 'admin' ? '#f44336' : user.role === 'owner' ? '#ff9800' : '#2196f3'}; color: white; border-radius: 0.25rem; font-weight: bold; text-transform: uppercase; font-size: 0.75rem;">
                             ${user.role}
                         </span>
                     `;
 
-                    // Add to header
-                    const header = document.querySelector('header');
-                    if (header && !document.getElementById('userRoleInfo')) {
-                        header.style.position = 'relative';
-                        header.appendChild(userInfoDiv);
+                    // Add to header-controls instead of directly to header
+                    const headerControls = document.querySelector('.header-controls');
+                    if (headerControls && !document.getElementById('userRoleInfo')) {
+                        // Insert at the beginning of header-controls
+                        headerControls.insertBefore(userInfoDiv, headerControls.firstChild);
                     }
                 }
             },
@@ -8590,6 +8590,9 @@ convertToQuotationDateFormat(dateStr) {
 
         console.log('✅ All data loaded from Firestore successfully!');
 
+        // Update all displays after data is loaded to ensure dashboard and other tabs show fresh data
+        this.updateAllDisplays();
+
     } catch (error) {
         console.error('❌ Load error:', error);
         this.showToast('Error loading data: ' + error.message, 'error');
@@ -9263,6 +9266,72 @@ setupAllRealtimeListeners() {
             }
         });
 
+    // Payments real-time listener
+    this.paymentsUnsubscribe = db.collection('payments').onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const payment = { id: change.doc.id, ...change.doc.data() };
+
+            if (change.type === 'added' || change.type === 'modified') {
+                const index = this.data.payments.findIndex(p => p.id === payment.id);
+                if (index === -1) {
+                    this.data.payments.push(payment);
+                    console.log('💵 Payment added:', payment.id);
+                } else {
+                    this.data.payments[index] = payment;
+                    console.log('💵 Payment updated:', payment.id);
+                }
+                // Update financials tab in real-time
+                if (this.currentTab === 'financials') {
+                    this.renderFinancials();
+                }
+            } else if (change.type === 'removed') {
+                const index = this.data.payments.findIndex(p => p.id === payment.id);
+                if (index !== -1) {
+                    this.data.payments.splice(index, 1);
+                    console.log('💵 Payment removed:', payment.id);
+                    // Update financials tab in real-time
+                    if (this.currentTab === 'financials') {
+                        this.renderFinancials();
+                    }
+                }
+            }
+        });
+        this.saveToStorage();
+    });
+
+    // Expenses real-time listener
+    this.expensesUnsubscribe = db.collection('expenses').onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const expense = { id: change.doc.id, ...change.doc.data() };
+
+            if (change.type === 'added' || change.type === 'modified') {
+                const index = this.data.expenses.findIndex(e => e.id === expense.id);
+                if (index === -1) {
+                    this.data.expenses.push(expense);
+                    console.log('💸 Expense added:', expense.id);
+                } else {
+                    this.data.expenses[index] = expense;
+                    console.log('💸 Expense updated:', expense.id);
+                }
+                // Update financials tab in real-time
+                if (this.currentTab === 'financials') {
+                    this.renderFinancials();
+                }
+            } else if (change.type === 'removed') {
+                const index = this.data.expenses.findIndex(e => e.id === expense.id);
+                if (index !== -1) {
+                    this.data.expenses.splice(index, 1);
+                    console.log('💸 Expense removed:', expense.id);
+                    // Update financials tab in real-time
+                    if (this.currentTab === 'financials') {
+                        this.renderFinancials();
+                    }
+                }
+            }
+        });
+        this.saveToStorage();
+    });
+
     console.log('✅ All real-time listeners active');
 },
 
@@ -9547,6 +9616,7 @@ updateAllDisplays() {
         else if (this.currentTab === 'calendar') this.renderCalendarTab();
         else if (this.currentTab === 'history') this.renderHistory();
         else if (this.currentTab === 'analytics') this.renderAnalytics();
+        else if (this.currentTab === 'financials') this.renderFinancials();
 
         // Always update notifications
         this.updateNotifications();
