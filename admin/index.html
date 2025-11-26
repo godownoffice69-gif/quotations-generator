@@ -5329,20 +5329,23 @@ convertToQuotationDateFormat(dateStr) {
                         }
                     }
 
-                    // Case 2: Multi-day order - check if selected date falls within range
-                    if (o.isMultiDay && o.startDate && o.endDate) {
-                        if (fuzzyDateMatcher.isInRange(date, o.startDate, o.endDate)) {
-                            filterDetails.multiDayRangeMatches++;
-                            matchedOrders.push(o);
-                            return true;
-                        }
-                    }
-
-                    // Case 3: Multi-day order with dayWiseData - check specific day functions
-                    if (o.isMultiDay && o.dayWiseData && Array.isArray(o.dayWiseData)) {
+                    // Case 2: Multi-day order WITH dayWiseData - check specific day functions (PRIORITY)
+                    if (o.isMultiDay && o.dayWiseData && Array.isArray(o.dayWiseData) && o.dayWiseData.length > 0) {
                         const hasMatch = o.dayWiseData.some(day => fuzzyDateMatcher.matches(day.date, date));
                         if (hasMatch) {
                             filterDetails.dayWiseDataMatches++;
+                            matchedOrders.push(o);
+                            return true;
+                        }
+                        // If order has dayWiseData but no match, skip it (don't fall through to range check)
+                        filterDetails.skipped++;
+                        return false;
+                    }
+
+                    // Case 3: Multi-day order WITHOUT dayWiseData - fallback to range check
+                    if (o.isMultiDay && o.startDate && o.endDate) {
+                        if (fuzzyDateMatcher.isInRange(date, o.startDate, o.endDate)) {
+                            filterDetails.multiDayRangeMatches++;
                             matchedOrders.push(o);
                             return true;
                         }
