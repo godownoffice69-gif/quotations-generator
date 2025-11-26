@@ -5465,9 +5465,10 @@ convertToQuotationDateFormat(dateStr) {
                     // For multiday orders, create a filtered copy with only the selected date's data
                     const filteredOrder = { ...order };
 
-                    // Filter dayWiseData to only include the selected date
+                    // Filter dayWiseData to only include the selected date (use fuzzy matcher for better matching)
                     if (order.dayWiseData && Array.isArray(order.dayWiseData)) {
-                        filteredOrder.dayWiseData = order.dayWiseData.filter(day => day.date === date);
+                        filteredOrder.dayWiseData = order.dayWiseData.filter(day => fuzzyDateMatcher.matches(day.date, date));
+                        console.log(`🔍 Multiday order ${order.orderId}: Filtered ${filteredOrder.dayWiseData.length}/${order.dayWiseData.length} days for date ${date}`);
                     }
 
                     // Update the order to show only selected date info
