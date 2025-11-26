@@ -922,28 +922,35 @@
                                 <small style="color: var(--text-gray);">Only needed for completed orders. Leave empty for pending/confirmed.</small>
                             </div>
                             <div class="form-group">
-    <label class="form-label required">Event Type</label>
-    <select id="eventTypeSelect" class="form-select" required>
-        <option value="single">Single Day Event</option>
-        <option value="multi">Multi-Day Event</option>
-    </select>
-</div>
+                                <label class="form-label required">Event Type</label>
+                                <select id="eventTypeSelect" class="form-select" required>
+                                    <option value="single">Single Day Event</option>
+                                    <option value="multi">Multi-Day Event</option>
+                                </select>
+                            </div>
+                        </div>
 
 <!-- Single Day Fields -->
-<div id="singleDayFields" class="form-group">
-    <label class="form-label required">Event Date</label>
-    <input type="date" id="orderDate" class="form-input highlight-datetime" required>
+<div id="singleDayFields" class="form-grid">
+    <div class="form-group">
+        <label class="form-label required">Event Date</label>
+        <input type="date" id="orderDate" name="orderDate" class="form-input highlight-datetime" required>
+    </div>
+    <div class="form-group">
+        <label class="form-label required">Ready Time</label>
+        <select id="readyTime" name="readyTime" class="form-select highlight-datetime" required></select>
+    </div>
 </div>
 
 <!-- Multi-Day Fields -->
 <div id="multiDayFields" class="form-grid" style="display: none;">
     <div class="form-group">
         <label class="form-label required">Start Date</label>
-        <input type="date" id="startDate" class="form-input highlight-datetime">
+        <input type="date" id="startDate" name="startDate" class="form-input highlight-datetime">
     </div>
     <div class="form-group">
         <label class="form-label required">End Date</label>
-        <input type="date" id="endDate" class="form-input highlight-datetime">
+        <input type="date" id="endDate" name="endDate" class="form-input highlight-datetime">
     </div>
     <div class="form-group">
         <label class="form-label">Total Days</label>
@@ -958,11 +965,6 @@
         <div id="functionsContainer"></div>
     </div>
 </div>
-                            <div class="form-group">
-                                <label class="form-label required">Ready Time</label>
-                                <select id="readyTime" class="form-select highlight-datetime" required></select>
-                            </div>
-                        </div>
 
                         <div class="form-grid">
                             <div class="form-group">
@@ -5038,7 +5040,7 @@ convertToQuotationDateFormat(dateStr) {
             // Show single day fields, hide multiday fields
             const singleDayFields = document.getElementById('singleDayFields');
             const multiDayFields = document.getElementById('multiDayFields');
-            if (singleDayFields) singleDayFields.style.display = 'block';
+            if (singleDayFields) singleDayFields.style.display = 'grid';
             if (multiDayFields) multiDayFields.style.display = 'none';
 
             Object.entries({
@@ -5108,7 +5110,7 @@ convertToQuotationDateFormat(dateStr) {
                 Utils.set('eventTypeSelect', 'single');
                 const singleDayFields = document.getElementById('singleDayFields');
                 const multiDayFields = document.getElementById('multiDayFields');
-                if (singleDayFields) singleDayFields.style.display = 'block';
+                if (singleDayFields) singleDayFields.style.display = 'grid';
                 if (multiDayFields) multiDayFields.style.display = 'none';
 
                 // Clear multi-day containers
@@ -12586,25 +12588,21 @@ updateAllDisplays() {
         eventTypeSelect.addEventListener('change', (e) => {
             if (e.target.value === 'single') {
     // Show single day fields
-    singleDayFields.style.display = 'block';
+    singleDayFields.style.display = 'grid';
     multiDayFields.style.display = 'none';
     dayWiseFunctions.style.display = 'none';
 
-            // Show fields needed for single day
-            const readyTimeField = document.getElementById('readyTime');
-            readyTimeField.parentElement.style.display = 'block';
-            readyTimeField.required = true;
+            // Set required fields for single day
+            document.getElementById('orderDate').required = true;
+            document.getElementById('readyTime').required = true;
+            document.getElementById('startDate').required = false;
+            document.getElementById('endDate').required = false;
 
             // Show single-day item search
             const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items')
             ? document.querySelector('.card h3').closest('.card')
             : null;
             if (itemSearchSection) itemSearchSection.style.display = 'block';
-
-    // Set required fields
-    document.getElementById('orderDate').required = true;
-    document.getElementById('startDate').required = false;
-    document.getElementById('endDate').required = false;
 
     // SAFEGUARD: Clear multi-day data when switching to single day
     if (window.dayFunctionsData) {
@@ -12620,10 +12618,13 @@ updateAllDisplays() {
     multiDayFields.style.display = 'grid';
     dayWiseFunctions.style.display = 'block';
 
-            // Hide fields not needed for multi-day
-            const readyTimeField = document.getElementById('readyTime');
-            readyTimeField.parentElement.style.display = 'none';
-            readyTimeField.required = false;
+            // Set required fields for multi-day
+            document.getElementById('orderDate').required = false;
+            document.getElementById('readyTime').required = false;
+            document.getElementById('startDate').required = true;
+            document.getElementById('endDate').required = true;
+
+            // Hide event type field for multi-day
             document.getElementById('eventType').parentElement.style.display = 'none';
 
     // Hide single-day item search
@@ -12631,11 +12632,6 @@ updateAllDisplays() {
         ? document.querySelector('.card h3').closest('.card')
         : null;
     if (itemSearchSection) itemSearchSection.style.display = 'none';
-
-    // Set required fields
-    document.getElementById('orderDate').required = false;
-    document.getElementById('startDate').required = true;
-    document.getElementById('endDate').required = true;
 
     // SAFEGUARD: Clear single-day items when switching to multi-day
     OMS.currentOrderItems = [];
