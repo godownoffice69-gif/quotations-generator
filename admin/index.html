@@ -5379,26 +5379,35 @@ convertToQuotationDateFormat(dateStr) {
                     'downloadSameDayOrders'
                 );
 
-                // APPLY LEARNING RULES FROM PREVIOUS USER FEEDBACK
-                const learningResult = filterRatingSystem.applyLearningRules(
-                    normalizedDate,
-                    orders,
-                    this.data.orders
-                );
+                // APPLY LEARNING RULES FROM PREVIOUS USER FEEDBACK (if enabled)
+                const mlEnabled = localStorage.getItem('oms_ml_enabled') !== 'false'; // Default: enabled for backward compatibility
+                let finalOrders = orders;
+                let hasCorrections = false;
 
-                let finalOrders = learningResult.orders;
-                const hasCorrections = learningResult.corrections.length > 0;
+                if (mlEnabled) {
+                    const learningResult = filterRatingSystem.applyLearningRules(
+                        normalizedDate,
+                        orders,
+                        this.data.orders
+                    );
 
-                if (hasCorrections) {
-                    console.log(`🧠 Smart Learning Applied: ${learningResult.corrections.length} corrections made based on your previous feedback`);
-                    learningResult.corrections.forEach(correction => {
-                        if (correction.type === 'added') {
-                            console.log(`  ✅ Added: ${correction.order.orderId} - ${correction.reason}`);
-                        } else if (correction.type === 'removed') {
-                            console.log(`  ❌ Removed: ${correction.order.orderId} - ${correction.reason}`);
-                        }
-                    });
-                    this.showToast(`🧠 Smart filter applied ${learningResult.corrections.length} learned corrections`, 'info');
+                    finalOrders = learningResult.orders;
+                    hasCorrections = learningResult.corrections.length > 0;
+
+                    if (hasCorrections) {
+                        console.log(`🧠 Smart Learning Applied: ${learningResult.corrections.length} corrections made based on your previous feedback`);
+                        learningResult.corrections.forEach(correction => {
+                            if (correction.type === 'added') {
+                                console.log(`  ✅ Added: ${correction.order.orderId} - ${correction.reason}`);
+                            } else if (correction.type === 'removed') {
+                                console.log(`  ❌ Removed: ${correction.order.orderId} - ${correction.reason}`);
+                            }
+                        });
+                        this.showToast(`🧠 Smart filter applied ${learningResult.corrections.length} learned corrections`, 'info');
+                    }
+                } else {
+                    console.log('🔇 ML Corrections DISABLED - Using original filter results only');
+                    console.log('💡 To enable: AdminUtils.enableML() or localStorage.setItem("oms_ml_enabled", "true")');
                 }
 
                 // STORE FILTER CONTEXT FOR RATING
@@ -5557,8 +5566,10 @@ convertToQuotationDateFormat(dateStr) {
 
                 this.generateMultiOrderImage(filteredOrders, date);
 
-                // Show rating prompt after generation
-                showRatingPrompt();
+                // Show rating prompt after generation (only if ML is enabled)
+                if (mlEnabled) {
+                    showRatingPrompt();
+                }
             },
 
             downloadOrderImage(orderId) {
@@ -12438,6 +12449,64 @@ updateAllDisplays() {
 
                     input.click();
                 });
+            },
+
+            // Enable ML corrections
+            enableML() {
+                localStorage.setItem('oms_ml_enabled', 'true');
+                console.log('✅ ML Corrections ENABLED');
+                console.log('🧠 The system will now apply learned corrections from previous ratings');
+                console.log('💡 To disable: AdminUtils.disableML()');
+                console.log('💡 To clear learned rules: AdminUtils.clearAllRatings()');
+                return true;
+            },
+
+            // Disable ML corrections
+            disableML() {
+                localStorage.setItem('oms_ml_enabled', 'false');
+                console.log('✅ ML Corrections DISABLED');
+                console.log('📊 Filter will now use ONLY the original logic (no ML modifications)');
+                console.log('💡 To enable: AdminUtils.enableML()');
+                console.log('⚠️ Note: This does NOT clear learned rules, just stops applying them');
+                return true;
+            },
+
+            // Check ML status
+            checkMLStatus() {
+                const enabled = localStorage.getItem('oms_ml_enabled') !== 'false';
+                const ratings = JSON.parse(localStorage.getItem('oms_filter_ratings') || '[]');
+                const rules = JSON.parse(localStorage.getItem('oms_filter_learning_rules') || '[]');
+
+                console.log('🤖 ML System Status:');
+                console.log(`  Status: ${enabled ? '✅ ENABLED' : '🔇 DISABLED'}`);
+                console.log(`  Ratings stored: ${ratings.length}`);
+                console.log(`  Learning rules: ${rules.length}`);
+
+                if (enabled && rules.length > 0) {
+                    console.log('\n⚠️ WARNING: ML is ACTIVE and will modify filter results');
+                    console.log('💡 To disable: AdminUtils.disableML()');
+                    console.log('💡 To clear rules: AdminUtils.clearAllRatings()');
+                } else if (!enabled) {
+                    console.log('\n✅ ML is disabled - using original filter logic only');
+                } else {
+                    console.log('\n📋 ML is enabled but no learning rules stored yet');
+                }
+
+                return { enabled, ratingsCount: ratings.length, rulesCount: rules.length };
+            },
+
+            // Quick fix: Disable ML and clear all learned rules
+            resetMLSystem() {
+                const confirmed = confirm('This will:\n1. Disable ML corrections\n2. Clear all ratings and learning rules\n\nContinue?');
+                if (confirmed) {
+                    this.disableML();
+                    filterRatingSystem.clearAllRatings();
+                    console.log('\n✅ ML System Reset Complete!');
+                    console.log('📊 Filter will now use ONLY original logic');
+                    console.log('💡 To re-enable: AdminUtils.enableML()');
+                    return true;
+                }
+                return false;
             }
         };
 
@@ -12475,9 +12544,31 @@ updateAllDisplays() {
         console.log('  - AdminUtils.clearAllRatings() - Clear all ratings and learning rules');
         console.log('  - AdminUtils.exportLearningData() - Export learning data to JSON');
         console.log('  - await AdminUtils.importLearningData() - Import learning data from JSON');
+        console.log('\n🤖 ML SYSTEM CONTROLS:');
+        console.log('  - AdminUtils.checkMLStatus() - ⭐ Check if ML is enabled/disabled and view stats');
+        console.log('  - AdminUtils.disableML() - ⭐ DISABLE ML corrections (use original filter only)');
+        console.log('  - AdminUtils.enableML() - Enable ML corrections');
+        console.log('  - AdminUtils.resetMLSystem() - ⭐ DISABLE ML + clear all learned rules');
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
+            // Check ML status on page load
+            setTimeout(() => {
+                const mlEnabled = localStorage.getItem('oms_ml_enabled') !== 'false';
+                const rules = JSON.parse(localStorage.getItem('oms_filter_learning_rules') || '[]');
+
+                if (mlEnabled && rules.length > 0) {
+                    console.warn('⚠️ ML SYSTEM IS ACTIVE! The filter may automatically modify results based on previous feedback.');
+                    console.warn(`📊 ${rules.length} learning rules are stored and will be applied.`);
+                    console.warn('💡 To disable: AdminUtils.disableML()');
+                    console.warn('💡 To check status: AdminUtils.checkMLStatus()');
+                    console.warn('💡 To reset everything: AdminUtils.resetMLSystem()');
+                } else if (!mlEnabled) {
+                    console.log('✅ ML corrections are DISABLED - using original filter logic only');
+                    console.log('💡 To enable: AdminUtils.enableML()');
+                }
+            }, 1000);
+
             // Multi-day event toggle
     const eventTypeSelect = document.getElementById('eventTypeSelect');
     const singleDayFields = document.getElementById('singleDayFields');
