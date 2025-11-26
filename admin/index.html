@@ -5481,6 +5481,13 @@ convertToQuotationDateFormat(dateStr) {
                     if (order.dayWiseData && Array.isArray(order.dayWiseData)) {
                         filteredOrder.dayWiseData = order.dayWiseData.filter(day => fuzzyDateMatcher.matches(day.date, date));
                         console.log(`🔍 Multiday order ${order.orderId}: Filtered ${filteredOrder.dayWiseData.length}/${order.dayWiseData.length} days for date ${date}`);
+
+                        // Log function and item counts for debugging
+                        filteredOrder.dayWiseData.forEach((day, idx) => {
+                            const funcCount = day.functions ? day.functions.length : 0;
+                            const itemCount = day.functions ? day.functions.reduce((sum, f) => sum + (f.items?.length || 0), 0) : 0;
+                            console.log(`  📋 Day ${day.dayNumber}: ${funcCount} functions, ${itemCount} total items`);
+                        });
                     }
 
                     // Update the order to show only selected date info
@@ -5981,7 +5988,7 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                         </div>
 
-                            ${order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0 ?
+                            ${order.dayWiseData && order.dayWiseData.length > 0 ?
                             '<div style="margin-top: 30px;">' +
                                 '<h3 style="color: ' + colors.headerText + '; background: ' + colors.headerBg + '; padding: 15px; text-align: center;">Day-wise Details</h3>' +
                                 order.dayWiseData.map((day, idx) =>
