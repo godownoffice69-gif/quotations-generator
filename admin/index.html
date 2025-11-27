@@ -2900,7 +2900,9 @@ const OMS = {
                 expenses: [],
                 trackingData: [],
                 settings: {
-                    printFontSize: 32,
+                    printFontSize: 26,
+                    printBgColor: '#ffffff',
+                    printTextColor: '#000000',
                     orderIdCounter: 1,
                     invoicePrefix: 'FP',
                     language: 'en',
@@ -5599,7 +5601,9 @@ convertToQuotationDateFormat(dateStr) {
                 try {
                     const template = document.getElementById('printTemplate');
                     const colors = this.data.settings.printColors;
-                    const fontSize = this.data.settings.printFontSize || 32;
+                    const fontSize = this.data.settings.printFontSize || 26;
+                    const bgColor = this.data.settings.printBgColor || '#ffffff';
+                    const textColor = this.data.settings.printTextColor || '#000000';
 
                     // Get paper dimensions based on settings
                     const paperDimensions = this.getPaperDimensions();
@@ -5613,7 +5617,7 @@ convertToQuotationDateFormat(dateStr) {
                     template.style.width = paperDimensions.width + 'px';
                     template.style.paddingRight = '80px';
 
-                    template.innerHTML = this.buildOrderHTML(order, fontSize, colors);
+                    template.innerHTML = this.buildOrderHTML(order, fontSize, colors, false, bgColor, textColor);
                     template.style.display = 'block';
 
                     // Reduced wait time for faster generation (300ms is enough for DOM to settle)
@@ -5621,7 +5625,7 @@ convertToQuotationDateFormat(dateStr) {
 
                     const canvas = await html2canvas(template, {
                         scale: this.data.settings.imageQuality || 2,
-                        backgroundColor: '#ffffff',
+                        backgroundColor: bgColor,
                         width: paperDimensions.width,
                         logging: false,
                         useCORS: true
@@ -5664,7 +5668,9 @@ convertToQuotationDateFormat(dateStr) {
                 try {
                     const template = document.getElementById('printTemplate');
                     const colors = this.data.settings.printColors;
-                    const fontSize = this.data.settings.printFontSize || 32;
+                    const fontSize = this.data.settings.printFontSize || 26;
+                    const bgColor = this.data.settings.printBgColor || '#ffffff';
+                    const textColor = this.data.settings.printTextColor || '#000000';
 
                     // Get paper dimensions based on settings
                     const paperDimensions = this.getPaperDimensions();
@@ -5731,7 +5737,7 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                         `;
                         testOrders.forEach((o, idx) => {
-                            testHtml += this.buildOrderHTML(o, compactFontSize, colors, true);
+                            testHtml += this.buildOrderHTML(o, compactFontSize, colors, true, bgColor, textColor);
                             if (idx < testOrders.length - 1) {
                                 testHtml += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
                             }
@@ -5892,7 +5898,7 @@ convertToQuotationDateFormat(dateStr) {
                         }
 
                         pageOrders.forEach((order, i) => {
-                            html += this.buildOrderHTML(order, compactFontSize, colors, true);
+                            html += this.buildOrderHTML(order, compactFontSize, colors, true, bgColor, textColor);
                             if (i < pageOrders.length - 1) {
                                 html += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
                             }
@@ -5910,7 +5916,7 @@ convertToQuotationDateFormat(dateStr) {
                         // Convert HTML to canvas
                         const canvas = await html2canvas(template, {
                             scale: qualityScale,
-                            backgroundColor: '#ffffff',
+                            backgroundColor: bgColor,
                             width: paperDimensions.width,
                             logging: false,
                             useCORS: true
@@ -6050,7 +6056,7 @@ convertToQuotationDateFormat(dateStr) {
                 };
             },
 
-            buildOrderHTML(order, fontSize, colors, compact = false) {
+            buildOrderHTML(order, fontSize, colors, compact = false, bgColor = '#ffffff', textColor = '#000000') {
                 console.log('🖼️ Building image for order:', order.orderId);
                 console.log('🖼️ isMultiDay:', order.isMultiDay);
                 console.log('🖼️ dayWiseData:', order.dayWiseData);
@@ -6063,47 +6069,47 @@ convertToQuotationDateFormat(dateStr) {
                 const requirements = this.calculateOrderRequirements(order);
 
                 return `
-                    <div style="margin-bottom: ${compact ? '40px' : '60px'}; ${compact ? 'border: 2px solid ' + colors.tableBorder + '; padding: 20px;' : ''}; color: #000000;">
+                    <div style="margin-bottom: ${compact ? '40px' : '60px'}; ${compact ? 'border: 2px solid ' + colors.tableBorder + '; padding: 20px;' : ''}; color: ${textColor}; background: ${bgColor};">
                         ${!compact ? `<div style="text-align: center; margin-bottom: 40px;">
                             <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px;">
                                 Order Management
                             </h1>
-                            <h2 style="margin-top: 20px; color: #000000;">
+                            <h2 style="margin-top: 20px; color: ${textColor};">
                                 <span style="background: ${orderIdBg}; color: ${orderIdText}; padding: 10px 20px; border-radius: 8px;">
                                     ${order.orderId}
                                 </span>
                             </h2>
-                        </div>` : `<h3 style="text-align: center; color: #000000;">
+                        </div>` : `<h3 style="text-align: center; color: ${textColor};">
                             <span style="background: ${orderIdBg}; color: ${orderIdText}; padding: 8px 15px; border-radius: 6px;">
                                 ${order.orderId}
                             </span>
                         </h3>`}
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; font-size: ${fontSize}px; margin-bottom: 20px; color: #000000;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; font-size: ${fontSize}px; margin-bottom: 20px; color: ${textColor};">
                             <div>
                                 ${order.isMultiDay ? `
-                                    <strong style="color: #000000;">Start Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.startDate) || 'N/A'}</span><br>
-                                    <strong style="color: #000000;">End Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.endDate) || 'N/A'}</span><br>
+                                    <strong style="color: ${textColor};">Start Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.startDate) || 'N/A'}</span><br>
+                                    <strong style="color: ${textColor};">End Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.endDate) || 'N/A'}</span><br>
                                 ` : `
-                                    <strong style="color: #000000;">Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.date) || 'N/A'}</span><br>
-                                    <strong style="color: #000000;">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${order.readyTime || '-'}</span><br>
+                                    <strong style="color: ${textColor};">Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.date) || 'N/A'}</span><br>
+                                    <strong style="color: ${textColor};">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${order.readyTime || '-'}</span><br>
                                 `}
-                                <strong style="color: #000000;">Client:</strong> ${order.clientName || '-'}<br>
-                                <strong style="color: #000000;">Contact:</strong> ${order.contact || '-'}<br>
-                                <strong style="color: #000000;">Venue:</strong> ${order.venue || '-'}
+                                <strong style="color: ${textColor};">Client:</strong> ${order.clientName || '-'}<br>
+                                <strong style="color: ${textColor};">Contact:</strong> ${order.contact || '-'}<br>
+                                <strong style="color: ${textColor};">Venue:</strong> ${order.venue || '-'}
                             </div>
                             <div>
-                                <strong style="color: #000000;">Transport:</strong> ${order.transport || '-'}<br>
-                                <strong style="color: #000000;">Driver:</strong> ${order.driverName || '-'}<br>
-                                <strong style="color: #000000;">Event:</strong> ${order.eventType || '-'}<br>
-                                <strong style="color: #000000;">Operator:</strong> ${order.operator || '-'}
+                                <strong style="color: ${textColor};">Transport:</strong> ${order.transport || '-'}<br>
+                                <strong style="color: ${textColor};">Driver:</strong> ${order.driverName || '-'}<br>
+                                <strong style="color: ${textColor};">Event:</strong> ${order.eventType || '-'}<br>
+                                <strong style="color: ${textColor};">Operator:</strong> ${order.operator || '-'}
                             </div>
                             <div>
-                                <strong style="color: #000000;">Helper:</strong> ${order.helper || '-'}<br>
-                                <strong style="color: #000000;">Status:</strong> ${order.status || '-'}<br>
-                                <strong style="color: #000000;">Dry Ice:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.dryIceNeeded > 0 ? requirements.dryIceNeeded + ' kg (' + requirements.dryMachines + ' machine' + (requirements.dryMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
-                                <strong style="color: #000000;">Flowers:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.flowersNeeded > 0 ? requirements.flowersNeeded + ' kg (' + requirements.flowerShowerMachines + ' machine' + (requirements.flowerShowerMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
-                                <strong style="color: #000000;">Electricity:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.totalElectricityKV > 0 ? requirements.totalElectricityKV + ' KV' : 'Not Required'}</span>
+                                <strong style="color: ${textColor};">Helper:</strong> ${order.helper || '-'}<br>
+                                <strong style="color: ${textColor};">Status:</strong> ${order.status || '-'}<br>
+                                <strong style="color: ${textColor};">Dry Ice:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.dryIceNeeded > 0 ? requirements.dryIceNeeded + ' kg (' + requirements.dryMachines + ' machine' + (requirements.dryMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
+                                <strong style="color: ${textColor};">Flowers:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.flowersNeeded > 0 ? requirements.flowersNeeded + ' kg (' + requirements.flowerShowerMachines + ' machine' + (requirements.flowerShowerMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
+                                <strong style="color: ${textColor};">Electricity:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.totalElectricityKV > 0 ? requirements.totalElectricityKV + ' KV' : 'Not Required'}</span>
                             </div>
                         </div>
 
@@ -6115,18 +6121,18 @@ convertToQuotationDateFormat(dateStr) {
                                         '<h4 style="color: ' + orderIdBg + '; margin-bottom: 15px;">Day ' + day.dayNumber + ' - <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + Utils.formatDate(day.date) + '</span></h4>' +
                                         (day.functions && day.functions.length > 0 ?
                                             day.functions.map((func, funcIdx) =>
-                                                '<div style="background: white; padding: 15px; border: 1px solid ' + colors.tableBorder + '; border-radius: 6px; margin-top: ' + (funcIdx > 0 ? '15px' : '0') + '; color: #000000;">' +
+                                                '<div style="background: ' + bgColor + '; padding: 15px; border: 1px solid ' + colors.tableBorder + '; border-radius: 6px; margin-top: ' + (funcIdx > 0 ? '15px' : '0') + '; color: ' + textColor + ';">' +
                                                     '<h5 style="color: ' + functionColor + '; margin-bottom: 10px; font-size: ' + (fontSize - 2) + 'px;">Function ' + (funcIdx + 1) + '</h5>' +
-                                                    '<div style="font-size: ' + fontSize + 'px; margin-bottom: 10px; color: #000000;">' +
-                                                        '<strong style="color: #000000;">Type:</strong> ' + (func.functionType || '-') + '<br>' +
-                                                        '<strong style="color: #000000;">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + (func.timeSlot || '-') + '</span><br>' +
-                                                        '<strong style="color: #000000;">Driver:</strong> ' + (func.driver || '-') + '<br>' +
-                                                        '<strong style="color: #000000;">Operator:</strong> ' + (func.operator || '-') + '<br>' +
-                                                        '<strong style="color: #000000;">Helper:</strong> ' + (func.helper || '-') + '<br>' +
-                                                        (func.notes ? '<strong style="color: #000000;">Notes:</strong> ' + func.notes + '<br>' : '') +
+                                                    '<div style="font-size: ' + fontSize + 'px; margin-bottom: 10px; color: ' + textColor + ';">' +
+                                                        '<strong style="color: ' + textColor + ';">Type:</strong> ' + (func.functionType || '-') + '<br>' +
+                                                        '<strong style="color: ' + textColor + ';">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + (func.timeSlot || '-') + '</span><br>' +
+                                                        '<strong style="color: ' + textColor + ';">Driver:</strong> ' + (func.driver || '-') + '<br>' +
+                                                        '<strong style="color: ' + textColor + ';">Operator:</strong> ' + (func.operator || '-') + '<br>' +
+                                                        '<strong style="color: ' + textColor + ';">Helper:</strong> ' + (func.helper || '-') + '<br>' +
+                                                        (func.notes ? '<strong style="color: ' + textColor + ';">Notes:</strong> ' + func.notes + '<br>' : '') +
                                                     '</div>' +
                                                     (func.items && func.items.length > 0 ?
-                                                        '<table style="width: 100%; border-collapse: collapse; font-size: ' + (fontSize - 4) + 'px; color: #000000;">' +
+                                                        '<table style="width: 100%; border-collapse: collapse; font-size: ' + (fontSize - 4) + 'px; color: ' + textColor + ';">' +
                                                             '<thead>' +
                                                                 '<tr style="background: ' + colors.tableHeaderBg + '; color: ' + colors.tableHeaderText + ';">' +
                                                                     '<th style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; width: ' + ts.columnWidthSr + '%;">Sr</th>' +
@@ -6137,11 +6143,11 @@ convertToQuotationDateFormat(dateStr) {
                                                             '</thead>' +
                                                             '<tbody>' +
                                                                 func.items.map((item, i) =>
-                                                                    '<tr style="color: #000000;">' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; text-align: center; color: #000000;">' + (i + 1) + '</td>' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; color: #000000;">' + item.name + '</td>' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; text-align: center; color: #000000;">' + item.quantity + '</td>' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; color: #000000;">' + (item.remarks || '-') + '</td>' +
+                                                                    '<tr style="color: ' + textColor + ';">' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; text-align: center; color: ' + textColor + ';">' + (i + 1) + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; color: ' + textColor + ';">' + item.name + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; text-align: center; color: ' + textColor + ';">' + item.quantity + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; color: ' + textColor + ';">' + (item.remarks || '-') + '</td>' +
                                                                     '</tr>'
                                                                 ).join('') +
                                                             '</tbody>' +
@@ -6156,7 +6162,7 @@ convertToQuotationDateFormat(dateStr) {
                         : ''}
                         
                         ${!order.isMultiDay && order.items && order.items.length > 0 ? `
-                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px; margin-top: 20px; color: #000000;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px; margin-top: 20px; color: ${textColor};">
                                 <thead>
                                     <tr style="background: ${colors.tableHeaderBg}; color: ${colors.tableHeaderText};">
                                         <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthSr}%;">Sr</th>
@@ -6167,11 +6173,11 @@ convertToQuotationDateFormat(dateStr) {
                                 </thead>
                                 <tbody>
                                     ${order.items.map((item, i) => `
-                                        <tr style="color: #000000;">
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center; color: #000000;">${i + 1}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; color: #000000;">${item.name}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center; color: #000000;">${item.quantity}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; color: #000000;">${item.remarks || ''}</td>
+                                        <tr style="color: ${textColor};">
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center; color: ${textColor};">${i + 1}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; color: ${textColor};">${item.name}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center; color: ${textColor};">${item.quantity}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; color: ${textColor};">${item.remarks || ''}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -6179,9 +6185,9 @@ convertToQuotationDateFormat(dateStr) {
                         ` : (!order.isMultiDay ? '<p style="text-align: center; color: #666; font-style: italic; margin-top: 20px;">No items added</p>' : '')}
 
                         ${order.notes ? `
-                            <div style="margin-top: 20px; font-size: ${fontSize}px; color: #000000;">
-                                <strong style="color: #000000;">Notes:</strong><br>
-                                <div style="background: ${colors.notesBg}; padding: 15px; border: 1px solid ${colors.tableBorder}; color: #000000;">
+                            <div style="margin-top: 20px; font-size: ${fontSize}px; color: ${textColor};">
+                                <strong style="color: ${textColor};">Notes:</strong><br>
+                                <div style="background: ${colors.notesBg}; padding: 15px; border: 1px solid ${colors.tableBorder}; color: ${textColor};">
                                     ${order.notes}
                                 </div>
                             </div>
@@ -9460,6 +9466,18 @@ convertToQuotationDateFormat(dateStr) {
                                     <input type="color" id="functionColor" class="form-input" value="${s.functionColor || '#667eea'}" style="height: 50px;">
                                     <small style="color: var(--text-gray);">${this.t('customColorNote')}</small>
                                 </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Background Color</label>
+                                    <input type="color" id="printBgColor" class="form-input" value="${s.printBgColor || '#ffffff'}" style="height: 50px;">
+                                    <small style="color: var(--text-gray);">Set the background color for downloaded images</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Text Color</label>
+                                    <input type="color" id="printTextColor" class="form-input" value="${s.printTextColor || '#000000'}" style="height: 50px;">
+                                    <small style="color: var(--text-gray);">Set the text color for downloaded images</small>
+                                </div>
                             </div>
                         </div>
 
@@ -9539,7 +9557,9 @@ convertToQuotationDateFormat(dateStr) {
                 };
 
                 // Save other settings
-                this.data.settings.printFontSize = parseInt(Utils.get('printFontSize')) || 32;
+                this.data.settings.printFontSize = parseInt(Utils.get('printFontSize')) || 26;
+                this.data.settings.printBgColor = Utils.get('printBgColor') || '#ffffff';
+                this.data.settings.printTextColor = Utils.get('printTextColor') || '#000000';
                 this.data.settings.defaultOrderStatus = Utils.get('defaultOrderStatus') || 'Confirmed';
                 this.data.settings.lowStockThreshold = parseInt(Utils.get('lowStockThreshold')) || 5;
                 this.data.settings.language = Utils.get('appLanguage') || 'en';
@@ -9578,7 +9598,9 @@ convertToQuotationDateFormat(dateStr) {
                 if (!confirm('Reset all settings?')) return;
 
                 this.data.settings = {
-                    printFontSize: 32,
+                    printFontSize: 26,
+                    printBgColor: '#ffffff',
+                    printTextColor: '#000000',
                     orderIdCounter: this.data.settings.orderIdCounter,
                     invoicePrefix: 'FP',
                     lowStockThreshold: 5,
