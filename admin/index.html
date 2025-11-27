@@ -7311,16 +7311,14 @@ convertToQuotationDateFormat(dateStr) {
                 const shortageItems = items.filter(i => i.difference < 0);
                 const okItems = items.filter(i => i.difference >= 0);
 
-                // Calculate dry ice and flowers requirements
-                // Find all dry ice machines (items containing "dry" and "ice" or "machine")
-                const dryMachineKeywords = ['dry ice machine', 'dry machine', 'ice machine'];
+                // Calculate dry ice, flowers, and electricity requirements
+                // Find all dry ice machines (items containing "dry ice")
                 const dryMachines = items.filter(item => {
                     const name = item.name.toLowerCase();
-                    return dryMachineKeywords.some(keyword => name.includes(keyword)) ||
-                           (name.includes('dry') && (name.includes('ice') || name.includes('machine')));
+                    return name.includes('dry ice');
                 }).reduce((sum, item) => sum + item.required, 0);
 
-                const dryIceNeeded = dryMachines * 40; // 40 kg per dry machine
+                const dryIceNeeded = dryMachines * 20; // 20 kg per dry ice machine
 
                 // Find all flower shower machines (items containing "flower shower" or "flower" and "shower")
                 const flowerShowerKeywords = ['flower shower', 'flower shower machine'];
@@ -7331,6 +7329,21 @@ convertToQuotationDateFormat(dateStr) {
                 }).reduce((sum, item) => sum + item.required, 0);
 
                 const flowersNeeded = flowerShowerMachines * 20; // 20 kg per flower shower machine
+
+                // Calculate electricity requirements
+                const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
+                const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+
+                let totalElectricityKV = 0;
+                items.forEach(item => {
+                    const itemNameLower = item.name.toLowerCase();
+
+                    if (electricity3KV.some(name => itemNameLower.includes(name))) {
+                        totalElectricityKV += item.required * 3;
+                    } else if (electricity1KV.some(name => itemNameLower.includes(name))) {
+                        totalElectricityKV += item.required * 1;
+                    }
+                });
 
                 container.innerHTML = `
                     <!-- Summary Cards -->
@@ -7365,7 +7378,7 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
 
                     <!-- Materials Calculation Card -->
-                    ${(dryMachines > 0 || flowerShowerMachines > 0) ? `
+                    ${(dryMachines > 0 || flowerShowerMachines > 0 || totalElectricityKV > 0) ? `
                     <div class="card" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 1.5rem; margin-top: 1rem;">
                         <h3 style="margin-bottom: 1rem; font-size: 1.3rem;">🧊 Materials Required</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
@@ -7379,7 +7392,7 @@ convertToQuotationDateFormat(dateStr) {
                                     </div>
                                 </div>
                                 <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
-                                    📦 ${dryMachines} dry machine(s) × 40 kg each
+                                    📦 ${dryMachines} dry machine(s) × 20 kg each
                                 </div>
                             </div>
                             ` : ''}
@@ -7394,6 +7407,20 @@ convertToQuotationDateFormat(dateStr) {
                                 </div>
                                 <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
                                     🌺 ${flowerShowerMachines} flower shower machine(s) × 20 kg each
+                                </div>
+                            </div>
+                            ` : ''}
+                            ${totalElectricityKV > 0 ? `
+                            <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: var(--radius);">
+                                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                                    <div style="font-size: 2.5rem;">⚡</div>
+                                    <div>
+                                        <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.25rem;">Electricity Required</div>
+                                        <div style="font-size: 2rem; font-weight: 700;">${totalElectricityKV} KV</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
+                                    ⚡ 3 KV items: ${items.filter(i => electricity3KV.some(name => i.name.toLowerCase().includes(name))).reduce((sum, i) => sum + i.required, 0)} pcs | 1 KV items: ${items.filter(i => electricity1KV.some(name => i.name.toLowerCase().includes(name))).reduce((sum, i) => sum + i.required, 0)} pcs
                                 </div>
                             </div>
                             ` : ''}
@@ -9528,6 +9555,70 @@ convertToQuotationDateFormat(dateStr) {
                 };
 
                 itemSearch.addEventListener('input', Utils.debounce(handleSearch, 300));
+
+                // Initialize client name search with autocomplete
+                this.initClientSearch();
+            },
+
+            initClientSearch() {
+                const clientInput = document.getElementById('clientName');
+                const dropdown = document.getElementById('clientSearchDropdown');
+
+                if (!clientInput || !dropdown) return;
+
+                // Prevent duplicate event listener registration
+                if (clientInput.dataset.searchInitialized === 'true') return;
+                clientInput.dataset.searchInitialized = 'true';
+
+                // Capture OMS context
+                const self = this;
+
+                const handleClientSearch = (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+
+                    if (query.length > 0) {
+                        const customers = self.data.customers.filter(c =>
+                            c.name.toLowerCase().includes(query)
+                        );
+
+                        if (customers.length > 0) {
+                            dropdown.innerHTML = customers.map(c => `
+                                <div class="search-item" onclick="OMS.selectCustomer('${c.id}')">
+                                    <span>${c.name}</span>
+                                    <span style="color: var(--text-gray);">${c.contact}</span>
+                                </div>
+                            `).join('');
+                            dropdown.classList.add('show');
+                        } else {
+                            dropdown.classList.remove('show');
+                        }
+                    } else {
+                        dropdown.classList.remove('show');
+                    }
+                };
+
+                clientInput.addEventListener('input', Utils.debounce(handleClientSearch, 300));
+
+                // Hide dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!clientInput.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.remove('show');
+                    }
+                });
+            },
+
+            selectCustomer(customerId) {
+                const customer = this.data.customers.find(c => c.id === customerId);
+                if (!customer) return;
+
+                // Auto-fill customer name and contact
+                Utils.set('clientName', customer.name);
+                Utils.set('contact', customer.contact);
+
+                // Hide dropdown
+                document.getElementById('clientSearchDropdown').classList.remove('show');
+
+                this.showToast(`Selected: ${customer.name}`, 'success');
             },
 
             addItemToOrder(itemId) {
