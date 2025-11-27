@@ -5712,9 +5712,17 @@ convertToQuotationDateFormat(dateStr) {
                     const separatorHeight = 25; // Space between orders
                     const bottomMargin = 60; // Bottom margin
                     const safetyMargin = 40; // Extra safety margin to prevent cutoff
-                    const maxContentHeight = paperDimensions.height - headerHeight - bottomMargin - safetyMargin;
 
-                    console.log(`📏 Max content height per page: ${maxContentHeight}px`);
+                    // Calculate different max heights for first page vs subsequent pages
+                    // First page includes grand total summary, so has less space
+                    const hasGrandTotalSummary = (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0);
+                    const grandTotalSummaryHeight = hasGrandTotalSummary ? 200 : 0; // Approximate height of summary section
+
+                    const maxContentHeightFirstPage = paperDimensions.height - headerHeight - bottomMargin - safetyMargin - grandTotalSummaryHeight;
+                    const maxContentHeightOtherPages = paperDimensions.height - headerHeight - bottomMargin - safetyMargin;
+
+                    console.log(`📏 Max content height - First page: ${maxContentHeightFirstPage}px | Other pages: ${maxContentHeightOtherPages}px`);
+                    console.log(`📊 Grand total summary: ${hasGrandTotalSummary ? 'YES' : 'NO'} (${grandTotalSummaryHeight}px reserved)`);
 
                     const pages = [];
                     let currentPageOrders = [];
@@ -5726,6 +5734,10 @@ convertToQuotationDateFormat(dateStr) {
 
                         // Try adding this order to current page
                         const testOrders = [...currentPageOrders, order];
+
+                        // Determine max height for current page (first page has less space)
+                        const isFirstPage = pages.length === 0;
+                        const currentMaxHeight = isFirstPage ? maxContentHeightFirstPage : maxContentHeightOtherPages;
 
                         // Build HTML with all orders on current page including this new one
                         // Include header to get accurate height measurement
@@ -5748,10 +5760,10 @@ convertToQuotationDateFormat(dateStr) {
                         await new Promise(r => setTimeout(r, 50)); // 50ms is enough for DOM update
                         const totalHeight = template.scrollHeight;
 
-                        console.log(`   📐 Current page with ${testOrders.length} orders: ${totalHeight}px / ${maxContentHeight}px`);
+                        console.log(`   📐 Page ${pages.length + 1} with ${testOrders.length} orders: ${totalHeight}px / ${currentMaxHeight}px ${isFirstPage ? '(FIRST PAGE)' : ''}`);
 
                         // Check if it fits
-                        if (totalHeight <= maxContentHeight || currentPageOrders.length === 0) {
+                        if (totalHeight <= currentMaxHeight || currentPageOrders.length === 0) {
                             // Fits! Add this order to current page
                             currentPageOrders.push(order);
                             processedOrders.add(i);
