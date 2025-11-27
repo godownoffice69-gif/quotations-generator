@@ -3943,40 +3943,45 @@
     }
 
     /**
-     * First Fit Decreasing (FFD) Algorithm
-     * Optimally distributes content blocks across pages
+     * AGGRESSIVE Best Fit Algorithm - Maximum Space Utilization
+     * Splits ALL content into individual items and fills pages completely
+     * NO wasted space tolerance - splits orders across pages if needed
      */
     function distributeContentToPages(measurements, pageHeight, startYPos) {
-      const SAFE_PAGE_HEIGHT = pageHeight - 20;  // Leave 20mm margin at bottom
+      const SAFE_PAGE_HEIGHT = pageHeight - 10;  // Reduced margin: Maximum space utilization
       const pages = [];
 
-      // Flatten all content blocks for FFD algorithm
+      // AGGRESSIVE FLATTENING: Split EVERYTHING into individual items
       let allBlocks = [];
 
       measurements.contentBlocks.forEach(block => {
         if (block.type === 'day') {
-          // For builder: try to keep functions together when possible
+          // Split ALL functions and items individually - NO grouping
           block.subBlocks.forEach(funcBlock => {
-            if (funcBlock.height < 50) {
-              // Small function - keep together
-              allBlocks.push(funcBlock);
-            } else {
-              // Large function - can split items
+            // Add function header as separate block
+            allBlocks.push({
+              type: 'function-header',
+              height: 5,
+              content: funcBlock.content,
+              dayIndex: block.dayIndex
+            });
+            // Add each item separately
+            funcBlock.items.forEach(item => {
               allBlocks.push({
-                type: 'function-header',
-                height: 5,
-                content: funcBlock.content
+                ...item,
+                dayIndex: block.dayIndex,
+                functionName: funcBlock.content.name
               });
-              funcBlock.items.forEach(item => allBlocks.push(item));
-            }
+            });
           });
         } else {
+          // Simple items - add directly
           allBlocks.push(block);
         }
       });
 
-      // Sort by height (descending) - FFD algorithm
-      allBlocks.sort((a, b) => b.height - a.height);
+      // Sort by height ASCENDING - fill smallest first for tighter packing
+      allBlocks.sort((a, b) => a.height - b.height);
 
       // Initialize first page
       pages.push({
@@ -3985,26 +3990,41 @@
         remainingHeight: SAFE_PAGE_HEIGHT - startYPos
       });
 
-      // First Fit: Place each block in the first page that fits
+      // AGGRESSIVE BEST FIT: Fill pages with ZERO tolerance for waste
       allBlocks.forEach(block => {
         let placed = false;
+        let bestPageIndex = -1;
+        let minWaste = Infinity;
 
-        for (let page of pages) {
+        // Find page with MINIMUM waste (Best Fit)
+        for (let i = 0; i < pages.length; i++) {
+          const page = pages[i];
           if (page.remainingHeight >= block.height) {
-            page.blocks.push(block);
-            page.usedHeight += block.height;
-            page.remainingHeight -= block.height;
-            placed = true;
-            break;  // First fit
+            const waste = page.remainingHeight - block.height;
+            // Prioritize first page (bias towards page 0)
+            const priority = i === 0 ? waste - 1000 : waste;
+            if (priority < minWaste) {
+              minWaste = priority;
+              bestPageIndex = i;
+            }
           }
         }
 
-        // Create new page if block doesn't fit anywhere
+        // Place in best-fit page
+        if (bestPageIndex !== -1) {
+          const page = pages[bestPageIndex];
+          page.blocks.push(block);
+          page.usedHeight += block.height;
+          page.remainingHeight -= block.height;
+          placed = true;
+        }
+
+        // Create new page only if absolutely necessary
         if (!placed) {
           pages.push({
             blocks: [block],
-            usedHeight: 20 + block.height,  // Start at 20mm on new pages
-            remainingHeight: SAFE_PAGE_HEIGHT - 20 - block.height
+            usedHeight: 15 + block.height,  // Start at 15mm on new pages (reduced for max space)
+            remainingHeight: SAFE_PAGE_HEIGHT - 15 - block.height
           });
         }
       });
@@ -4033,7 +4053,7 @@
       distributedPages.forEach((page, pageIdx) => {
         if (pageIdx > 0) {
           doc.addPage();
-          yPos = 20;
+          yPos = 15;  // Reduced top margin for maximum space
         }
 
         doc.setFontSize(10);
@@ -4052,8 +4072,17 @@
               margin, yPos);
             yPos += 6;
             doc.setFontSize(10);
-          } else if (block.type === 'function' || block.type === 'function-header') {
+          } else if (block.type === 'function-header') {
             // Render function header
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'bold');
+            doc.text(block.content.name, margin + 5, yPos);
+            yPos += 5;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+          } else if (block.type === 'function') {
+            // Legacy: Render function with items (for backward compatibility)
             doc.setFontSize(11);
             doc.setTextColor(0, 0, 0);
             doc.setFont(undefined, 'bold');
@@ -4075,11 +4104,11 @@
               yPos += 2;
             }
           } else if (block.type === 'item') {
-            // Render individual cart item
-            const item = block.content;
+            // Render individual item - handle both nested and flat structure
+            const item = block.content || block;  // Support both structures
             const itemTotal = item.price * item.qty;
-            doc.text(item.name, margin + (type === 'builder' ? 10 : 0), yPos);
-            doc.text(item.qty + ' x Rs. ' + item.price.toLocaleString('en-IN'), margin + (type === 'builder' ? 10 : 0), yPos + 4);
+            doc.text(item.name, margin + 10, yPos);  // Always indent for builder items
+            doc.text(item.qty + ' x Rs. ' + item.price.toLocaleString('en-IN'), margin + 10, yPos + 4);
             doc.text('Rs. ' + itemTotal.toLocaleString('en-IN'), pageWidth - margin, yPos + 2, { align: 'right' });
             yPos += block.height;
           }
@@ -4088,9 +4117,9 @@
 
       // Check if requirements section fits on current page
       if (measurements.requirements > 0) {
-        if (yPos + measurements.requirements > pageHeight - 40) {
+        if (yPos + measurements.requirements > pageHeight - 15) {  // Reduced margin check
           doc.addPage();
-          yPos = 20;
+          yPos = 15;  // Reduced top margin for maximum space
         }
 
         yPos += 3;
@@ -4129,9 +4158,9 @@
       }
 
       // Check if total + footer fits on current page
-      if (yPos + measurements.total + measurements.footer > pageHeight - 20) {
+      if (yPos + measurements.total + measurements.footer > pageHeight - 15) {  // Reduced margin check
         doc.addPage();
-        yPos = 20;
+        yPos = 15;  // Reduced top margin for maximum space
       }
 
       // TOTAL
