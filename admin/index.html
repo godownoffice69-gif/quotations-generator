@@ -12638,7 +12638,20 @@ updateAllDisplays() {
     OMS.updateOrderItemsTable();
 }
         });
-    }    
+
+        // Initialize required attributes based on default state (single day)
+        if (eventTypeSelect && eventTypeSelect.value === 'single') {
+            document.getElementById('orderDate').required = true;
+            document.getElementById('readyTime').required = true;
+            document.getElementById('startDate').required = false;
+            document.getElementById('endDate').required = false;
+        } else if (eventTypeSelect && eventTypeSelect.value === 'multi') {
+            document.getElementById('orderDate').required = false;
+            document.getElementById('readyTime').required = false;
+            document.getElementById('startDate').required = true;
+            document.getElementById('endDate').required = true;
+        }
+    }
     // Calculate total days
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
