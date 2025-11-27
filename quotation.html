@@ -3945,16 +3945,9 @@
     /**
      * First Fit Decreasing (FFD) Algorithm
      * Optimally distributes content blocks across pages
-     * IMPROVED: Accounts for requirements and totals sections to maximize space efficiency
      */
     function distributeContentToPages(measurements, pageHeight, startYPos) {
       const SAFE_PAGE_HEIGHT = pageHeight - 20;  // Leave 20mm margin at bottom
-      const FIRST_PAGE_AVAILABLE_HEIGHT = SAFE_PAGE_HEIGHT - startYPos;  // First page has header
-      const OTHER_PAGE_AVAILABLE_HEIGHT = SAFE_PAGE_HEIGHT - 20;  // Other pages start at 20mm
-
-      // Reserve space for requirements and totals sections (they go on last page)
-      const RESERVED_FOOTER_HEIGHT = measurements.requirements + measurements.total + measurements.footer + 10; // +10 for spacing
-
       const pages = [];
 
       // Flatten all content blocks for FFD algorithm
@@ -3964,8 +3957,8 @@
         if (block.type === 'day') {
           // For builder: try to keep functions together when possible
           block.subBlocks.forEach(funcBlock => {
-            if (funcBlock.height < 40) {
-              // Small function - keep together (reduced threshold from 50 to 40 for tighter packing)
+            if (funcBlock.height < 50) {
+              // Small function - keep together
               allBlocks.push(funcBlock);
             } else {
               // Large function - can split items
@@ -3982,57 +3975,38 @@
         }
       });
 
-      // Sort by height (descending) - FFD algorithm for optimal bin packing
+      // Sort by height (descending) - FFD algorithm
       allBlocks.sort((a, b) => b.height - a.height);
 
-      // Initialize first page with correct available height
+      // Initialize first page
       pages.push({
         blocks: [],
         usedHeight: startYPos,
-        remainingHeight: FIRST_PAGE_AVAILABLE_HEIGHT,
-        pageNumber: 1
+        remainingHeight: SAFE_PAGE_HEIGHT - startYPos
       });
 
-      console.log(`🎯 FFD: First page has ${FIRST_PAGE_AVAILABLE_HEIGHT.toFixed(1)}mm available space`);
-      console.log(`🎯 FFD: Other pages have ${OTHER_PAGE_AVAILABLE_HEIGHT.toFixed(1)}mm available space`);
-      console.log(`🎯 FFD: Reserved ${RESERVED_FOOTER_HEIGHT.toFixed(1)}mm for requirements/totals on last page`);
-
       // First Fit: Place each block in the first page that fits
-      allBlocks.forEach((block, idx) => {
+      allBlocks.forEach(block => {
         let placed = false;
 
-        for (let i = 0; i < pages.length; i++) {
-          const page = pages[i];
-          const isLastPage = (i === pages.length - 1);
-          const availableSpace = isLastPage ? (page.remainingHeight - RESERVED_FOOTER_HEIGHT) : page.remainingHeight;
-
-          if (availableSpace >= block.height) {
+        for (let page of pages) {
+          if (page.remainingHeight >= block.height) {
             page.blocks.push(block);
             page.usedHeight += block.height;
             page.remainingHeight -= block.height;
             placed = true;
-            console.log(`  ✓ Block ${idx + 1} (${block.height.toFixed(1)}mm) → Page ${page.pageNumber}`);
             break;  // First fit
           }
         }
 
         // Create new page if block doesn't fit anywhere
         if (!placed) {
-          const newPageNumber = pages.length + 1;
           pages.push({
             blocks: [block],
             usedHeight: 20 + block.height,  // Start at 20mm on new pages
-            remainingHeight: OTHER_PAGE_AVAILABLE_HEIGHT - block.height,
-            pageNumber: newPageNumber
+            remainingHeight: SAFE_PAGE_HEIGHT - 20 - block.height
           });
-          console.log(`  ✓ Block ${idx + 1} (${block.height.toFixed(1)}mm) → NEW Page ${newPageNumber}`);
         }
-      });
-
-      console.log(`📊 FFD Result: Distributed to ${pages.length} page(s)`);
-      pages.forEach(page => {
-        const utilization = ((page.usedHeight / SAFE_PAGE_HEIGHT) * 100).toFixed(1);
-        console.log(`  Page ${page.pageNumber}: ${page.blocks.length} blocks, ${page.usedHeight.toFixed(1)}mm used (${utilization}% utilization)`);
       });
 
       return pages;

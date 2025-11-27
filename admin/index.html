@@ -5697,6 +5697,22 @@ convertToQuotationDateFormat(dateStr) {
                     console.log(`🚀 Starting PDF generation for ${orders.length} orders`);
                     console.log(`📊 Orders to process:`, orders.map((o, i) => `${i+1}. ${o.orderId}`).join(', '));
 
+                    // Calculate grand totals for all orders (needed early for page height calculations)
+                    let grandTotalDryIce = 0;
+                    let grandTotalFlowers = 0;
+                    let grandTotalElectricity = 0;
+                    let grandTotalDryMachines = 0;
+                    let grandTotalFlowerMachines = 0;
+
+                    orders.forEach(order => {
+                        const requirements = this.calculateOrderRequirements(order);
+                        grandTotalDryIce += requirements.dryIceNeeded;
+                        grandTotalFlowers += requirements.flowersNeeded;
+                        grandTotalElectricity += requirements.totalElectricityKV;
+                        grandTotalDryMachines += requirements.dryMachines;
+                        grandTotalFlowerMachines += requirements.flowerShowerMachines;
+                    });
+
                     // NEW ALGORITHM: Dynamic page building with actual measurements
                     // This ensures ALL orders are included and pages are packed optimally
 
@@ -5842,22 +5858,6 @@ convertToQuotationDateFormat(dateStr) {
                     // Get PDF page dimensions
                     const pdfWidth = pdf.internal.pageSize.getWidth();
                     const pdfHeight = pdf.internal.pageSize.getHeight();
-
-                    // Calculate grand totals for all orders
-                    let grandTotalDryIce = 0;
-                    let grandTotalFlowers = 0;
-                    let grandTotalElectricity = 0;
-                    let grandTotalDryMachines = 0;
-                    let grandTotalFlowerMachines = 0;
-
-                    orders.forEach(order => {
-                        const requirements = this.calculateOrderRequirements(order);
-                        grandTotalDryIce += requirements.dryIceNeeded;
-                        grandTotalFlowers += requirements.flowersNeeded;
-                        grandTotalElectricity += requirements.totalElectricityKV;
-                        grandTotalDryMachines += requirements.dryMachines;
-                        grandTotalFlowerMachines += requirements.flowerShowerMachines;
-                    });
 
                     // Generate each page and add to PDF
                     for (let pageNum = 0; pageNum < totalPages; pageNum++) {
