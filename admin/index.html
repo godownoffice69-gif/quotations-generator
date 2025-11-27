@@ -10051,6 +10051,228 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            async editPayment(paymentId) {
+                const payment = this.data.payments.find(p => p.id === paymentId);
+                if (!payment) {
+                    this.showToast('Payment not found!', 'error');
+                    return;
+                }
+
+                const orders = this.data.orders.filter(o => o.status !== 'Cancelled');
+
+                const modalHTML = `
+                    <div class="modal-overlay" id="editPaymentModal">
+                        <div class="modal-content" style="max-width: 600px;">
+                            <button class="modal-close" onclick="OMS.closeModal('editPaymentModal')">×</button>
+                            <h2>✏️ Edit Payment</h2>
+                            <form id="editPaymentForm" onsubmit="OMS.updatePayment(event, '${paymentId}')">
+                                <div class="form-group">
+                                    <label class="form-label required">Order</label>
+                                    <select id="editPaymentOrderId" class="form-select" required>
+                                        <option value="">Select Order</option>
+                                        ${orders.map(o => `<option value="${o.docId || o.orderId}" ${(o.docId || o.orderId) === payment.orderDocId ? 'selected' : ''}>${o.orderId || 'Pending'} - ${o.clientName}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Date</label>
+                                        <input type="date" id="editPaymentDate" class="form-input" value="${payment.paymentDate || Utils.toDateString(payment.timestamp?.toDate?.() || new Date())}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label required">Amount</label>
+                                        <input type="number" id="editPaymentAmount" class="form-input" min="1" step="0.01" value="${payment.amount}" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Method</label>
+                                        <select id="editPaymentMethod" class="form-select" required>
+                                            <option value="Cash" ${payment.paymentMethod === 'Cash' ? 'selected' : ''}>Cash</option>
+                                            <option value="UPI" ${payment.paymentMethod === 'UPI' ? 'selected' : ''}>UPI</option>
+                                            <option value="Bank Transfer" ${payment.paymentMethod === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option>
+                                            <option value="Cheque" ${payment.paymentMethod === 'Cheque' ? 'selected' : ''}>Cheque</option>
+                                            <option value="Card" ${payment.paymentMethod === 'Card' ? 'selected' : ''}>Card</option>
+                                            <option value="Other" ${payment.paymentMethod === 'Other' ? 'selected' : ''}>Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Transaction ID</label>
+                                        <input type="text" id="editPaymentTransactionId" class="form-input" value="${payment.transactionId || ''}">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Notes</label>
+                                    <textarea id="editPaymentNotes" class="form-textarea" rows="3">${payment.notes || ''}</textarea>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="submit" class="btn btn-success">💾 Update Payment</button>
+                                    <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('editPaymentModal')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalsContainer').innerHTML = modalHTML;
+            },
+
+            async updatePayment(event, paymentId) {
+                event.preventDefault();
+
+                const orderId = Utils.get('editPaymentOrderId');
+                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+
+                if (!order) {
+                    this.showToast('Order not found!', 'error');
+                    return;
+                }
+
+                const oldPayment = this.data.payments.find(p => p.id === paymentId);
+                const oldAmount = parseFloat(oldPayment.amount || 0);
+                const newAmount = parseFloat(Utils.get('editPaymentAmount'));
+
+                const updatedPayment = {
+                    orderId: order.orderId || 'Pending',
+                    orderDocId: order.docId,
+                    customerName: order.clientName,
+                    amount: newAmount,
+                    paymentDate: Utils.get('editPaymentDate'),
+                    paymentMethod: Utils.get('editPaymentMethod'),
+                    transactionId: Utils.get('editPaymentTransactionId'),
+                    notes: Utils.get('editPaymentNotes')
+                };
+
+                try {
+                    await db.collection('payments').doc(paymentId).update(updatedPayment);
+
+                    // Update local data
+                    const paymentIndex = this.data.payments.findIndex(p => p.id === paymentId);
+                    if (paymentIndex !== -1) {
+                        this.data.payments[paymentIndex] = { ...this.data.payments[paymentIndex], ...updatedPayment };
+                    }
+
+                    // Update order balance if amount changed
+                    if (oldAmount !== newAmount) {
+                        const amountDiff = newAmount - oldAmount;
+                        const currentBalance = parseFloat(order.financials?.balanceDue || order.totalAmount || 0);
+                        const newBalance = currentBalance - amountDiff;
+                        const advancePaid = parseFloat(order.financials?.advancePaid || 0) + amountDiff;
+
+                        await db.collection('orders').doc(order.docId).update({
+                            'financials.advancePaid': advancePaid,
+                            'financials.balanceDue': Math.max(0, newBalance),
+                            'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < (order.financials?.grandTotal || order.totalAmount || 0) ? 'partial' : 'pending'
+                        });
+                    }
+
+                    this.showToast('Payment updated successfully!', 'success');
+                    this.closeModal('editPaymentModal');
+                    this.renderFinancials();
+                    await this.loadOrdersFromFirestore();
+                } catch (error) {
+                    console.error('Error updating payment:', error);
+                    this.showToast('Error updating payment: ' + error.message, 'error');
+                }
+            },
+
+            async editExpense(expenseId) {
+                const expense = this.data.expenses.find(e => e.id === expenseId);
+                if (!expense) {
+                    this.showToast('Expense not found!', 'error');
+                    return;
+                }
+
+                const modalHTML = `
+                    <div class="modal-overlay" id="editExpenseModal">
+                        <div class="modal-content" style="max-width: 600px;">
+                            <button class="modal-close" onclick="OMS.closeModal('editExpenseModal')">×</button>
+                            <h2>✏️ Edit Expense</h2>
+                            <form id="editExpenseForm" onsubmit="OMS.updateExpense(event, '${expenseId}')">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label required">Date</label>
+                                        <input type="date" id="editExpenseDate" class="form-input" value="${expense.date || Utils.toDateString(expense.timestamp?.toDate?.() || new Date())}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label required">Amount</label>
+                                        <input type="number" id="editExpenseAmount" class="form-input" min="1" step="0.01" value="${expense.amount}" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label required">Category</label>
+                                        <select id="editExpenseCategory" class="form-select" required>
+                                            <option value="Inventory" ${expense.category === 'Inventory' ? 'selected' : ''}>Inventory</option>
+                                            <option value="Equipment" ${expense.category === 'Equipment' ? 'selected' : ''}>Equipment</option>
+                                            <option value="Transportation" ${expense.category === 'Transportation' ? 'selected' : ''}>Transportation</option>
+                                            <option value="Staff" ${expense.category === 'Staff' ? 'selected' : ''}>Staff</option>
+                                            <option value="Marketing" ${expense.category === 'Marketing' ? 'selected' : ''}>Marketing</option>
+                                            <option value="Utilities" ${expense.category === 'Utilities' ? 'selected' : ''}>Utilities</option>
+                                            <option value="Other" ${expense.category === 'Other' ? 'selected' : ''}>Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Vendor</label>
+                                        <input type="text" id="editExpenseVendor" class="form-input" value="${expense.vendor || ''}">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Payment Method</label>
+                                    <select id="editExpensePaymentMethod" class="form-select">
+                                        <option value="Cash" ${expense.paymentMethod === 'Cash' ? 'selected' : ''}>Cash</option>
+                                        <option value="UPI" ${expense.paymentMethod === 'UPI' ? 'selected' : ''}>UPI</option>
+                                        <option value="Bank Transfer" ${expense.paymentMethod === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option>
+                                        <option value="Cheque" ${expense.paymentMethod === 'Cheque' ? 'selected' : ''}>Cheque</option>
+                                        <option value="Card" ${expense.paymentMethod === 'Card' ? 'selected' : ''}>Card</option>
+                                        <option value="Other" ${expense.paymentMethod === 'Other' ? 'selected' : ''}>Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Description</label>
+                                    <textarea id="editExpenseDescription" class="form-textarea" rows="3">${expense.description || ''}</textarea>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="submit" class="btn btn-success">💾 Update Expense</button>
+                                    <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('editExpenseModal')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalsContainer').innerHTML = modalHTML;
+            },
+
+            async updateExpense(event, expenseId) {
+                event.preventDefault();
+
+                const updatedExpense = {
+                    date: Utils.get('editExpenseDate'),
+                    amount: parseFloat(Utils.get('editExpenseAmount')),
+                    category: Utils.get('editExpenseCategory'),
+                    vendor: Utils.get('editExpenseVendor'),
+                    description: Utils.get('editExpenseDescription'),
+                    paymentMethod: Utils.get('editExpensePaymentMethod')
+                };
+
+                try {
+                    await db.collection('expenses').doc(expenseId).update(updatedExpense);
+
+                    // Update local data
+                    const expenseIndex = this.data.expenses.findIndex(e => e.id === expenseId);
+                    if (expenseIndex !== -1) {
+                        this.data.expenses[expenseIndex] = { ...this.data.expenses[expenseIndex], ...updatedExpense };
+                    }
+
+                    this.showToast('Expense updated successfully!', 'success');
+                    this.closeModal('editExpenseModal');
+                    this.renderFinancials();
+                } catch (error) {
+                    console.error('Error updating expense:', error);
+                    this.showToast('Error updating expense: ' + error.message, 'error');
+                }
+            },
+
             exportFinancialReport() {
                 const startDate = Utils.get('finStartDate');
                 const endDate = Utils.get('finEndDate');

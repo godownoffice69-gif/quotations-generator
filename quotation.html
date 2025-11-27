@@ -3598,9 +3598,13 @@
       message += `*Client:* ${clientName}\n*Phone:* ${phone}\n`;
       if (builderData.venue) message += `*Venue:* ${builderData.venue}\n`;
       if (builderData.location) message += `*Location:* ${builderData.location}\n\n`;
-      
+
       let grandTotal = 0;
-      
+      let totalDryIceKg = 0;
+      let totalElectricityKV = 0;
+      const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
+      const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+
       builderData.days.forEach((day, idx) => {
         message += `*Day ${idx + 1}*${day.date ? ` - ${new Date(day.date).toLocaleDateString('en-IN')}` : ''}\n`;
         day.functions.forEach(func => {
@@ -3609,11 +3613,34 @@
             const itemTotal = item.price * item.qty;
             grandTotal += itemTotal;
             message += `• ${item.name}: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n`;
+
+            // Calculate dry ice and electricity
+            const itemNameLower = item.name.toLowerCase();
+            if (itemNameLower.includes('dry ice')) {
+              totalDryIceKg += item.qty * 20;
+            }
+            if (electricity3KV.some(name => itemNameLower.includes(name))) {
+              totalElectricityKV += item.qty * 3;
+            } else if (electricity1KV.some(name => itemNameLower.includes(name))) {
+              totalElectricityKV += item.qty * 1;
+            }
           });
         });
         message += `\n`;
       });
-      
+
+      // Add dry ice and electricity requirements to message
+      if (totalDryIceKg > 0 || totalElectricityKV > 0) {
+        message += `*Additional Requirements:*\n`;
+        if (totalDryIceKg > 0) {
+          message += `• Dry Ice: ${totalDryIceKg} kg\n`;
+        }
+        if (totalElectricityKV > 0) {
+          message += `• Electricity: ${totalElectricityKV} KV (Kilowatt)\n`;
+        }
+        message += `\n`;
+      }
+
       message += `*Grand Total: ₹${grandTotal.toLocaleString('en-IN')}*\n\n`;
       message += `📱 9898 496 111 (Yogendra) | 7698 496 111 (Lala)\n🌐 www.firepowers.in`;
       
@@ -3738,12 +3765,39 @@
       
       message += `\n*Items:*\n`;
       let total = 0;
+      let totalDryIceKg = 0;
+      let totalElectricityKV = 0;
+      const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
+      const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+
       cart.forEach(item => {
         const itemTotal = item.price * item.qty;
         total += itemTotal;
         message += `• ${item.name}: ${item.qty} × ₹${item.price.toLocaleString('en-IN')} = ₹${itemTotal.toLocaleString('en-IN')}\n`;
+
+        // Calculate dry ice and electricity
+        const itemNameLower = item.name.toLowerCase();
+        if (itemNameLower.includes('dry ice')) {
+          totalDryIceKg += item.qty * 20;
+        }
+        if (electricity3KV.some(name => itemNameLower.includes(name))) {
+          totalElectricityKV += item.qty * 3;
+        } else if (electricity1KV.some(name => itemNameLower.includes(name))) {
+          totalElectricityKV += item.qty * 1;
+        }
       });
-      
+
+      // Add dry ice and electricity requirements to message
+      if (totalDryIceKg > 0 || totalElectricityKV > 0) {
+        message += `\n*Additional Requirements:*\n`;
+        if (totalDryIceKg > 0) {
+          message += `• Dry Ice: ${totalDryIceKg} kg\n`;
+        }
+        if (totalElectricityKV > 0) {
+          message += `• Electricity: ${totalElectricityKV} KV (Kilowatt)\n`;
+        }
+      }
+
       message += `\n*Total: ₹${total.toLocaleString('en-IN')}*\n\n`;
       message += `📱 9898 496 111 | 7698 496 111\n🌐 www.firepowers.in`;
       
@@ -3911,7 +3965,70 @@
           yPos += 9;
         });
       }
-      
+
+      // Calculate dry ice and electricity requirements
+      let totalDryIceKg = 0;
+      let totalElectricityKV = 0;
+      const itemsList = type === 'builder' ?
+        builderData.days.flatMap(day => day.functions.flatMap(func => func.items)) :
+        cart;
+
+      // Define electricity requirements (in KV per piece)
+      const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
+      const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+
+      itemsList.forEach(item => {
+        const itemNameLower = item.name.toLowerCase();
+
+        // Dry ice calculation: 20kg per pc of Dry Ice Machine
+        if (itemNameLower.includes('dry ice')) {
+          totalDryIceKg += item.qty * 20;
+        }
+
+        // Electricity calculation
+        if (electricity3KV.some(name => itemNameLower.includes(name))) {
+          totalElectricityKV += item.qty * 3;
+        } else if (electricity1KV.some(name => itemNameLower.includes(name))) {
+          totalElectricityKV += item.qty * 1;
+        }
+      });
+
+      // Add dry ice and electricity info if applicable
+      if (totalDryIceKg > 0 || totalElectricityKV > 0) {
+        yPos += 3;
+        if (yPos > 250) { doc.addPage(); yPos = 20; }
+        doc.setDrawColor(100, 100, 100);
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 8;
+
+        doc.setFontSize(12);
+        doc.setTextColor(143, 107, 255);
+        doc.setFont(undefined, 'bold');
+        doc.text('ADDITIONAL REQUIREMENTS', margin, yPos);
+        yPos += 8;
+
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'normal');
+
+        if (totalDryIceKg > 0) {
+          doc.setFont(undefined, 'bold');
+          doc.text('Dry Ice Required:', margin, yPos);
+          doc.setFont(undefined, 'normal');
+          doc.text(totalDryIceKg + ' kg', pageWidth - margin, yPos, { align: 'right' });
+          yPos += 6;
+        }
+
+        if (totalElectricityKV > 0) {
+          doc.setFont(undefined, 'bold');
+          doc.text('Electricity Required:', margin, yPos);
+          doc.setFont(undefined, 'normal');
+          doc.text(totalElectricityKV + ' KV (Kilowatt)', pageWidth - margin, yPos, { align: 'right' });
+          yPos += 6;
+        }
+      }
+
       // TOTAL
       yPos += 5;
       doc.setDrawColor(0, 213, 255);
