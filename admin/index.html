@@ -3709,7 +3709,7 @@ const OMS = {
                         localStorage.setItem('oms_draft', JSON.stringify(this.collectFormData()));
                         console.log('📝 Draft auto-saved');
                     }
-                }, 30000); // Auto-save every 30 seconds
+                }, 2000); // Auto-save every 2 seconds
             },
 
             hasUnsavedChanges() {
@@ -3780,12 +3780,6 @@ const OMS = {
                             if (draftData.status) Utils.set('orderStatus', draftData.status);
                             if (draftData.notes) Utils.set('notes', draftData.notes);
 
-                            // Restore items
-                            if (draftData.items && Array.isArray(draftData.items)) {
-                                this.currentOrderItems = draftData.items;
-                                this.updateOrderItemsList();
-                            }
-
                             // Restore multiday data if exists
                             if (draftData.isMultiDay) {
                                 Utils.set('eventTypeSelect', 'multi');
@@ -3800,8 +3794,15 @@ const OMS = {
                                 if (draftData.dayWiseData) {
                                     setTimeout(() => {
                                         window.dayFunctionsData = draftData.dayWiseData;
-                                        console.log('📅 Restored multiday data');
+                                        console.log('📅 Restored multiday data with items');
                                     }, 500);
+                                }
+                            } else {
+                                // Restore items for single-day events only
+                                if (draftData.items && Array.isArray(draftData.items) && draftData.items.length > 0) {
+                                    console.log('📦 Restoring items:', draftData.items);
+                                    this.currentOrderItems = [...draftData.items];
+                                    this.updateOrderItemsList();
                                 }
                             }
 
