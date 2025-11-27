@@ -3826,177 +3826,274 @@
     });
 
     // PDF Generation Function
-    function generatePDF(type, data) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const pageWidth = 210, pageHeight = 297, margin = 20;
-      
-      // Header - QUOTATION
-      doc.setFontSize(26);
-      doc.setTextColor(143, 107, 255);
-      doc.text('QUOTATION', pageWidth/2, 20, { align: 'center' });
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text('SFX • Crackers • Pyro Effects', pageWidth/2, 24, { align: 'center' });
-      
-      doc.setDrawColor(143, 107, 255);
-      doc.setLineWidth(0.5);
-      doc.line(margin, 30, pageWidth - margin, 30);
-      
-      // CLIENT INFO - TWO COLUMNS
-      let yPos = 55;
-      doc.setFontSize(14);
-      doc.setTextColor(143, 107, 255);
-      doc.setFont(undefined, 'bold');
-      doc.text('CLIENT INFORMATION', margin, yPos);
-      yPos += 8;
-      
-      const leftCol = margin, rightCol = pageWidth/2 + 5, labelWidth = 30;
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont(undefined, 'normal');
-      
-      // Row 1
-      doc.setFont(undefined, 'bold');
-      doc.text('Name:', leftCol, yPos);
-      doc.text('Phone:', rightCol, yPos);
-      doc.setFont(undefined, 'normal');
-      doc.text(data.clientName, leftCol + labelWidth, yPos);
-      doc.text(data.phone, rightCol + labelWidth, yPos);
-      yPos += 6;
-      
-      // Row 2
-      if (data.venue || data.location) {
-        if (data.venue) {
-          doc.setFont(undefined, 'bold');
-          doc.text('Venue:', leftCol, yPos);
-          doc.setFont(undefined, 'normal');
-          doc.text(data.venue, leftCol + labelWidth, yPos);
-        }
-        if (data.location) {
-          doc.setFont(undefined, 'bold');
-          doc.text('Location:', rightCol, yPos);
-          doc.setFont(undefined, 'normal');
-          doc.text(data.location, rightCol + labelWidth, yPos);
-        }
-        yPos += 6;
-      }
-      
-      // Row 3
-      if (data.function || data.dates) {
-        if (data.function) {
-          doc.setFont(undefined, 'bold');
-          doc.text('Function:', leftCol, yPos);
-          doc.setFont(undefined, 'normal');
-          doc.text(data.function, leftCol + labelWidth, yPos);
-        }
-        if (data.dates) {
-          doc.setFont(undefined, 'bold');
-          doc.text('Date(s):', rightCol, yPos);
-          doc.setFont(undefined, 'normal');
-          doc.text(data.dates, rightCol + labelWidth, yPos);
-        }
-        yPos += 6;
-      }
-      
-      // Row 4
-      if (data.timeSlot) {
-        doc.setFont(undefined, 'bold');
-        doc.text('Time:', leftCol, yPos);
-        doc.setFont(undefined, 'normal');
-        doc.text(data.timeSlot, leftCol + labelWidth, yPos);
-      }
-      doc.setFont(undefined, 'bold');
-      doc.text('Quote Date:', rightCol, yPos);
-      doc.setFont(undefined, 'normal');
-      doc.text(new Date().toLocaleDateString('en-IN'), rightCol + labelWidth, yPos);
-      yPos += 12;
-      
-      // ITEMS
-      doc.setFontSize(14);
-      doc.setTextColor(143, 107, 255);
-      doc.setFont(undefined, 'bold');
-      doc.text(type === 'builder' ? 'PACKAGE DETAILS' : 'ITEM DETAILS', margin, yPos);
-      yPos += 8;
-      
-      let grandTotal = 0;
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont(undefined, 'normal');
-      
+    // ==========================================
+    // SMART PDF GENERATION WITH TWO-PASS RENDERING + FFD ALGORITHM
+    // ==========================================
+
+    /**
+     * PASS 1: Measure content heights accurately
+     * Calculates the actual height each content block will occupy
+     */
+    function measureContentHeights(doc, type, data, pageWidth, margin) {
+      const measurements = {
+        header: 35,  // Fixed: Title + subtitle + line
+        clientInfo: 8,  // Section title
+        clientRows: 0,
+        itemsTitle: 22,  // Section title + spacing
+        contentBlocks: [],  // Array of measured content blocks
+        requirements: 0,
+        total: 17,  // Fixed: Line + grand total
+        footer: 32  // Fixed: Thank you + terms
+      };
+
+      // Measure client info rows
+      measurements.clientRows += 6;  // Row 1 (Name, Phone)
+      if (data.venue || data.location) measurements.clientRows += 6;  // Row 2
+      if (data.function || data.dates) measurements.clientRows += 6;  // Row 3
+      measurements.clientRows += 6;  // Row 4 (Time, Quote Date)
+
+      // Measure items/content blocks
       if (type === 'builder') {
         builderData.days.forEach((day, dayIdx) => {
-          if (yPos > 250) { doc.addPage(); yPos = 20; }
-          doc.setFontSize(12);
-          doc.setTextColor(0, 213, 255);
-          doc.setFont(undefined, 'bold');
-          doc.text('Day ' + (dayIdx + 1) + (day.date ? ' - ' + new Date(day.date).toLocaleDateString('en-IN') : ''), margin, yPos);
-          yPos += 6;
-          
-          day.functions.forEach(func => {
-            if (yPos > 250) { doc.addPage(); yPos = 20; }
-            doc.setFontSize(11);
-            doc.setTextColor(0, 0, 0);
-            doc.text(func.name, margin + 5, yPos);
-            yPos += 5;
-            doc.setFontSize(10);
-            
-            func.items.forEach(item => {
-              if (yPos > 250) { doc.addPage(); yPos = 20; }
-              const itemTotal = item.price * item.qty;
-              grandTotal += itemTotal;
-              doc.text(item.name, margin + 10, yPos);
-              doc.text(item.qty + ' x Rs. ' + item.price.toLocaleString('en-IN'), margin + 10, yPos + 4);
-              doc.text('Rs. ' + itemTotal.toLocaleString('en-IN'), pageWidth - margin, yPos + 2, { align: 'right' });
-              yPos += 9;
+          // Day header
+          const dayBlock = {
+            type: 'day',
+            height: 6,  // Day title
+            dayIndex: dayIdx,
+            content: day,
+            subBlocks: []
+          };
+
+          day.functions.forEach((func, funcIdx) => {
+            // Function header
+            const funcBlock = {
+              type: 'function',
+              height: 5,  // Function name
+              functionIndex: funcIdx,
+              content: func,
+              items: []
+            };
+
+            // Measure each item in function
+            func.items.forEach((item, itemIdx) => {
+              const itemName = item.name || '';
+              const textWidth = pageWidth - margin * 2 - 10;
+              const lines = Math.ceil(doc.getTextWidth(itemName) / textWidth) || 1;
+              const itemHeight = 4 + (lines * 5);  // Base 4mm + 5mm per line
+
+              funcBlock.items.push({
+                type: 'item',
+                height: itemHeight,
+                itemIndex: itemIdx,
+                content: item
+              });
+              funcBlock.height += itemHeight;
             });
-            yPos += 2;
+
+            funcBlock.height += 2;  // Spacing after function
+            dayBlock.subBlocks.push(funcBlock);
+            dayBlock.height += funcBlock.height;
           });
-          yPos += 3;
+
+          dayBlock.height += 3;  // Spacing after day
+          measurements.contentBlocks.push(dayBlock);
         });
       } else {
-        cart.forEach(item => {
-          if (yPos > 250) { doc.addPage(); yPos = 50; }
-          const itemTotal = item.price * item.qty;
-          grandTotal += itemTotal;
-          doc.text(item.name, margin, yPos);
-          doc.text(item.qty + ' x Rs. ' + item.price.toLocaleString('en-IN'), margin, yPos + 4);
-          doc.text('Rs. ' + itemTotal.toLocaleString('en-IN'), pageWidth - margin, yPos + 2, { align: 'right' });
-          yPos += 9;
+        // Simple cart items
+        cart.forEach((item, idx) => {
+          const itemName = item.name || '';
+          const textWidth = pageWidth - margin * 2;
+          const lines = Math.ceil(doc.getTextWidth(itemName) / textWidth) || 1;
+          const itemHeight = 4 + (lines * 5);  // Base 4mm + 5mm per line
+
+          measurements.contentBlocks.push({
+            type: 'item',
+            height: itemHeight,
+            itemIndex: idx,
+            content: item
+          });
         });
       }
 
-      // Calculate dry ice and electricity requirements
-      let totalDryIceKg = 0;
-      let totalElectricityKV = 0;
+      // Measure requirements section
       const itemsList = type === 'builder' ?
         builderData.days.flatMap(day => day.functions.flatMap(func => func.items)) :
         cart;
 
-      // Define electricity requirements (in KV per piece)
       const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
       const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
 
+      let totalDryIceKg = 0, totalElectricityKV = 0;
       itemsList.forEach(item => {
         const itemNameLower = item.name.toLowerCase();
+        if (itemNameLower.includes('dry ice')) totalDryIceKg += item.qty * 20;
+        if (electricity3KV.some(name => itemNameLower.includes(name))) totalElectricityKV += item.qty * 3;
+        else if (electricity1KV.some(name => itemNameLower.includes(name))) totalElectricityKV += item.qty * 1;
+      });
 
-        // Dry ice calculation: 20kg per pc of Dry Ice Machine
-        if (itemNameLower.includes('dry ice')) {
-          totalDryIceKg += item.qty * 20;
-        }
+      if (totalDryIceKg > 0 || totalElectricityKV > 0) {
+        measurements.requirements = 19;  // Section title + spacing
+        if (totalDryIceKg > 0) measurements.requirements += 6;
+        if (totalElectricityKV > 0) measurements.requirements += 6;
+      }
 
-        // Electricity calculation
-        if (electricity3KV.some(name => itemNameLower.includes(name))) {
-          totalElectricityKV += item.qty * 3;
-        } else if (electricity1KV.some(name => itemNameLower.includes(name))) {
-          totalElectricityKV += item.qty * 1;
+      measurements.requirementsData = { totalDryIceKg, totalElectricityKV };
+
+      return measurements;
+    }
+
+    /**
+     * First Fit Decreasing (FFD) Algorithm
+     * Optimally distributes content blocks across pages
+     */
+    function distributeContentToPages(measurements, pageHeight, startYPos) {
+      const SAFE_PAGE_HEIGHT = pageHeight - 20;  // Leave 20mm margin at bottom
+      const pages = [];
+
+      // Flatten all content blocks for FFD algorithm
+      let allBlocks = [];
+
+      measurements.contentBlocks.forEach(block => {
+        if (block.type === 'day') {
+          // For builder: try to keep functions together when possible
+          block.subBlocks.forEach(funcBlock => {
+            if (funcBlock.height < 50) {
+              // Small function - keep together
+              allBlocks.push(funcBlock);
+            } else {
+              // Large function - can split items
+              allBlocks.push({
+                type: 'function-header',
+                height: 5,
+                content: funcBlock.content
+              });
+              funcBlock.items.forEach(item => allBlocks.push(item));
+            }
+          });
+        } else {
+          allBlocks.push(block);
         }
       });
 
-      // Add dry ice and electricity info if applicable
-      if (totalDryIceKg > 0 || totalElectricityKV > 0) {
+      // Sort by height (descending) - FFD algorithm
+      allBlocks.sort((a, b) => b.height - a.height);
+
+      // Initialize first page
+      pages.push({
+        blocks: [],
+        usedHeight: startYPos,
+        remainingHeight: SAFE_PAGE_HEIGHT - startYPos
+      });
+
+      // First Fit: Place each block in the first page that fits
+      allBlocks.forEach(block => {
+        let placed = false;
+
+        for (let page of pages) {
+          if (page.remainingHeight >= block.height) {
+            page.blocks.push(block);
+            page.usedHeight += block.height;
+            page.remainingHeight -= block.height;
+            placed = true;
+            break;  // First fit
+          }
+        }
+
+        // Create new page if block doesn't fit anywhere
+        if (!placed) {
+          pages.push({
+            blocks: [block],
+            usedHeight: 20 + block.height,  // Start at 20mm on new pages
+            remainingHeight: SAFE_PAGE_HEIGHT - 20 - block.height
+          });
+        }
+      });
+
+      return pages;
+    }
+
+    /**
+     * PASS 2: Render optimized content with smart page breaks
+     */
+    function renderOptimizedPDF(doc, type, data, measurements, distributedPages, pageWidth, pageHeight, margin) {
+      let grandTotal = 0;
+      let currentPageIndex = 0;
+      let yPos = 55 + measurements.clientInfo + measurements.clientRows + measurements.itemsTitle;
+
+      // Render header and client info (appears only on first page)
+      renderPDFHeader(doc, data, pageWidth, margin);
+
+      // Calculate grand total
+      const itemsList = type === 'builder' ?
+        builderData.days.flatMap(day => day.functions.flatMap(func => func.items)) :
+        cart;
+      grandTotal = itemsList.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+      // Render content blocks page by page
+      distributedPages.forEach((page, pageIdx) => {
+        if (pageIdx > 0) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'normal');
+
+        page.blocks.forEach(block => {
+          if (block.type === 'day') {
+            // Render day header
+            doc.setFontSize(12);
+            doc.setTextColor(0, 213, 255);
+            doc.setFont(undefined, 'bold');
+            const dayContent = block.content;
+            doc.text('Day ' + (block.dayIndex + 1) +
+              (dayContent.date ? ' - ' + new Date(dayContent.date).toLocaleDateString('en-IN') : ''),
+              margin, yPos);
+            yPos += 6;
+            doc.setFontSize(10);
+          } else if (block.type === 'function' || block.type === 'function-header') {
+            // Render function header
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'bold');
+            doc.text(block.content.name, margin + 5, yPos);
+            yPos += 5;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+
+            // Render function items if present
+            if (block.items) {
+              block.items.forEach(itemBlock => {
+                const item = itemBlock.content;
+                const itemTotal = item.price * item.qty;
+                doc.text(item.name, margin + 10, yPos);
+                doc.text(item.qty + ' x Rs. ' + item.price.toLocaleString('en-IN'), margin + 10, yPos + 4);
+                doc.text('Rs. ' + itemTotal.toLocaleString('en-IN'), pageWidth - margin, yPos + 2, { align: 'right' });
+                yPos += itemBlock.height;
+              });
+              yPos += 2;
+            }
+          } else if (block.type === 'item') {
+            // Render individual cart item
+            const item = block.content;
+            const itemTotal = item.price * item.qty;
+            doc.text(item.name, margin + (type === 'builder' ? 10 : 0), yPos);
+            doc.text(item.qty + ' x Rs. ' + item.price.toLocaleString('en-IN'), margin + (type === 'builder' ? 10 : 0), yPos + 4);
+            doc.text('Rs. ' + itemTotal.toLocaleString('en-IN'), pageWidth - margin, yPos + 2, { align: 'right' });
+            yPos += block.height;
+          }
+        });
+      });
+
+      // Check if requirements section fits on current page
+      if (measurements.requirements > 0) {
+        if (yPos + measurements.requirements > pageHeight - 40) {
+          doc.addPage();
+          yPos = 20;
+        }
+
         yPos += 3;
-        if (yPos > 250) { doc.addPage(); yPos = 20; }
         doc.setDrawColor(100, 100, 100);
         doc.setLineWidth(0.3);
         doc.line(margin, yPos, pageWidth - margin, yPos);
@@ -4011,6 +4108,8 @@
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
         doc.setFont(undefined, 'normal');
+
+        const { totalDryIceKg, totalElectricityKV } = measurements.requirementsData;
 
         if (totalDryIceKg > 0) {
           doc.setFont(undefined, 'bold');
@@ -4029,6 +4128,12 @@
         }
       }
 
+      // Check if total + footer fits on current page
+      if (yPos + measurements.total + measurements.footer > pageHeight - 20) {
+        doc.addPage();
+        yPos = 20;
+      }
+
       // TOTAL
       yPos += 5;
       doc.setDrawColor(0, 213, 255);
@@ -4039,17 +4144,16 @@
       doc.setTextColor(0, 213, 255);
       doc.text('GRAND TOTAL:', margin, yPos);
       doc.text('Rs. ' + grandTotal.toLocaleString('en-IN'), pageWidth - margin, yPos, { align: 'right' });
-      
+
       // FOOTER
       yPos += 15;
-      if (yPos > 260) { doc.addPage(); yPos = 20; }
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.setFont(undefined, 'normal');
       doc.text('Thank you for choosing us!', pageWidth/2, yPos, { align: 'center' });
       yPos += 6;
       doc.text('We look forward to making your event spectacular.', pageWidth/2, yPos, { align: 'center' });
-      
+
       // TERMS
       yPos += 10;
       doc.setFontSize(8);
@@ -4058,7 +4162,134 @@
       const terms = 'Terms & Conditions: By placing this order, you are acknowledging and accepting our terms and conditions. All prices are subject to availability. Advance booking required. Cancellation policy applies.';
       const splitTerms = doc.splitTextToSize(terms, pageWidth - 2 * margin);
       doc.text(splitTerms, pageWidth/2, yPos, { align: 'center' });
-      
+    }
+
+    /**
+     * Render PDF header (first page only)
+     */
+    function renderPDFHeader(doc, data, pageWidth, margin) {
+      // Header - QUOTATION
+      doc.setFontSize(26);
+      doc.setTextColor(143, 107, 255);
+      doc.text('QUOTATION', pageWidth/2, 20, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('SFX • Crackers • Pyro Effects', pageWidth/2, 24, { align: 'center' });
+
+      doc.setDrawColor(143, 107, 255);
+      doc.setLineWidth(0.5);
+      doc.line(margin, 30, pageWidth - margin, 30);
+
+      // CLIENT INFO - TWO COLUMNS
+      let yPos = 55;
+      doc.setFontSize(14);
+      doc.setTextColor(143, 107, 255);
+      doc.setFont(undefined, 'bold');
+      doc.text('CLIENT INFORMATION', margin, yPos);
+      yPos += 8;
+
+      const leftCol = margin, rightCol = pageWidth/2 + 5, labelWidth = 30;
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'normal');
+
+      // Row 1
+      doc.setFont(undefined, 'bold');
+      doc.text('Name:', leftCol, yPos);
+      doc.text('Phone:', rightCol, yPos);
+      doc.setFont(undefined, 'normal');
+      doc.text(data.clientName, leftCol + labelWidth, yPos);
+      doc.text(data.phone, rightCol + labelWidth, yPos);
+      yPos += 6;
+
+      // Row 2
+      if (data.venue || data.location) {
+        if (data.venue) {
+          doc.setFont(undefined, 'bold');
+          doc.text('Venue:', leftCol, yPos);
+          doc.setFont(undefined, 'normal');
+          doc.text(data.venue, leftCol + labelWidth, yPos);
+        }
+        if (data.location) {
+          doc.setFont(undefined, 'bold');
+          doc.text('Location:', rightCol, yPos);
+          doc.setFont(undefined, 'normal');
+          doc.text(data.location, rightCol + labelWidth, yPos);
+        }
+        yPos += 6;
+      }
+
+      // Row 3
+      if (data.function || data.dates) {
+        if (data.function) {
+          doc.setFont(undefined, 'bold');
+          doc.text('Function:', leftCol, yPos);
+          doc.setFont(undefined, 'normal');
+          doc.text(data.function, leftCol + labelWidth, yPos);
+        }
+        if (data.dates) {
+          doc.setFont(undefined, 'bold');
+          doc.text('Date(s):', rightCol, yPos);
+          doc.setFont(undefined, 'normal');
+          doc.text(data.dates, rightCol + labelWidth, yPos);
+        }
+        yPos += 6;
+      }
+
+      // Row 4
+      if (data.timeSlot) {
+        doc.setFont(undefined, 'bold');
+        doc.text('Time:', leftCol, yPos);
+        doc.setFont(undefined, 'normal');
+        doc.text(data.timeSlot, leftCol + labelWidth, yPos);
+      }
+      doc.setFont(undefined, 'bold');
+      doc.text('Quote Date:', rightCol, yPos);
+      doc.setFont(undefined, 'normal');
+      doc.text(new Date().toLocaleDateString('en-IN'), rightCol + labelWidth, yPos);
+      yPos += 12;
+
+      // ITEMS SECTION TITLE
+      doc.setFontSize(14);
+      doc.setTextColor(143, 107, 255);
+      doc.setFont(undefined, 'bold');
+      doc.text(data.type === 'builder' ? 'PACKAGE DETAILS' : 'ITEM DETAILS', margin, yPos);
+      yPos += 8;
+    }
+
+    /**
+     * Main PDF Generation Function with Two-Pass Rendering + FFD
+     */
+    function generatePDF(type, data) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const pageWidth = 210, pageHeight = 297, margin = 20;
+
+      console.log('🔍 PASS 1: Measuring content heights...');
+      // PASS 1: Measure all content
+      const measurements = measureContentHeights(doc, type, data, pageWidth, margin);
+
+      console.log('📊 Measurements:', measurements);
+      console.log('📦 Total content blocks:', measurements.contentBlocks.length);
+
+      // Calculate starting Y position for content
+      const startYPos = measurements.header + measurements.clientInfo +
+                        measurements.clientRows + measurements.itemsTitle;
+
+      console.log('🎯 FFD Algorithm: Distributing content to pages...');
+      // Apply FFD Algorithm for optimal distribution
+      const distributedPages = distributeContentToPages(measurements, pageHeight, startYPos);
+
+      console.log('📄 Distributed to', distributedPages.length, 'pages');
+      distributedPages.forEach((page, idx) => {
+        console.log(`  Page ${idx + 1}: ${page.blocks.length} blocks, ${page.usedHeight.toFixed(1)}mm used, ${page.remainingHeight.toFixed(1)}mm remaining`);
+      });
+
+      console.log('✍️ PASS 2: Rendering optimized PDF...');
+      // PASS 2: Render with optimized layout
+      renderOptimizedPDF(doc, type, data, measurements, distributedPages, pageWidth, pageHeight, margin);
+
+      console.log('✅ PDF generated successfully!');
       doc.save('Quotation' + (type === 'builder' ? 'Package' : 'Quote') + '_' + Date.now() + '.pdf');
       createCelebrationConfetti();
     }
