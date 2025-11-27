@@ -5825,6 +5825,22 @@ convertToQuotationDateFormat(dateStr) {
                     const pdfWidth = pdf.internal.pageSize.getWidth();
                     const pdfHeight = pdf.internal.pageSize.getHeight();
 
+                    // Calculate grand totals for all orders
+                    let grandTotalDryIce = 0;
+                    let grandTotalFlowers = 0;
+                    let grandTotalElectricity = 0;
+                    let grandTotalDryMachines = 0;
+                    let grandTotalFlowerMachines = 0;
+
+                    orders.forEach(order => {
+                        const requirements = this.calculateOrderRequirements(order);
+                        grandTotalDryIce += requirements.dryIceNeeded;
+                        grandTotalFlowers += requirements.flowersNeeded;
+                        grandTotalElectricity += requirements.totalElectricityKV;
+                        grandTotalDryMachines += requirements.dryMachines;
+                        grandTotalFlowerMachines += requirements.flowerShowerMachines;
+                    });
+
                     // Generate each page and add to PDF
                     for (let pageNum = 0; pageNum < totalPages; pageNum++) {
                         this.updateLoadingMessage(loading, `Adding page ${pageNum + 1} of ${totalPages} to PDF...`);
@@ -5839,6 +5855,41 @@ convertToQuotationDateFormat(dateStr) {
                                 </h1>
                             </div>
                         `;
+
+                        // Add summary section on first page only
+                        if (pageNum === 0 && (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0)) {
+                            html += `
+                                <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                                    <h3 style="margin: 0 0 12px 0; font-size: 18px; text-align: center;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                                        ${grandTotalDryIce > 0 ? `
+                                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
+                                            <div style="font-size: 24px; margin-bottom: 4px;">❄️</div>
+                                            <div style="font-size: 14px; opacity: 0.9;">Dry Ice Needed</div>
+                                            <div style="font-size: 20px; font-weight: 700; margin-top: 4px;">${grandTotalDryIce} kg</div>
+                                            <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                        </div>
+                                        ` : ''}
+                                        ${grandTotalFlowers > 0 ? `
+                                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
+                                            <div style="font-size: 24px; margin-bottom: 4px;">🌸</div>
+                                            <div style="font-size: 14px; opacity: 0.9;">Flowers Needed</div>
+                                            <div style="font-size: 20px; font-weight: 700; margin-top: 4px;">${grandTotalFlowers} kg</div>
+                                            <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                        </div>
+                                        ` : ''}
+                                        ${grandTotalElectricity > 0 ? `
+                                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
+                                            <div style="font-size: 24px; margin-bottom: 4px;">⚡</div>
+                                            <div style="font-size: 14px; opacity: 0.9;">Electricity Required</div>
+                                            <div style="font-size: 20px; font-weight: 700; margin-top: 4px;">${grandTotalElectricity} KV</div>
+                                            <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Total power needed</div>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }
 
                         pageOrders.forEach((order, i) => {
                             html += this.buildOrderHTML(order, compactFontSize, colors, true);
@@ -5938,6 +5989,67 @@ convertToQuotationDateFormat(dateStr) {
                 return dimensions;
             },
 
+            // Calculate dry ice, flowers, and electricity requirements for a single order
+            calculateOrderRequirements(order) {
+                const items = [];
+
+                // Collect all items from the order
+                if (order.isMultiDay && order.dayWiseData) {
+                    order.dayWiseData.forEach(day => {
+                        if (day.functions && Array.isArray(day.functions)) {
+                            day.functions.forEach(func => {
+                                if (func.items && Array.isArray(func.items)) {
+                                    items.push(...func.items);
+                                }
+                            });
+                        }
+                    });
+                } else if (order.items && Array.isArray(order.items)) {
+                    items.push(...order.items);
+                }
+
+                // Calculate dry ice requirements
+                const dryMachines = items.filter(item => {
+                    const name = item.name.toLowerCase();
+                    return name.includes('dry ice');
+                }).reduce((sum, item) => sum + (item.quantity || 0), 0);
+                const dryIceNeeded = dryMachines * 20; // 20 kg per dry ice machine
+
+                // Calculate flower requirements
+                const flowerShowerKeywords = ['flower shower', 'flower shower machine'];
+                const flowerShowerMachines = items.filter(item => {
+                    const name = item.name.toLowerCase();
+                    return flowerShowerKeywords.some(keyword => name.includes(keyword)) ||
+                           (name.includes('flower') && name.includes('shower'));
+                }).reduce((sum, item) => sum + (item.quantity || 0), 0);
+                const flowersNeeded = flowerShowerMachines * 20; // 20 kg per flower shower machine
+
+                // Calculate electricity requirements
+                const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
+                const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+
+                let totalElectricityKV = 0;
+                items.forEach(item => {
+                    const itemNameLower = item.name.toLowerCase();
+                    const qty = item.quantity || 0;
+
+                    if (electricity3KV.some(name => itemNameLower.includes(name))) {
+                        totalElectricityKV += qty * 3;
+                    } else if (electricity1KV.some(name => itemNameLower.includes(name))) {
+                        totalElectricityKV += qty * 1;
+                    }
+                });
+
+                return {
+                    dryIceNeeded,
+                    dryMachines,
+                    flowersNeeded,
+                    flowerShowerMachines,
+                    totalElectricityKV,
+                    items
+                };
+            },
+
             buildOrderHTML(order, fontSize, colors, compact = false) {
                 console.log('🖼️ Building image for order:', order.orderId);
                 console.log('🖼️ isMultiDay:', order.isMultiDay);
@@ -5946,6 +6058,9 @@ convertToQuotationDateFormat(dateStr) {
                 const orderIdBg = colors.orderIdBg || '#667eea';
                 const orderIdText = colors.orderIdText || '#ffffff';
                 const functionColor = this.data.settings.functionColor || '#667eea';
+
+                // Calculate requirements for this order
+                const requirements = this.calculateOrderRequirements(order);
 
                 return `
                     <div style="margin-bottom: ${compact ? '40px' : '60px'}; ${compact ? 'border: 2px solid ' + colors.tableBorder + '; padding: 20px;' : ''}; color: #000000;">
@@ -5986,8 +6101,9 @@ convertToQuotationDateFormat(dateStr) {
                             <div>
                                 <strong style="color: #000000;">Helper:</strong> ${order.helper || '-'}<br>
                                 <strong style="color: #000000;">Status:</strong> ${order.status || '-'}<br>
-                                <strong style="color: #000000;">Dry Ice:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">&nbsp;</span><br>
-                                <strong style="color: #000000;">Flowers:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">&nbsp;</span>
+                                <strong style="color: #000000;">Dry Ice:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.dryIceNeeded > 0 ? requirements.dryIceNeeded + ' kg (' + requirements.dryMachines + ' machine' + (requirements.dryMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
+                                <strong style="color: #000000;">Flowers:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.flowersNeeded > 0 ? requirements.flowersNeeded + ' kg (' + requirements.flowerShowerMachines + ' machine' + (requirements.flowerShowerMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
+                                <strong style="color: #000000;">Electricity:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.totalElectricityKV > 0 ? requirements.totalElectricityKV + ' KV' : 'Not Required'}</span>
                             </div>
                         </div>
 
