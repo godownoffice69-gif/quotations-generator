@@ -11542,6 +11542,55 @@ updateAllDisplays() {
                 console.log(`📋 Total deleted orders: ${OMS.data.deletedOrders.length}`);
             },
 
+            // Restore a specific order (remove from deletedOrders list)
+            async restoreDeletedOrder(orderId) {
+                console.log(`🔄 Attempting to restore order: ${orderId}`);
+
+                // Find the order in deletedOrders list
+                const deletedOrder = OMS.data.deletedOrders.find(o => o.orderId === orderId || o.docId === orderId);
+
+                if (!deletedOrder) {
+                    console.warn(`⚠️ Order ${orderId} not found in deletedOrders list`);
+                    console.log('💡 Run AdminUtils.viewDeletedOrders() to see all deleted orders');
+                    return false;
+                }
+
+                console.log(`✅ Found deleted order: ${deletedOrder.orderId || orderId}`);
+                console.log(`   Client: ${deletedOrder.clientName || 'N/A'}`);
+                console.log(`   Deleted at: ${deletedOrder.deletedAt || 'N/A'}`);
+
+                // Remove from deletedOrders list
+                const beforeCount = OMS.data.deletedOrders.length;
+                OMS.data.deletedOrders = OMS.data.deletedOrders.filter(o =>
+                    o.orderId !== orderId && o.docId !== orderId
+                );
+                const afterCount = OMS.data.deletedOrders.length;
+
+                // Save to localStorage
+                OMS.saveToStorage();
+                console.log(`✅ Removed from deletedOrders list (${beforeCount} → ${afterCount})`);
+
+                // Reload orders from Firestore
+                console.log('🔄 Reloading orders from Firestore...');
+                await OMS.loadOrdersFromFirestore();
+                OMS.updateAllDisplays();
+
+                // Check if order is now visible
+                const restoredOrder = OMS.data.orders.find(o => o.orderId === orderId || o.docId === orderId);
+                if (restoredOrder) {
+                    console.log(`✅✅ SUCCESS! Order ${orderId} has been restored and is now visible!`);
+                    console.log(`   Client: ${restoredOrder.clientName}`);
+                    console.log(`   Status: ${restoredOrder.status}`);
+                    return true;
+                } else {
+                    console.warn(`⚠️ Order removed from block list, but not found in Firestore.`);
+                    console.log(`💡 The order may have been permanently deleted from Firestore.`);
+                    console.log(`💡 If you saved it again, try refreshing the page or run:`);
+                    console.log(`   await AdminUtils.forceFullSync()`);
+                    return false;
+                }
+            },
+
             // Recover inventory FROM Firestore (force reload)
             async recoverInventoryFromFirestore() {
                 try {
