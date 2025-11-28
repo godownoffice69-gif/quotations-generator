@@ -5751,7 +5751,6 @@ convertToQuotationDateFormat(dateStr) {
                     const maxContentHeightOtherPages = paperDimensions.height - headerHeight - bottomMargin - safetyMargin;
 
                     const pages = [];
-                    let currentPageOrders = [];
                     let processedOrders = new Set(); // Track which orders we've added
 
                     // Helper function to check if a single order fits on a page
@@ -5775,26 +5774,58 @@ convertToQuotationDateFormat(dateStr) {
                         return { fits: height <= maxHeight, height: height };
                     };
 
-                    for (let i = 0; i < orders.length; i++) {
-                        const order = orders[i];
-
-                        // Determine max height for current page (first page has less space)
-                        const isFirstPage = pages.length === 0;
-                        const currentMaxHeight = isFirstPage ? maxContentHeightFirstPage : maxContentHeightOtherPages;
-
-                        // First check if this single order even fits on a page by itself
-                        const singleOrderCheck = await checkSingleOrderFits(order, currentMaxHeight);
-
-                        if (!singleOrderCheck.fits) {
-                            // Save current page if it has orders
-                            if (currentPageOrders.length > 0) {
-                                pages.push([...currentPageOrders]);
-                                currentPageOrders = [];
+                    // Helper function to measure multiple orders together
+                    const measureOrdersHeight = async (ordersList) => {
+                        let testHtml = `
+                            <div style="text-align: center; margin-bottom: 25px; padding: 12px 0;">
+                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 12px; margin: 0; font-size: 26px;">
+                                    Test Header
+                                </h1>
+                            </div>
+                        `;
+                        ordersList.forEach((o, idx) => {
+                            testHtml += this.buildOrderHTML(o, compactFontSize, colors, true, bgColor, textColor);
+                            if (idx < ordersList.length - 1) {
+                                testHtml += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
                             }
+                        });
+                        template.innerHTML = testHtml;
+                        template.style.display = 'block';
+                        template.style.visibility = 'hidden';
+                        template.style.position = 'static';
+                        template.style.opacity = '0';
+                        await new Promise(r => setTimeout(r, 100));
+                        return template.scrollHeight;
+                    };
 
+                    // STEP 1: Measure all orders individually first
+                    console.log('📏 Measuring all orders for optimal packing...');
+                    const orderHeights = [];
+                    for (let i = 0; i < orders.length; i++) {
+                        const check = await checkSingleOrderFits(orders[i], maxContentHeightOtherPages);
+                        orderHeights.push({
+                            order: orders[i],
+                            height: check.height,
+                            originalIndex: i
+                        });
+                    }
+
+                    // STEP 2: Sort orders by height (descending) - First Fit Decreasing algorithm
+                    orderHeights.sort((a, b) => b.height - a.height);
+                    console.log('📊 Order heights (sorted descending):', orderHeights.map(oh => `${oh.order.customerName}: ${oh.height}px`).join(', '));
+
+                    // STEP 3: Use First Fit Decreasing bin-packing algorithm
+                    for (let i = 0; i < orderHeights.length; i++) {
+                        const { order, height, originalIndex } = orderHeights[i];
+
+                        // Check if this single order is too large for any page by itself
+                        const fitsOnFirstPage = height <= maxContentHeightFirstPage;
+                        const fitsOnOtherPage = height <= maxContentHeightOtherPages;
+
+                        // If order doesn't fit on any page by itself, handle special case
+                        if (!fitsOnOtherPage) {
                             // Check if this is a multifunction/multiday order that can be split
                             if (order.dayWiseData && order.dayWiseData.length > 0) {
-
                                 // Try to split by function groups
                                 let remainingFunctions = [];
                                 order.dayWiseData.forEach(day => {
@@ -5812,7 +5843,6 @@ convertToQuotationDateFormat(dateStr) {
 
                                 // Split functions across multiple pages
                                 while (remainingFunctions.length > 0) {
-                                    let functionsForPage = [];
                                     let currentFunctionSet = [];
 
                                     for (let f = 0; f < remainingFunctions.length; f++) {
@@ -5847,7 +5877,7 @@ convertToQuotationDateFormat(dateStr) {
                                     // Create page with current function set
                                     const pageOrder = {
                                         ...order,
-                                        orderId: `${order.orderId} (Part ${pages.length + 1 - currentPageOrders.length})`,
+                                        orderId: `${order.orderId} (Part ${pages.length + 1})`,
                                         dayWiseData: currentFunctionSet.map(tf => ({
                                             dayNumber: tf.dayNumber,
                                             date: tf.date,
@@ -5861,66 +5891,44 @@ convertToQuotationDateFormat(dateStr) {
                                     remainingFunctions = remainingFunctions.slice(currentFunctionSet.length);
                                 }
 
-                                processedOrders.add(i);
+                                processedOrders.add(originalIndex);
                                 continue;
                             } else {
                                 // Not a multifunction order, add it anyway and let it scale or overflow
                                 pages.push([order]);
-                                processedOrders.add(i);
+                                processedOrders.add(originalIndex);
                                 continue;
                             }
                         }
 
-                        // Try adding this order to current page
-                        const testOrders = [...currentPageOrders, order];
+                        // FIRST FIT: Try to fit this order in existing pages
+                        let placed = false;
+                        for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
+                            const pageOrders = pages[pageIdx];
+                            const isFirstPage = pageIdx === 0;
+                            const maxHeight = isFirstPage ? maxContentHeightFirstPage : maxContentHeightOtherPages;
 
-                        // Build HTML with all orders on current page including this new one
-                        // Include header to get accurate height measurement
-                        let testHtml = `
-                            <div style="text-align: center; margin-bottom: 25px; padding: 12px 0;">
-                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 12px; margin: 0; font-size: 26px;">
-                                    Test Header
-                                </h1>
-                            </div>
-                        `;
-                        testOrders.forEach((o, idx) => {
-                            testHtml += this.buildOrderHTML(o, compactFontSize, colors, true, bgColor, textColor);
-                            if (idx < testOrders.length - 1) {
-                                testHtml += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
+                            // Try adding this order to this page
+                            const testOrders = [...pageOrders, order];
+                            const testHeight = await measureOrdersHeight(testOrders);
+
+                            console.log(`📏 Testing order "${order.customerName}" (${height}px) on page ${pageIdx + 1}: current height = ${testHeight}px, max = ${maxHeight}px, fits = ${testHeight <= maxHeight}`);
+
+                            if (testHeight <= maxHeight) {
+                                // Fits! Add to this page
+                                pages[pageIdx].push(order);
+                                processedOrders.add(originalIndex);
+                                placed = true;
+                                console.log(`✅ Placed order "${order.customerName}" on page ${pageIdx + 1}`);
+                                break;
                             }
-                        });
+                        }
 
-                        // Render and measure with proper wait time for layout calculation
-                        template.innerHTML = testHtml;
-                        template.style.display = 'block';
-                        template.style.visibility = 'hidden';
-                        template.style.position = 'static';
-                        template.style.opacity = '0';
-                        await new Promise(r => setTimeout(r, 100)); // Wait for DOM layout
-                        const totalHeight = template.scrollHeight;
-
-                        console.log(`📏 Testing ${testOrders.length} order(s): measured height = ${totalHeight}px, max allowed = ${currentMaxHeight}px, fits = ${totalHeight <= currentMaxHeight}`);
-
-                        // Check if it fits
-                        if (totalHeight <= currentMaxHeight) {
-                            // Fits! Add this order to current page
-                            currentPageOrders.push(order);
-                            processedOrders.add(i);
-
-                            // If this is the last order, save the page
-                            if (i === orders.length - 1) {
-                                pages.push([...currentPageOrders]);
-                            }
-                        } else {
-                            // Doesn't fit! Save current page and start new page with this order
-                            pages.push([...currentPageOrders]);
-                            currentPageOrders = [order];
-                            processedOrders.add(i);
-
-                            // If this is the last order, save this new page too
-                            if (i === orders.length - 1) {
-                                pages.push([...currentPageOrders]);
-                            }
+                        // If didn't fit in any existing page, create a new page
+                        if (!placed) {
+                            pages.push([order]);
+                            processedOrders.add(originalIndex);
+                            console.log(`📄 Created new page ${pages.length} for order "${order.customerName}"`);
                         }
                     }
 
