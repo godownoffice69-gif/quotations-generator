@@ -1014,6 +1014,30 @@
 
                         <div class="form-grid">
                             <div class="form-group">
+                                <label class="form-label">Transport 2 (Optional)</label>
+                                <select id="transport2" class="form-select">
+                                    <option value="">Select</option>
+                                    <option value="New Bolero">New Bolero</option>
+                                    <option value="Old Bolero">Old Bolero</option>
+                                    <option value="Isuzu">Isuzu</option>
+                                    <option value="Porter">Porter</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group hidden" id="customTransport2Group">
+                                <label class="form-label">Custom Transport 2</label>
+                                <input type="text" id="customTransport2" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Driver 2 (Optional)</label>
+                                <select id="driverName2" class="form-select">
+                                    <option value="">Select Driver</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
                                 <label class="form-label">Operator</label>
                                 <select id="operator" class="form-select">
                                     <option value="">Select Operator</option>
@@ -4364,6 +4388,7 @@ async refreshOrderId() {
             }
         }
 
+        const transport2 = Utils.get('transport2');
         return {
             orderId: Utils.get('orderId'),
             isMultiDay: isMultiDay,
@@ -4379,6 +4404,8 @@ async refreshOrderId() {
             eventType: Utils.get('eventType'),
             transport: transport === 'Other' ? Utils.get('customTransport') : transport,
             driverName: Utils.get('driverName'),
+            transport2: transport2 === 'Other' ? Utils.get('customTransport2') : transport2,
+            driverName2: Utils.get('driverName2'),
             operator: Utils.get('operator'),
             helper: selectedHelpers,
             status: Utils.get('orderStatus'),
@@ -4511,6 +4538,8 @@ const firestoreData = {
     eventType: orderData.eventType || '',
     transport: orderData.transport || '',
     driverName: orderData.driverName || '',
+    transport2: orderData.transport2 || '',
+    driverName2: orderData.driverName2 || '',
     operator: orderData.operator || '',
     helper: orderData.helper || '',
     status: orderData.status.toLowerCase(),
@@ -5057,6 +5086,9 @@ convertToQuotationDateFormat(dateStr) {
                 transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
                 customTransport: !['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : '',
                 driverName: order.driverName,
+                transport2: order.transport2 && ['Bolero', 'Isuzu', 'Porter'].includes(order.transport2) ? order.transport2 : (order.transport2 ? 'Other' : ''),
+                customTransport2: order.transport2 && !['Bolero', 'Isuzu', 'Porter'].includes(order.transport2) ? order.transport2 : '',
+                driverName2: order.driverName2 || '',
                 operator: order.operator,
                 orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
                 orderNotes: order.notes
@@ -5076,6 +5108,10 @@ convertToQuotationDateFormat(dateStr) {
 
             if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
                 document.getElementById('customTransportGroup').classList.remove('hidden');
+            }
+
+            if (order.transport2 && !['Bolero', 'Isuzu', 'Porter'].includes(order.transport2)) {
+                document.getElementById('customTransport2Group').classList.remove('hidden');
             }
 
             this.currentOrderItems = order.items ? [...order.items] : [];
@@ -5103,6 +5139,7 @@ convertToQuotationDateFormat(dateStr) {
                 this.refreshOrderId();
                 Utils.set('orderDate', Utils.toDateString(new Date()));
                 document.getElementById('customTransportGroup').classList.add('hidden');
+                document.getElementById('customTransport2Group').classList.add('hidden');
 
                 // Clear multi-day data
                 if (window.dayFunctionsData) {
@@ -6098,6 +6135,13 @@ convertToQuotationDateFormat(dateStr) {
                             </span>
                         </h3>`}
 
+                        <!-- FP- Field at center/top -->
+                        <div style="text-align: center; margin-bottom: 25px;">
+                            <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: ${textColor};">
+                                FP-<span style="display: inline-block; width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px;"></span>
+                            </div>
+                        </div>
+
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; font-size: ${fontSize}px; margin-bottom: 20px; color: ${textColor};">
                             <div>
                                 ${order.isMultiDay ? `
@@ -6114,11 +6158,13 @@ convertToQuotationDateFormat(dateStr) {
                             <div>
                                 <strong style="color: ${textColor};">Transport:</strong> ${order.transport || '-'}<br>
                                 <strong style="color: ${textColor};">Driver:</strong> ${order.driverName || '-'}<br>
+                                ${order.transport2 ? `<strong style="color: ${textColor};">Transport 2:</strong> ${order.transport2}<br>` : ''}
+                                ${order.driverName2 ? `<strong style="color: ${textColor};">Driver 2:</strong> ${order.driverName2}<br>` : ''}
                                 <strong style="color: ${textColor};">Event:</strong> ${order.eventType || '-'}<br>
-                                <strong style="color: ${textColor};">Operator:</strong> ${order.operator || '-'}
+                                <strong style="color: ${textColor};">Helper:</strong> ${order.helper || '-'}
                             </div>
                             <div>
-                                <strong style="color: ${textColor};">Helper:</strong> ${order.helper || '-'}<br>
+                                <strong style="color: ${textColor};">Operator:</strong> ${order.operator || '-'}<br>
                                 <strong style="color: ${textColor};">Status:</strong> ${order.status || '-'}<br>
                                 <strong style="color: ${textColor};">Dry Ice:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.dryIceNeeded > 0 ? requirements.dryIceNeeded + ' kg (' + requirements.dryMachines + ' machine' + (requirements.dryMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
                                 <strong style="color: ${textColor};">Flowers:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.flowersNeeded > 0 ? requirements.flowersNeeded + ' kg (' + requirements.flowerShowerMachines + ' machine' + (requirements.flowerShowerMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
@@ -6140,8 +6186,8 @@ convertToQuotationDateFormat(dateStr) {
                                                         '<strong style="color: ' + textColor + ';">Type:</strong> ' + (func.functionType || '-') + '<br>' +
                                                         '<strong style="color: ' + textColor + ';">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + (func.timeSlot || '-') + '</span><br>' +
                                                         '<strong style="color: ' + textColor + ';">Driver:</strong> ' + (func.driver || '-') + '<br>' +
-                                                        '<strong style="color: ' + textColor + ';">Operator:</strong> ' + (func.operator || '-') + '<br>' +
                                                         '<strong style="color: ' + textColor + ';">Helper:</strong> ' + (func.helper || '-') + '<br>' +
+                                                        '<strong style="color: ' + textColor + ';">Operator:</strong> ' + (func.operator || '-') + '<br>' +
                                                         (func.notes ? '<strong style="color: ' + textColor + ';">Notes:</strong> ' + func.notes + '<br>' : '') +
                                                     '</div>' +
                                                     (func.items && func.items.length > 0 ?
@@ -8459,6 +8505,14 @@ convertToQuotationDateFormat(dateStr) {
                 if (driverSelect) {
                     const drivers = activeTeam.filter(m => m.roles.includes('Driver'));
                     driverSelect.innerHTML = '<option value="">Select Driver</option>' +
+                        drivers.map(d => `<option value="${d.name}" data-id="${d.id}">🚗 ${d.name}</option>`).join('');
+                }
+
+                // Populate Driver 2 dropdown
+                const driver2Select = document.getElementById('driverName2');
+                if (driver2Select) {
+                    const drivers = activeTeam.filter(m => m.roles.includes('Driver'));
+                    driver2Select.innerHTML = '<option value="">Select Driver</option>' +
                         drivers.map(d => `<option value="${d.name}" data-id="${d.id}">🚗 ${d.name}</option>`).join('');
                 }
 
@@ -13420,7 +13474,17 @@ if (diffDays > 30) {
                     group.classList.add('hidden');
                 }
             });
-            
+
+            // Transport 2 custom field
+            document.getElementById('transport2').addEventListener('change', (e) => {
+                const group = document.getElementById('customTransport2Group');
+                if (e.target.value === 'Other') {
+                    group.classList.remove('hidden');
+                } else {
+                    group.classList.add('hidden');
+                }
+            });
+
     // Order ID visibility based on status
     document.getElementById('orderStatus').addEventListener('change', (e) => {
         const orderIdGroup = document.getElementById('orderIdGroup');
