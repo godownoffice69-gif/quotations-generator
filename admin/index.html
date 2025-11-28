@@ -5925,28 +5925,24 @@ convertToQuotationDateFormat(dateStr) {
                     // STEP 3: Generate multi-page PDF
                     this.updateLoadingMessage(loading, 'Creating PDF document...');
 
-                    // Initialize jsPDF (A4 portrait by default)
+                    // Initialize jsPDF with exact dimensions matching our measurements (300 DPI)
                     const { jsPDF } = window.jspdf;
-                    const orientation = this.data.settings.paperOrientation || 'portrait';
-                    const format = this.data.settings.paperFormat || 'A4';
 
-                    // Convert format names to jsPDF format
-                    let pdfFormat = 'a4';
-                    if (format === 'Letter') pdfFormat = 'letter';
-                    else if (format === 'Legal') pdfFormat = 'legal';
-                    else if (format === 'A3') pdfFormat = 'a3';
-                    else if (format === 'A5') pdfFormat = 'a5';
-
+                    // CRITICAL FIX: Use the same paperDimensions we used for measurement
+                    // This ensures content measured to fit will actually fit in the PDF
                     const pdf = new jsPDF({
-                        orientation: orientation === 'landscape' ? 'l' : 'p',
+                        orientation: 'p', // We handle orientation in paperDimensions
                         unit: 'px',
-                        format: pdfFormat,
+                        format: [paperDimensions.width, paperDimensions.height], // Use exact dimensions at 300 DPI
                         compress: true
                     });
 
-                    // Get PDF page dimensions
+                    // Get PDF page dimensions (should match paperDimensions)
                     const pdfWidth = pdf.internal.pageSize.getWidth();
                     const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                    console.log(`📏 PDF dimensions: ${pdfWidth} x ${pdfHeight} px (should match measurement dimensions)`);
+                    console.log(`📐 Paper dimensions used for measurement: ${paperDimensions.width} x ${paperDimensions.height} px`);
 
                     // Generate each page and add to PDF
                     for (let pageNum = 0; pageNum < totalPages; pageNum++) {
