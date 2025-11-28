@@ -3948,7 +3948,7 @@
      * NO wasted space tolerance - splits orders across pages if needed
      */
     function distributeContentToPages(measurements, pageHeight, startYPos) {
-      const SAFE_PAGE_HEIGHT = pageHeight - 10;  // Reduced margin: Maximum space utilization
+      const SAFE_PAGE_HEIGHT = pageHeight - 8;  // Maximum space utilization
       const pages = [];
 
       // AGGRESSIVE FLATTENING: Split EVERYTHING into individual items
@@ -3980,8 +3980,8 @@
         }
       });
 
-      // Sort by height ASCENDING - fill smallest first for tighter packing
-      allBlocks.sort((a, b) => a.height - b.height);
+      // Sort by height DESCENDING - FFD algorithm: largest items first for optimal packing
+      allBlocks.sort((a, b) => b.height - a.height);
 
       // Initialize first page
       pages.push({
@@ -3990,7 +3990,7 @@
         remainingHeight: SAFE_PAGE_HEIGHT - startYPos
       });
 
-      // AGGRESSIVE BEST FIT: Fill pages with ZERO tolerance for waste
+      // OPTIMIZED BEST FIT: Fill pages efficiently with FFD strategy
       allBlocks.forEach(block => {
         let placed = false;
         let bestPageIndex = -1;
@@ -4001,9 +4001,8 @@
           const page = pages[i];
           if (page.remainingHeight >= block.height) {
             const waste = page.remainingHeight - block.height;
-            // MAXIMUM FIRST PAGE PRIORITY: Overcome the ~70mm space disadvantage
-            // First page has less space due to headers, so apply HUGE bias
-            const priority = i === 0 ? waste - 100000 : waste;
+            // Moderate first page priority: balance space efficiency
+            const priority = i === 0 ? waste - 50 : waste;
             if (priority < minWaste) {
               minWaste = priority;
               bestPageIndex = i;
@@ -4024,8 +4023,8 @@
         if (!placed) {
           pages.push({
             blocks: [block],
-            usedHeight: 15 + block.height,  // Start at 15mm on new pages (reduced for max space)
-            remainingHeight: SAFE_PAGE_HEIGHT - 15 - block.height
+            usedHeight: 12 + block.height,  // Minimal top margin for maximum space
+            remainingHeight: SAFE_PAGE_HEIGHT - 12 - block.height
           });
         }
       });
@@ -4055,7 +4054,7 @@
       distributedPages.forEach((page, pageIdx) => {
         if (pageIdx > 0) {
           doc.addPage();
-          yPos = 15;  // Reduced top margin for maximum space
+          yPos = 12;  // Minimal top margin for maximum space
         }
 
         doc.setFontSize(10);
@@ -4119,9 +4118,9 @@
 
       // Check if requirements section fits on current page
       if (measurements.requirements > 0) {
-        if (yPos + measurements.requirements > pageHeight - 15) {  // Reduced margin check
+        if (yPos + measurements.requirements > pageHeight - 12) {  // Minimal margin check
           doc.addPage();
-          yPos = 15;  // Reduced top margin for maximum space
+          yPos = 12;  // Minimal top margin for maximum space
         }
 
         yPos += 3;
@@ -4160,9 +4159,9 @@
       }
 
       // Check if total + footer fits on current page
-      if (yPos + measurements.total + measurements.footer > pageHeight - 15) {  // Reduced margin check
+      if (yPos + measurements.total + measurements.footer > pageHeight - 12) {  // Minimal margin check
         doc.addPage();
-        yPos = 15;  // Reduced top margin for maximum space
+        yPos = 12;  // Minimal top margin for maximum space
       }
 
       // TOTAL
