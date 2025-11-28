@@ -5680,13 +5680,16 @@ convertToQuotationDateFormat(dateStr) {
                     // NEW ALGORITHM: Dynamic page building with actual measurements
                     // This ensures ALL orders are included and pages are packed optimally
 
+                    // CRITICAL: Use 'static' positioning for accurate measurements
+                    // Using 'absolute' causes grid/flexbox layouts to collapse and gives wrong scrollHeight
                     template.style.height = 'auto';
                     template.style.minHeight = '0';
                     template.style.maxHeight = 'none';
                     template.style.overflow = 'visible';
                     template.style.display = 'block';
-                    template.style.visibility = 'hidden';
-                    template.style.position = 'absolute';
+                    template.style.visibility = 'hidden'; // Hidden but still in document flow
+                    template.style.position = 'static'; // Keep in document flow for accurate measurement
+                    template.style.opacity = '0'; // Extra insurance it's not visible
 
                     const headerHeight = 90; // Header height for date
                     const separatorHeight = 25; // Space between orders
@@ -5731,14 +5734,17 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                         `;
 
-                        // Temporarily render to measure
+                        // Temporarily render to measure (use static positioning for accurate height)
                         template.innerHTML = summaryHtml;
                         template.style.display = 'block';
                         template.style.visibility = 'hidden';
-                        template.style.position = 'absolute';
-                        await new Promise(r => setTimeout(r, 50));
+                        template.style.position = 'static';
+                        template.style.opacity = '0';
+                        await new Promise(r => setTimeout(r, 100)); // Increased wait for layout calculation
                         grandTotalSummaryHeight = template.scrollHeight;
+                        console.log(`📊 Measured grand total summary height: ${grandTotalSummaryHeight}px`);
                         template.style.display = 'none';
+                        template.style.opacity = '1';
                     }
 
                     const maxContentHeightFirstPage = paperDimensions.height - headerHeight - bottomMargin - safetyMargin - grandTotalSummaryHeight;
@@ -5759,7 +5765,12 @@ convertToQuotationDateFormat(dateStr) {
                             ${this.buildOrderHTML(order, compactFontSize, colors, true, bgColor, textColor)}
                         `;
                         template.innerHTML = testHtml;
-                        await new Promise(r => setTimeout(r, 50));
+                        // Ensure template is visible for measurement (but hidden from user)
+                        template.style.display = 'block';
+                        template.style.visibility = 'hidden';
+                        template.style.position = 'static';
+                        template.style.opacity = '0';
+                        await new Promise(r => setTimeout(r, 100)); // Wait for layout
                         const height = template.scrollHeight;
                         return { fits: height <= maxHeight, height: height };
                     };
@@ -5879,10 +5890,16 @@ convertToQuotationDateFormat(dateStr) {
                             }
                         });
 
-                        // Render and measure (reduced wait time for faster processing)
+                        // Render and measure with proper wait time for layout calculation
                         template.innerHTML = testHtml;
-                        await new Promise(r => setTimeout(r, 50)); // 50ms is enough for DOM update
+                        template.style.display = 'block';
+                        template.style.visibility = 'hidden';
+                        template.style.position = 'static';
+                        template.style.opacity = '0';
+                        await new Promise(r => setTimeout(r, 100)); // Wait for DOM layout
                         const totalHeight = template.scrollHeight;
+
+                        console.log(`📏 Testing ${testOrders.length} order(s): measured height = ${totalHeight}px, max allowed = ${currentMaxHeight}px, fits = ${totalHeight <= currentMaxHeight}`);
 
                         // Check if it fits
                         if (totalHeight <= currentMaxHeight) {
@@ -5907,10 +5924,11 @@ convertToQuotationDateFormat(dateStr) {
                         }
                     }
 
-                    // Reset template
+                    // Reset template to normal state
                     template.style.display = 'none';
                     template.style.visibility = 'visible';
                     template.style.position = 'static';
+                    template.style.opacity = '1';
 
                     // VERIFICATION: Check all orders are included
                     const totalOrdersInPages = pages.reduce((sum, page) => sum + page.length, 0);
