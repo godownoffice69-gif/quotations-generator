@@ -5540,94 +5540,18 @@ convertToQuotationDateFormat(dateStr) {
                 });
 
                 console.log(`📅 Found ${filteredOrders.length} orders for ${date}:`, filteredOrders.map(o => o.orderId || o.clientName));
-
-                // Show rating prompt after a short delay
-                const showRatingPrompt = () => {
-                    setTimeout(() => {
-                        const ratingDiv = document.createElement('div');
-                        ratingDiv.style.cssText = `
-                            position: fixed;
-                            bottom: 20px;
-                            right: 20px;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            color: white;
-                            padding: 15px 20px;
-                            border-radius: 12px;
-                            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-                            z-index: 10000;
-                            display: flex;
-                            align-items: center;
-                            gap: 15px;
-                            animation: slideInUp 0.3s ease-out;
-                            max-width: 400px;
-                        `;
-
-                        ratingDiv.innerHTML = `
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600; margin-bottom: 5px;">⭐ Rate This Filter</div>
-                                <div style="font-size: 13px; opacity: 0.9;">Help the smart system learn from your feedback</div>
-                            </div>
-                            <button id="rateNowBtn" style="background: white; color: #667eea; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; white-space: nowrap;">
-                                Rate Now
-                            </button>
-                            <button id="rateLaterBtn" style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 12px; border-radius: 6px; cursor: pointer;">
-                                ✕
-                            </button>
-                        `;
-
-                        document.body.appendChild(ratingDiv);
-
-                        // Add animation
-                        const style = document.createElement('style');
-                        style.textContent = `
-                            @keyframes slideInUp {
-                                from {
-                                    transform: translateY(100px);
-                                    opacity: 0;
-                                }
-                                to {
-                                    transform: translateY(0);
-                                    opacity: 1;
-                                }
-                            }
-                        `;
-                        document.head.appendChild(style);
-
-                        // Add event listeners
-                        document.getElementById('rateNowBtn').addEventListener('click', () => {
-                            ratingDiv.remove();
-                            filterRatingSystem.showRatingUI(this);
-                        });
-
-                        document.getElementById('rateLaterBtn').addEventListener('click', () => {
-                            ratingDiv.remove();
-                        });
-
-                        // Auto-hide after 15 seconds
-                        setTimeout(() => {
-                            if (ratingDiv.parentNode) {
-                                ratingDiv.style.animation = 'slideInUp 0.3s ease-out reverse';
-                                setTimeout(() => ratingDiv.remove(), 300);
-                            }
-                        }, 15000);
-                    }, 2000);
-                };
+                console.log(`💡 To rate this filter result, use: AdminUtils.rateLastFilter() in console`);
 
                 this.generateMultiOrderImage(filteredOrders, date);
-
-                // Show rating prompt after generation (only if ML is enabled)
-                if (mlEnabled) {
-                    showRatingPrompt();
-                }
             },
 
             downloadOrderImage(orderId) {
-                console.log('🖨️ DownloadOrderImage called with ID:', orderId);
-                console.log('📋 All order IDs in data.orders:', this.data.orders.map(o => o.orderId));
-                // FIXED: Search by docId first (always unique), then orderId as fallback
+                // Search by docId first (always unique), then orderId as fallback
                 const order = this.data.orders.find(o => o.docId === orderId || o.orderId === orderId);
-                console.log('✅ Found order:', order ? order.orderId + ' - ' + order.clientName : 'NOT FOUND');
-                if (!order) return;
+                if (!order) {
+                    this.showToast('Order not found', 'error');
+                    return;
+                }
                 this.generateSingleOrderImage(order);
             },
 
@@ -5723,16 +5647,19 @@ convertToQuotationDateFormat(dateStr) {
 
                     // Smart quality adjustment for multi-order images to prevent memory issues
                     let qualityScale = this.data.settings.imageQuality || 2;
-                    if (orders.length > 5 && qualityScale > 3) {
-                        qualityScale = 3; // Limit to High quality for more than 5 orders
-                        console.log('⚠️ Quality reduced to High due to multiple orders to prevent memory issues');
+                    if (orders.length > 5) {
+                        qualityScale = Math.min(qualityScale, 2); // Limit to scale 2 for more than 5 orders
+                        console.log('⚠️ Quality reduced to scale 2 due to multiple orders to prevent memory issues');
+                    }
+                    if (orders.length > 10) {
+                        qualityScale = 1.5; // Further reduce for very large sets
+                        console.log('⚠️ Quality further reduced to scale 1.5 for large order set');
                     }
 
                     // Use fontSize from settings, but slightly smaller for compact multi-order view
                     const compactFontSize = Math.max(16, fontSize - 6);
 
                     console.log(`🚀 Starting PDF generation for ${orders.length} orders`);
-                    console.log(`📊 Orders to process:`, orders.map((o, i) => `${i+1}. ${o.orderId}`).join(', '));
 
                     // Calculate grand totals for all orders (needed early for page height calculations)
                     let grandTotalDryIce = 0;
@@ -5761,10 +5688,10 @@ convertToQuotationDateFormat(dateStr) {
                     template.style.visibility = 'hidden';
                     template.style.position = 'absolute';
 
-                    const headerHeight = 90; // Reduced from 120px for more space
+                    const headerHeight = 90; // Header height for date
                     const separatorHeight = 25; // Space between orders
-                    const bottomMargin = 30; // Reduced from 60px
-                    const safetyMargin = 20; // Reduced from 40px to 20px
+                    const bottomMargin = 40; // Bottom margin for page
+                    const safetyMargin = 80; // Safety buffer for rendering differences (increased for better accuracy)
 
                     // Measure the actual grand total summary height instead of estimating
                     const hasGrandTotalSummary = (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0);
@@ -5773,31 +5700,31 @@ convertToQuotationDateFormat(dateStr) {
                     if (hasGrandTotalSummary) {
                         // Render the actual summary to measure its real height
                         const summaryHtml = `
-                            <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
-                                <h3 style="margin: 0 0 12px 0; font-size: 18px; text-align: center;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                            <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 10px; margin-bottom: 15px; border-radius: 6px;">
+                                <h3 style="margin: 0 0 8px 0; font-size: 16px; text-align: center;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                                     ${grandTotalDryIce > 0 ? `
-                                    <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
-                                        <div style="font-size: 24px; margin-bottom: 4px;">❄️</div>
-                                        <div style="font-size: 18px; opacity: 0.9;">Dry Ice Needed</div>
-                                        <div style="font-size: 60px; font-weight: 700; margin-top: 4px;">${grandTotalDryIce} kg</div>
-                                        <div style="font-size: 14px; opacity: 0.8; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                    <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
+                                        <div style="font-size: 18px; margin-bottom: 2px;">❄️</div>
+                                        <div style="font-size: 14px; opacity: 0.9;">Dry Ice Needed</div>
+                                        <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalDryIce} kg</div>
+                                        <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                     </div>
                                     ` : ''}
                                     ${grandTotalFlowers > 0 ? `
-                                    <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
-                                        <div style="font-size: 24px; margin-bottom: 4px;">🌸</div>
-                                        <div style="font-size: 18px; opacity: 0.9;">Flowers Needed</div>
-                                        <div style="font-size: 60px; font-weight: 700; margin-top: 4px;">${grandTotalFlowers} kg</div>
-                                        <div style="font-size: 14px; opacity: 0.8; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                    <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
+                                        <div style="font-size: 18px; margin-bottom: 2px;">🌸</div>
+                                        <div style="font-size: 14px; opacity: 0.9;">Flowers Needed</div>
+                                        <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalFlowers} kg</div>
+                                        <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                     </div>
                                     ` : ''}
                                     ${grandTotalElectricity > 0 ? `
-                                    <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
-                                        <div style="font-size: 24px; margin-bottom: 4px;">⚡</div>
-                                        <div style="font-size: 18px; opacity: 0.9;">Electricity Required</div>
-                                        <div style="font-size: 60px; font-weight: 700; margin-top: 4px;">${grandTotalElectricity} KV</div>
-                                        <div style="font-size: 14px; opacity: 0.8; margin-top: 4px;">Total power needed</div>
+                                    <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
+                                        <div style="font-size: 18px; margin-bottom: 2px;">⚡</div>
+                                        <div style="font-size: 14px; opacity: 0.9;">Electricity Required</div>
+                                        <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalElectricity} KV</div>
+                                        <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">Total power needed</div>
                                     </div>
                                     ` : ''}
                                 </div>
@@ -5812,14 +5739,10 @@ convertToQuotationDateFormat(dateStr) {
                         await new Promise(r => setTimeout(r, 50));
                         grandTotalSummaryHeight = template.scrollHeight;
                         template.style.display = 'none';
-                        console.log(`📊 Measured grand total summary height: ${grandTotalSummaryHeight}px`);
                     }
 
                     const maxContentHeightFirstPage = paperDimensions.height - headerHeight - bottomMargin - safetyMargin - grandTotalSummaryHeight;
                     const maxContentHeightOtherPages = paperDimensions.height - headerHeight - bottomMargin - safetyMargin;
-
-                    console.log(`📏 Max content height - First page: ${maxContentHeightFirstPage}px | Other pages: ${maxContentHeightOtherPages}px`);
-                    console.log(`📊 Grand total summary: ${hasGrandTotalSummary ? 'YES' : 'NO'} (${grandTotalSummaryHeight}px measured)`);
 
                     const pages = [];
                     let currentPageOrders = [];
@@ -5843,7 +5766,6 @@ convertToQuotationDateFormat(dateStr) {
 
                     for (let i = 0; i < orders.length; i++) {
                         const order = orders[i];
-                        console.log(`\n🔄 Processing order ${i + 1}/${orders.length}: ${order.orderId}`);
 
                         // Determine max height for current page (first page has less space)
                         const isFirstPage = pages.length === 0;
@@ -5853,18 +5775,14 @@ convertToQuotationDateFormat(dateStr) {
                         const singleOrderCheck = await checkSingleOrderFits(order, currentMaxHeight);
 
                         if (!singleOrderCheck.fits) {
-                            console.warn(`⚠️ Order ${order.orderId} is TOO LARGE (${singleOrderCheck.height}px > ${currentMaxHeight}px) to fit on a single page!`);
-
                             // Save current page if it has orders
                             if (currentPageOrders.length > 0) {
-                                console.log(`   📄 Saving current page with ${currentPageOrders.length} orders`);
                                 pages.push([...currentPageOrders]);
                                 currentPageOrders = [];
                             }
 
                             // Check if this is a multifunction/multiday order that can be split
                             if (order.dayWiseData && order.dayWiseData.length > 0) {
-                                console.log(`   🔪 Attempting to split multifunction order ${order.orderId} across pages...`);
 
                                 // Try to split by function groups
                                 let remainingFunctions = [];
@@ -5880,8 +5798,6 @@ convertToQuotationDateFormat(dateStr) {
                                         });
                                     }
                                 });
-
-                                console.log(`   📊 Found ${remainingFunctions.length} functions to split across pages`);
 
                                 // Split functions across multiple pages
                                 while (remainingFunctions.length > 0) {
@@ -5914,7 +5830,6 @@ convertToQuotationDateFormat(dateStr) {
 
                                     // If we couldn't fit even one function, we need to add it anyway
                                     if (currentFunctionSet.length === 0 && remainingFunctions.length > 0) {
-                                        console.warn(`   ⚠️  Single function is too large, adding it anyway`);
                                         currentFunctionSet.push(remainingFunctions[0]);
                                     }
 
@@ -5930,7 +5845,6 @@ convertToQuotationDateFormat(dateStr) {
                                     };
 
                                     pages.push([pageOrder]);
-                                    console.log(`   📄 Added partial order page with ${currentFunctionSet.length} function(s)`);
 
                                     // Remove processed functions
                                     remainingFunctions = remainingFunctions.slice(currentFunctionSet.length);
@@ -5940,7 +5854,6 @@ convertToQuotationDateFormat(dateStr) {
                                 continue;
                             } else {
                                 // Not a multifunction order, add it anyway and let it scale or overflow
-                                console.warn(`   ⚠️  Order is not splittable, placing on its own page anyway`);
                                 pages.push([order]);
                                 processedOrders.add(i);
                                 continue;
@@ -5971,33 +5884,24 @@ convertToQuotationDateFormat(dateStr) {
                         await new Promise(r => setTimeout(r, 50)); // 50ms is enough for DOM update
                         const totalHeight = template.scrollHeight;
 
-                        console.log(`   📐 Page ${pages.length + 1} with ${testOrders.length} orders: ${totalHeight}px / ${currentMaxHeight}px ${isFirstPage ? '(FIRST PAGE)' : ''}`);
-
                         // Check if it fits
                         if (totalHeight <= currentMaxHeight) {
                             // Fits! Add this order to current page
                             currentPageOrders.push(order);
                             processedOrders.add(i);
-                            console.log(`   ✅ Order ${order.orderId} ADDED to page (${currentPageOrders.length} orders on page)`);
 
                             // If this is the last order, save the page
                             if (i === orders.length - 1) {
-                                console.log(`📄 Final page created with ${currentPageOrders.length} orders`);
                                 pages.push([...currentPageOrders]);
                             }
                         } else {
                             // Doesn't fit! Save current page and start new page with this order
-                            console.log(`   ⚠️  Exceeds limit! Saving page ${pages.length + 1} with ${currentPageOrders.length} orders`);
-                            console.log(`   📄 Page ${pages.length + 1} orders:`, currentPageOrders.map(o => o.orderId).join(', '));
-
                             pages.push([...currentPageOrders]);
                             currentPageOrders = [order];
                             processedOrders.add(i);
-                            console.log(`   ✅ Order ${order.orderId} STARTS new page ${pages.length + 1}`);
 
                             // If this is the last order, save this new page too
                             if (i === orders.length - 1) {
-                                console.log(`📄 Final page created with ${currentPageOrders.length} orders`);
                                 pages.push([...currentPageOrders]);
                             }
                         }
@@ -6010,23 +5914,13 @@ convertToQuotationDateFormat(dateStr) {
 
                     // VERIFICATION: Check all orders are included
                     const totalOrdersInPages = pages.reduce((sum, page) => sum + page.length, 0);
-                    console.log(`\n✅ VERIFICATION:`);
-                    console.log(`   Input orders: ${orders.length}`);
-                    console.log(`   Processed: ${processedOrders.size}`);
-                    console.log(`   Total in pages: ${totalOrdersInPages}`);
-                    console.log(`   Pages created: ${pages.length}`);
-
-                    pages.forEach((page, idx) => {
-                        console.log(`   Page ${idx + 1}: ${page.length} orders - ${page.map(o => o.orderId).join(', ')}`);
-                    });
 
                     if (totalOrdersInPages !== orders.length) {
-                        console.error(`❌ ERROR: Missing orders! Expected ${orders.length}, got ${totalOrdersInPages}`);
                         throw new Error(`Missing orders in PDF! Expected ${orders.length}, but only ${totalOrdersInPages} were included.`);
                     }
 
                     const totalPages = pages.length;
-                    console.log(`\n🎉 Success! Generated ${totalPages} pages for ${orders.length} orders`);
+                    console.log(`✅ Generated ${totalPages} pages for ${orders.length} orders`);
 
                     // STEP 3: Generate multi-page PDF
                     this.updateLoadingMessage(loading, 'Creating PDF document...');
@@ -6072,31 +5966,31 @@ convertToQuotationDateFormat(dateStr) {
                         // Add summary section on first page only
                         if (pageNum === 0 && (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0)) {
                             html += `
-                                <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
-                                    <h3 style="margin: 0 0 12px 0; font-size: 18px; text-align: center;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                                <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 10px; margin-bottom: 15px; border-radius: 6px;">
+                                    <h3 style="margin: 0 0 8px 0; font-size: 16px; text-align: center;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                                         ${grandTotalDryIce > 0 ? `
-                                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
-                                            <div style="font-size: 24px; margin-bottom: 4px;">❄️</div>
-                                            <div style="font-size: 18px; opacity: 0.9;">Dry Ice Needed</div>
-                                            <div style="font-size: 60px; font-weight: 700; margin-top: 4px;">${grandTotalDryIce} kg</div>
-                                            <div style="font-size: 14px; opacity: 0.8; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                        <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size: 18px; margin-bottom: 2px;">❄️</div>
+                                            <div style="font-size: 14px; opacity: 0.9;">Dry Ice Needed</div>
+                                            <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalDryIce} kg</div>
+                                            <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                         </div>
                                         ` : ''}
                                         ${grandTotalFlowers > 0 ? `
-                                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
-                                            <div style="font-size: 24px; margin-bottom: 4px;">🌸</div>
-                                            <div style="font-size: 18px; opacity: 0.9;">Flowers Needed</div>
-                                            <div style="font-size: 60px; font-weight: 700; margin-top: 4px;">${grandTotalFlowers} kg</div>
-                                            <div style="font-size: 14px; opacity: 0.8; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                        <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size: 18px; margin-bottom: 2px;">🌸</div>
+                                            <div style="font-size: 14px; opacity: 0.9;">Flowers Needed</div>
+                                            <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalFlowers} kg</div>
+                                            <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                         </div>
                                         ` : ''}
                                         ${grandTotalElectricity > 0 ? `
-                                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
-                                            <div style="font-size: 24px; margin-bottom: 4px;">⚡</div>
-                                            <div style="font-size: 18px; opacity: 0.9;">Electricity Required</div>
-                                            <div style="font-size: 60px; font-weight: 700; margin-top: 4px;">${grandTotalElectricity} KV</div>
-                                            <div style="font-size: 14px; opacity: 0.8; margin-top: 4px;">Total power needed</div>
+                                        <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size: 18px; margin-bottom: 2px;">⚡</div>
+                                            <div style="font-size: 14px; opacity: 0.9;">Electricity Required</div>
+                                            <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalElectricity} KV</div>
+                                            <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">Total power needed</div>
                                         </div>
                                         ` : ''}
                                     </div>
@@ -6120,19 +6014,41 @@ convertToQuotationDateFormat(dateStr) {
                         // Reduced wait time for faster PDF generation
                         await new Promise(r => setTimeout(r, 200));
 
-                        // Convert HTML to canvas
-                        const canvas = await html2canvas(template, {
-                            scale: qualityScale,
-                            backgroundColor: bgColor,
-                            width: paperDimensions.width,
-                            logging: false,
-                            useCORS: true
-                        });
+                        // Convert HTML to canvas with error handling
+                        let canvas;
+                        try {
+                            canvas = await html2canvas(template, {
+                                scale: qualityScale,
+                                backgroundColor: bgColor,
+                                width: paperDimensions.width,
+                                logging: false,
+                                useCORS: true,
+                                allowTaint: false
+                            });
+                        } catch (canvasError) {
+                            console.error('Canvas generation failed, retrying with lower quality:', canvasError);
+                            // Retry with lower quality scale
+                            canvas = await html2canvas(template, {
+                                scale: 1,
+                                backgroundColor: bgColor,
+                                width: paperDimensions.width,
+                                logging: false,
+                                useCORS: true,
+                                allowTaint: false
+                            });
+                        }
 
                         template.style.display = 'none';
 
-                        // Convert canvas to image and add to PDF
-                        const imgData = canvas.toDataURL('image/png', 0.95);
+                        // Convert canvas to image and add to PDF with error handling
+                        let imgData;
+                        try {
+                            imgData = canvas.toDataURL('image/png', 0.92);
+                        } catch (pngError) {
+                            console.error('PNG conversion failed, retrying with JPEG:', pngError);
+                            // Fallback to JPEG if PNG fails
+                            imgData = canvas.toDataURL('image/jpeg', 0.85);
+                        }
                         let imgWidth = pdfWidth;
                         let imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
@@ -6273,9 +6189,6 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             buildOrderHTML(order, fontSize, colors, compact = false, bgColor = '#ffffff', textColor = '#000000') {
-                console.log('🖼️ Building image for order:', order.orderId);
-                console.log('🖼️ isMultiDay:', order.isMultiDay);
-                console.log('🖼️ dayWiseData:', order.dayWiseData);
                 const ts = this.data.settings.tableSettings;
                 const orderIdBg = colors.orderIdBg || '#667eea';
                 const orderIdText = colors.orderIdText || '#ffffff';
