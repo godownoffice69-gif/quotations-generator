@@ -3943,89 +3943,172 @@
     }
 
     /**
-     * AGGRESSIVE Best Fit Algorithm - Maximum Space Utilization
-     * Splits ALL content into individual items and fills pages completely
-     * NO wasted space tolerance - splits orders across pages if needed
+     * SMART HIERARCHICAL BIN PACKING - Maximum Space + Logical Grouping
+     * Uses Modified First Fit with Group Preservation for optimal results
+     * - Preserves Day → Function → Items hierarchy for readability
+     * - Allows smart splitting at function boundaries only
+     * - Uses First Fit (fill current page) for better space utilization
+     * - Sorts items within functions for tighter packing
      */
     function distributeContentToPages(measurements, pageHeight, startYPos) {
-      const SAFE_PAGE_HEIGHT = pageHeight - 8;  // Maximum space utilization
+      const SAFE_PAGE_HEIGHT = pageHeight - 5;  // Minimal margin for max space
       const pages = [];
 
-      // AGGRESSIVE FLATTENING: Split EVERYTHING into individual items
-      let allBlocks = [];
-
-      measurements.contentBlocks.forEach(block => {
-        if (block.type === 'day') {
-          // Split ALL functions and items individually - NO grouping
-          block.subBlocks.forEach(funcBlock => {
-            // Add function header as separate block
-            allBlocks.push({
-              type: 'function-header',
-              height: 5,
-              content: funcBlock.content,
-              dayIndex: block.dayIndex
-            });
-            // Add each item separately
-            funcBlock.items.forEach(item => {
-              allBlocks.push({
-                ...item,
-                dayIndex: block.dayIndex,
-                functionName: funcBlock.content.name
-              });
-            });
-          });
-        } else {
-          // Simple items - add directly
-          allBlocks.push(block);
-        }
+      // Helper: Create new page
+      const createPage = (initialYPos = 10) => ({
+        blocks: [],
+        usedHeight: initialYPos,
+        remainingHeight: SAFE_PAGE_HEIGHT - initialYPos,
+        dayHeaders: new Set(),  // Track which days appear on this page
+        lastDayIndex: -1
       });
-
-      // Sort by height DESCENDING - FFD algorithm: largest items first for optimal packing
-      allBlocks.sort((a, b) => b.height - a.height);
 
       // Initialize first page
-      pages.push({
-        blocks: [],
-        usedHeight: startYPos,
-        remainingHeight: SAFE_PAGE_HEIGHT - startYPos
-      });
+      let currentPage = createPage(startYPos);
+      pages.push(currentPage);
 
-      // OPTIMIZED BEST FIT: Fill pages efficiently with FFD strategy
-      allBlocks.forEach(block => {
-        let placed = false;
-        let bestPageIndex = -1;
-        let minWaste = Infinity;
+      // Process content blocks with smart grouping
+      measurements.contentBlocks.forEach(block => {
+        if (block.type === 'day') {
+          const dayIndex = block.dayIndex;
+          const dayHeaderHeight = 6;
+          let needDayHeader = !currentPage.dayHeaders.has(dayIndex);
 
-        // Find page with MINIMUM waste (Best Fit)
-        for (let i = 0; i < pages.length; i++) {
-          const page = pages[i];
-          if (page.remainingHeight >= block.height) {
-            const waste = page.remainingHeight - block.height;
-            // Moderate first page priority: balance space efficiency
-            const priority = i === 0 ? waste - 50 : waste;
-            if (priority < minWaste) {
-              minWaste = priority;
-              bestPageIndex = i;
+          // Process each function in the day
+          block.subBlocks.forEach((funcBlock, funcIdx) => {
+            const funcHeaderHeight = 5;
+
+            // Sort items within function by height DESCENDING for optimal packing
+            const sortedItems = [...funcBlock.items].sort((a, b) => b.height - a.height);
+
+            // Calculate function total height
+            const functionTotalHeight = funcHeaderHeight +
+              sortedItems.reduce((sum, item) => sum + item.height, 0);
+
+            // Check if we need day header
+            const requiredHeight = (needDayHeader ? dayHeaderHeight : 0) + functionTotalHeight;
+
+            // STRATEGY 1: Try to fit entire function on current page
+            if (currentPage.remainingHeight >= requiredHeight) {
+              // Add day header if needed
+              if (needDayHeader) {
+                currentPage.blocks.push({
+                  type: 'day',
+                  height: dayHeaderHeight,
+                  content: block.content,
+                  dayIndex: dayIndex
+                });
+                currentPage.usedHeight += dayHeaderHeight;
+                currentPage.remainingHeight -= dayHeaderHeight;
+                currentPage.dayHeaders.add(dayIndex);
+                currentPage.lastDayIndex = dayIndex;
+                needDayHeader = false;
+              }
+
+              // Add function header
+              currentPage.blocks.push({
+                type: 'function-header',
+                height: funcHeaderHeight,
+                content: funcBlock.content,
+                dayIndex: dayIndex
+              });
+              currentPage.usedHeight += funcHeaderHeight;
+              currentPage.remainingHeight -= funcHeaderHeight;
+
+              // Add all items
+              sortedItems.forEach(item => {
+                currentPage.blocks.push({
+                  ...item,
+                  dayIndex: dayIndex,
+                  functionName: funcBlock.content.name
+                });
+                currentPage.usedHeight += item.height;
+                currentPage.remainingHeight -= item.height;
+              });
             }
-          }
-        }
+            // STRATEGY 2: Function too large - use intelligent splitting
+            else {
+              // Start new page for better organization
+              currentPage = createPage(10);
+              pages.push(currentPage);
+              needDayHeader = true;
 
-        // Place in best-fit page
-        if (bestPageIndex !== -1) {
-          const page = pages[bestPageIndex];
-          page.blocks.push(block);
-          page.usedHeight += block.height;
-          page.remainingHeight -= block.height;
-          placed = true;
-        }
+              // Add day header on new page
+              if (needDayHeader) {
+                currentPage.blocks.push({
+                  type: 'day',
+                  height: dayHeaderHeight,
+                  content: block.content,
+                  dayIndex: dayIndex
+                });
+                currentPage.usedHeight += dayHeaderHeight;
+                currentPage.remainingHeight -= dayHeaderHeight;
+                currentPage.dayHeaders.add(dayIndex);
+                currentPage.lastDayIndex = dayIndex;
+                needDayHeader = false;
+              }
 
-        // Create new page only if absolutely necessary
-        if (!placed) {
-          pages.push({
-            blocks: [block],
-            usedHeight: 12 + block.height,  // Minimal top margin for maximum space
-            remainingHeight: SAFE_PAGE_HEIGHT - 12 - block.height
+              // Add function header
+              currentPage.blocks.push({
+                type: 'function-header',
+                height: funcHeaderHeight,
+                content: funcBlock.content,
+                dayIndex: dayIndex
+              });
+              currentPage.usedHeight += funcHeaderHeight;
+              currentPage.remainingHeight -= funcHeaderHeight;
+
+              // Add items one by one, creating new pages as needed
+              sortedItems.forEach((item, itemIdx) => {
+                if (currentPage.remainingHeight < item.height) {
+                  // Need new page
+                  currentPage = createPage(10);
+                  pages.push(currentPage);
+
+                  // Add continuation marker (day header) on new page
+                  currentPage.blocks.push({
+                    type: 'day',
+                    height: dayHeaderHeight,
+                    content: block.content,
+                    dayIndex: dayIndex
+                  });
+                  currentPage.usedHeight += dayHeaderHeight;
+                  currentPage.remainingHeight -= dayHeaderHeight;
+                  currentPage.dayHeaders.add(dayIndex);
+                  currentPage.lastDayIndex = dayIndex;
+
+                  // Add function header continuation
+                  currentPage.blocks.push({
+                    type: 'function-header',
+                    height: funcHeaderHeight,
+                    content: funcBlock.content,
+                    dayIndex: dayIndex
+                  });
+                  currentPage.usedHeight += funcHeaderHeight;
+                  currentPage.remainingHeight -= funcHeaderHeight;
+                }
+
+                // Add item
+                currentPage.blocks.push({
+                  ...item,
+                  dayIndex: dayIndex,
+                  functionName: funcBlock.content.name
+                });
+                currentPage.usedHeight += item.height;
+                currentPage.remainingHeight -= item.height;
+              });
+            }
           });
+        } else {
+          // Simple cart items (not builder mode)
+          if (currentPage.remainingHeight < block.height) {
+            currentPage = createPage(10);
+            pages.push(currentPage);
+          }
+
+          currentPage.blocks.push(block);
+          currentPage.usedHeight += block.height;
+          currentPage.remainingHeight -= block.height;
         }
       });
 
@@ -4288,7 +4371,8 @@
     }
 
     /**
-     * Main PDF Generation Function with Two-Pass Rendering + FFD
+     * Main PDF Generation Function with Two-Pass Rendering + Smart Hierarchical Packing
+     * Uses Modified First Fit with Group Preservation for maximum space utilization
      */
     function generatePDF(type, data) {
       const { jsPDF } = window.jspdf;
@@ -4308,8 +4392,8 @@
       // Adjustment = (clientRows / 5) rows * 6mm spacing + 6mm extra = clientRows * 1.2 + 6mm
       const startYPos = 77 + measurements.clientRows * 1.2; // Exact match with renderPDFHeader
 
-      console.log('🎯 FFD Algorithm: Distributing content to pages...');
-      // Apply FFD Algorithm for optimal distribution
+      console.log('🎯 Smart Hierarchical Packing: Distributing content to pages...');
+      // Apply Modified First Fit with Group Preservation for optimal distribution
       const distributedPages = distributeContentToPages(measurements, pageHeight, startYPos);
 
       console.log('📄 Distributed to', distributedPages.length, 'pages');
