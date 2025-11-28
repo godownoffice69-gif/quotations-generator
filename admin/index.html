@@ -5930,11 +5930,10 @@ convertToQuotationDateFormat(dateStr) {
                     template.style.position = 'static';
                     template.style.opacity = '1';
 
-                    // VERIFICATION: Check all orders are included
-                    const totalOrdersInPages = pages.reduce((sum, page) => sum + page.length, 0);
-
-                    if (totalOrdersInPages !== orders.length) {
-                        throw new Error(`Missing orders in PDF! Expected ${orders.length}, but only ${totalOrdersInPages} were included.`);
+                    // VERIFICATION: Check all orders were processed
+                    // Note: totalOrdersInPages may be > orders.length due to split multifunction orders
+                    if (processedOrders.size !== orders.length) {
+                        throw new Error(`Missing orders in PDF! Expected ${orders.length}, but only ${processedOrders.size} were processed.`);
                     }
 
                     const totalPages = pages.length;
