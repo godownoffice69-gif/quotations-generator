@@ -6012,7 +6012,8 @@ convertToQuotationDateFormat(dateStr) {
                 const items = [];
 
                 // Collect all items from the order
-                if (order.isMultiDay && order.dayWiseData) {
+                // Check for dayWiseData first (handles both multiday and filtered single-day orders)
+                if (order.dayWiseData && Array.isArray(order.dayWiseData) && order.dayWiseData.length > 0) {
                     order.dayWiseData.forEach(day => {
                         if (day.functions && Array.isArray(day.functions)) {
                             day.functions.forEach(func => {
