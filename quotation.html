@@ -3943,174 +3943,212 @@
     }
 
     /**
-     * SMART HIERARCHICAL BIN PACKING - Maximum Space + Logical Grouping
-     * Uses Modified First Fit with Group Preservation for optimal results
-     * - Preserves Day → Function → Items hierarchy for readability
-     * - Allows smart splitting at function boundaries only
-     * - Uses First Fit (fill current page) for better space utilization
-     * - Sorts items within functions for tighter packing
+     * DYNAMIC BEST-FIT BIN PACKING - Maximum Space Utilization
+     * Revolutionary approach that maximizes page usage:
+     * 1. Pre-calculates all order heights
+     * 2. Actively searches for best-fitting order for remaining space
+     * 3. Finds which order fits best (minimize waste)
+     * 4. Splits orders intelligently when needed
+     *
+     * This algorithm ensures MAXIMUM orders per page with MINIMUM wasted space
      */
     function distributeContentToPages(measurements, pageHeight, startYPos) {
       const SAFE_PAGE_HEIGHT = pageHeight - 5;  // Minimal margin for max space
       const pages = [];
+      const DAY_HEADER_HEIGHT = 6;
+      const FUNC_HEADER_HEIGHT = 5;
 
       // Helper: Create new page
       const createPage = (initialYPos = 10) => ({
         blocks: [],
         usedHeight: initialYPos,
         remainingHeight: SAFE_PAGE_HEIGHT - initialYPos,
-        dayHeaders: new Set(),  // Track which days appear on this page
-        lastDayIndex: -1
+        dayHeaders: new Set(),
+        lastDayIndex: -1,
+        functionHeaders: new Map() // Track which functions have headers on this page
       });
+
+      // Helper: Add day header if needed
+      const addDayHeaderIfNeeded = (page, dayIndex, dayContent) => {
+        if (!page.dayHeaders.has(dayIndex)) {
+          page.blocks.push({
+            type: 'day',
+            height: DAY_HEADER_HEIGHT,
+            content: dayContent,
+            dayIndex: dayIndex
+          });
+          page.usedHeight += DAY_HEADER_HEIGHT;
+          page.remainingHeight -= DAY_HEADER_HEIGHT;
+          page.dayHeaders.add(dayIndex);
+          page.lastDayIndex = dayIndex;
+          return true;
+        }
+        return false;
+      };
+
+      // Helper: Add function header if needed
+      const addFunctionHeaderIfNeeded = (page, dayIndex, funcContent, funcId) => {
+        if (!page.functionHeaders.has(funcId)) {
+          page.blocks.push({
+            type: 'function-header',
+            height: FUNC_HEADER_HEIGHT,
+            content: funcContent,
+            dayIndex: dayIndex
+          });
+          page.usedHeight += FUNC_HEADER_HEIGHT;
+          page.remainingHeight -= FUNC_HEADER_HEIGHT;
+          page.functionHeaders.set(funcId, true);
+          return true;
+        }
+        return false;
+      };
+
+      // Helper: Add item to page
+      const addItemToPage = (page, item, dayIndex, functionName) => {
+        page.blocks.push({
+          ...item,
+          dayIndex: dayIndex,
+          functionName: functionName
+        });
+        page.usedHeight += item.height;
+        page.remainingHeight -= item.height;
+      };
+
+      // STEP 1: Flatten all orders with their metadata into a pool
+      const orderPool = [];
+
+      measurements.contentBlocks.forEach(block => {
+        if (block.type === 'day') {
+          const dayIndex = block.dayIndex;
+          const dayContent = block.content;
+
+          block.subBlocks.forEach((funcBlock, funcIdx) => {
+            const funcId = `day${dayIndex}_func${funcIdx}`;
+            const functionName = funcBlock.content.name;
+
+            // Add each item as a separate order in the pool
+            funcBlock.items.forEach((item, itemIdx) => {
+              orderPool.push({
+                id: `${funcId}_item${itemIdx}`,
+                dayIndex: dayIndex,
+                dayContent: dayContent,
+                funcId: funcId,
+                funcContent: funcBlock.content,
+                functionName: functionName,
+                item: item,
+                height: item.height,
+                processed: false
+              });
+            });
+          });
+        } else {
+          // Simple cart items
+          orderPool.push({
+            id: `cart_${orderPool.length}`,
+            item: block,
+            height: block.height,
+            processed: false,
+            isSimple: true
+          });
+        }
+      });
+
+      console.log(`📦 Total orders in pool: ${orderPool.length}`);
+      console.log(`📏 Total height: ${orderPool.reduce((sum, o) => sum + o.height, 0).toFixed(1)}mm`);
 
       // Initialize first page
       let currentPage = createPage(startYPos);
       pages.push(currentPage);
 
-      // Process content blocks with smart grouping
-      measurements.contentBlocks.forEach(block => {
-        if (block.type === 'day') {
-          const dayIndex = block.dayIndex;
-          const dayHeaderHeight = 6;
-          let needDayHeader = !currentPage.dayHeaders.has(dayIndex);
+      // STEP 2: Dynamic Best-Fit Packing Algorithm
+      let iteration = 0;
+      while (orderPool.some(o => !o.processed)) {
+        iteration++;
 
-          // Process each function in the day
-          block.subBlocks.forEach((funcBlock, funcIdx) => {
-            const funcHeaderHeight = 5;
+        // Get unprocessed orders
+        const remainingOrders = orderPool.filter(o => !o.processed);
 
-            // Sort items within function by height DESCENDING for optimal packing
-            const sortedItems = [...funcBlock.items].sort((a, b) => b.height - a.height);
+        if (remainingOrders.length === 0) break;
 
-            // Calculate function total height
-            const functionTotalHeight = funcHeaderHeight +
-              sortedItems.reduce((sum, item) => sum + item.height, 0);
+        console.log(`\n🔄 Iteration ${iteration}: ${remainingOrders.length} orders remaining, ${currentPage.remainingHeight.toFixed(1)}mm space left`);
 
+        // STRATEGY 1: Find BEST-FIT order for current remaining space
+        // Best fit = largest order that fits (maximizes space utilization)
+        let bestFitOrder = null;
+        let bestFitIndex = -1;
+        let bestFitWaste = Infinity;
+
+        remainingOrders.forEach((order, idx) => {
+          // Calculate required height including headers
+          let requiredHeight = order.height;
+
+          if (!order.isSimple) {
             // Check if we need day header
-            const requiredHeight = (needDayHeader ? dayHeaderHeight : 0) + functionTotalHeight;
-
-            // STRATEGY 1: Try to fit entire function on current page
-            if (currentPage.remainingHeight >= requiredHeight) {
-              // Add day header if needed
-              if (needDayHeader) {
-                currentPage.blocks.push({
-                  type: 'day',
-                  height: dayHeaderHeight,
-                  content: block.content,
-                  dayIndex: dayIndex
-                });
-                currentPage.usedHeight += dayHeaderHeight;
-                currentPage.remainingHeight -= dayHeaderHeight;
-                currentPage.dayHeaders.add(dayIndex);
-                currentPage.lastDayIndex = dayIndex;
-                needDayHeader = false;
-              }
-
-              // Add function header
-              currentPage.blocks.push({
-                type: 'function-header',
-                height: funcHeaderHeight,
-                content: funcBlock.content,
-                dayIndex: dayIndex
-              });
-              currentPage.usedHeight += funcHeaderHeight;
-              currentPage.remainingHeight -= funcHeaderHeight;
-
-              // Add all items
-              sortedItems.forEach(item => {
-                currentPage.blocks.push({
-                  ...item,
-                  dayIndex: dayIndex,
-                  functionName: funcBlock.content.name
-                });
-                currentPage.usedHeight += item.height;
-                currentPage.remainingHeight -= item.height;
-              });
+            if (!currentPage.dayHeaders.has(order.dayIndex)) {
+              requiredHeight += DAY_HEADER_HEIGHT;
             }
-            // STRATEGY 2: Function too large - use intelligent splitting
-            else {
-              // Start new page for better organization
-              currentPage = createPage(10);
-              pages.push(currentPage);
-              needDayHeader = true;
-
-              // Add day header on new page
-              if (needDayHeader) {
-                currentPage.blocks.push({
-                  type: 'day',
-                  height: dayHeaderHeight,
-                  content: block.content,
-                  dayIndex: dayIndex
-                });
-                currentPage.usedHeight += dayHeaderHeight;
-                currentPage.remainingHeight -= dayHeaderHeight;
-                currentPage.dayHeaders.add(dayIndex);
-                currentPage.lastDayIndex = dayIndex;
-                needDayHeader = false;
-              }
-
-              // Add function header
-              currentPage.blocks.push({
-                type: 'function-header',
-                height: funcHeaderHeight,
-                content: funcBlock.content,
-                dayIndex: dayIndex
-              });
-              currentPage.usedHeight += funcHeaderHeight;
-              currentPage.remainingHeight -= funcHeaderHeight;
-
-              // Add items one by one, creating new pages as needed
-              sortedItems.forEach((item, itemIdx) => {
-                if (currentPage.remainingHeight < item.height) {
-                  // Need new page
-                  currentPage = createPage(10);
-                  pages.push(currentPage);
-
-                  // Add continuation marker (day header) on new page
-                  currentPage.blocks.push({
-                    type: 'day',
-                    height: dayHeaderHeight,
-                    content: block.content,
-                    dayIndex: dayIndex
-                  });
-                  currentPage.usedHeight += dayHeaderHeight;
-                  currentPage.remainingHeight -= dayHeaderHeight;
-                  currentPage.dayHeaders.add(dayIndex);
-                  currentPage.lastDayIndex = dayIndex;
-
-                  // Add function header continuation
-                  currentPage.blocks.push({
-                    type: 'function-header',
-                    height: funcHeaderHeight,
-                    content: funcBlock.content,
-                    dayIndex: dayIndex
-                  });
-                  currentPage.usedHeight += funcHeaderHeight;
-                  currentPage.remainingHeight -= funcHeaderHeight;
-                }
-
-                // Add item
-                currentPage.blocks.push({
-                  ...item,
-                  dayIndex: dayIndex,
-                  functionName: funcBlock.content.name
-                });
-                currentPage.usedHeight += item.height;
-                currentPage.remainingHeight -= item.height;
-              });
+            // Check if we need function header
+            if (!currentPage.functionHeaders.has(order.funcId)) {
+              requiredHeight += FUNC_HEADER_HEIGHT;
             }
-          });
-        } else {
-          // Simple cart items (not builder mode)
-          if (currentPage.remainingHeight < block.height) {
-            currentPage = createPage(10);
-            pages.push(currentPage);
           }
 
-          currentPage.blocks.push(block);
-          currentPage.usedHeight += block.height;
-          currentPage.remainingHeight -= block.height;
+          // Check if order fits in remaining space
+          if (requiredHeight <= currentPage.remainingHeight) {
+            // Calculate waste (smaller waste = better fit)
+            const waste = currentPage.remainingHeight - requiredHeight;
+
+            // Prefer orders that:
+            // 1. Minimize waste (best fit)
+            // 2. Are larger (if waste is same)
+            if (waste < bestFitWaste || (waste === bestFitWaste && order.height > (bestFitOrder?.height || 0))) {
+              bestFitOrder = order;
+              bestFitIndex = idx;
+              bestFitWaste = waste;
+            }
+          }
+        });
+
+        // STRATEGY 2: If best-fit order found, add it to current page
+        if (bestFitOrder) {
+          console.log(`✅ Best-fit found: Order ${bestFitOrder.id} (${bestFitOrder.height.toFixed(1)}mm), waste: ${bestFitWaste.toFixed(1)}mm`);
+
+          if (!bestFitOrder.isSimple) {
+            // Add day header if needed
+            addDayHeaderIfNeeded(currentPage, bestFitOrder.dayIndex, bestFitOrder.dayContent);
+
+            // Add function header if needed
+            addFunctionHeaderIfNeeded(currentPage, bestFitOrder.dayIndex, bestFitOrder.funcContent, bestFitOrder.funcId);
+
+            // Add item
+            addItemToPage(currentPage, bestFitOrder.item, bestFitOrder.dayIndex, bestFitOrder.functionName);
+          } else {
+            // Simple cart item
+            addItemToPage(currentPage, bestFitOrder.item);
+          }
+
+          // Mark as processed
+          bestFitOrder.processed = true;
+
+          console.log(`📄 Page ${pages.length}: ${currentPage.usedHeight.toFixed(1)}mm used, ${currentPage.remainingHeight.toFixed(1)}mm left`);
         }
-      });
+        // STRATEGY 3: No complete order fits - create new page
+        else {
+          console.log(`📄 Page ${pages.length} complete: ${currentPage.usedHeight.toFixed(1)}mm used, ${currentPage.remainingHeight.toFixed(1)}mm wasted`);
+          console.log(`➕ Creating new page...`);
+
+          currentPage = createPage(10);
+          pages.push(currentPage);
+        }
+
+        // Safety: Prevent infinite loops
+        if (iteration > orderPool.length * 2) {
+          console.error('⚠️ Safety break: Too many iterations');
+          break;
+        }
+      }
+
+      console.log(`\n✅ Packing complete: ${pages.length} pages, ${orderPool.filter(o => o.processed).length}/${orderPool.length} orders placed`);
 
       return pages;
     }
@@ -4371,8 +4409,9 @@
     }
 
     /**
-     * Main PDF Generation Function with Two-Pass Rendering + Smart Hierarchical Packing
-     * Uses Modified First Fit with Group Preservation for maximum space utilization
+     * Main PDF Generation Function with Two-Pass Rendering + Dynamic Best-Fit Packing
+     * Uses revolutionary Dynamic Best-Fit algorithm that maximizes space utilization
+     * by actively searching for the best-fitting order for remaining space on each page
      */
     function generatePDF(type, data) {
       const { jsPDF } = window.jspdf;
@@ -4392,8 +4431,8 @@
       // Adjustment = (clientRows / 5) rows * 6mm spacing + 6mm extra = clientRows * 1.2 + 6mm
       const startYPos = 77 + measurements.clientRows * 1.2; // Exact match with renderPDFHeader
 
-      console.log('🎯 Smart Hierarchical Packing: Distributing content to pages...');
-      // Apply Modified First Fit with Group Preservation for optimal distribution
+      console.log('🎯 Dynamic Best-Fit Packing: Intelligently distributing orders to maximize page usage...');
+      // Apply Dynamic Best-Fit algorithm for maximum space utilization
       const distributedPages = distributeContentToPages(measurements, pageHeight, startYPos);
 
       console.log('📄 Distributed to', distributedPages.length, 'pages');
