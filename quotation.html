@@ -4039,7 +4039,8 @@
     function renderOptimizedPDF(doc, type, data, measurements, distributedPages, pageWidth, pageHeight, margin) {
       let grandTotal = 0;
       let currentPageIndex = 0;
-      let yPos = 55 + measurements.clientInfo + measurements.clientRows + measurements.itemsTitle;
+      // Must match startYPos calculation in generatePDF
+      let yPos = 77 + measurements.clientRows * 1.2;
 
       // Render header and client info (appears only on first page)
       renderPDFHeader(doc, data, pageWidth, margin);
@@ -4302,9 +4303,11 @@
       console.log('📊 Measurements:', measurements);
       console.log('📦 Total content blocks:', measurements.contentBlocks.length);
 
-      // Calculate starting Y position for content
-      const startYPos = measurements.header + measurements.clientInfo +
-                        measurements.clientRows + measurements.itemsTitle;
+      // Calculate starting Y position for content (must match renderPDFHeader exactly)
+      // Formula: 55 (header start) + 8 (CLIENT INFO spacing) + clientRows + row spacing adjustments + 8 (items title spacing)
+      // Row spacing: each row gets 6mm except last gets 12mm, but measurements.clientRows uses 5mm per row
+      // Adjustment = (clientRows / 5) rows * 6mm spacing + 6mm extra = clientRows * 1.2 + 6mm
+      const startYPos = 77 + measurements.clientRows * 1.2; // Exact match with renderPDFHeader
 
       console.log('🎯 FFD Algorithm: Distributing content to pages...');
       // Apply FFD Algorithm for optimal distribution
