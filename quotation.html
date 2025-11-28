@@ -3834,6 +3834,7 @@
      * PASS 1: Measure content heights accurately
      * Calculates the actual height each content block will occupy
      */
+    /* DEPRECATED - No longer used with single-pass algorithm
     function measureContentHeights(doc, type, data, pageWidth, margin) {
       const measurements = {
         header: 30,  // Fixed: Title + subtitle + line (reduced for max space)
@@ -3941,17 +3942,9 @@
 
       return measurements;
     }
+    */ // End of DEPRECATED measureContentHeights
 
-    /**
-     * DYNAMIC BEST-FIT BIN PACKING - Maximum Space Utilization
-     * Revolutionary approach that maximizes page usage:
-     * 1. Pre-calculates all order heights
-     * 2. Actively searches for best-fitting order for remaining space
-     * 3. Finds which order fits best (minimize waste)
-     * 4. Splits orders intelligently when needed
-     *
-     * This algorithm ensures MAXIMUM orders per page with MINIMUM wasted space
-     */
+    /* DEPRECATED - No longer used with single-pass algorithm
     function distributeContentToPages(measurements, pageHeight, startYPos) {
       const SAFE_PAGE_HEIGHT = pageHeight - 5;  // Minimal margin for max space
       const pages = [];
@@ -4152,10 +4145,9 @@
 
       return pages;
     }
+    */ // End of DEPRECATED distributeContentToPages
 
-    /**
-     * PASS 2: Render optimized content with smart page breaks
-     */
+    /* DEPRECATED - No longer used with single-pass algorithm
     function renderOptimizedPDF(doc, type, data, measurements, distributedPages, pageWidth, pageHeight, margin) {
       let grandTotal = 0;
       let currentPageIndex = 0;
@@ -4314,6 +4306,7 @@
       const splitTerms = doc.splitTextToSize(terms, pageWidth - 2 * margin);
       doc.text(splitTerms, pageWidth/2, yPos, { align: 'center' });
     }
+    */ // End of DEPRECATED renderOptimizedPDF
 
     /**
      * Render PDF header (first page only)
@@ -4409,44 +4402,215 @@
     }
 
     /**
-     * Main PDF Generation Function with Two-Pass Rendering + Dynamic Best-Fit Packing
-     * Uses revolutionary Dynamic Best-Fit algorithm that maximizes space utilization
-     * by actively searching for the best-fitting order for remaining space on each page
+     * SINGLE-PASS PDF GENERATION - Simple & Reliable
+     * Renders content sequentially with real-time boundary checking
+     * No complex algorithms - just straightforward logic that works
      */
     function generatePDF(type, data) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       const pageWidth = 210, pageHeight = 297, margin = 20;
+      const BOTTOM_MARGIN = 10;  // Leave 10mm at bottom
+      const MAX_Y = pageHeight - BOTTOM_MARGIN;
 
-      console.log('🔍 PASS 1: Measuring content heights...');
-      // PASS 1: Measure all content
-      const measurements = measureContentHeights(doc, type, data, pageWidth, margin);
+      console.log('📄 Generating PDF with single-pass algorithm...');
 
-      console.log('📊 Measurements:', measurements);
-      console.log('📦 Total content blocks:', measurements.contentBlocks.length);
+      // Render header and client info on first page
+      renderPDFHeader(doc, data, pageWidth, margin);
 
-      // Calculate starting Y position for content (must match renderPDFHeader exactly)
-      // Formula: 55 (header start) + 8 (CLIENT INFO spacing) + clientRows + row spacing adjustments + 8 (items title spacing)
-      // Row spacing: each row gets 6mm except last gets 12mm, but measurements.clientRows uses 5mm per row
-      // Adjustment = (clientRows / 5) rows * 6mm spacing + 6mm extra = clientRows * 1.2 + 6mm
-      const startYPos = 77 + measurements.clientRows * 1.2; // Exact match with renderPDFHeader
+      // Calculate starting Y position (must match renderPDFHeader)
+      const clientRows = calculateClientRows(data);
+      let yPos = 77 + clientRows * 1.2;
+      let pageCount = 1;
 
-      console.log('🎯 Dynamic Best-Fit Packing: Intelligently distributing orders to maximize page usage...');
-      // Apply Dynamic Best-Fit algorithm for maximum space utilization
-      const distributedPages = distributeContentToPages(measurements, pageHeight, startYPos);
+      console.log(`📍 Starting content at yPos: ${yPos.toFixed(1)}mm`);
 
-      console.log('📄 Distributed to', distributedPages.length, 'pages');
-      distributedPages.forEach((page, idx) => {
-        console.log(`  Page ${idx + 1}: ${page.blocks.length} blocks, ${page.usedHeight.toFixed(1)}mm used, ${page.remainingHeight.toFixed(1)}mm remaining`);
+      // Helper: Check if element fits on current page, create new page if needed
+      const ensureSpace = (requiredHeight, elementName) => {
+        if (yPos + requiredHeight > MAX_Y) {
+          console.log(`📄 Page ${pageCount} full (yPos: ${yPos.toFixed(1)}mm) - creating new page for ${elementName}`);
+          doc.addPage();
+          pageCount++;
+          yPos = 10;  // Start new pages near the top
+          return true;  // Indicates new page was created
+        }
+        return false;
+      };
+
+      // Render content based on type
+      if (type === 'builder') {
+        builderData.days.forEach((day, dayIdx) => {
+          // Check space for day header
+          ensureSpace(8, `Day ${dayIdx + 1} header`);
+
+          // Render day header
+          doc.setFontSize(12);
+          doc.setTextColor(0, 213, 255);
+          doc.setFont(undefined, 'bold');
+          doc.text('Day ' + (dayIdx + 1) + (day.date ? ' - ' + new Date(day.date).toLocaleDateString('en-IN') : ''), margin, yPos);
+          yPos += 6;
+
+          day.functions.forEach((func, funcIdx) => {
+            // Check space for function header
+            ensureSpace(7, `Function: ${func.name}`);
+
+            // Render function header
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'bold');
+            doc.text(func.name, margin + 5, yPos);
+            yPos += 5;
+
+            // Render each item in function
+            func.items.forEach((item, itemIdx) => {
+              doc.setFontSize(10);
+              doc.setFont(undefined, 'normal');
+
+              // Calculate item height
+              const itemName = item.name || '';
+              const textWidth = pageWidth - margin * 2 - 10;
+              const lines = Math.ceil(doc.getTextWidth(itemName) / textWidth) || 1;
+              const itemHeight = 4 + (lines * 5);
+
+              // Check space for item
+              ensureSpace(itemHeight + 2, `Item: ${item.name}`);
+
+              // Render item
+              const itemTotal = item.price * item.qty;
+              doc.text(item.name, margin + 10, yPos);
+              doc.text(item.qty + ' x Rs. ' + item.price.toLocaleString('en-IN'), margin + 10, yPos + 4);
+              doc.text('Rs. ' + itemTotal.toLocaleString('en-IN'), pageWidth - margin, yPos + 2, { align: 'right' });
+              yPos += itemHeight;
+            });
+
+            yPos += 2;  // Spacing after function
+          });
+
+          yPos += 3;  // Spacing after day
+        });
+      } else {
+        // Simple cart items
+        cart.forEach((item, idx) => {
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+
+          // Calculate item height
+          const itemName = item.name || '';
+          const textWidth = pageWidth - margin * 2;
+          const lines = Math.ceil(doc.getTextWidth(itemName) / textWidth) || 1;
+          const itemHeight = 4 + (lines * 5);
+
+          // Check space for item
+          ensureSpace(itemHeight + 2, `Cart item: ${item.name}`);
+
+          // Render item
+          const itemTotal = item.price * item.qty;
+          doc.text(item.name, margin, yPos);
+          doc.text(item.qty + ' x Rs. ' + item.price.toLocaleString('en-IN'), margin, yPos + 4);
+          doc.text('Rs. ' + itemTotal.toLocaleString('en-IN'), pageWidth - margin, yPos + 2, { align: 'right' });
+          yPos += itemHeight;
+        });
+      }
+
+      // Calculate grand total
+      const itemsList = type === 'builder' ?
+        builderData.days.flatMap(day => day.functions.flatMap(func => func.items)) :
+        cart;
+      const grandTotal = itemsList.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+      // Render requirements section
+      const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
+      const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+      let totalDryIceKg = 0, totalElectricityKV = 0;
+
+      itemsList.forEach(item => {
+        const itemNameLower = item.name.toLowerCase();
+        if (itemNameLower.includes('dry ice')) totalDryIceKg += item.qty * 20;
+        if (electricity3KV.some(name => itemNameLower.includes(name))) totalElectricityKV += item.qty * 3;
+        else if (electricity1KV.some(name => itemNameLower.includes(name))) totalElectricityKV += item.qty * 1;
       });
 
-      console.log('✍️ PASS 2: Rendering optimized PDF...');
-      // PASS 2: Render with optimized layout
-      renderOptimizedPDF(doc, type, data, measurements, distributedPages, pageWidth, pageHeight, margin);
+      if (totalDryIceKg > 0 || totalElectricityKV > 0) {
+        const reqHeight = 19 + (totalDryIceKg > 0 ? 6 : 0) + (totalElectricityKV > 0 ? 6 : 0);
+        ensureSpace(reqHeight, 'Requirements section');
 
-      console.log('✅ PDF generated successfully!');
+        yPos += 3;
+        doc.setDrawColor(100, 100, 100);
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 8;
+
+        doc.setFontSize(12);
+        doc.setTextColor(143, 107, 255);
+        doc.setFont(undefined, 'bold');
+        doc.text('ADDITIONAL REQUIREMENTS', margin, yPos);
+        yPos += 8;
+
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'normal');
+
+        if (totalDryIceKg > 0) {
+          doc.text('• Dry Ice: ' + totalDryIceKg + ' kg required', margin + 5, yPos);
+          yPos += 6;
+        }
+        if (totalElectricityKV > 0) {
+          doc.text('• Electricity: ' + totalElectricityKV + ' KV power supply required', margin + 5, yPos);
+          yPos += 6;
+        }
+      }
+
+      // Render grand total
+      ensureSpace(20, 'Grand total');
+
+      yPos += 5;
+      doc.setDrawColor(100, 100, 100);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 8;
+
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'bold');
+      doc.text('GRAND TOTAL:', margin, yPos);
+      doc.text('Rs. ' + grandTotal.toLocaleString('en-IN'), pageWidth - margin, yPos, { align: 'right' });
+      yPos += 10;
+
+      // Render footer
+      ensureSpace(35, 'Footer');
+
+      yPos += 5;
+      doc.setFontSize(11);
+      doc.setTextColor(255, 107, 107);
+      doc.text('Thank you for your business!', pageWidth / 2, yPos, { align: 'center' });
+      yPos += 8;
+
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont(undefined, 'normal');
+      doc.text('Terms & Conditions:', margin, yPos);
+      yPos += 5;
+      doc.setFontSize(8);
+      doc.text('• 50% advance payment required to confirm booking', margin + 5, yPos);
+      yPos += 4;
+      doc.text('• Balance payment due before event delivery', margin + 5, yPos);
+      yPos += 4;
+      doc.text('• Prices valid for 30 days from quote date', margin + 5, yPos);
+      yPos += 4;
+      doc.text('• Cancellation charges apply as per agreement', margin + 5, yPos);
+
+      console.log(`✅ PDF generated successfully! Total pages: ${pageCount}`);
       doc.save('Quotation' + (type === 'builder' ? 'Package' : 'Quote') + '_' + Date.now() + '.pdf');
       createCelebrationConfetti();
+    }
+
+    // Helper function to calculate client rows
+    function calculateClientRows(data) {
+      let clientRows = 5;  // Row 1 (Name, Phone)
+      if (data.venue || data.location) clientRows += 5;  // Row 2
+      if (data.function || data.dates) clientRows += 5;  // Row 3
+      clientRows += 5;  // Row 4 (Time, Quote Date)
+      return clientRows;
     }
 
     // Search & Filter
