@@ -5750,19 +5750,16 @@ convertToQuotationDateFormat(dateStr) {
                     const maxContentHeightFirstPage = paperDimensions.height - headerHeight - bottomMargin - safetyMargin - grandTotalSummaryHeight;
                     const maxContentHeightOtherPages = paperDimensions.height - headerHeight - bottomMargin - safetyMargin;
 
+                    console.log(`📐 Page constraints: Paper=${paperDimensions.height}px, Header=${headerHeight}px, Margins=${bottomMargin + safetyMargin}px, GrandTotal=${grandTotalSummaryHeight}px`);
+                    console.log(`📊 Max content: First page=${maxContentHeightFirstPage}px, Other pages=${maxContentHeightOtherPages}px`);
+
                     const pages = [];
                     let processedOrders = new Set(); // Track which orders we've added
 
                     // Helper function to check if a single order fits on a page
+                    // NOTE: We DON'T include the header here because maxHeight already accounts for it
                     const checkSingleOrderFits = async (order, maxHeight) => {
-                        const testHtml = `
-                            <div style="text-align: center; margin-bottom: 25px; padding: 12px 0;">
-                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 12px; margin: 0; font-size: 26px;">
-                                    Test Header
-                                </h1>
-                            </div>
-                            ${this.buildOrderHTML(order, compactFontSize, colors, true, bgColor, textColor)}
-                        `;
+                        const testHtml = this.buildOrderHTML(order, compactFontSize, colors, true, bgColor, textColor);
                         template.innerHTML = testHtml;
                         // Ensure template is visible for measurement (but hidden from user)
                         template.style.display = 'block';
@@ -5775,14 +5772,9 @@ convertToQuotationDateFormat(dateStr) {
                     };
 
                     // Helper function to measure multiple orders together
+                    // NOTE: We DON'T include the header here because maxHeight already accounts for it
                     const measureOrdersHeight = async (ordersList) => {
-                        let testHtml = `
-                            <div style="text-align: center; margin-bottom: 25px; padding: 12px 0;">
-                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 12px; margin: 0; font-size: 26px;">
-                                    Test Header
-                                </h1>
-                            </div>
-                        `;
+                        let testHtml = '';
                         ordersList.forEach((o, idx) => {
                             testHtml += this.buildOrderHTML(o, compactFontSize, colors, true, bgColor, textColor);
                             if (idx < ordersList.length - 1) {
@@ -5812,7 +5804,7 @@ convertToQuotationDateFormat(dateStr) {
 
                     // STEP 2: Sort orders by height (descending) - First Fit Decreasing algorithm
                     orderHeights.sort((a, b) => b.height - a.height);
-                    console.log('📊 Order heights (sorted descending):', orderHeights.map(oh => `${oh.order.customerName}: ${oh.height}px`).join(', '));
+                    console.log('📊 Order heights (sorted descending):', orderHeights.map(oh => `${oh.order.clientName || oh.order.orderId}: ${oh.height}px`).join(', '));
 
                     // STEP 3: Use First Fit Decreasing bin-packing algorithm
                     for (let i = 0; i < orderHeights.length; i++) {
@@ -5908,18 +5900,24 @@ convertToQuotationDateFormat(dateStr) {
                             const isFirstPage = pageIdx === 0;
                             const maxHeight = isFirstPage ? maxContentHeightFirstPage : maxContentHeightOtherPages;
 
+                            // Measure current page content
+                            const currentHeight = pageOrders.length > 0 ? await measureOrdersHeight(pageOrders) : 0;
+                            const availableSpace = maxHeight - currentHeight;
+
                             // Try adding this order to this page
                             const testOrders = [...pageOrders, order];
                             const testHeight = await measureOrdersHeight(testOrders);
+                            const willFit = testHeight <= maxHeight;
 
-                            console.log(`📏 Testing order "${order.customerName}" (${height}px) on page ${pageIdx + 1}: current height = ${testHeight}px, max = ${maxHeight}px, fits = ${testHeight <= maxHeight}`);
+                            console.log(`📏 Page ${pageIdx + 1} (${isFirstPage ? 'FIRST' : 'other'}): has ${pageOrders.length} order(s), used ${currentHeight}px, available ${availableSpace}px/${maxHeight}px`);
+                            console.log(`   → Testing "${order.clientName || order.orderId}" (${height}px): total would be ${testHeight}px, fits = ${willFit}`);
 
-                            if (testHeight <= maxHeight) {
+                            if (willFit) {
                                 // Fits! Add to this page
                                 pages[pageIdx].push(order);
                                 processedOrders.add(originalIndex);
                                 placed = true;
-                                console.log(`✅ Placed order "${order.customerName}" on page ${pageIdx + 1}`);
+                                console.log(`✅ Placed order "${order.clientName || order.orderId}" on page ${pageIdx + 1}`);
                                 break;
                             }
                         }
@@ -5928,7 +5926,7 @@ convertToQuotationDateFormat(dateStr) {
                         if (!placed) {
                             pages.push([order]);
                             processedOrders.add(originalIndex);
-                            console.log(`📄 Created new page ${pages.length} for order "${order.customerName}"`);
+                            console.log(`📄 Created new page ${pages.length} for order "${order.clientName || order.orderId}"`);
                         }
                     }
 
