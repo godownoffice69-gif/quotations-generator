@@ -3836,21 +3836,21 @@
      */
     function measureContentHeights(doc, type, data, pageWidth, margin) {
       const measurements = {
-        header: 35,  // Fixed: Title + subtitle + line
-        clientInfo: 8,  // Section title
+        header: 30,  // Fixed: Title + subtitle + line (reduced for max space)
+        clientInfo: 6,  // Section title (reduced for max space)
         clientRows: 0,
-        itemsTitle: 22,  // Section title + spacing
+        itemsTitle: 18,  // Section title + spacing (reduced for max space)
         contentBlocks: [],  // Array of measured content blocks
         requirements: 0,
         total: 17,  // Fixed: Line + grand total
         footer: 32  // Fixed: Thank you + terms
       };
 
-      // Measure client info rows
-      measurements.clientRows += 6;  // Row 1 (Name, Phone)
-      if (data.venue || data.location) measurements.clientRows += 6;  // Row 2
-      if (data.function || data.dates) measurements.clientRows += 6;  // Row 3
-      measurements.clientRows += 6;  // Row 4 (Time, Quote Date)
+      // Measure client info rows (reduced for max first page space)
+      measurements.clientRows += 5;  // Row 1 (Name, Phone)
+      if (data.venue || data.location) measurements.clientRows += 5;  // Row 2
+      if (data.function || data.dates) measurements.clientRows += 5;  // Row 3
+      measurements.clientRows += 5;  // Row 4 (Time, Quote Date)
 
       // Measure items/content blocks
       if (type === 'builder') {
@@ -4001,8 +4001,9 @@
           const page = pages[i];
           if (page.remainingHeight >= block.height) {
             const waste = page.remainingHeight - block.height;
-            // Prioritize first page (bias towards page 0)
-            const priority = i === 0 ? waste - 1000 : waste;
+            // MAXIMUM FIRST PAGE PRIORITY: Overcome the ~70mm space disadvantage
+            // First page has less space due to headers, so apply HUGE bias
+            const priority = i === 0 ? waste - 100000 : waste;
             if (priority < minWaste) {
               minWaste = priority;
               bestPageIndex = i;
