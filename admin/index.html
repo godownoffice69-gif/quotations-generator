@@ -5761,36 +5761,194 @@ convertToQuotationDateFormat(dateStr) {
                     template.style.visibility = 'hidden';
                     template.style.position = 'absolute';
 
-                    const headerHeight = 120; // Reduced header
+                    const headerHeight = 90; // Reduced from 120px for more space
                     const separatorHeight = 25; // Space between orders
-                    const bottomMargin = 60; // Bottom margin
-                    const safetyMargin = 40; // Extra safety margin to prevent cutoff
+                    const bottomMargin = 30; // Reduced from 60px
+                    const safetyMargin = 20; // Reduced from 40px to 20px
 
-                    // Calculate different max heights for first page vs subsequent pages
-                    // First page includes grand total summary, so has less space
+                    // Measure the actual grand total summary height instead of estimating
                     const hasGrandTotalSummary = (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0);
-                    const grandTotalSummaryHeight = hasGrandTotalSummary ? 200 : 0; // Approximate height of summary section
+                    let grandTotalSummaryHeight = 0;
+
+                    if (hasGrandTotalSummary) {
+                        // Render the actual summary to measure its real height
+                        const summaryHtml = `
+                            <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                                <h3 style="margin: 0 0 12px 0; font-size: 18px; text-align: center;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                                    ${grandTotalDryIce > 0 ? `
+                                    <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
+                                        <div style="font-size: 24px; margin-bottom: 4px;">❄️</div>
+                                        <div style="font-size: 18px; opacity: 0.9;">Dry Ice Needed</div>
+                                        <div style="font-size: 60px; font-weight: 700; margin-top: 4px;">${grandTotalDryIce} kg</div>
+                                        <div style="font-size: 14px; opacity: 0.8; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                    </div>
+                                    ` : ''}
+                                    ${grandTotalFlowers > 0 ? `
+                                    <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
+                                        <div style="font-size: 24px; margin-bottom: 4px;">🌸</div>
+                                        <div style="font-size: 18px; opacity: 0.9;">Flowers Needed</div>
+                                        <div style="font-size: 60px; font-weight: 700; margin-top: 4px;">${grandTotalFlowers} kg</div>
+                                        <div style="font-size: 14px; opacity: 0.8; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                    </div>
+                                    ` : ''}
+                                    ${grandTotalElectricity > 0 ? `
+                                    <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; text-align: center;">
+                                        <div style="font-size: 24px; margin-bottom: 4px;">⚡</div>
+                                        <div style="font-size: 18px; opacity: 0.9;">Electricity Required</div>
+                                        <div style="font-size: 60px; font-weight: 700; margin-top: 4px;">${grandTotalElectricity} KV</div>
+                                        <div style="font-size: 14px; opacity: 0.8; margin-top: 4px;">Total power needed</div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+
+                        // Temporarily render to measure
+                        template.innerHTML = summaryHtml;
+                        template.style.display = 'block';
+                        template.style.visibility = 'hidden';
+                        template.style.position = 'absolute';
+                        await new Promise(r => setTimeout(r, 50));
+                        grandTotalSummaryHeight = template.scrollHeight;
+                        template.style.display = 'none';
+                        console.log(`📊 Measured grand total summary height: ${grandTotalSummaryHeight}px`);
+                    }
 
                     const maxContentHeightFirstPage = paperDimensions.height - headerHeight - bottomMargin - safetyMargin - grandTotalSummaryHeight;
                     const maxContentHeightOtherPages = paperDimensions.height - headerHeight - bottomMargin - safetyMargin;
 
                     console.log(`📏 Max content height - First page: ${maxContentHeightFirstPage}px | Other pages: ${maxContentHeightOtherPages}px`);
-                    console.log(`📊 Grand total summary: ${hasGrandTotalSummary ? 'YES' : 'NO'} (${grandTotalSummaryHeight}px reserved)`);
+                    console.log(`📊 Grand total summary: ${hasGrandTotalSummary ? 'YES' : 'NO'} (${grandTotalSummaryHeight}px measured)`);
 
                     const pages = [];
                     let currentPageOrders = [];
                     let processedOrders = new Set(); // Track which orders we've added
 
+                    // Helper function to check if a single order fits on a page
+                    const checkSingleOrderFits = async (order, maxHeight) => {
+                        const testHtml = `
+                            <div style="text-align: center; margin-bottom: 25px; padding: 12px 0;">
+                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 12px; margin: 0; font-size: 26px;">
+                                    Test Header
+                                </h1>
+                            </div>
+                            ${this.buildOrderHTML(order, compactFontSize, colors, true, bgColor, textColor)}
+                        `;
+                        template.innerHTML = testHtml;
+                        await new Promise(r => setTimeout(r, 50));
+                        const height = template.scrollHeight;
+                        return { fits: height <= maxHeight, height: height };
+                    };
+
                     for (let i = 0; i < orders.length; i++) {
                         const order = orders[i];
                         console.log(`\n🔄 Processing order ${i + 1}/${orders.length}: ${order.orderId}`);
 
-                        // Try adding this order to current page
-                        const testOrders = [...currentPageOrders, order];
-
                         // Determine max height for current page (first page has less space)
                         const isFirstPage = pages.length === 0;
                         const currentMaxHeight = isFirstPage ? maxContentHeightFirstPage : maxContentHeightOtherPages;
+
+                        // First check if this single order even fits on a page by itself
+                        const singleOrderCheck = await checkSingleOrderFits(order, currentMaxHeight);
+
+                        if (!singleOrderCheck.fits) {
+                            console.warn(`⚠️ Order ${order.orderId} is TOO LARGE (${singleOrderCheck.height}px > ${currentMaxHeight}px) to fit on a single page!`);
+
+                            // Save current page if it has orders
+                            if (currentPageOrders.length > 0) {
+                                console.log(`   📄 Saving current page with ${currentPageOrders.length} orders`);
+                                pages.push([...currentPageOrders]);
+                                currentPageOrders = [];
+                            }
+
+                            // Check if this is a multifunction/multiday order that can be split
+                            if (order.dayWiseData && order.dayWiseData.length > 0) {
+                                console.log(`   🔪 Attempting to split multifunction order ${order.orderId} across pages...`);
+
+                                // Try to split by function groups
+                                let remainingFunctions = [];
+                                order.dayWiseData.forEach(day => {
+                                    if (day.functions && day.functions.length > 0) {
+                                        day.functions.forEach((func, funcIdx) => {
+                                            remainingFunctions.push({
+                                                dayNumber: day.dayNumber,
+                                                date: day.date,
+                                                function: func,
+                                                functionIndex: funcIdx
+                                            });
+                                        });
+                                    }
+                                });
+
+                                console.log(`   📊 Found ${remainingFunctions.length} functions to split across pages`);
+
+                                // Split functions across multiple pages
+                                while (remainingFunctions.length > 0) {
+                                    let functionsForPage = [];
+                                    let currentFunctionSet = [];
+
+                                    for (let f = 0; f < remainingFunctions.length; f++) {
+                                        const testFunctions = [...currentFunctionSet, remainingFunctions[f]];
+
+                                        // Create a partial order with only these functions
+                                        const partialOrder = {
+                                            ...order,
+                                            dayWiseData: testFunctions.map(tf => ({
+                                                dayNumber: tf.dayNumber,
+                                                date: tf.date,
+                                                functions: [tf.function]
+                                            }))
+                                        };
+
+                                        // Test if it fits
+                                        const partialCheck = await checkSingleOrderFits(partialOrder, maxContentHeightOtherPages);
+
+                                        if (partialCheck.fits) {
+                                            currentFunctionSet.push(remainingFunctions[f]);
+                                        } else {
+                                            // Can't add more functions, save current set
+                                            break;
+                                        }
+                                    }
+
+                                    // If we couldn't fit even one function, we need to add it anyway
+                                    if (currentFunctionSet.length === 0 && remainingFunctions.length > 0) {
+                                        console.warn(`   ⚠️  Single function is too large, adding it anyway`);
+                                        currentFunctionSet.push(remainingFunctions[0]);
+                                    }
+
+                                    // Create page with current function set
+                                    const pageOrder = {
+                                        ...order,
+                                        orderId: `${order.orderId} (Part ${pages.length + 1 - currentPageOrders.length})`,
+                                        dayWiseData: currentFunctionSet.map(tf => ({
+                                            dayNumber: tf.dayNumber,
+                                            date: tf.date,
+                                            functions: [tf.function]
+                                        }))
+                                    };
+
+                                    pages.push([pageOrder]);
+                                    console.log(`   📄 Added partial order page with ${currentFunctionSet.length} function(s)`);
+
+                                    // Remove processed functions
+                                    remainingFunctions = remainingFunctions.slice(currentFunctionSet.length);
+                                }
+
+                                processedOrders.add(i);
+                                continue;
+                            } else {
+                                // Not a multifunction order, add it anyway and let it scale or overflow
+                                console.warn(`   ⚠️  Order is not splittable, placing on its own page anyway`);
+                                pages.push([order]);
+                                processedOrders.add(i);
+                                continue;
+                            }
+                        }
+
+                        // Try adding this order to current page
+                        const testOrders = [...currentPageOrders, order];
 
                         // Build HTML with all orders on current page including this new one
                         // Include header to get accurate height measurement
@@ -5816,7 +5974,7 @@ convertToQuotationDateFormat(dateStr) {
                         console.log(`   📐 Page ${pages.length + 1} with ${testOrders.length} orders: ${totalHeight}px / ${currentMaxHeight}px ${isFirstPage ? '(FIRST PAGE)' : ''}`);
 
                         // Check if it fits
-                        if (totalHeight <= currentMaxHeight || currentPageOrders.length === 0) {
+                        if (totalHeight <= currentMaxHeight) {
                             // Fits! Add this order to current page
                             currentPageOrders.push(order);
                             processedOrders.add(i);
@@ -5978,16 +6136,24 @@ convertToQuotationDateFormat(dateStr) {
                         let imgWidth = pdfWidth;
                         let imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-                        // CRITICAL FIX: Scale image to fit PDF page if it's too tall
-                        if (imgHeight > pdfHeight) {
-                            console.warn(`⚠️ Page ${pageNum + 1} image height (${imgHeight}px) exceeds PDF height (${pdfHeight}px). Scaling to fit.`);
-                            imgHeight = pdfHeight;
-                            imgWidth = (canvas.width * pdfHeight) / canvas.height;
-                        }
-
                         // Add new page if not first page
                         if (pageNum > 0) {
                             pdf.addPage();
+                        }
+
+                        // Check if image is too tall - if so, add it without scaling to preserve quality
+                        // The content should have been properly split in the page allocation phase
+                        if (imgHeight > pdfHeight) {
+                            console.warn(`⚠️ Page ${pageNum + 1} image height (${imgHeight}px) exceeds PDF height (${pdfHeight}px)`);
+                            console.warn(`   This should not happen - the page allocation should have split the content properly`);
+
+                            // Calculate scale factor needed
+                            const scaleFactor = pdfHeight / imgHeight;
+                            console.warn(`   Content will be scaled down to ${(scaleFactor * 100).toFixed(1)}% to fit the page`);
+
+                            // Scale to fit as last resort
+                            imgHeight = pdfHeight;
+                            imgWidth = (canvas.width * pdfHeight) / canvas.height;
                         }
 
                         // Add image to PDF page (centered if scaled down)
