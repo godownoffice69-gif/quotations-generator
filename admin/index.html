@@ -6279,10 +6279,18 @@ convertToQuotationDateFormat(dateStr) {
                             <div>
                                 <strong style="color: ${textColor};">Event:</strong> ${order.eventType || '-'}<br>
                                 <strong style="color: ${textColor};">Operator:</strong> ${order.operator || '-'}<br>
-                                <strong style="color: ${textColor};">Helper:</strong><br>
-                                <div style="min-height: 80px; border: 1px solid ${textColor}; padding: 8px; margin-top: 5px;">
-                                    ${order.helper || ''}
-                                </div>
+                                <strong style="color: ${textColor};">Helper(s):</strong><br>
+                                ${(() => {
+                                    const helpers = order.helper ? order.helper.split(',').map(h => h.trim()).filter(h => h) : [];
+                                    let helperBoxes = '';
+                                    for (let i = 0; i < 5; i++) {
+                                        const helperName = helpers[i] || '';
+                                        helperBoxes += `<div style="border: 1px solid ${textColor}; padding: 6px 8px; margin-top: 5px; min-height: 30px; background: ${helperName ? '#f0f0f0' : 'transparent'};">
+                                            ${helperName || '&nbsp;'}
+                                        </div>`;
+                                    }
+                                    return helperBoxes;
+                                })()}
                             </div>
                         </div>
 
