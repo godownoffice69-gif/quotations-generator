@@ -5075,6 +5075,13 @@ convertToQuotationDateFormat(dateStr) {
             if (singleDayFields) singleDayFields.style.display = 'grid';
             if (multiDayFields) multiDayFields.style.display = 'none';
 
+            // Trigger event type change to update required fields
+            const eventTypeSelect = document.getElementById('eventTypeSelect');
+            if (eventTypeSelect) {
+                const event = new Event('change');
+                eventTypeSelect.dispatchEvent(event);
+            }
+
             Object.entries({
                 orderId: order.orderId,
                 clientName: order.clientName,
@@ -5152,6 +5159,13 @@ convertToQuotationDateFormat(dateStr) {
                 const multiDayFields = document.getElementById('multiDayFields');
                 if (singleDayFields) singleDayFields.style.display = 'grid';
                 if (multiDayFields) multiDayFields.style.display = 'none';
+
+                // Trigger event type change to update required fields
+                const eventTypeSelect = document.getElementById('eventTypeSelect');
+                if (eventTypeSelect) {
+                    const event = new Event('change');
+                    eventTypeSelect.dispatchEvent(event);
+                }
 
                 // Clear multi-day containers
                 const multiDayContainer = document.getElementById('multiDayContainer');
