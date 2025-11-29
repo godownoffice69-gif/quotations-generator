@@ -1377,6 +1377,91 @@ debounce: (func, wait) => {
                         description: 'Weather data unavailable'
                     };
                 }
+            },
+
+            // Get weather forecast for a specific date
+            getWeatherForecast: async (city = 'Delhi', targetDate, apiKey = 'demo') => {
+                try {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const target = new Date(targetDate);
+                    target.setHours(0, 0, 0, 0);
+
+                    // If target date is today, use current weather API
+                    if (target.getTime() === today.getTime()) {
+                        return await Utils.getWeather(city, apiKey);
+                    }
+
+                    // For future dates (up to 5 days), use forecast API
+                    const response = await fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`);
+
+                    if (!response.ok) {
+                        return {
+                            temp: 'N/A',
+                            humidity: 'N/A',
+                            condition: 'N/A',
+                            description: 'Weather forecast unavailable'
+                        };
+                    }
+
+                    const data = await response.json();
+
+                    // Find forecast closest to noon on target date
+                    const targetTime = new Date(target);
+                    targetTime.setHours(12, 0, 0, 0);
+
+                    let closestForecast = null;
+                    let minDiff = Infinity;
+
+                    data.list.forEach(forecast => {
+                        const forecastTime = new Date(forecast.dt * 1000);
+                        const diff = Math.abs(forecastTime - targetTime);
+
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestForecast = forecast;
+                        }
+                    });
+
+                    if (!closestForecast) {
+                        return {
+                            temp: 'N/A',
+                            humidity: 'N/A',
+                            condition: 'N/A',
+                            description: 'Forecast not available for this date'
+                        };
+                    }
+
+                    return {
+                        temp: Math.round(closestForecast.main.temp),
+                        tempMin: Math.round(closestForecast.main.temp_min),
+                        tempMax: Math.round(closestForecast.main.temp_max),
+                        humidity: closestForecast.main.humidity,
+                        condition: closestForecast.weather[0].main,
+                        description: closestForecast.weather[0].description,
+                        icon: closestForecast.weather[0].icon
+                    };
+                } catch (error) {
+                    console.error('Weather forecast error:', error);
+                    return {
+                        temp: 'N/A',
+                        humidity: 'N/A',
+                        condition: 'N/A',
+                        description: 'Weather forecast unavailable'
+                    };
+                }
+            },
+
+            // Get weather icon emoji
+            getWeatherEmoji: (condition) => {
+                const conditionLower = condition.toLowerCase();
+                if (conditionLower.includes('clear') || conditionLower.includes('sun')) return '☀️';
+                if (conditionLower.includes('cloud')) return '☁️';
+                if (conditionLower.includes('rain') || conditionLower.includes('drizzle')) return '🌧️';
+                if (conditionLower.includes('thunder') || conditionLower.includes('storm')) return '⛈️';
+                if (conditionLower.includes('snow')) return '❄️';
+                if (conditionLower.includes('mist') || conditionLower.includes('fog') || conditionLower.includes('haze')) return '🌫️';
+                return '🌤️';
             }
         };
 
@@ -7813,7 +7898,7 @@ convertToQuotationDateFormat(dateStr) {
                 this.generateForecast();
             },
 
-            generateForecast() {
+            async generateForecast() {
                 const startDate = Utils.get('forecastStartDate');
                 const endDate = Utils.get('forecastEndDate');
 
@@ -7873,8 +7958,13 @@ convertToQuotationDateFormat(dateStr) {
                     };
                 }).sort((a, b) => b.required - a.required);
 
+                // Fetch weather for the start date
+                const weatherApiKey = this.data.settings.weatherApiKey || 'demo';
+                const defaultCity = this.data.settings.defaultCity || 'Delhi';
+                const weatherData = await Utils.getWeatherForecast(defaultCity, startDate, weatherApiKey);
+
                 // Render forecast results
-                this.renderForecastResults(ordersInRange, aggregatedItems, startDate, endDate);
+                this.renderForecastResults(ordersInRange, aggregatedItems, startDate, endDate, weatherData);
             },
 
             getOrdersInDateRange(startDate, endDate) {
@@ -7926,7 +8016,7 @@ convertToQuotationDateFormat(dateStr) {
                 return items;
             },
 
-            renderForecastResults(orders, items, startDate, endDate) {
+            renderForecastResults(orders, items, startDate, endDate, weatherData = null) {
                 const container = document.getElementById('forecastResults');
 
                 if (orders.length === 0) {
@@ -8012,6 +8102,40 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Weather Forecast Card -->
+                    ${weatherData ? `
+                    <div class="card" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 1.5rem; margin-top: 1rem;">
+                        <h3 style="margin-bottom: 1rem; font-size: 1.3rem;">🌤️ Weather Forecast for ${Utils.formatDate(startDate)}</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 3rem; margin-bottom: 0.5rem;">${Utils.getWeatherEmoji(weatherData.condition)}</div>
+                                <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem;">${weatherData.condition}</div>
+                                <div style="font-size: 0.9rem; opacity: 0.9;">${weatherData.description}</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">🌡️ Temperature</div>
+                                <div style="font-size: 2.5rem; font-weight: 700;">${weatherData.temp}°C</div>
+                                ${weatherData.tempMin && weatherData.tempMax ? `
+                                    <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem;">
+                                        ${weatherData.tempMin}°C - ${weatherData.tempMax}°C
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">💧 Humidity</div>
+                                <div style="font-size: 2.5rem; font-weight: 700;">${weatherData.humidity}%</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">📍 Location</div>
+                                <div style="font-size: 1.2rem; font-weight: 600;">${this.data.settings.defaultCity || 'Delhi'}</div>
+                                <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">
+                                    ${weatherData.temp === 'N/A' ? 'Weather unavailable' : 'Live forecast'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
 
                     <!-- Materials Calculation Card -->
                     ${(dryMachines > 0 || flowerShowerMachines > 0 || totalElectricityKV > 0) ? `
