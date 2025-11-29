@@ -4600,7 +4600,31 @@
       doc.text('• Cancellation charges apply as per agreement', margin + 5, yPos);
 
       console.log(`✅ PDF generated successfully! Total pages: ${pageCount}`);
-      doc.save('Quotation' + (type === 'builder' ? 'Package' : 'Quote') + '_' + Date.now() + '.pdf');
+
+      // Mobile-friendly PDF download
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const filename = 'Quotation_' + (type === 'builder' ? 'Package' : 'Quote') + '_' + Date.now() + '.pdf';
+
+      if (isMobile) {
+        // For mobile devices, use a different approach
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = filename;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Cleanup after delay for mobile browsers
+        setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
+      } else {
+        // Desktop: use standard save method
+        doc.save(filename);
+        setTimeout(() => URL.revokeObjectURL(pdfUrl), 100);
+      }
+
       createCelebrationConfetti();
     }
 
