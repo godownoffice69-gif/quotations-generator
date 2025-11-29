@@ -1053,10 +1053,14 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Helper(s)</label>
-                                <select id="helper" class="form-select" multiple style="min-height: 80px;">
-                                    <option value="">Select Helper(s)</option>
-                                </select>
-                                <small style="color: var(--text-gray);">Hold Ctrl/Cmd to select multiple helpers</small>
+                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                    <input type="text" id="helper1" class="form-input" placeholder="Helper 1" style="flex: 1;">
+                                    <input type="text" id="helper2" class="form-input" placeholder="Helper 2" style="flex: 1;">
+                                </div>
+                                <input type="text" id="helper3" class="form-input" placeholder="Helper 3" style="margin-bottom: 10px;">
+                                <input type="text" id="helper4" class="form-input" placeholder="Helper 4" style="margin-bottom: 10px;">
+                                <input type="text" id="helper5" class="form-input" placeholder="Helper 5">
+                                <small style="color: var(--text-gray);">Enter helper names in the boxes above</small>
                             </div>
                         </div>
 
@@ -3108,11 +3112,7 @@ const OMS = {
                     });
                 });
 
-                // Update helper placeholder
-                const helperInput = document.getElementById('helper');
-                if (helperInput) {
-                    helperInput.placeholder = this.t('helperPlaceholder');
-                }
+                // Helper placeholders are now set directly in HTML for the 5 text boxes
 
                 // Update client name placeholder
                 const clientInput = document.getElementById('clientName');
@@ -4352,9 +4352,15 @@ async refreshOrderId() {
         const eventType = Utils.get('eventTypeSelect');
         const isMultiDay = eventType === 'multi';
 
-        // Get multiple selected helpers from multi-select dropdown
-        const helperSelect = document.getElementById('helper');
-        const selectedHelpers = helperSelect ? Array.from(helperSelect.selectedOptions).map(opt => opt.value).filter(v => v).join(', ') : '';
+        // Get helpers from text boxes
+        const helpers = [];
+        for (let i = 1; i <= 5; i++) {
+            const helperInput = document.getElementById(`helper${i}`);
+            if (helperInput && helperInput.value.trim()) {
+                helpers.push(helperInput.value.trim());
+            }
+        }
+        const selectedHelpers = helpers.join(', ');
 
         // Collect day-wise data for multi-day events
         let dayWiseData = [];
@@ -5101,15 +5107,15 @@ convertToQuotationDateFormat(dateStr) {
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
 
-            // Handle multi-select helper field separately
+            // Handle helper text boxes separately
             if (order.helper) {
-                const helperSelect = document.getElementById('helper');
-                if (helperSelect) {
-                    // Split comma-separated helpers and select them
-                    const helperNames = order.helper.split(',').map(h => h.trim()).filter(h => h);
-                    Array.from(helperSelect.options).forEach(option => {
-                        option.selected = helperNames.includes(option.value);
-                    });
+                // Split comma-separated helpers and populate text boxes
+                const helperNames = order.helper.split(',').map(h => h.trim()).filter(h => h);
+                for (let i = 0; i < Math.min(helperNames.length, 5); i++) {
+                    const helperInput = document.getElementById(`helper${i + 1}`);
+                    if (helperInput) {
+                        helperInput.value = helperNames[i];
+                    }
                 }
             }
 
@@ -5147,6 +5153,14 @@ convertToQuotationDateFormat(dateStr) {
                 Utils.set('orderDate', Utils.toDateString(new Date()));
                 document.getElementById('customTransportGroup').classList.add('hidden');
                 document.getElementById('customTransport2Group').classList.add('hidden');
+
+                // Clear all helper text boxes
+                for (let i = 1; i <= 5; i++) {
+                    const helperInput = document.getElementById(`helper${i}`);
+                    if (helperInput) {
+                        helperInput.value = '';
+                    }
+                }
 
                 // Clear multi-day data
                 if (window.dayFunctionsData) {
@@ -8638,16 +8652,8 @@ convertToQuotationDateFormat(dateStr) {
                         operators.map(o => `<option value="${o.name}" data-id="${o.id}">⚙️ ${o.name}</option>`).join('');
                 }
 
-                // Populate Helper multi-select dropdown
-                const helperSelect = document.getElementById('helper');
-                if (helperSelect) {
-                    const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
-                    // Keep existing selections
-                    const currentValues = Array.from(helperSelect.selectedOptions).map(opt => opt.value);
-                    helperSelect.innerHTML = helpers.map(h =>
-                        `<option value="${h.name}" data-id="${h.id}" ${currentValues.includes(h.name) ? 'selected' : ''}>👷 ${h.name}</option>`
-                    ).join('');
-                }
+                // Helper fields are now text boxes - no need to populate from team list
+                // Users can manually enter helper names in the 5 text boxes
             },
 
             populateFunctionTeamDropdowns(dayIndex, functionIndex) {
@@ -8705,9 +8711,14 @@ convertToQuotationDateFormat(dateStr) {
                 const driverName = Utils.get('driverName');
                 const operatorName = Utils.get('operator');
 
-                // Get multiple selected helpers from multi-select dropdown
-                const helperSelect = document.getElementById('helper');
-                const helperNames = helperSelect ? Array.from(helperSelect.selectedOptions).map(opt => opt.value).filter(v => v) : [];
+                // Get helpers from text boxes
+                const helperNames = [];
+                for (let i = 1; i <= 5; i++) {
+                    const helperInput = document.getElementById(`helper${i}`);
+                    if (helperInput && helperInput.value.trim()) {
+                        helperNames.push(helperInput.value.trim());
+                    }
+                }
 
                 // Get order details
                 const orderId = Utils.get('orderId') || 'NEW';
@@ -8851,9 +8862,15 @@ convertToQuotationDateFormat(dateStr) {
                 const driverName = Utils.get('driverName');
                 const operatorName = Utils.get('operator');
 
-                // Get multiple selected helpers from multi-select dropdown
-                const helperSelect = document.getElementById('helper');
-                const helperNames = helperSelect ? Array.from(helperSelect.selectedOptions).map(opt => opt.value).filter(v => v).join(', ') : '';
+                // Get helpers from text boxes
+                const helpers = [];
+                for (let i = 1; i <= 5; i++) {
+                    const helperInput = document.getElementById(`helper${i}`);
+                    if (helperInput && helperInput.value.trim()) {
+                        helpers.push(helperInput.value.trim());
+                    }
+                }
+                const helperNames = helpers.join(', ');
 
                 // Check if we have order data in the form
                 if (!clientName || !venue) {
