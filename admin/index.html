@@ -6249,7 +6249,7 @@ convertToQuotationDateFormat(dateStr) {
 
                         <!-- FP- Field at center/top -->
                         <div style="text-align: center; margin-bottom: 25px;">
-                            <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: ${textColor};">
+                            <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: #000000; background: #ffeb3b;">
                                 FP-<span style="display: inline-block; width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px;"></span>
                             </div>
                         </div>
@@ -6268,19 +6268,21 @@ convertToQuotationDateFormat(dateStr) {
                                 <strong style="color: ${textColor};">Venue:</strong> ${order.venue || '-'}
                             </div>
                             <div>
+                                <strong style="color: ${textColor};">Dry Ice:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.dryIceNeeded > 0 ? requirements.dryIceNeeded + ' kg (' + requirements.dryMachines + ' machine' + (requirements.dryMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
+                                <strong style="color: ${textColor};">Flowers:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.flowersNeeded > 0 ? requirements.flowersNeeded + ' kg (' + requirements.flowerShowerMachines + ' machine' + (requirements.flowerShowerMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
+                                <strong style="color: ${textColor};">Electricity:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.totalElectricityKV > 0 ? requirements.totalElectricityKV + ' KV' : 'Not Required'}</span><br>
                                 <strong style="color: ${textColor};">Transport:</strong> ${order.transport || '-'}<br>
                                 <strong style="color: ${textColor};">Driver:</strong> ${order.driverName || '-'}<br>
                                 ${order.transport2 ? `<strong style="color: ${textColor};">Transport 2:</strong> ${order.transport2}<br>` : ''}
                                 ${order.driverName2 ? `<strong style="color: ${textColor};">Driver 2:</strong> ${order.driverName2}<br>` : ''}
-                                <strong style="color: ${textColor};">Event:</strong> ${order.eventType || '-'}<br>
-                                <strong style="color: ${textColor};">Helper:</strong> ${order.helper || '-'}
                             </div>
                             <div>
+                                <strong style="color: ${textColor};">Event:</strong> ${order.eventType || '-'}<br>
                                 <strong style="color: ${textColor};">Operator:</strong> ${order.operator || '-'}<br>
-                                <strong style="color: ${textColor};">Status:</strong> ${order.status || '-'}<br>
-                                <strong style="color: ${textColor};">Dry Ice:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.dryIceNeeded > 0 ? requirements.dryIceNeeded + ' kg (' + requirements.dryMachines + ' machine' + (requirements.dryMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
-                                <strong style="color: ${textColor};">Flowers:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.flowersNeeded > 0 ? requirements.flowersNeeded + ' kg (' + requirements.flowerShowerMachines + ' machine' + (requirements.flowerShowerMachines !== 1 ? 's' : '') + ')' : 'Not Required'}</span><br>
-                                <strong style="color: ${textColor};">Electricity:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">${requirements.totalElectricityKV > 0 ? requirements.totalElectricityKV + ' KV' : 'Not Required'}</span>
+                                <strong style="color: ${textColor};">Helper:</strong><br>
+                                <div style="min-height: 80px; border: 1px solid ${textColor}; padding: 8px; margin-top: 5px;">
+                                    ${order.helper || ''}
+                                </div>
                             </div>
                         </div>
 
