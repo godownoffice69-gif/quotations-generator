@@ -5707,8 +5707,8 @@ convertToQuotationDateFormat(dateStr) {
 
                     const headerHeight = 90; // Header height for date
                     const separatorHeight = 25; // Space between orders
-                    const bottomMargin = 40; // Bottom margin for page
-                    const safetyMargin = 80; // Safety buffer for rendering differences (increased for better accuracy)
+                    const bottomMargin = 15; // Bottom margin for page (optimized for space utilization)
+                    const safetyMargin = 20; // Safety buffer for rendering differences (optimized for maximum space usage)
 
                     // Measure the actual grand total summary height instead of estimating
                     const hasGrandTotalSummary = (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0);
@@ -5724,7 +5724,7 @@ convertToQuotationDateFormat(dateStr) {
                                     <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
                                         <div style="font-size: 18px; margin-bottom: 2px;">❄️</div>
                                         <div style="font-size: 14px; opacity: 0.9;">Dry Ice Needed</div>
-                                        <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalDryIce} kg</div>
+                                        <div style="font-size: 60px; font-weight: 700; margin-top: 2px;">${grandTotalDryIce} kg</div>
                                         <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                     </div>
                                     ` : ''}
@@ -5732,7 +5732,7 @@ convertToQuotationDateFormat(dateStr) {
                                     <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
                                         <div style="font-size: 18px; margin-bottom: 2px;">🌸</div>
                                         <div style="font-size: 14px; opacity: 0.9;">Flowers Needed</div>
-                                        <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalFlowers} kg</div>
+                                        <div style="font-size: 60px; font-weight: 700; margin-top: 2px;">${grandTotalFlowers} kg</div>
                                         <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                     </div>
                                     ` : ''}
@@ -5740,7 +5740,7 @@ convertToQuotationDateFormat(dateStr) {
                                     <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
                                         <div style="font-size: 18px; margin-bottom: 2px;">⚡</div>
                                         <div style="font-size: 14px; opacity: 0.9;">Electricity Required</div>
-                                        <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalElectricity} KV</div>
+                                        <div style="font-size: 60px; font-weight: 700; margin-top: 2px;">${grandTotalElectricity} KV</div>
                                         <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">Total power needed</div>
                                     </div>
                                     ` : ''}
@@ -6006,7 +6006,7 @@ convertToQuotationDateFormat(dateStr) {
                                         <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
                                             <div style="font-size: 18px; margin-bottom: 2px;">❄️</div>
                                             <div style="font-size: 14px; opacity: 0.9;">Dry Ice Needed</div>
-                                            <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalDryIce} kg</div>
+                                            <div style="font-size: 60px; font-weight: 700; margin-top: 2px;">${grandTotalDryIce} kg</div>
                                             <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                         </div>
                                         ` : ''}
@@ -6014,7 +6014,7 @@ convertToQuotationDateFormat(dateStr) {
                                         <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
                                             <div style="font-size: 18px; margin-bottom: 2px;">🌸</div>
                                             <div style="font-size: 14px; opacity: 0.9;">Flowers Needed</div>
-                                            <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalFlowers} kg</div>
+                                            <div style="font-size: 60px; font-weight: 700; margin-top: 2px;">${grandTotalFlowers} kg</div>
                                             <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                         </div>
                                         ` : ''}
@@ -6022,7 +6022,7 @@ convertToQuotationDateFormat(dateStr) {
                                         <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
                                             <div style="font-size: 18px; margin-bottom: 2px;">⚡</div>
                                             <div style="font-size: 14px; opacity: 0.9;">Electricity Required</div>
-                                            <div style="font-size: 32px; font-weight: 700; margin-top: 2px;">${grandTotalElectricity} KV</div>
+                                            <div style="font-size: 60px; font-weight: 700; margin-top: 2px;">${grandTotalElectricity} KV</div>
                                             <div style="font-size: 12px; opacity: 0.8; margin-top: 2px;">Total power needed</div>
                                         </div>
                                         ` : ''}
