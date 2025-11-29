@@ -1234,6 +1234,79 @@ debounce: (func, wait) => {
                     if (!value) errors.push(field);
                 });
                 return errors;
+            },
+
+            // Mobile device detection
+            isMobileDevice: () => {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            },
+
+            // Get device type for logging
+            getDeviceType: () => {
+                const ua = navigator.userAgent;
+                if (/iPad/i.test(ua)) return 'iPad';
+                if (/iPhone|iPod/i.test(ua)) return 'iPhone';
+                if (/Android/i.test(ua)) return 'Android';
+                return 'Desktop';
+            },
+
+            // Convert canvas.toBlob callback to Promise
+            canvasToBlobPromise: (canvas, type = 'image/png', quality = 0.95) => {
+                return new Promise((resolve, reject) => {
+                    try {
+                        canvas.toBlob(blob => {
+                            if (blob) {
+                                resolve(blob);
+                            } else {
+                                reject(new Error('Canvas toBlob returned null - image may be too large for device memory'));
+                            }
+                        }, type, quality);
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+            },
+
+            // Get optimal canvas scale for device
+            getOptimalCanvasScale: (baseScale) => {
+                const isMobile = Utils.isMobileDevice();
+                const deviceMemory = navigator.deviceMemory || 4; // Default to 4GB if not available
+
+                if (!isMobile) {
+                    return baseScale; // Desktop: use requested scale
+                }
+
+                // Mobile optimizations based on device memory
+                if (deviceMemory <= 2) {
+                    return Math.min(baseScale, 1); // Low memory: max scale 1
+                } else if (deviceMemory <= 4) {
+                    return Math.min(baseScale, 1.5); // Medium memory: max scale 1.5
+                } else {
+                    return Math.min(baseScale, 2); // Higher memory: max scale 2
+                }
+            },
+
+            // Validate canvas dimensions for device
+            validateCanvasDimensions: (width, height) => {
+                const maxDimension = Utils.isMobileDevice() ? 4096 : 32767; // Mobile: 4096, Desktop: 32767
+                const maxArea = Utils.isMobileDevice() ? 16777216 : 268435456; // Mobile: 16MP, Desktop: 256MP
+                const area = width * height;
+
+                if (width > maxDimension || height > maxDimension) {
+                    return {
+                        valid: false,
+                        reason: `Canvas dimension exceeds maximum (${maxDimension}px) for this device`
+                    };
+                }
+
+                if (area > maxArea) {
+                    return {
+                        valid: false,
+                        reason: `Canvas area (${area}px) exceeds maximum (${maxArea}px) for this device`
+                    };
+                }
+
+                return { valid: true };
             }
         };
 
@@ -5571,7 +5644,9 @@ convertToQuotationDateFormat(dateStr) {
 
             // ============ IMAGE GENERATION ============
             async generateSingleOrderImage(order) {
-                const loading = this.showLoading('Generating image...');
+                const isMobile = Utils.isMobileDevice();
+                const deviceType = Utils.getDeviceType();
+                const loading = this.showLoading(isMobile ? 'Generating image (mobile mode)...' : 'Generating image...');
 
                 try {
                     const template = document.getElementById('printTemplate');
@@ -5582,6 +5657,25 @@ convertToQuotationDateFormat(dateStr) {
 
                     // Get paper dimensions based on settings
                     const paperDimensions = this.getPaperDimensions();
+
+                    // Mobile optimization: Validate canvas dimensions before proceeding
+                    const baseScale = this.data.settings.imageQuality || 2;
+                    const optimizedScale = Utils.getOptimalCanvasScale(baseScale);
+
+                    const canvasWidth = Math.round(paperDimensions.width * optimizedScale);
+                    const canvasHeight = Math.round(paperDimensions.height * optimizedScale);
+
+                    const validation = Utils.validateCanvasDimensions(canvasWidth, canvasHeight);
+                    if (!validation.valid) {
+                        this.hideLoading(loading);
+                        this.showToast(`⚠️ ${validation.reason}. Please reduce image quality in settings.`, 'error');
+                        console.error('Canvas validation failed:', validation.reason);
+                        return;
+                    }
+
+                    if (isMobile && optimizedScale < baseScale) {
+                        console.log(`📱 Mobile device detected (${deviceType}): Quality auto-reduced from ${baseScale} to ${optimizedScale} for better compatibility`);
+                    }
 
                     // Apply left margin from settings (convert mm to pixels: 1mm = 11.811px at 300 DPI)
                     const leftMarginMm = this.data.settings.tableSettings?.leftMargin || 50;
@@ -5595,50 +5689,122 @@ convertToQuotationDateFormat(dateStr) {
                     template.innerHTML = this.buildOrderHTML(order, fontSize, colors, false, bgColor, textColor);
                     template.style.display = 'block';
 
-                    // Reduced wait time for faster generation (300ms is enough for DOM to settle)
-                    await new Promise(r => setTimeout(r, 300));
+                    // Increased wait time for mobile devices (they need more time for DOM to settle)
+                    await new Promise(r => setTimeout(r, isMobile ? 500 : 300));
 
-                    const canvas = await html2canvas(template, {
-                        scale: this.data.settings.imageQuality || 2,
-                        backgroundColor: bgColor,
-                        width: paperDimensions.width,
-                        logging: false,
-                        useCORS: true
-                    });
+                    // Create canvas with optimized scale
+                    let canvas;
+                    try {
+                        canvas = await html2canvas(template, {
+                            scale: optimizedScale,
+                            backgroundColor: bgColor,
+                            width: paperDimensions.width,
+                            logging: false,
+                            useCORS: true,
+                            allowTaint: false,
+                            // Mobile-specific optimizations
+                            removeContainer: true,
+                            imageTimeout: isMobile ? 30000 : 15000
+                        });
+                    } catch (canvasError) {
+                        console.error('html2canvas failed:', canvasError);
+
+                        // Retry with even lower quality for mobile
+                        if (isMobile && optimizedScale > 1) {
+                            console.log('⚠️ Retrying with scale 1 for mobile compatibility...');
+                            this.updateLoadingMessage(loading, 'Retrying with lower quality...');
+
+                            canvas = await html2canvas(template, {
+                                scale: 1,
+                                backgroundColor: bgColor,
+                                width: paperDimensions.width,
+                                logging: false,
+                                useCORS: true,
+                                allowTaint: false,
+                                removeContainer: true,
+                                imageTimeout: 30000
+                            });
+                        } else {
+                            throw canvasError;
+                        }
+                    }
 
                     template.style.display = 'none';
 
-                    // Add error handling for blob creation
-                    canvas.toBlob(blob => {
-                        if (!blob) {
-                            this.hideLoading(loading);
-                            this.showToast('Error: Image too large. Try reducing quality or paper size.', 'error');
-                            return;
-                        }
+                    // Use Promise-based blob creation with better error handling
+                    this.updateLoadingMessage(loading, 'Creating download file...');
 
-                        try {
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = `Order_${order.orderId}.png`;
+                    let blob;
+                    try {
+                        blob = await Utils.canvasToBlobPromise(canvas, 'image/png', 0.95);
+                    } catch (blobError) {
+                        console.error('PNG blob creation failed:', blobError);
+
+                        // Fallback to JPEG with lower quality for mobile
+                        if (isMobile) {
+                            console.log('⚠️ Retrying with JPEG format for mobile compatibility...');
+                            this.updateLoadingMessage(loading, 'Trying alternative format...');
+                            blob = await Utils.canvasToBlobPromise(canvas, 'image/jpeg', 0.85);
+                        } else {
+                            throw blobError;
+                        }
+                    }
+
+                    // Check blob size
+                    const blobSizeMB = (blob.size / 1024 / 1024).toFixed(2);
+                    console.log(`📊 Image size: ${blobSizeMB} MB`);
+
+                    if (blob.size > 50 * 1024 * 1024 && isMobile) {
+                        this.hideLoading(loading);
+                        this.showToast('⚠️ Image too large for mobile device. Please reduce quality in settings.', 'error');
+                        return;
+                    }
+
+                    // Create download
+                    try {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        const fileExt = blob.type.includes('jpeg') ? 'jpg' : 'png';
+                        link.download = `Order_${order.orderId}.${fileExt}`;
+
+                        // Mobile-specific download handling
+                        if (isMobile) {
+                            // For mobile, add a small delay and use different approach
+                            document.body.appendChild(link);
                             link.click();
-                            URL.revokeObjectURL(url);
-
-                            this.hideLoading(loading);
-                            this.showToast('Image downloaded!');
-                        } catch (e) {
-                            this.hideLoading(loading);
-                            this.showToast('Error creating download: ' + e.message, 'error');
+                            document.body.removeChild(link);
+                        } else {
+                            link.click();
                         }
-                    }, 'image/png', 0.95);
+
+                        // Delay cleanup for mobile browsers
+                        setTimeout(() => URL.revokeObjectURL(url), isMobile ? 1000 : 100);
+
+                        this.hideLoading(loading);
+                        this.showToast(`✅ Image downloaded! (${blobSizeMB} MB)`);
+                    } catch (downloadError) {
+                        console.error('Download failed:', downloadError);
+                        this.hideLoading(loading);
+                        this.showToast('❌ Download failed: ' + downloadError.message, 'error');
+                    }
                 } catch (error) {
                     this.hideLoading(loading);
-                    this.showToast('Error: ' + error.message, 'error');
+                    console.error('Image generation error:', error);
+
+                    // Mobile-friendly error message
+                    if (isMobile) {
+                        this.showToast(`❌ Failed on ${deviceType}: ${error.message}. Try reducing image quality in settings.`, 'error');
+                    } else {
+                        this.showToast('❌ Error: ' + error.message, 'error');
+                    }
                 }
             },
 
             async generateMultiOrderImage(orders, date) {
-                const loading = this.showLoading('Generating multi-page PDF...');
+                const isMobile = Utils.isMobileDevice();
+                const deviceType = Utils.getDeviceType();
+                const loading = this.showLoading(isMobile ? `Generating PDF (mobile mode, ${orders.length} orders)...` : 'Generating multi-page PDF...');
 
                 try {
                     const template = document.getElementById('printTemplate');
@@ -5660,14 +5826,36 @@ convertToQuotationDateFormat(dateStr) {
                     template.style.paddingRight = '80px';
 
                     // Smart quality adjustment for multi-order images to prevent memory issues
-                    let qualityScale = this.data.settings.imageQuality || 2;
+                    let baseQualityScale = this.data.settings.imageQuality || 2;
+
+                    // Apply mobile optimizations first
+                    let qualityScale = Utils.getOptimalCanvasScale(baseQualityScale);
+
+                    // Further reduce quality based on number of orders
                     if (orders.length > 5) {
                         qualityScale = Math.min(qualityScale, 2); // Limit to scale 2 for more than 5 orders
                         console.log('⚠️ Quality reduced to scale 2 due to multiple orders to prevent memory issues');
                     }
                     if (orders.length > 10) {
-                        qualityScale = 1.5; // Further reduce for very large sets
+                        qualityScale = Math.min(qualityScale, 1.5); // Further reduce for very large sets
                         console.log('⚠️ Quality further reduced to scale 1.5 for large order set');
+                    }
+
+                    // Extra reduction for mobile with many orders
+                    if (isMobile) {
+                        if (orders.length > 3) {
+                            qualityScale = Math.min(qualityScale, 1);
+                            console.log(`📱 Mobile with ${orders.length} orders: Quality capped at scale 1`);
+                        }
+                        if (orders.length > 10) {
+                            this.hideLoading(loading);
+                            this.showToast(`⚠️ ${orders.length} orders may be too many for mobile device. Consider downloading fewer orders at once.`, 'error');
+                            return;
+                        }
+                    }
+
+                    if (isMobile && qualityScale < baseQualityScale) {
+                        console.log(`📱 ${deviceType}: Quality auto-adjusted from ${baseQualityScale} to ${qualityScale}`);
                     }
 
                     // Use fontSize from settings, but slightly smaller for compact multi-order view
@@ -6044,8 +6232,17 @@ convertToQuotationDateFormat(dateStr) {
                         template.style.position = 'static';
                         template.style.height = 'auto';
 
-                        // Reduced wait time for faster PDF generation
-                        await new Promise(r => setTimeout(r, 200));
+                        // Increased wait time for mobile devices
+                        await new Promise(r => setTimeout(r, isMobile ? 500 : 200));
+
+                        // Validate canvas dimensions before creation
+                        const expectedWidth = Math.round(paperDimensions.width * qualityScale);
+                        const expectedHeight = Math.round(paperDimensions.height * qualityScale);
+                        const validation = Utils.validateCanvasDimensions(expectedWidth, expectedHeight);
+
+                        if (!validation.valid) {
+                            throw new Error(`Page ${pageNum + 1}: ${validation.reason}`);
+                        }
 
                         // Convert HTML to canvas with error handling
                         let canvas;
@@ -6056,18 +6253,26 @@ convertToQuotationDateFormat(dateStr) {
                                 width: paperDimensions.width,
                                 logging: false,
                                 useCORS: true,
-                                allowTaint: false
+                                allowTaint: false,
+                                removeContainer: true,
+                                imageTimeout: isMobile ? 30000 : 15000
                             });
                         } catch (canvasError) {
                             console.error('Canvas generation failed, retrying with lower quality:', canvasError);
+
                             // Retry with lower quality scale
+                            const retryScale = isMobile ? 0.75 : 1;
+                            console.log(`⚠️ Retrying page ${pageNum + 1} with scale ${retryScale}...`);
+
                             canvas = await html2canvas(template, {
-                                scale: 1,
+                                scale: retryScale,
                                 backgroundColor: bgColor,
                                 width: paperDimensions.width,
                                 logging: false,
                                 useCORS: true,
-                                allowTaint: false
+                                allowTaint: false,
+                                removeContainer: true,
+                                imageTimeout: isMobile ? 30000 : 15000
                             });
                         }
 
@@ -6080,7 +6285,21 @@ convertToQuotationDateFormat(dateStr) {
                         } catch (pngError) {
                             console.error('PNG conversion failed, retrying with JPEG:', pngError);
                             // Fallback to JPEG if PNG fails
-                            imgData = canvas.toDataURL('image/jpeg', 0.85);
+                            try {
+                                imgData = canvas.toDataURL('image/jpeg', 0.85);
+                            } catch (jpegError) {
+                                console.error('JPEG conversion also failed:', jpegError);
+                                if (isMobile) {
+                                    throw new Error('Canvas conversion failed on mobile device. Try reducing image quality or downloading fewer orders.');
+                                } else {
+                                    throw jpegError;
+                                }
+                            }
+                        }
+
+                        // Check data URL size for mobile
+                        if (isMobile && imgData.length > 10 * 1024 * 1024) {
+                            console.warn(`⚠️ Page ${pageNum + 1} is large (${(imgData.length / 1024 / 1024).toFixed(2)} MB)`);
                         }
                         let imgWidth = pdfWidth;
                         let imgHeight = (canvas.height * pdfWidth) / canvas.width;
@@ -6119,8 +6338,14 @@ convertToQuotationDateFormat(dateStr) {
 
                 } catch (error) {
                     this.hideLoading(loading);
-                    this.showToast('Error: ' + error.message, 'error');
                     console.error('Error generating multi-order images:', error);
+
+                    // Mobile-friendly error messages
+                    if (isMobile) {
+                        this.showToast(`❌ Failed on ${deviceType}: ${error.message}. Try reducing quality in settings or downloading fewer orders.`, 'error');
+                    } else {
+                        this.showToast('❌ Error: ' + error.message, 'error');
+                    }
                 }
             },
 
