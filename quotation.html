@@ -1787,6 +1787,48 @@
         </div>
       </article>
 
+      <article class="card" data-name="Color Sonic Boom" data-desc="Color CO2 jet effect (3 KV)" data-price="6500" data-category="sfx">
+        <button class="wishlist-btn">♡</button>
+        <h3>Color Sonic Boom</h3>
+        <p class="desc">Color CO2 jet effect (3 KV)</p>
+        <div class="meta">
+          <div style="font-size:14px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹6,500</div>
+            <div class="price-note">6,500 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <article class="card" data-name="Eco Sonic Boom Jet" data-desc="Eco CO2 jet effect (3 KV)" data-price="6500" data-category="sfx">
+        <button class="wishlist-btn">♡</button>
+        <h3>Eco Sonic Boom Jet</h3>
+        <p class="desc">Eco CO2 jet effect (3 KV)</p>
+        <div class="meta">
+          <div style="font-size:14px; color:rgba(223,230,235,0.72)">Qty: 1 pcs</div>
+          <div style="text-align:right">
+            <div class="price">₹6,500</div>
+            <div class="price-note">6,500 / unit</div>
+          </div>
+        </div>
+        <div class="cart-controls no-print">
+          <div class="qty-selector">
+            <button class="qty-btn qty-minus">−</button>
+            <span class="qty-display">1</span>
+            <button class="qty-btn qty-plus">+</button>
+          </div>
+          <button class="add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
       <article class="card" data-name="Showven Waterfall Machine" data-desc="200 gram powder" data-price="7000" data-category="sfx">
         <button class="wishlist-btn">♡</button>
         <h3>Showven Waterfall Machine</h3>
@@ -3602,8 +3644,8 @@
       let grandTotal = 0;
       let totalDryIceKg = 0;
       let totalElectricityKV = 0;
-      const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
-      const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+      const electricity3KV = ['showven sonic boom (co2 jet)', 'color sonic boom', 'eco sonic boom jet', 'dry ice machine', '5 head flame', '5-head flame'];
+      const electricity1KV = ['sparkler', 'spinner', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
 
       builderData.days.forEach((day, idx) => {
         message += `*Day ${idx + 1}*${day.date ? ` - ${new Date(day.date).toLocaleDateString('en-IN')}` : ''}\n`;
@@ -3767,8 +3809,8 @@
       let total = 0;
       let totalDryIceKg = 0;
       let totalElectricityKV = 0;
-      const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
-      const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+      const electricity3KV = ['showven sonic boom (co2 jet)', 'color sonic boom', 'eco sonic boom jet', 'dry ice machine', '5 head flame', '5-head flame'];
+      const electricity1KV = ['sparkler', 'spinner', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
 
       cart.forEach(item => {
         const itemTotal = item.price * item.qty;
@@ -3921,8 +3963,8 @@
         builderData.days.flatMap(day => day.functions.flatMap(func => func.items)) :
         cart;
 
-      const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
-      const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+      const electricity3KV = ['showven sonic boom (co2 jet)', 'color sonic boom', 'eco sonic boom jet', 'dry ice machine', '5 head flame', '5-head flame'];
+      const electricity1KV = ['sparkler', 'spinner', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
 
       let totalDryIceKg = 0, totalElectricityKV = 0;
       itemsList.forEach(item => {
@@ -4519,8 +4561,8 @@
       const grandTotal = itemsList.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
       // Render requirements section
-      const electricity3KV = ['showven sonic boom (co2 jet)', 'dry ice machine', '5 head flame'];
-      const electricity1KV = ['sparkular machine', 'spinner machine', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+      const electricity3KV = ['showven sonic boom (co2 jet)', 'color sonic boom', 'eco sonic boom jet', 'dry ice machine', '5 head flame', '5-head flame'];
+      const electricity1KV = ['sparkler', 'spinner', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
       let totalDryIceKg = 0, totalElectricityKV = 0;
 
       itemsList.forEach(item => {
