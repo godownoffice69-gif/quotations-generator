@@ -1089,10 +1089,8 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Helper(s)</label>
-                                <select id="helper" class="form-select" multiple style="min-height: 80px;">
-                                    <option value="">Select Helper(s)</option>
-                                </select>
-                                <small style="color: var(--text-gray);">Hold Ctrl/Cmd to select multiple helpers</small>
+                                <input type="text" id="helper" class="form-input" placeholder="Enter helper names separated by commas (e.g., John, Mary, David)">
+                                <small style="color: var(--text-gray);">Enter multiple helper names separated by commas</small>
                             </div>
                         </div>
 
@@ -3646,10 +3644,9 @@ const OMS = {
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">${this.t('helpers')}</label>
-                        <select id="${functionId}Helper" class="form-select" multiple style="min-height: 80px;"
-                               onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', Array.from(this.selectedOptions).map(opt => opt.value).join(', '))">
-                        </select>
-                        <small style="color: var(--text-gray);">Hold Ctrl/Cmd to select multiple helpers</small>
+                        <input type="text" id="${functionId}Helper" class="form-input" placeholder="Enter helper names separated by commas (e.g., John, Mary, David)"
+                               oninput="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'helper', this.value.trim())">
+                        <small style="color: var(--text-gray);">Enter multiple helper names separated by commas</small>
                     </div>
                 </div>
 
@@ -4677,9 +4674,9 @@ async refreshOrderId() {
         const eventType = Utils.get('eventTypeSelect');
         const isMultiDay = eventType === 'multi';
 
-        // Get multiple selected helpers from multi-select dropdown
-        const helperSelect = document.getElementById('helper');
-        const selectedHelpers = helperSelect ? Array.from(helperSelect.selectedOptions).map(opt => opt.value).filter(v => v).join(', ') : '';
+        // Get helper names from text input
+        const helperInput = document.getElementById('helper');
+        const selectedHelpers = helperInput ? helperInput.value.trim() : '';
 
         // Collect day-wise data for multi-day events
         let dayWiseData = [];
@@ -5374,10 +5371,7 @@ convertToQuotationDateFormat(dateStr) {
                                         if (operatorSelect) operatorSelect.value = func.operator || '';
 
                                         if (helperSelect && func.helper) {
-                                            const helpers = func.helper.split(',').map(h => h.trim());
-                                            Array.from(helperSelect.options).forEach(option => {
-                                                option.selected = helpers.includes(option.value);
-                                            });
+                                            helperSelect.value = func.helper;
                                         }
 
                                         if (notesTextarea) notesTextarea.value = func.notes || '';
@@ -5444,15 +5438,11 @@ convertToQuotationDateFormat(dateStr) {
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
 
-            // Handle multi-select helper field separately
+            // Load helper names to text input
             if (order.helper) {
-                const helperSelect = document.getElementById('helper');
-                if (helperSelect) {
-                    // Split comma-separated helpers and select them
-                    const helperNames = order.helper.split(',').map(h => h.trim()).filter(h => h);
-                    Array.from(helperSelect.options).forEach(option => {
-                        option.selected = helperNames.includes(option.value);
-                    });
+                const helperInput = document.getElementById('helper');
+                if (helperInput) {
+                    helperInput.value = order.helper;
                 }
             }
 
@@ -9232,16 +9222,7 @@ convertToQuotationDateFormat(dateStr) {
                         operators.map(o => `<option value="${o.name}" data-id="${o.id}">⚙️ ${o.name}</option>`).join('');
                 }
 
-                // Populate Helper multi-select dropdown
-                const helperSelect = document.getElementById('helper');
-                if (helperSelect) {
-                    const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
-                    // Keep existing selections
-                    const currentValues = Array.from(helperSelect.selectedOptions).map(opt => opt.value);
-                    helperSelect.innerHTML = helpers.map(h =>
-                        `<option value="${h.name}" data-id="${h.id}" ${currentValues.includes(h.name) ? 'selected' : ''}>👷 ${h.name}</option>`
-                    ).join('');
-                }
+                // Helper field is now a text input - no population needed
             },
 
             populateFunctionTeamDropdowns(dayIndex, functionIndex) {
@@ -9268,15 +9249,7 @@ convertToQuotationDateFormat(dateStr) {
                         operators.map(o => `<option value="${o.name}" data-id="${o.id}" ${o.name === currentValue ? 'selected' : ''}>⚙️ ${o.name}</option>`).join('');
                 }
 
-                // Populate Helper multi-select for this function
-                const helperSelect = document.getElementById(`${functionId}Helper`);
-                if (helperSelect) {
-                    const helpers = activeTeam.filter(m => m.roles.includes('Helper'));
-                    const currentValues = Array.from(helperSelect.selectedOptions).map(opt => opt.value);
-                    helperSelect.innerHTML = helpers.map(h =>
-                        `<option value="${h.name}" data-id="${h.id}" ${currentValues.includes(h.name) ? 'selected' : ''}>👷 ${h.name}</option>`
-                    ).join('');
-                }
+                // Helper field is now a text input - no population needed
             },
 
             updateTeamDropdowns() {
