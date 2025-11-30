@@ -6682,7 +6682,8 @@ convertToQuotationDateFormat(dateStr) {
                         if (day.functions && Array.isArray(day.functions)) {
                             day.functions.forEach(func => {
                                 if (func.items && Array.isArray(func.items)) {
-                                    console.log(`  → Adding ${func.items.length} items from function ${func.functionName}`);
+                                    const funcName = func.functionName || func.name || '(unnamed function)';
+                                    console.log(`  → Adding ${func.items.length} items from function "${funcName}"`);
                                     items.push(...func.items);
                                 }
                             });
@@ -6695,19 +6696,35 @@ convertToQuotationDateFormat(dateStr) {
 
                 console.log(`  → Total items collected: ${items.length}`);
 
+                // DEBUG: Log all item names to understand what we're working with
+                if (items.length > 0) {
+                    console.log(`  → Item details:`);
+                    items.forEach((item, idx) => {
+                        console.log(`     ${idx + 1}. Name: "${item.name}" | Qty: ${item.quantity || 0}`);
+                    });
+                }
+
                 // Calculate dry ice requirements
                 const dryMachines = items.filter(item => {
-                    const name = item.name.toLowerCase();
-                    return name.includes('dry ice');
+                    const name = item.name?.toLowerCase() || '';
+                    const matches = name.includes('dry ice');
+                    if (matches) {
+                        console.log(`     ✅ DRY ICE MATCH: "${item.name}" (qty: ${item.quantity || 0})`);
+                    }
+                    return matches;
                 }).reduce((sum, item) => sum + (item.quantity || 0), 0);
                 const dryIceNeeded = dryMachines * 20; // 20 kg per dry ice machine
 
                 // Calculate flower requirements
                 const flowerShowerKeywords = ['flower shower', 'flower shower machine'];
                 const flowerShowerMachines = items.filter(item => {
-                    const name = item.name.toLowerCase();
-                    return flowerShowerKeywords.some(keyword => name.includes(keyword)) ||
+                    const name = item.name?.toLowerCase() || '';
+                    const matches = flowerShowerKeywords.some(keyword => name.includes(keyword)) ||
                            (name.includes('flower') && name.includes('shower'));
+                    if (matches) {
+                        console.log(`     ✅ FLOWER SHOWER MATCH: "${item.name}" (qty: ${item.quantity || 0})`);
+                    }
+                    return matches;
                 }).reduce((sum, item) => sum + (item.quantity || 0), 0);
                 const flowersNeeded = flowerShowerMachines * 20; // 20 kg per flower shower machine
 
@@ -6717,17 +6734,19 @@ convertToQuotationDateFormat(dateStr) {
 
                 let totalElectricityKV = 0;
                 items.forEach(item => {
-                    const itemNameLower = item.name.toLowerCase();
+                    const itemNameLower = item.name?.toLowerCase() || '';
                     const qty = item.quantity || 0;
 
                     if (electricity3KV.some(name => itemNameLower.includes(name))) {
+                        console.log(`     ✅ ELECTRICITY 3KV MATCH: "${item.name}" (qty: ${qty}, total: ${qty * 3}KV)`);
                         totalElectricityKV += qty * 3;
                     } else if (electricity1KV.some(name => itemNameLower.includes(name))) {
+                        console.log(`     ✅ ELECTRICITY 1KV MATCH: "${item.name}" (qty: ${qty}, total: ${qty * 1}KV)`);
                         totalElectricityKV += qty * 1;
                     }
                 });
 
-                return {
+                const result = {
                     dryIceNeeded,
                     dryMachines,
                     flowersNeeded,
@@ -6735,6 +6754,11 @@ convertToQuotationDateFormat(dateStr) {
                     totalElectricityKV,
                     items
                 };
+
+                // DEBUG: Log the calculated requirements
+                console.log(`  → 📊 Calculated: DryIce=${dryIceNeeded}kg (${dryMachines} machines), Flowers=${flowersNeeded}kg (${flowerShowerMachines} machines), Electricity=${totalElectricityKV}KV`);
+
+                return result;
             },
 
             buildOrderHTML(order, fontSize, colors, compact = false, bgColor = '#ffffff', textColor = '#000000') {
