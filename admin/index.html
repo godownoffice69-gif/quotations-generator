@@ -6752,7 +6752,7 @@ convertToQuotationDateFormat(dateStr) {
                         <!-- FP- Field at center/top -->
                         <div style="text-align: center; margin-bottom: 25px;">
                             <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: #000000; background: #ffeb3b;">
-                                FP-<span style="display: inline-block; width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px;"></span>
+                                FP-<span style="display: inline-block; width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px;">${order.orderId && order.orderId.startsWith('FP') ? order.orderId.substring(2) : ''}</span>
                             </div>
                         </div>
 
@@ -9553,9 +9553,17 @@ convertToQuotationDateFormat(dateStr) {
                         <div class="btn-group">
                             <button class="btn btn-success" data-action="exportData">${this.t('export')}</button>
                         </div>
+                        <div class="form-group" style="margin: 20px 0;">
+                            <label class="form-label">🔍 Search Orders</label>
+                            <input type="text" id="historySearch" class="form-input" placeholder="Search by client name, order ID, date, or venue...">
+                            <div id="historySearchResults" class="search-dropdown"></div>
+                        </div>
                         <div id="historyContainer"></div>
                     </div>
                 `;
+
+                // Add search functionality
+                this.setupHistorySearch();
 
                 this.renderTable('historyContainer', [
                     { key: 'orderId', label: this.t('orderId'), render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
@@ -9575,6 +9583,101 @@ convertToQuotationDateFormat(dateStr) {
                     <button class="btn btn-warning btn-small" onclick="OMS.addExpenseForOrder('${row.docId || row.orderId}')">💸 Expense</button>
                     <button class="btn btn-danger btn-small" data-action="delete" data-type="order" data-id="${row.docId || row.orderId}">${this.t('delete')}</button>
                 `);
+            },
+
+            setupHistorySearch() {
+                const searchInput = document.getElementById('historySearch');
+                const searchResults = document.getElementById('historySearchResults');
+
+                if (!searchInput || !searchResults) return;
+
+                let searchTimeout;
+
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    const query = e.target.value.trim().toLowerCase();
+
+                    if (query.length < 2) {
+                        searchResults.style.display = 'none';
+                        searchResults.innerHTML = '';
+                        return;
+                    }
+
+                    searchTimeout = setTimeout(() => {
+                        // Search through all orders
+                        const results = this.data.orders.filter(order => {
+                            const clientName = (order.clientName || '').toLowerCase();
+                            const orderId = (order.orderId || '').toLowerCase();
+                            const venue = (order.venue || '').toLowerCase();
+                            const date = order.isMultiDay
+                                ? `${Utils.formatDate(order.startDate)} ${Utils.formatDate(order.endDate)}`.toLowerCase()
+                                : Utils.formatDate(order.date).toLowerCase();
+
+                            return clientName.includes(query) ||
+                                   orderId.includes(query) ||
+                                   venue.includes(query) ||
+                                   date.includes(query);
+                        }).slice(0, 10); // Limit to top 10 results
+
+                        if (results.length === 0) {
+                            searchResults.innerHTML = '<div class="search-dropdown-item">No orders found</div>';
+                            searchResults.style.display = 'block';
+                        } else {
+                            searchResults.innerHTML = results.map(order => {
+                                const dateDisplay = order.isMultiDay
+                                    ? `${Utils.formatDate(order.startDate)} - ${Utils.formatDate(order.endDate)}`
+                                    : Utils.formatDate(order.date);
+                                const statusClass = `status-${order.status.toLowerCase()}`;
+
+                                return `
+                                    <div class="search-dropdown-item" data-order-id="${order.docId || order.orderId}" style="cursor: pointer; padding: 10px; border-bottom: 1px solid var(--border-color);">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <strong>${order.orderId || '[No ID]'}</strong> - ${order.clientName}
+                                                <br>
+                                                <small style="color: var(--text-gray);">
+                                                    📅 ${dateDisplay} | 📍 ${order.venue || 'N/A'}
+                                                </small>
+                                            </div>
+                                            <span class="status-badge ${statusClass}">${order.status}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                            searchResults.style.display = 'block';
+
+                            // Add click handlers to search results
+                            searchResults.querySelectorAll('.search-dropdown-item').forEach(item => {
+                                const orderId = item.getAttribute('data-order-id');
+                                if (orderId && orderId !== 'null') {
+                                    item.addEventListener('click', () => {
+                                        // Find the order
+                                        const order = this.data.orders.find(o =>
+                                            o.docId === orderId || o.orderId === orderId
+                                        );
+
+                                        if (order) {
+                                            // Switch to orders tab
+                                            this.switchTab('orders');
+                                            // Load order into form for editing
+                                            this.loadOrderToForm(order);
+                                            // Clear search
+                                            searchInput.value = '';
+                                            searchResults.style.display = 'none';
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    }, 300); // Debounce 300ms
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                        searchResults.style.display = 'none';
+                    }
+                });
             },
 
             renderAnalytics() {
