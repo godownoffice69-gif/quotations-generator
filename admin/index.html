@@ -11562,10 +11562,13 @@ async loadOrdersFromFirestore() {
                 eventType: orderData.functionType || customer.functionType || '',
                 transport: orderData.transport || '',
                 driverName: orderData.driverName || '',
+                transport2: orderData.transport2 || '',
+                driverName2: orderData.driverName2 || '',
                 operator: orderData.operator || '',
                 helper: orderData.helper || '',
                 status: orderData.status || 'Confirmed',
                 notes: orderData.notes || '',
+                weather: orderData.weather || null,
                 items: (orderData.items || []).map(item => ({
                     name: item.name || '',
                     quantity: item.qty || 0,
@@ -11573,6 +11576,7 @@ async loadOrdersFromFirestore() {
                     price: item.price || 0
                 })),
                 createdAt: orderData.createdAt || new Date().toISOString(),
+                updatedAt: orderData.updatedAt || null,
                 totalAmount: orderData.totalAmount || 0,
                 // Multi-day order fields
                 isMultiDay: orderData.isMultiDay || false,
