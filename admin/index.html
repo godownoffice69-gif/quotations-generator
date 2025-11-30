@@ -6057,6 +6057,20 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             async generateMultiOrderImage(orders, date) {
+                console.log(`\n🎯 ========== GENERATE MULTI ORDER IMAGE CALLED ==========`);
+                console.log(`📅 Date: ${date}`);
+                console.log(`📦 Number of orders: ${orders.length}`);
+                console.log(`📋 Orders:`, orders.map(o => ({
+                    orderId: o.orderId,
+                    clientName: o.clientName,
+                    isMultiDay: o.isMultiDay,
+                    hasDayWiseData: !!(o.dayWiseData && o.dayWiseData.length > 0),
+                    dayWiseDataCount: o.dayWiseData ? o.dayWiseData.length : 0,
+                    hasItems: !!(o.items && o.items.length > 0),
+                    itemsCount: o.items ? o.items.length : 0
+                })));
+                console.log(`========================================\n`);
+
                 const isMobile = Utils.isMobileDevice();
                 const deviceType = Utils.getDeviceType();
                 const loading = this.showLoading(isMobile ? `Generating PDF (mobile mode, ${orders.length} orders)...` : 'Generating multi-page PDF...');
@@ -6127,12 +6141,15 @@ convertToQuotationDateFormat(dateStr) {
 
                     orders.forEach(order => {
                         const requirements = this.calculateOrderRequirements(order);
+                        console.log(`  → Order ${order.orderId} requirements:`, requirements);
                         grandTotalDryIce += requirements.dryIceNeeded;
                         grandTotalFlowers += requirements.flowersNeeded;
                         grandTotalElectricity += requirements.totalElectricityKV;
                         grandTotalDryMachines += requirements.dryMachines;
                         grandTotalFlowerMachines += requirements.flowerShowerMachines;
                     });
+
+                    console.log(`\n📊 Grand Totals Calculated: DryIce=${grandTotalDryIce}kg, Flowers=${grandTotalFlowers}kg, Electricity=${grandTotalElectricity}KV, DryMachines=${grandTotalDryMachines}, FlowerMachines=${grandTotalFlowerMachines}\n`);
 
                     // NEW ALGORITHM: Dynamic page building with actual measurements
                     // This ensures ALL orders are included and pages are packed optimally
@@ -6446,7 +6463,9 @@ convertToQuotationDateFormat(dateStr) {
                         `;
 
                         // Add summary section on first page only
+                        console.log(`🔍 Page ${pageNum}: Checking grand total condition - DryIce=${grandTotalDryIce}, Flowers=${grandTotalFlowers}, Electricity=${grandTotalElectricity}`);
                         if (pageNum === 0 && (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0)) {
+                            console.log(`✅ Adding grand total summary to first page`);
                             html += `
                                 <div style="background: white; color: black; padding: 8px; margin-bottom: 12px; border: 2px solid #000; border-radius: 4px;">
                                     <h3 style="margin: 0 0 6px 0; font-size: 15px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
@@ -6658,18 +6677,23 @@ convertToQuotationDateFormat(dateStr) {
                 // Collect all items from the order
                 // Check for dayWiseData first (handles both multiday and filtered single-day orders)
                 if (order.dayWiseData && Array.isArray(order.dayWiseData) && order.dayWiseData.length > 0) {
+                    console.log(`📋 Order ${order.orderId || order.clientName}: Processing dayWiseData (${order.dayWiseData.length} days)`);
                     order.dayWiseData.forEach(day => {
                         if (day.functions && Array.isArray(day.functions)) {
                             day.functions.forEach(func => {
                                 if (func.items && Array.isArray(func.items)) {
+                                    console.log(`  → Adding ${func.items.length} items from function ${func.functionName}`);
                                     items.push(...func.items);
                                 }
                             });
                         }
                     });
                 } else if (order.items && Array.isArray(order.items)) {
+                    console.log(`📋 Order ${order.orderId || order.clientName}: Processing items array (${order.items.length} items)`);
                     items.push(...order.items);
                 }
+
+                console.log(`  → Total items collected: ${items.length}`);
 
                 // Calculate dry ice requirements
                 const dryMachines = items.filter(item => {
