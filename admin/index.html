@@ -6742,7 +6742,7 @@ convertToQuotationDateFormat(dateStr) {
                         <!-- FP- Field at center/top -->
                         <div style="text-align: center; margin-bottom: 25px;">
                             <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: #000000; background: #ffeb3b;">
-                                FP-<span style="display: inline-block; width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px;">${order.orderId && order.orderId.startsWith('FP') ? order.orderId.substring(2) : ''}</span>
+                                FP-<span style="display: inline-block; min-width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px; white-space: nowrap;">${order.orderId && order.orderId.startsWith('FP') ? order.orderId.substring(2) : ''}</span>
                             </div>
                         </div>
 
@@ -6771,26 +6771,9 @@ convertToQuotationDateFormat(dateStr) {
                             <div>
                                 <strong style="color: ${textColor};">Event:</strong> ${order.eventType || '-'}<br>
                                 <strong style="color: ${textColor};">Operator:</strong> ${order.operator || '-'}<br>
-                                <strong style="color: ${textColor};">Helper(s):</strong>
+                                <strong style="color: ${textColor};">Helper(s):</strong> ${order.helpers || '-'}
                             </div>
                         </div>
-
-                        ${order.weather ? `
-                        <div style="margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; display: flex; justify-content: space-around; align-items: center; font-size: ${fontSize}px;">
-                            <div style="text-align: center;">
-                                <div style="font-size: ${fontSize + 8}px; font-weight: bold;">${order.weather.temp}°C</div>
-                                <div style="font-size: ${fontSize - 2}px; opacity: 0.9;">Temperature</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <div style="font-size: ${fontSize + 8}px; font-weight: bold;">${order.weather.humidity}%</div>
-                                <div style="font-size: ${fontSize - 2}px; opacity: 0.9;">Humidity</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <div style="font-size: ${fontSize + 2}px; font-weight: bold; text-transform: capitalize;">${order.weather.condition}</div>
-                                <div style="font-size: ${fontSize - 2}px; opacity: 0.9;">${order.weather.description}</div>
-                            </div>
-                        </div>
-                        ` : ''}
 
                             ${order.dayWiseData && order.dayWiseData.length > 0 ?
                             '<div style="margin-top: 30px;">' +
