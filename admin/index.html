@@ -80,13 +80,43 @@
             flex-wrap: wrap;
         }
 
-        #currentOrderId {
-            font-weight: bold;
+        #weatherMiniDashboard {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2));
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
             white-space: nowrap;
-            padding: 0.5rem;
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 0.9rem;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        #weatherMiniDashboard:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.3));
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .weather-mini-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .weather-mini-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+
+        .weather-mini-temp {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .weather-mini-condition {
+            font-size: 0.75rem;
+            opacity: 0.8;
         }
 
         .search-global {
@@ -852,7 +882,13 @@
                         <input type="text" id="globalSearch" placeholder="🔍 Search everything..." autocomplete="off">
                         <div class="search-results" id="globalSearchResults"></div>
                     </div>
-                    <span id="currentOrderId" style="font-weight: bold;">Next: FP001</span>
+                    <div id="weatherMiniDashboard">
+                        <span class="weather-mini-icon">🌤️</span>
+                        <div class="weather-mini-info">
+                            <span class="weather-mini-temp">--°C</span>
+                            <span class="weather-mini-condition">Loading...</span>
+                        </div>
+                    </div>
                     <button class="btn btn-info btn-small" onclick="OMS.toggleLanguage()" id="languageToggle" title="Switch Language">
                         🌐 EN
                     </button>
@@ -975,8 +1011,8 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="form-label required">Contact</label>
-                                <input type="tel" id="contact" class="form-input" required>
+                                <label class="form-label">Contact</label>
+                                <input type="tel" id="contact" class="form-input">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Venue</label>
@@ -3287,6 +3323,10 @@ const OMS = {
                 this.initGlobalSearch();
                 this.applyLanguage(); // Apply saved language
 
+                // Initialize weather mini dashboard and set up auto-refresh
+                this.updateWeatherMiniDashboard();
+                setInterval(() => this.updateWeatherMiniDashboard(), 2000); // Refresh every 2 seconds
+
                 // Check for draft order after initialization
                 setTimeout(() => this.checkForDraft(), 1000);
             },
@@ -4598,8 +4638,27 @@ async editItem(type, id) {
 async refreshOrderId() {
     const nextId = await this.previewNextOrderId();
     Utils.set('orderId', nextId);
-    document.getElementById('currentOrderId').textContent = `${this.t('next')}: ${nextId}`;
 },
+
+            async updateWeatherMiniDashboard() {
+                try {
+                    const city = this.data.settings.city || 'Delhi';
+                    const apiKey = this.data.settings.weatherApiKey || '';
+                    const weather = await Utils.getWeather(city, apiKey);
+
+                    const iconElement = document.querySelector('.weather-mini-icon');
+                    const tempElement = document.querySelector('.weather-mini-temp');
+                    const conditionElement = document.querySelector('.weather-mini-condition');
+
+                    if (iconElement && tempElement && conditionElement) {
+                        iconElement.textContent = Utils.getWeatherEmoji(weather.condition);
+                        tempElement.textContent = weather.temp !== 'N/A' ? `${weather.temp}°C` : '--°C';
+                        conditionElement.textContent = weather.condition !== 'N/A' ? weather.condition : 'Loading...';
+                    }
+                } catch (error) {
+                    console.error('Error updating weather mini dashboard:', error);
+                }
+            },
 
             getNextOrderId() {
                 const prefix = this.data.settings.invoicePrefix || 'FP';
@@ -4686,7 +4745,7 @@ async saveOrder() {
     const eventType = Utils.get('eventTypeSelect');
     const isMultiDay = eventType === 'multi';
     
-    let requiredFields = ['clientName', 'contact', 'orderStatus'];
+    let requiredFields = ['clientName', 'orderStatus'];
 
     if (isMultiDay) {
         requiredFields.push('startDate', 'endDate');
