@@ -3325,7 +3325,7 @@ const OMS = {
 
                 // Initialize weather mini dashboard and set up auto-refresh
                 this.updateWeatherMiniDashboard();
-                setInterval(() => this.updateWeatherMiniDashboard(), 2000); // Refresh every 2 seconds
+                setInterval(() => this.updateWeatherMiniDashboard(), 900000); // Refresh every 15 minutes
 
                 // Check for draft order after initialization
                 setTimeout(() => this.checkForDraft(), 1000);
@@ -5595,12 +5595,7 @@ convertToQuotationDateFormat(dateStr) {
                 this.showToast('Last order duplicated');
             },
             previewOrder() {
-                const errors = Utils.validateRequired(['clientName', 'contact']);
-                if (errors.length > 0) {
-                this.showToast('Fill required fields first', 'error');
-                return;
-                }
-                
+                // Preview doesn't require validation - just show what's been filled
                 const orderData = this.collectFormData();
                 this.showModal('Order Preview', this.generatePreviewHTML(orderData));
             },
@@ -7563,6 +7558,14 @@ convertToQuotationDateFormat(dateStr) {
                     }
                 }
 
+                // Clean up preparation weather interval when leaving preparation tab
+                if (this.currentTab === 'preparation' && tabName !== 'preparation') {
+                    if (this.preparationWeatherInterval) {
+                        clearInterval(this.preparationWeatherInterval);
+                        this.preparationWeatherInterval = null;
+                    }
+                }
+
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
@@ -8403,6 +8406,7 @@ convertToQuotationDateFormat(dateStr) {
                     items,
                     startDate,
                     endDate,
+                    weatherData,
                     stats: {
                         totalOrders: orders.length,
                         confirmed: confirmedOrders,
@@ -8413,6 +8417,36 @@ convertToQuotationDateFormat(dateStr) {
                         sufficient: okItems.length
                     }
                 };
+
+                // Set up weather auto-refresh for preparation tab (every 15 minutes)
+                if (this.preparationWeatherInterval) {
+                    clearInterval(this.preparationWeatherInterval);
+                }
+                this.preparationWeatherInterval = setInterval(() => this.updatePreparationWeather(), 900000);
+            },
+
+            async updatePreparationWeather() {
+                if (!this.currentForecastData || !this.currentForecastData.startDate) return;
+
+                try {
+                    const weatherApiKey = this.data.settings.weatherApiKey || '';
+                    const defaultCity = this.data.settings.defaultCity || 'Delhi';
+                    const weatherData = await Utils.getWeatherForecast(defaultCity, this.currentForecastData.startDate, weatherApiKey);
+
+                    // Update the stored weather data
+                    this.currentForecastData.weatherData = weatherData;
+
+                    // Re-render the forecast results with updated weather
+                    this.renderForecastResults(
+                        this.currentForecastData.orders,
+                        this.currentForecastData.items,
+                        this.currentForecastData.startDate,
+                        this.currentForecastData.endDate,
+                        weatherData
+                    );
+                } catch (error) {
+                    console.error('Error updating preparation weather:', error);
+                }
             },
 
             showItemOrderDetails(itemName) {
