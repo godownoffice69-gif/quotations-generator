@@ -6148,10 +6148,10 @@ convertToQuotationDateFormat(dateStr) {
                     template.style.position = 'static'; // Keep in document flow for accurate measurement
                     template.style.opacity = '0'; // Extra insurance it's not visible
 
-                    const headerHeight = 90; // Header height for date
-                    const separatorHeight = 25; // Space between orders
-                    const bottomMargin = 15; // Bottom margin for page (optimized for space utilization)
-                    const safetyMargin = 20; // Safety buffer for rendering differences (optimized for maximum space usage)
+                    const headerHeight = 75; // Header height for date (reduced for better space utilization)
+                    const separatorHeight = 15; // Space between orders (reduced for better space utilization)
+                    const bottomMargin = 10; // Bottom margin for page (optimized for space utilization)
+                    const safetyMargin = 15; // Safety buffer for rendering differences (optimized for maximum space usage)
 
                     // Measure the actual grand total summary height instead of estimating
                     const hasGrandTotalSummary = (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0);
@@ -6160,37 +6160,37 @@ convertToQuotationDateFormat(dateStr) {
                     if (hasGrandTotalSummary) {
                         // Render the actual summary to measure its real height
                         const summaryHtml = `
-                            <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 10px; margin-bottom: 15px; border-radius: 6px;">
-                                <h3 style="margin: 0 0 8px 0; font-size: 16px; text-align: center;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                            <div style="background: white; color: black; padding: 8px; margin-bottom: 12px; border: 2px solid #000; border-radius: 4px;">
+                                <h3 style="margin: 0 0 6px 0; font-size: 15px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
                                     ${grandTotalDryIce > 0 ? `
-                                    <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
-                                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 6px;">Dry Ice Needed</div>
-                                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                            <div style="font-size: 60px;">❄️</div>
-                                            <div style="font-size: 60px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                    <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
+                                        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                            <div style="font-size: 50px;">❄️</div>
+                                            <div style="font-size: 50px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                         </div>
-                                        <div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                        <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                     </div>
                                     ` : ''}
                                     ${grandTotalFlowers > 0 ? `
-                                    <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
-                                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 6px;">Flowers Needed</div>
-                                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                            <div style="font-size: 60px;">🌸</div>
-                                            <div style="font-size: 60px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                    <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
+                                        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                            <div style="font-size: 50px;">🌸</div>
+                                            <div style="font-size: 50px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                         </div>
-                                        <div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                        <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                     </div>
                                     ` : ''}
                                     ${grandTotalElectricity > 0 ? `
-                                    <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
-                                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 6px;">Electricity Required</div>
-                                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                            <div style="font-size: 60px;">⚡</div>
-                                            <div style="font-size: 60px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                    <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
+                                        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                            <div style="font-size: 50px;">⚡</div>
+                                            <div style="font-size: 50px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                         </div>
-                                        <div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">Total power needed</div>
+                                        <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">Total power needed</div>
                                     </div>
                                     ` : ''}
                                 </div>
@@ -6438,8 +6438,8 @@ convertToQuotationDateFormat(dateStr) {
 
                         // Build HTML for this page
                         let html = `
-                            <div style="text-align: center; margin-bottom: 25px; padding: 12px 0;">
-                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 12px; margin: 0; font-size: 26px;">
+                            <div style="text-align: center; margin-bottom: 15px; padding: 8px 0;">
+                                <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 10px; margin: 0; font-size: 24px;">
                                     Orders for ${Utils.formatDate(date)} - Page ${pageNum + 1} of ${totalPages}
                                 </h1>
                             </div>
@@ -6448,37 +6448,37 @@ convertToQuotationDateFormat(dateStr) {
                         // Add summary section on first page only
                         if (pageNum === 0 && (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0)) {
                             html += `
-                                <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 10px; margin-bottom: 15px; border-radius: 6px;">
-                                    <h3 style="margin: 0 0 8px 0; font-size: 16px; text-align: center;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                                <div style="background: white; color: black; padding: 8px; margin-bottom: 12px; border: 2px solid #000; border-radius: 4px;">
+                                    <h3 style="margin: 0 0 6px 0; font-size: 15px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
                                         ${grandTotalDryIce > 0 ? `
-                                        <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
-                                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 6px;">Dry Ice Needed</div>
-                                            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                                <div style="font-size: 60px;">❄️</div>
-                                                <div style="font-size: 60px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                        <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                            <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
+                                            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                                <div style="font-size: 50px;">❄️</div>
+                                                <div style="font-size: 50px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                             </div>
-                                            <div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                            <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                         </div>
                                         ` : ''}
                                         ${grandTotalFlowers > 0 ? `
-                                        <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
-                                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 6px;">Flowers Needed</div>
-                                            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                                <div style="font-size: 60px;">🌸</div>
-                                                <div style="font-size: 60px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                        <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                            <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
+                                            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                                <div style="font-size: 50px;">🌸</div>
+                                                <div style="font-size: 50px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                             </div>
-                                            <div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                            <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                         </div>
                                         ` : ''}
                                         ${grandTotalElectricity > 0 ? `
-                                        <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; text-align: center;">
-                                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 6px;">Electricity Required</div>
-                                            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                                <div style="font-size: 60px;">⚡</div>
-                                                <div style="font-size: 60px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                        <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                            <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
+                                            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                                <div style="font-size: 50px;">⚡</div>
+                                                <div style="font-size: 50px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                             </div>
-                                            <div style="font-size: 12px; opacity: 0.8; margin-top: 6px;">Total power needed</div>
+                                            <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">Total power needed</div>
                                         </div>
                                         ` : ''}
                                     </div>
@@ -6723,7 +6723,7 @@ convertToQuotationDateFormat(dateStr) {
                 const requirements = this.calculateOrderRequirements(order);
 
                 return `
-                    <div style="margin-bottom: ${compact ? '40px' : '60px'}; ${compact ? 'border: 2px solid ' + colors.tableBorder + '; padding: 20px;' : ''}; color: ${textColor}; background: ${bgColor};">
+                    <div style="margin-bottom: ${compact ? '25px' : '60px'}; ${compact ? 'border: 2px solid ' + colors.tableBorder + '; padding: 15px;' : ''}; color: ${textColor}; background: ${bgColor};">
                         ${!compact ? `<div style="text-align: center; margin-bottom: 40px;">
                             <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px;">
                                 Order Management
@@ -6733,20 +6733,16 @@ convertToQuotationDateFormat(dateStr) {
                                     ${order.orderId}
                                 </span>
                             </h2>
-                        </div>` : `<h3 style="text-align: center; color: ${textColor};">
-                            <span style="background: ${orderIdBg}; color: ${orderIdText}; padding: 8px 15px; border-radius: 6px;">
-                                ${order.orderId}
-                            </span>
-                        </h3>`}
+                        </div>` : ''}
 
                         <!-- FP- Field at center/top -->
-                        <div style="text-align: center; margin-bottom: 25px;">
+                        <div style="text-align: center; margin-bottom: ${compact ? '15px' : '25px'}; margin-top: ${compact ? '10px' : '0'};">
                             <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: #000000; background: #ffeb3b;">
                                 FP-<span style="display: inline-block; min-width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px; white-space: nowrap;">${order.orderId && order.orderId.startsWith('FP') ? order.orderId.substring(2) : ''}</span>
                             </div>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; font-size: ${fontSize}px; margin-bottom: 20px; color: ${textColor};">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: ${compact ? '12px' : '20px'}; font-size: ${fontSize}px; margin-bottom: ${compact ? '12px' : '20px'}; color: ${textColor};">
                             <div>
                                 ${order.isMultiDay ? `
                                     <strong style="color: ${textColor};">Start Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.startDate) || 'N/A'}</span><br>
@@ -6776,16 +6772,16 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
 
                             ${order.dayWiseData && order.dayWiseData.length > 0 ?
-                            '<div style="margin-top: 30px;">' +
-                                '<h3 style="color: ' + colors.headerText + '; background: ' + colors.headerBg + '; padding: 15px; text-align: center;">Day-wise Details</h3>' +
+                            '<div style="margin-top: ' + (compact ? '15px' : '30px') + ';">' +
+                                '<h3 style="color: ' + colors.headerText + '; background: ' + colors.headerBg + '; padding: ' + (compact ? '10px' : '15px') + '; text-align: center;">Day-wise Details</h3>' +
                                 order.dayWiseData.map((day, idx) =>
-                                    '<div style="margin-top: 25px; border: 2px solid ' + colors.tableBorder + '; padding: 15px; background: rgba(102, 126, 234, 0.05);">' +
-                                        '<h4 style="color: ' + orderIdBg + '; margin-bottom: 15px;">Day ' + day.dayNumber + ' - <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + Utils.formatDate(day.date) + '</span></h4>' +
+                                    '<div style="margin-top: ' + (compact ? '12px' : '25px') + '; border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '10px' : '15px') + '; background: rgba(102, 126, 234, 0.05);">' +
+                                        '<h4 style="color: ' + orderIdBg + '; margin-bottom: ' + (compact ? '8px' : '15px') + ';">Day ' + day.dayNumber + ' - <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + Utils.formatDate(day.date) + '</span></h4>' +
                                         (day.functions && day.functions.length > 0 ?
                                             day.functions.map((func, funcIdx) =>
-                                                '<div style="background: ' + bgColor + '; padding: 15px; border: 1px solid ' + colors.tableBorder + '; border-radius: 6px; margin-top: ' + (funcIdx > 0 ? '15px' : '0') + '; color: ' + textColor + ';">' +
-                                                    '<h5 style="color: ' + functionColor + '; margin-bottom: 10px; font-size: ' + (fontSize - 2) + 'px;">Function ' + (funcIdx + 1) + '</h5>' +
-                                                    '<div style="font-size: ' + fontSize + 'px; margin-bottom: 10px; color: ' + textColor + ';">' +
+                                                '<div style="background: ' + bgColor + '; padding: ' + (compact ? '10px' : '15px') + '; border: 1px solid ' + colors.tableBorder + '; border-radius: 6px; margin-top: ' + (funcIdx > 0 ? (compact ? '8px' : '15px') : '0') + '; color: ' + textColor + ';">' +
+                                                    '<h5 style="color: ' + functionColor + '; margin-bottom: ' + (compact ? '6px' : '10px') + '; font-size: ' + (fontSize - 2) + 'px;">Function ' + (funcIdx + 1) + '</h5>' +
+                                                    '<div style="font-size: ' + fontSize + 'px; margin-bottom: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';">' +
                                                         '<strong style="color: ' + textColor + ';">Type:</strong> ' + (func.functionType || '-') + '<br>' +
                                                         '<strong style="color: ' + textColor + ';">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + (func.timeSlot || '-') + '</span><br>' +
                                                         '<strong style="color: ' + textColor + ';">Driver:</strong> ' + (func.driver || '-') + '<br>' +
@@ -6797,24 +6793,24 @@ convertToQuotationDateFormat(dateStr) {
                                                         '<table style="width: 100%; border-collapse: collapse; font-size: ' + (fontSize - 4) + 'px; color: ' + textColor + ';">' +
                                                             '<thead>' +
                                                                 '<tr style="background: ' + colors.tableHeaderBg + '; color: ' + colors.tableHeaderText + ';">' +
-                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; width: ' + ts.columnWidthSr + '%;">Sr</th>' +
-                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; width: ' + ts.columnWidthItem + '%;">Item</th>' +
-                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; width: ' + ts.columnWidthQty + '%;">Qty</th>' +
-                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; width: ' + ts.columnWidthRemarks + '%;">Remarks</th>' +
+                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; width: ' + ts.columnWidthSr + '%;">Sr</th>' +
+                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; width: ' + ts.columnWidthItem + '%;">Item</th>' +
+                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; width: ' + ts.columnWidthQty + '%;">Qty</th>' +
+                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; width: ' + ts.columnWidthRemarks + '%;">Remarks</th>' +
                                                                 '</tr>' +
                                                             '</thead>' +
                                                             '<tbody>' +
                                                                 func.items.map((item, i) =>
                                                                     '<tr style="color: ' + textColor + ';">' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; text-align: center; color: ' + textColor + ';">' + (i + 1) + '</td>' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; color: ' + textColor + ';">' + item.name + '</td>' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; text-align: center; color: ' + textColor + ';">' + item.quantity + '</td>' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: 10px; color: ' + textColor + ';">' + (item.remarks || '-') + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; text-align: center; color: ' + textColor + ';">' + (i + 1) + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';">' + item.name + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; text-align: center; color: ' + textColor + ';">' + item.quantity + '</td>' +
+                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';">' + (item.remarks || '-') + '</td>' +
                                                                     '</tr>'
                                                                 ).join('') +
                                                             '</tbody>' +
                                                         '</table>'
-                                                    : '<p style="text-align: center; color: #666; font-style: italic; margin-top: 10px;">No items for this function</p>') +
+                                                    : '<p style="text-align: center; color: #666; font-style: italic; margin-top: ' + (compact ? '6px' : '10px') + ';">No items for this function</p>') +
                                                 '</div>'
                                             ).join('')
                                         : '<p style="text-align: center; color: #666; font-style: italic; margin-top: 10px;">No functions for this day</p>') +
@@ -6824,32 +6820,32 @@ convertToQuotationDateFormat(dateStr) {
                         : ''}
                         
                         ${!order.isMultiDay && order.items && order.items.length > 0 ? `
-                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px; margin-top: 20px; color: ${textColor};">
+                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px; margin-top: ${compact ? '12px' : '20px'}; color: ${textColor};">
                                 <thead>
                                     <tr style="background: ${colors.tableHeaderBg}; color: ${colors.tableHeaderText};">
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthSr}%;">Sr</th>
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthItem}%;">Item</th>
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthQty}%;">Qty</th>
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: 10px; width: ${ts.columnWidthRemarks}%;">Remarks</th>
+                                        <th style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; width: ${ts.columnWidthSr}%;">Sr</th>
+                                        <th style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; width: ${ts.columnWidthItem}%;">Item</th>
+                                        <th style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; width: ${ts.columnWidthQty}%;">Qty</th>
+                                        <th style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; width: ${ts.columnWidthRemarks}%;">Remarks</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${order.items.map((item, i) => `
                                         <tr style="color: ${textColor};">
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center; color: ${textColor};">${i + 1}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; color: ${textColor};">${item.name}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; text-align: center; color: ${textColor};">${item.quantity}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: 10px; color: ${textColor};">${item.remarks || ''}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; text-align: center; color: ${textColor};">${i + 1}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; color: ${textColor};">${item.name}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; text-align: center; color: ${textColor};">${item.quantity}</td>
+                                            <td style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; color: ${textColor};">${item.remarks || ''}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
                             </table>
-                        ` : (!order.isMultiDay ? '<p style="text-align: center; color: #666; font-style: italic; margin-top: 20px;">No items added</p>' : '')}
+                        ` : (!order.isMultiDay ? '<p style="text-align: center; color: #666; font-style: italic; margin-top: ' + (compact ? '12px' : '20px') + ';">No items added</p>' : '')}
 
                         ${order.notes ? `
-                            <div style="margin-top: 20px; font-size: ${fontSize}px; color: ${textColor};">
+                            <div style="margin-top: ${compact ? '10px' : '20px'}; font-size: ${fontSize}px; color: ${textColor};">
                                 <strong style="color: ${textColor};">Notes:</strong><br>
-                                <div style="background: ${colors.notesBg}; padding: 15px; border: 1px solid ${colors.tableBorder}; color: ${textColor};">
+                                <div style="background: ${colors.notesBg}; padding: ${compact ? '10px' : '15px'}; border: 1px solid ${colors.tableBorder}; color: ${textColor};">
                                     ${order.notes}
                                 </div>
                             </div>
