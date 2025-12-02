@@ -6177,37 +6177,37 @@ convertToQuotationDateFormat(dateStr) {
                     if (hasGrandTotalSummary) {
                         // Render the actual summary to measure its real height
                         const summaryHtml = `
-                            <div style="background: white; color: black; padding: 8px; margin-bottom: 12px; border: 2px solid #000; border-radius: 4px;">
-                                <h3 style="margin: 0 0 6px 0; font-size: 15px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                            <div style="background: white; color: black; padding: 5px; margin-bottom: 8px; border: 2px solid #000; border-radius: 4px;">
+                                <h3 style="margin: 0 0 4px 0; font-size: 13px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
                                     ${grandTotalDryIce > 0 ? `
-                                    <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                        <div style="font-size: 50px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
-                                        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                            <div style="font-size: 50px;">❄️</div>
-                                            <div style="font-size: 50px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                    <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                        <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
+                                        <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                            <div style="font-size: 40px;">❄️</div>
+                                            <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                         </div>
-                                        <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                        <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                     </div>
                                     ` : ''}
                                     ${grandTotalFlowers > 0 ? `
-                                    <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                        <div style="font-size: 50px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
-                                        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                            <div style="font-size: 50px;">🌸</div>
-                                            <div style="font-size: 50px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                    <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                        <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
+                                        <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                            <div style="font-size: 40px;">🌸</div>
+                                            <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                         </div>
-                                        <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                        <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                     </div>
                                     ` : ''}
                                     ${grandTotalElectricity > 0 ? `
-                                    <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                        <div style="font-size: 50px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
-                                        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                            <div style="font-size: 50px;">⚡</div>
-                                            <div style="font-size: 50px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                    <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                        <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
+                                        <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                            <div style="font-size: 40px;">⚡</div>
+                                            <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                         </div>
-                                        <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">Total power needed</div>
+                                        <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">Total power needed</div>
                                     </div>
                                     ` : ''}
                                 </div>
@@ -6467,37 +6467,37 @@ convertToQuotationDateFormat(dateStr) {
                         if (pageNum === 0 && (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0)) {
                             console.log(`✅ Adding grand total summary to first page`);
                             html += `
-                                <div style="background: white; color: black; padding: 8px; margin-bottom: 12px; border: 2px solid #000; border-radius: 4px;">
-                                    <h3 style="margin: 0 0 6px 0; font-size: 15px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                                <div style="background: white; color: black; padding: 5px; margin-bottom: 8px; border: 2px solid #000; border-radius: 4px;">
+                                    <h3 style="margin: 0 0 4px 0; font-size: 13px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
                                         ${grandTotalDryIce > 0 ? `
-                                        <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                            <div style="font-size: 50px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
-                                            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                                <div style="font-size: 50px;">❄️</div>
-                                                <div style="font-size: 50px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                        <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                            <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
+                                            <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                                <div style="font-size: 40px;">❄️</div>
+                                                <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                             </div>
-                                            <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                            <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                         </div>
                                         ` : ''}
                                         ${grandTotalFlowers > 0 ? `
-                                        <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                            <div style="font-size: 50px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
-                                            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                                <div style="font-size: 50px;">🌸</div>
-                                                <div style="font-size: 50px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                        <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                            <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
+                                            <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                                <div style="font-size: 40px;">🌸</div>
+                                                <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                             </div>
-                                            <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                            <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                         </div>
                                         ` : ''}
                                         ${grandTotalElectricity > 0 ? `
-                                        <div style="background: white; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                            <div style="font-size: 50px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
-                                            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                                <div style="font-size: 50px;">⚡</div>
-                                                <div style="font-size: 50px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                        <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                            <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
+                                            <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                                <div style="font-size: 40px;">⚡</div>
+                                                <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                             </div>
-                                            <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">Total power needed</div>
+                                            <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">Total power needed</div>
                                         </div>
                                         ` : ''}
                                     </div>
