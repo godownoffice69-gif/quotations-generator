@@ -1597,7 +1597,7 @@ debounce: (func, wait) => {
                 items: 'Items',
                 addItem: 'Add Item',
                 itemName: 'Item Name',
-                quantity: 'Quantity',
+                quantity: 'Pieces',
                 remarks: 'Remarks',
                 serialNumber: 'Sr. No.',
 
@@ -1645,7 +1645,7 @@ debounce: (func, wait) => {
 
                 srColumnWidth: 'Sr.No Column Width',
                 itemColumnWidth: 'Item Name Width',
-                qtyColumnWidth: 'Quantity Width',
+                qtyColumnWidth: 'Pieces Width',
                 remarksColumnWidth: 'Remarks Width',
                 leftMarginFiling: 'Left Margin (filing)',
 
@@ -1863,7 +1863,7 @@ debounce: (func, wait) => {
                 noOrdersScheduledBetween: 'No orders scheduled between',
                 summary: 'Summary',
                 uniqueItems: 'Unique Items',
-                totalQuantity: 'Total Quantity',
+                totalQuantity: 'Total Pieces',
                 shortages: 'Shortages',
                 sufficient: 'Sufficient',
                 itemsPreparationList: 'Items Preparation List',
@@ -1989,7 +1989,7 @@ debounce: (func, wait) => {
 
                 srColumnWidth: 'ક્રમાંક કૉલમ પહોળાઈ',
                 itemColumnWidth: 'આઇટમ નામ પહોળાઈ',
-                qtyColumnWidth: 'જથ્થો પહોળાઈ',
+                qtyColumnWidth: 'પીસીસ પહોળાઈ',
                 remarksColumnWidth: 'ટિપ્પણી પહોળાઈ',
                 leftMarginFiling: 'ડાબો માર્જિન (ફાઇલિંગ)',
 
@@ -2207,7 +2207,7 @@ debounce: (func, wait) => {
                 noOrdersScheduledBetween: 'કોઈ ઓર્ડર સુનિશ્ચિત નથી',
                 summary: 'સારાંશ',
                 uniqueItems: 'અનન્ય આઇટમ્સ',
-                totalQuantity: 'કુલ જથ્થો',
+                totalQuantity: 'કુલ પીસીસ',
                 shortages: 'ઉણપ',
                 sufficient: 'પર્યાપ્ત',
                 itemsPreparationList: 'આઇટમ્સ તૈયારી યાદી',
@@ -3803,7 +3803,7 @@ const OMS = {
                 <thead>
                     <tr>
                         <th>Item</th>
-                        <th>Qty</th>
+                        <th>Pcs</th>
                         <th>Remarks</th>
                         <th>Action</th>
                     </tr>
@@ -3917,7 +3917,7 @@ const OMS = {
                 <thead>
                     <tr>
                         <th>Item</th>
-                        <th>Qty</th>
+                        <th>Pcs</th>
                         <th>Remarks</th>
                         <th>Action</th>
                     </tr>
@@ -5651,7 +5651,7 @@ convertToQuotationDateFormat(dateStr) {
                                                 (func.notes ? '<div style="margin-bottom: 10px;"><strong>Notes:</strong> ' + func.notes + '</div>' : '') +
                                                 (func.items && func.items.length > 0 ? 
                                                     '<table class="table" style="margin-top: 10px;">' +
-                                                        '<thead><tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th></tr></thead>' +
+                                                        '<thead><tr><th>Sr</th><th>Item</th><th>Pcs</th><th>Remarks</th></tr></thead>' +
                                                         '<tbody>' +
                                                             func.items.map((item, i) => 
                                                                 '<tr>' +
@@ -6700,7 +6700,7 @@ convertToQuotationDateFormat(dateStr) {
                 if (items.length > 0) {
                     console.log(`  → Item details:`);
                     items.forEach((item, idx) => {
-                        console.log(`     ${idx + 1}. Name: "${item.name}" | Qty: ${item.quantity || 0}`);
+                        console.log(`     ${idx + 1}. Name: "${item.name}" | Pcs: ${item.quantity || 0}`);
                     });
                 }
 
@@ -6841,7 +6841,7 @@ convertToQuotationDateFormat(dateStr) {
                                                         '<div style="font-size: ' + (fontSize - 4) + 'px; color: ' + textColor + '; margin-top: ' + (compact ? '8px' : '12px') + ';">' +
                                                             func.items.map((item, i) =>
                                                                 '<div style="padding: ' + (compact ? '4px' : '6px') + ' 0; color: ' + textColor + ';">' +
-                                                                    '<span style="color: ' + textColor + ';">' + (i + 1) + '. ' + item.name + ' - Qty: ' + item.quantity + (item.remarks ? ' - Remarks: ' + item.remarks : '') + '</span>' +
+                                                                    '<span style="color: ' + textColor + ';">' + (i + 1) + '. ' + item.name + ' - ' + item.quantity + (item.quantity == 1 ? ' Pc' : ' Pcs') + (item.remarks ? ' - Remarks: ' + item.remarks : '') + '</span>' +
                                                                 '</div>'
                                                             ).join('') +
                                                         '</div>'
@@ -6858,7 +6858,7 @@ convertToQuotationDateFormat(dateStr) {
                             <div style="font-size: ${fontSize - 4}px; margin-top: ${compact ? '12px' : '20px'}; color: ${textColor};">
                                 ${order.items.map((item, i) => `
                                     <div style="padding: ${compact ? '4px' : '6px'} 0; color: ${textColor};">
-                                        <span style="color: ${textColor};">${i + 1}. ${item.name} - Qty: ${item.quantity}${item.remarks ? ' - Remarks: ' + item.remarks : ''}</span>
+                                        <span style="color: ${textColor};">${i + 1}. ${item.name} - ${item.quantity} ${item.quantity == 1 ? 'Pc' : 'Pcs'}${item.remarks ? ' - Remarks: ' + item.remarks : ''}</span>
                                     </div>
                                 `).join('')}
                             </div>
@@ -7723,7 +7723,7 @@ convertToQuotationDateFormat(dateStr) {
                 // Render table
                 this.renderTable('itemHistoryContainer', [
                     { key: 'itemName', label: 'Item Name' },
-                    { key: 'quantity', label: 'Qty' },
+                    { key: 'quantity', label: 'Pcs' },
                     { key: 'orderId', label: 'Order ID', render: h => `<span class="order-id-highlight">${h.orderId}</span>` },
                     { key: 'clientName', label: 'Client' },
                     { key: 'venue', label: 'Venue', render: h => h.venue || 'N/A' },
@@ -7834,7 +7834,7 @@ convertToQuotationDateFormat(dateStr) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label required">Quantity</label>
+                        <label class="form-label required">Pieces</label>
                         <input type="number" id="editItemQuantity" class="form-input" value="${item.quantity}" min="0">
                     </div>
                     <div class="btn-group">
@@ -8452,7 +8452,7 @@ convertToQuotationDateFormat(dateStr) {
                         <div style="color: var(--text-gray); font-size: 0.9rem;">${o.clientName}</div>
                         <div style="margin-top: 0.25rem;">
                             <span style="background: var(--light); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">
-                                Quantity: <strong>${o.quantity}</strong>
+                                Pcs: <strong>${o.quantity}</strong>
                             </span>
                         </div>
                     </div>
@@ -8532,7 +8532,7 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                             <div class="summary-card">
                                 <div class="value">${stats.totalItems}</div>
-                                <div class="label">Total Quantity</div>
+                                <div class="label">Total Pieces</div>
                             </div>
                             <div class="summary-card">
                                 <div class="value">${stats.confirmed}</div>
@@ -8629,7 +8629,7 @@ convertToQuotationDateFormat(dateStr) {
                 message += `• Total Orders: ${stats.totalOrders}\n`;
                 message += `• Confirmed: ${stats.confirmed}\n`;
                 message += `• Total Items: ${items.length}\n`;
-                message += `• Total Quantity: ${stats.totalItems}\n`;
+                message += `• Total Pieces: ${stats.totalItems}\n`;
                 message += `• Shortages: ${stats.shortages}\n\n`;
 
                 message += `📦 *ITEMS NEEDED*\n`;
@@ -10666,7 +10666,7 @@ convertToQuotationDateFormat(dateStr) {
                 container.innerHTML = `
                     <table class="table">
                         <thead>
-                            <tr><th>Sr</th><th>Item</th><th>Qty</th><th>Remarks</th><th>Actions</th></tr>
+                            <tr><th>Sr</th><th>Item</th><th>Pcs</th><th>Remarks</th><th>Actions</th></tr>
                         </thead>
                         <tbody>
                             ${this.currentOrderItems.map((item, i) => `
@@ -13977,6 +13977,9 @@ updateAllDisplays() {
             document.getElementById('startDate').required = false;
             document.getElementById('endDate').required = false;
 
+            // Show event type field for single-day
+            document.getElementById('eventType').parentElement.style.display = 'block';
+
             // Show single-day item search
             const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items')
             ? document.querySelector('.card h3').closest('.card')
@@ -14003,8 +14006,8 @@ updateAllDisplays() {
             document.getElementById('startDate').required = true;
             document.getElementById('endDate').required = true;
 
-            // Hide event type field for multi-day
-            document.getElementById('eventType').parentElement.style.display = 'none';
+            // Show event type field for multi-day
+            document.getElementById('eventType').parentElement.style.display = 'block';
 
     // Hide single-day item search
     const itemSearchSection = document.querySelector('.card h3')?.textContent.includes('Order Items')
