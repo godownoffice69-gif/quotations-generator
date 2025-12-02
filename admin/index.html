@@ -6838,26 +6838,13 @@ convertToQuotationDateFormat(dateStr) {
                                                         (func.notes ? '<strong style="color: ' + textColor + ';">Notes:</strong> ' + func.notes + '<br>' : '') +
                                                     '</div>' +
                                                     (func.items && func.items.length > 0 ?
-                                                        '<table style="width: 100%; border-collapse: collapse; font-size: ' + (fontSize - 4) + 'px; color: ' + textColor + ';">' +
-                                                            '<thead>' +
-                                                                '<tr style="background: ' + colors.tableHeaderBg + '; color: ' + colors.tableHeaderText + ';">' +
-                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; width: ' + ts.columnWidthSr + '%;">Sr</th>' +
-                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; width: ' + ts.columnWidthItem + '%;">Item</th>' +
-                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; width: ' + ts.columnWidthQty + '%;">Qty</th>' +
-                                                                    '<th style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; width: ' + ts.columnWidthRemarks + '%;">Remarks</th>' +
-                                                                '</tr>' +
-                                                            '</thead>' +
-                                                            '<tbody>' +
-                                                                func.items.map((item, i) =>
-                                                                    '<tr style="color: ' + textColor + ';">' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; text-align: center; color: ' + textColor + ';">' + (i + 1) + '</td>' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';">' + item.name + '</td>' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; text-align: center; color: ' + textColor + ';">' + item.quantity + '</td>' +
-                                                                        '<td style="border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';">' + (item.remarks || '-') + '</td>' +
-                                                                    '</tr>'
-                                                                ).join('') +
-                                                            '</tbody>' +
-                                                        '</table>'
+                                                        '<div style="font-size: ' + (fontSize - 4) + 'px; color: ' + textColor + '; margin-top: ' + (compact ? '8px' : '12px') + ';">' +
+                                                            func.items.map((item, i) =>
+                                                                '<div style="padding: ' + (compact ? '4px' : '6px') + ' 0; color: ' + textColor + ';">' +
+                                                                    '<span style="color: ' + textColor + ';">' + (i + 1) + '. ' + item.name + ' - Qty: ' + item.quantity + (item.remarks ? ' - Remarks: ' + item.remarks : '') + '</span>' +
+                                                                '</div>'
+                                                            ).join('') +
+                                                        '</div>'
                                                     : '<p style="text-align: center; color: #666; font-style: italic; margin-top: ' + (compact ? '6px' : '10px') + ';">No items for this function</p>') +
                                                 '</div>'
                                             ).join('')
@@ -6868,26 +6855,13 @@ convertToQuotationDateFormat(dateStr) {
                         : ''}
                         
                         ${!order.isMultiDay && order.items && order.items.length > 0 ? `
-                            <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize - 4}px; margin-top: ${compact ? '12px' : '20px'}; color: ${textColor};">
-                                <thead>
-                                    <tr style="background: ${colors.tableHeaderBg}; color: ${colors.tableHeaderText};">
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; width: ${ts.columnWidthSr}%;">Sr</th>
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; width: ${ts.columnWidthItem}%;">Item</th>
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; width: ${ts.columnWidthQty}%;">Qty</th>
-                                        <th style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; width: ${ts.columnWidthRemarks}%;">Remarks</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${order.items.map((item, i) => `
-                                        <tr style="color: ${textColor};">
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; text-align: center; color: ${textColor};">${i + 1}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; color: ${textColor};">${item.name}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; text-align: center; color: ${textColor};">${item.quantity}</td>
-                                            <td style="border: 2px solid ${colors.tableBorder}; padding: ${compact ? '6px' : '10px'}; color: ${textColor};">${item.remarks || ''}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                            <div style="font-size: ${fontSize - 4}px; margin-top: ${compact ? '12px' : '20px'}; color: ${textColor};">
+                                ${order.items.map((item, i) => `
+                                    <div style="padding: ${compact ? '4px' : '6px'} 0; color: ${textColor};">
+                                        <span style="color: ${textColor};">${i + 1}. ${item.name} - Qty: ${item.quantity}${item.remarks ? ' - Remarks: ' + item.remarks : ''}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
                         ` : (!order.isMultiDay ? '<p style="text-align: center; color: #666; font-style: italic; margin-top: ' + (compact ? '12px' : '20px') + ';">No items added</p>' : '')}
 
                         ${order.notes ? `
