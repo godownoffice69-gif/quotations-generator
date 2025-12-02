@@ -6457,7 +6457,7 @@ convertToQuotationDateFormat(dateStr) {
                         let html = `
                             <div style="text-align: center; margin-bottom: 15px; padding: 8px 0;">
                                 <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 10px; margin: 0; font-size: 24px;">
-                                    Orders for ${Utils.formatDate(date)} - Page ${pageNum + 1} of ${totalPages}
+                                    Orders for <span style="font-size: 60px;">${Utils.formatDate(date)}</span> - Page ${pageNum + 1} of ${totalPages}
                                 </h1>
                             </div>
                         `;
@@ -6793,10 +6793,10 @@ convertToQuotationDateFormat(dateStr) {
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: ${compact ? '12px' : '20px'}; font-size: ${fontSize}px; margin-bottom: ${compact ? '12px' : '20px'}; color: ${textColor};">
                             <div>
                                 ${order.isMultiDay ? `
-                                    <strong style="color: ${textColor};">Start Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; font-size: 60px;">${Utils.formatDate(order.startDate) || 'N/A'}</span><br>
-                                    <strong style="color: ${textColor};">End Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; font-size: 60px;">${Utils.formatDate(order.endDate) || 'N/A'}</span><br>
+                                    <strong style="color: ${textColor};">Start Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.startDate) || 'N/A'}</span><br>
+                                    <strong style="color: ${textColor};">End Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.endDate) || 'N/A'}</span><br>
                                 ` : `
-                                    <strong style="color: ${textColor};">Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px; font-size: 60px;">${Utils.formatDate(order.date) || 'N/A'}</span><br>
+                                    <strong style="color: ${textColor};">Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.date) || 'N/A'}</span><br>
                                     <strong style="color: ${textColor};">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${order.readyTime || '-'}</span><br>
                                 `}
                                 <strong style="color: ${textColor};">Client:</strong> ${order.clientName || '-'}<br>
@@ -6804,9 +6804,9 @@ convertToQuotationDateFormat(dateStr) {
                                 <strong style="color: ${textColor};">Venue:</strong> ${order.venue || '-'}
                             </div>
                             <div>
-                                <strong style="color: ${textColor}; font-size: 50px;">Dry Ice:</strong> ${requirements.dryIceNeeded > 0 ? '<span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">' + requirements.dryIceNeeded + ' kg (' + requirements.dryMachines + ' machine' + (requirements.dryMachines !== 1 ? 's' : '') + ')' + '</span>' : '<span style="display: inline-block; min-width: 250px;"></span>'}<br>
-                                <strong style="color: ${textColor}; font-size: 50px;">Flowers:</strong> ${requirements.flowersNeeded > 0 ? '<span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">' + requirements.flowersNeeded + ' kg (' + requirements.flowerShowerMachines + ' machine' + (requirements.flowerShowerMachines !== 1 ? 's' : '') + ')' + '</span>' : '<span style="display: inline-block; min-width: 250px;"></span>'}<br>
-                                <strong style="color: ${textColor}; font-size: 50px;">Electricity:</strong> ${requirements.totalElectricityKV > 0 ? '<span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">' + requirements.totalElectricityKV + ' KV' + '</span>' : '<span style="display: inline-block; min-width: 250px;"></span>'}<br>
+                                <strong style="color: ${textColor}; font-size: 50px !important;">Dry Ice:</strong> ${requirements.dryIceNeeded > 0 ? '<span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">' + requirements.dryIceNeeded + ' kg (' + requirements.dryMachines + ' machine' + (requirements.dryMachines !== 1 ? 's' : '') + ')' + '</span>' : '<span style="display: inline-block; min-width: 250px;"></span>'}<br>
+                                <strong style="color: ${textColor}; font-size: 50px !important;">Flowers:</strong> ${requirements.flowersNeeded > 0 ? '<span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">' + requirements.flowersNeeded + ' kg (' + requirements.flowerShowerMachines + ' machine' + (requirements.flowerShowerMachines !== 1 ? 's' : '') + ')' + '</span>' : '<span style="display: inline-block; min-width: 250px;"></span>'}<br>
+                                <strong style="color: ${textColor}; font-size: 50px !important;">Electricity:</strong> ${requirements.totalElectricityKV > 0 ? '<span style="background: #ffeb3b; color: #000000; padding: 2px 4px; display: inline-block; min-width: 250px;">' + requirements.totalElectricityKV + ' KV' + '</span>' : '<span style="display: inline-block; min-width: 250px;"></span>'}<br>
                                 <strong style="color: ${textColor};">Transport:</strong> ${order.transport || '-'}<br>
                                 <strong style="color: ${textColor};">Driver:</strong> ${order.driverName || '-'}<br>
                                 ${order.transport2 ? `<strong style="color: ${textColor};">Transport 2:</strong> ${order.transport2}<br>` : ''}
