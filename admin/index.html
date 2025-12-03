@@ -973,8 +973,8 @@
         <input type="date" id="orderDate" name="orderDate" class="form-input highlight-datetime" required>
     </div>
     <div class="form-group">
-        <label class="form-label required">Ready Time</label>
-        <select id="readyTime" name="readyTime" class="form-select highlight-datetime" required></select>
+        <label class="form-label">Ready Time</label>
+        <select id="readyTime" name="readyTime" class="form-select highlight-datetime"></select>
     </div>
 </div>
 
@@ -4747,7 +4747,7 @@ async saveOrder() {
     if (isMultiDay) {
         requiredFields.push('startDate', 'endDate');
 } else {
-    requiredFields.push('orderDate', 'readyTime');
+    requiredFields.push('orderDate');
 }
 
 const errors = Utils.validateRequired(requiredFields);
@@ -5616,6 +5616,8 @@ convertToQuotationDateFormat(dateStr) {
                             <div>
                                 <strong>Transport:</strong> ${order.transport || '-'}<br>
                                 <strong>Driver:</strong> ${order.driverName || '-'}<br>
+                                ${order.transport2 ? `<strong>Transport 2:</strong> ${order.transport2}<br>` : ''}
+                                ${order.driverName2 ? `<strong>Driver 2:</strong> ${order.driverName2}<br>` : ''}
                                 <strong>Status:</strong> <span class="status-badge status-${order.status.toLowerCase()}">${order.status}</span>
                             </div>
                         </div>
@@ -6832,14 +6834,20 @@ convertToQuotationDateFormat(dateStr) {
                                             day.functions.map((func, funcIdx) =>
                                                 '<div style="background: ' + bgColor + '; padding: ' + (compact ? '10px' : '15px') + '; border: 1px solid ' + colors.tableBorder + '; border-radius: 6px; margin-top: ' + (funcIdx > 0 ? (compact ? '8px' : '15px') : '0') + '; color: ' + textColor + ';">' +
                                                     '<h5 style="color: ' + functionColor + '; margin-bottom: ' + (compact ? '6px' : '10px') + '; font-size: ' + (fontSize - 2) + 'px;">Function ' + (funcIdx + 1) + '</h5>' +
-                                                    '<div style="font-size: ' + fontSize + 'px; margin-bottom: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';">' +
-                                                        '<strong style="color: ' + textColor + ';">Type:</strong> ' + (func.functionType || '-') + '<br>' +
-                                                        '<strong style="color: ' + textColor + ';">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + (func.timeSlot || '-') + '</span><br>' +
-                                                        '<strong style="color: ' + textColor + ';">Driver:</strong> ' + (func.driver || '-') + '<br>' +
-                                                        '<strong style="color: ' + textColor + ';">Helper:</strong> ' + (func.helper || '-') + '<br>' +
-                                                        '<strong style="color: ' + textColor + ';">Operator:</strong> ' + (func.operator || '-') + '<br>' +
-                                                        (func.notes ? '<strong style="color: ' + textColor + ';">Notes:</strong> ' + func.notes + '<br>' : '') +
+                                                    '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: ' + (compact ? '8px' : '12px') + '; font-size: ' + fontSize + 'px; margin-bottom: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';">' +
+                                                        '<div>' +
+                                                            '<strong style="color: ' + textColor + ';">Type:</strong> ' + (func.functionType || '-') + '<br>' +
+                                                            '<strong style="color: ' + textColor + ';">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + (func.timeSlot || '-') + '</span>' +
+                                                        '</div>' +
+                                                        '<div>' +
+                                                            '<strong style="color: ' + textColor + ';">Driver:</strong> ' + (func.driver || '-') + '<br>' +
+                                                            '<strong style="color: ' + textColor + ';">Operator:</strong> ' + (func.operator || '-') +
+                                                        '</div>' +
+                                                        '<div>' +
+                                                            '<strong style="color: ' + textColor + ';">Helper:</strong> ' + (func.helper || '-') +
+                                                        '</div>' +
                                                     '</div>' +
+                                                    (func.notes ? '<div style="font-size: ' + fontSize + 'px; margin-bottom: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';"><strong style="color: ' + textColor + ';">Notes:</strong> ' + func.notes + '</div>' : '') +
                                                     (func.items && func.items.length > 0 ?
                                                         '<div style="font-size: ' + (fontSize - 4) + 'px; color: ' + textColor + '; margin-top: ' + (compact ? '8px' : '12px') + ';">' +
                                                             func.items.map((item, i) =>
@@ -9594,7 +9602,7 @@ convertToQuotationDateFormat(dateStr) {
                                    orderId.includes(query) ||
                                    venue.includes(query) ||
                                    date.includes(query);
-                        }).slice(0, 10); // Limit to top 10 results
+                        }); // Show all matching results (no limit)
 
                         if (results.length === 0) {
                             searchResults.innerHTML = '<div class="search-dropdown-item">No orders found</div>';
@@ -13976,7 +13984,6 @@ updateAllDisplays() {
 
             // Set required fields for single day
             document.getElementById('orderDate').required = true;
-            document.getElementById('readyTime').required = true;
             document.getElementById('startDate').required = false;
             document.getElementById('endDate').required = false;
 
@@ -14005,7 +14012,6 @@ updateAllDisplays() {
 
             // Set required fields for multi-day
             document.getElementById('orderDate').required = false;
-            document.getElementById('readyTime').required = false;
             document.getElementById('startDate').required = true;
             document.getElementById('endDate').required = true;
 
@@ -14027,12 +14033,10 @@ updateAllDisplays() {
         // Initialize required attributes based on default state (single day)
         if (eventTypeSelect && eventTypeSelect.value === 'single') {
             document.getElementById('orderDate').required = true;
-            document.getElementById('readyTime').required = true;
             document.getElementById('startDate').required = false;
             document.getElementById('endDate').required = false;
         } else if (eventTypeSelect && eventTypeSelect.value === 'multi') {
             document.getElementById('orderDate').required = false;
-            document.getElementById('readyTime').required = false;
             document.getElementById('startDate').required = true;
             document.getElementById('endDate').required = true;
         }
