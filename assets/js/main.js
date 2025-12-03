@@ -81,13 +81,66 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // ═══════════════════════════════════════════════════════════════════
+  // GALLERY FILTER SYSTEM
+  // ═══════════════════════════════════════════════════════════════════
+
+  const filterButtons = document.querySelectorAll('.filter-btn');
+  const galleryItems = document.querySelectorAll('.gallery-item');
+
+  filterButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const filter = this.getAttribute('data-filter');
+
+      // Update active button
+      filterButtons.forEach(btn => btn.classList.remove('active'));
+      this.classList.add('active');
+
+      // Filter gallery items
+      galleryItems.forEach(item => {
+        const category = item.getAttribute('data-category');
+
+        if (filter === 'all') {
+          item.classList.remove('hidden');
+          setTimeout(() => {
+            item.style.opacity = '1';
+            item.style.transform = 'scale(1)';
+          }, 10);
+        } else {
+          if (category && category.includes(filter)) {
+            item.classList.remove('hidden');
+            setTimeout(() => {
+              item.style.opacity = '1';
+              item.style.transform = 'scale(1)';
+            }, 10);
+          } else {
+            item.style.opacity = '0';
+            item.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+              item.classList.add('hidden');
+            }, 300);
+          }
+        }
+      });
+
+      // Track filter usage
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'gallery_filter', {
+          'event_category': 'engagement',
+          'event_label': filter
+        });
+      }
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
   // GALLERY LIGHTBOX (Simple implementation)
   // ═══════════════════════════════════════════════════════════════════
 
-  const galleryItems = document.querySelectorAll('.gallery-item');
-
   galleryItems.forEach(item => {
     item.addEventListener('click', function() {
+      // Only handle clicks on actual gallery items with images
+      if (!this.querySelector('img')) return;
+
       // Get image data
       const img = this.querySelector('img');
       const overlay = this.querySelector('.gallery-overlay');
