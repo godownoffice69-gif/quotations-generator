@@ -838,7 +838,7 @@
         .mt-1 { margin-top: 0.5rem; }
         .mb-1 { margin-bottom: 0.5rem; }
 
-        /* OpenStreetMap Autocomplete Dropdown */
+        /* MapMyIndia Autocomplete Dropdown */
         .osm-autocomplete-dropdown {
             position: absolute;
             top: 100%;
@@ -889,12 +889,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
-    <!-- Leaflet CSS for OpenStreetMap -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
-    <!-- Leaflet JavaScript -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
@@ -4801,7 +4795,7 @@ async refreshOrderId() {
             clientName: Utils.get('clientName'),
             contact: Utils.get('contact'),
             venue: Utils.get('venue'),
-            venueLocation: window.selectedVenueLocation || null, // OpenStreetMap location data
+            venueLocation: window.selectedVenueLocation || null, // MapMyIndia location data
             eventType: Utils.get('eventType'),
             transport: transport === 'Other' ? Utils.get('customTransport') : transport,
             driverName: Utils.get('driverName'),
@@ -9657,11 +9651,11 @@ convertToQuotationDateFormat(dateStr) {
                     message += `Contact: ${order.contact || 'N/A'}\n`;
                     message += `Venue: ${order.venue || 'N/A'}\n`;
 
-                    // Add OpenStreetMap location link if available
+                    // Add map location link if available
                     if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
-                        // OpenStreetMap link - opens in OSM or Google Maps
-                        const osmUrl = `https://www.openstreetmap.org/?mlat=${order.venueLocation.lat}&mlon=${order.venueLocation.lng}&zoom=17`;
-                        message += `Location: ${osmUrl}\n`;
+                        // Google Maps link - works universally
+                        const mapUrl = `https://www.google.com/maps?q=${order.venueLocation.lat},${order.venueLocation.lng}`;
+                        message += `Location: ${mapUrl}\n`;
                     }
 
                     if (order.isMultiDay) {
@@ -14261,7 +14255,10 @@ updateAllDisplays() {
         console.log('  - AdminUtils.enableML() - Enable ML corrections');
         console.log('  - AdminUtils.resetMLSystem() - ⭐ DISABLE ML + clear all learned rules');
 
-        // ============ OPENSTREETMAP INITIALIZATION ============
+        // ============ MAPMYINDIA INITIALIZATION ============
+        // 🔑 ADD YOUR MAPMYINDIA REST API KEY HERE (Line 14267)
+        const MAPMYINDIA_REST_API_KEY = 'YOUR_REST_API_KEY_HERE';  // ← PASTE YOUR "REST / Map SDK Key (Default Key)" HERE
+
         // Global variable to store selected venue location
         window.selectedVenueLocation = null;
         window.venueSearchTimeout = null;
@@ -14356,22 +14353,22 @@ updateAllDisplays() {
             }
         };
 
-        // Initialize OpenStreetMap Autocomplete with Nominatim
-        function initOpenStreetMapAutocomplete() {
+        // Initialize MapMyIndia Autocomplete
+        function initMapMyIndiaAutocomplete() {
             const venueInput = document.getElementById('venue');
             const dropdown = document.getElementById('venueAutocompleteDropdown');
 
             if (!venueInput || !dropdown) return;
 
-            console.log('🚀 Initializing Enhanced OpenStreetMap autocomplete with Smart Features...');
+            console.log('🚀 Initializing Enhanced MapMyIndia autocomplete with Smart Features...');
 
-            // ALLOWED CITIES
+            // ALLOWED CITIES for filtering
             const allowedCities = [
                 'ahmedabad', 'gandhinagar', 'mehsana', 'himmatnagar',
                 'rajkot', 'kadi', 'kalol', 'morbi'
             ];
 
-            // Search function using Nominatim API with caching
+            // Search function using MapMyIndia Autosuggest API with caching
             async function searchAddress(query) {
                 if (query.length < 2) {
                     // Show recent/popular when field is focused but empty
@@ -14392,58 +14389,57 @@ updateAllDisplays() {
                         return;
                     }
 
-                    // Gujarat viewbox (focused on these cities)
-                    const gujaratViewbox = '70.5,21.5,73.5,24.0';
-
-                    // Add city context to search query for better results
-                    const enhancedQuery = `${query}, Gujarat`;
-
-                    const url = `https://nominatim.openstreetmap.org/search?` +
-                        `format=json` +
-                        `&q=${encodeURIComponent(enhancedQuery)}` +
-                        `&countrycodes=in` +
-                        `&limit=20` +
-                        `&addressdetails=1` +
-                        `&viewbox=${gujaratViewbox}` +
-                        `&bounded=1` +
-                        `&dedupe=1`;
+                    // MapMyIndia Autosuggest API
+                    const url = `https://atlas.mappls.com/api/places/search/json?` +
+                        `query=${encodeURIComponent(query)}` +
+                        `&access_token=${MAPMYINDIA_REST_API_KEY}` +
+                        `&region=IND` +
+                        `&location=23.0225,72.5714`;  // Gujarat center coordinates
 
                     const response = await fetch(url, {
                         headers: {
-                            'User-Agent': 'FirepowerSFX-OrderManagement',
-                            'Accept-Language': 'en'
+                            'Accept': 'application/json'
                         }
                     });
 
                     if (!response.ok) {
-                        console.error('❌ Nominatim API error:', response.status);
-                        dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Search temporarily unavailable<br><small style="margin-top:4px;display:block;">Try again in a moment</small></div>';
+                        console.error('❌ MapMyIndia API error:', response.status);
+                        if (response.status === 401 || response.status === 403) {
+                            dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ API Key Error<br><small style="margin-top:4px;display:block;">Please check your MapMyIndia API key</small></div>';
+                        } else {
+                            dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Search temporarily unavailable<br><small style="margin-top:4px;display:block;">Try again in a moment</small></div>';
+                        }
                         dropdown.classList.add('show');
                         return;
                     }
 
-                    const results = await response.json();
+                    const data = await response.json();
+                    const results = data.suggestedLocations || [];
 
                     // STRICT FILTER: Only show results from allowed cities
                     const cityFilteredResults = results.filter(result => {
-                        const addressLower = result.display_name.toLowerCase();
+                        const addressLower = (result.placeName + ' ' + result.placeAddress).toLowerCase();
                         return allowedCities.some(city => addressLower.includes(city));
                     });
 
-                    // Sort by importance and distance
-                    const sortedResults = cityFilteredResults
-                        .filter(r => r.display_name && r.lat && r.lon)
-                        .sort((a, b) => {
-                            const impA = parseFloat(a.importance || 0);
-                            const impB = parseFloat(b.importance || 0);
-                            return impB - impA;
-                        })
+                    // Transform to common format and sort
+                    const formattedResults = cityFilteredResults
+                        .filter(r => r.placeName && r.latitude && r.longitude)
+                        .map(r => ({
+                            place_id: r.eLoc || r.placeId,
+                            name: r.placeName,
+                            display_name: `${r.placeName}, ${r.placeAddress || 'Gujarat'}`,
+                            lat: r.latitude,
+                            lon: r.longitude,
+                            type: r.type || 'place',
+                            city: r.city || ''
+                        }))
                         .slice(0, 5);
 
                     // Cache results 💾
-                    VenueSearchCache.set(query, sortedResults);
+                    VenueSearchCache.set(query, formattedResults);
 
-                    displayResults(sortedResults, false);
+                    displayResults(formattedResults, false);
                 } catch (error) {
                     console.error('❌ Error fetching address suggestions:', error);
                     dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Network error<br><small style="margin-top:4px;display:block;">Check your internet connection</small></div>';
@@ -14642,7 +14638,8 @@ updateAllDisplays() {
                 }
             });
 
-            console.log('🎉 Enhanced OpenStreetMap autocomplete initialized with Smart Features!');
+            console.log('🎉 Enhanced MapMyIndia autocomplete initialized with Smart Features!');
+            console.log('   ✅ MapMyIndia API - Best data for Indian locations');
             console.log('   ✅ Smart Caching - Instant results for repeated searches');
             console.log('   ✅ Recent Searches - Quick access to last 10 venues');
             console.log('   ✅ Popular Venues - Most-used venues appear first');
@@ -14669,8 +14666,8 @@ updateAllDisplays() {
                 }
             }, 1000);
 
-            // Initialize OpenStreetMap autocomplete
-            initOpenStreetMapAutocomplete();
+            // Initialize MapMyIndia autocomplete
+            initMapMyIndiaAutocomplete();
 
             // Multi-day event toggle
     const eventTypeSelect = document.getElementById('eventTypeSelect');
