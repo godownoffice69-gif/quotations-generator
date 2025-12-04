@@ -838,52 +838,6 @@
         .mt-1 { margin-top: 0.5rem; }
         .mb-1 { margin-bottom: 0.5rem; }
 
-        /* MapMyIndia Autocomplete Dropdown */
-        .osm-autocomplete-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            max-height: 300px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: var(--shadow-lg);
-            margin-top: 2px;
-            display: none;
-        }
-
-        .osm-autocomplete-dropdown.show {
-            display: block;
-        }
-
-        .osm-autocomplete-item {
-            padding: 10px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
-            transition: background 0.2s;
-        }
-
-        .osm-autocomplete-item:hover {
-            background: var(--bg-hover);
-        }
-
-        .osm-autocomplete-item:last-child {
-            border-bottom: none;
-        }
-
-        .osm-location-name {
-            font-weight: 500;
-            color: var(--text-dark);
-            margin-bottom: 2px;
-        }
-
-        .osm-location-address {
-            font-size: 0.85rem;
-            color: var(--text-gray);
-        }
     </style>
     <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -892,7 +846,7 @@
 
     <!-- Google Maps JavaScript API -->
     <!-- PASTE YOUR API KEY ON LINE 849 below, replacing YOUR_API_KEY_HERE -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places&loading=async&callback=initGoogleMaps" async defer></script>
 </head>
 
 <body>
@@ -4794,11 +4748,25 @@ async refreshOrderId() {
 
         const transport2 = Utils.get('transport2');
 
-        // Extract location from Google Maps link (if provided)
+        // Get location data - prioritize autocomplete selection, then fall back to manual Maps link
         let venueLocation = null;
         const mapLink = Utils.get('venueMapLink');
-        if (mapLink && mapLink.trim()) {
+
+        // Check if user selected place from autocomplete
+        if (window.selectedPlaceData) {
+            venueLocation = {
+                lat: window.selectedPlaceData.lat,
+                lng: window.selectedPlaceData.lng,
+                source: 'google_autocomplete',
+                place_id: window.selectedPlaceData.place_id,
+                formatted_address: window.selectedPlaceData.formatted_address
+            };
+            console.log('Using location from autocomplete:', venueLocation);
+        }
+        // Otherwise, try to extract from manually pasted Maps link
+        else if (mapLink && mapLink.trim()) {
             venueLocation = this.extractLocationFromMapsLink(mapLink);
+            console.log('Using location extracted from Maps link:', venueLocation);
         }
 
         return {
@@ -4815,7 +4783,6 @@ async refreshOrderId() {
             venue: Utils.get('venue'),
             venueMapLink: mapLink || null, // Store the Google Maps link
             venueLocation: venueLocation, // Extracted coordinates from Maps link
-            venueLocation: window.selectedVenueLocation || null, // MapMyIndia location data
             eventType: Utils.get('eventType'),
             transport: transport === 'Other' ? Utils.get('customTransport') : transport,
             driverName: Utils.get('driverName'),
@@ -5624,8 +5591,8 @@ convertToQuotationDateFormat(dateStr) {
                 document.getElementById('customTransportGroup').classList.add('hidden');
                 document.getElementById('customTransport2Group').classList.add('hidden');
 
-                // Clear venue location data
-                window.selectedVenueLocation = null;
+                // Clear venue location data from autocomplete
+                window.selectedPlaceData = null;
 
                 // Clear multi-day data
                 if (window.dayFunctionsData) {
@@ -9709,11 +9676,10 @@ convertToQuotationDateFormat(dateStr) {
                     message += `Contact: ${order.contact || 'N/A'}\n`;
                     message += `Venue: ${order.venue || 'N/A'}\n`;
 
-                    // Add map location link if available
+                    // Add Google Maps location link if available
                     if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
-                        // Google Maps link - works universally
-                        const mapUrl = `https://www.google.com/maps?q=${order.venueLocation.lat},${order.venueLocation.lng}`;
-                        message += `Location: ${mapUrl}\n`;
+                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${order.venueLocation.lat},${order.venueLocation.lng}`;
+                        message += `Location: ${mapsUrl}\n`;
                     }
 
                     if (order.isMultiDay) {
@@ -14313,480 +14279,70 @@ updateAllDisplays() {
         console.log('  - AdminUtils.enableML() - Enable ML corrections');
         console.log('  - AdminUtils.resetMLSystem() - ⭐ DISABLE ML + clear all learned rules');
 
-        // ============ MAPMYINDIA INITIALIZATION ============
-        // 🔑 ADD YOUR MAPMYINDIA KEYPAIR CREDENTIALS HERE
-        // Line 14260: Paste your Client ID from KeyPair
-        const MAPMYINDIA_CLIENT_ID = '96dHZVzsAuunotn6bJC5OKj5wpZn6gn4yqmj5SuhNUIxAY2RTECbyAzXqbvsxWbuH_NVg1jyxQ1F5z8lcGEKRQ==';  // ← PASTE YOUR CLIENT ID HERE
-        // 🔑 ADD YOUR MAPMYINDIA REST API KEY HERE (Line 14267)
-        const MAPMYINDIA_REST_API_KEY = 'eb7884868bd73cd33bae02c73a99495c';  // ← PASTE YOUR "REST / Map SDK Key (Default Key)" HERE
+        // ============ GOOGLE MAPS INITIALIZATION ============
+        // Global variable to store selected place from autocomplete
+        let selectedPlaceData = null;
 
-        // Line 14263: Paste your Client Secret from KeyPair
-        const MAPMYINDIA_CLIENT_SECRET = 'lrFxI-iSEg_hMXywsPO8yq6AdbkVjLjWijudItM9Sk1d4AYQUenncUbzctsHqRBpbJWSPXDOf9MfV_oLOUx3XcMjgKOf_kym';  // ← PASTE YOUR CLIENT SECRET HERE
+        // This function is called when Google Maps API finishes loading
+        function initGoogleMaps() {
+            console.log('Google Maps API loaded successfully');
 
-        // Global variables
-        window.selectedVenueLocation = null;
-        window.venueSearchTimeout = null;
-        window.mapMyIndiaAccessToken = null;
-        window.mapMyIndiaTokenExpiry = null;
-
-        // 🔐 MapMyIndia Token Management (Browser-Safe Authentication)
-        const MapMyIndiaAuth = {
-            TOKEN_CACHE_KEY: 'mappls_access_token',
-            TOKEN_EXPIRY_KEY: 'mappls_token_expiry',
-
-            // Get valid access token (from cache or fetch new)
-            async getAccessToken() {
-                // Check if we have a valid cached token
-                const cachedToken = localStorage.getItem(this.TOKEN_CACHE_KEY);
-                const tokenExpiry = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
-
-                if (cachedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-                    console.log('✅ Using cached MapMyIndia access token');
-                    return cachedToken;
-                }
-
-                // Fetch new token
-                console.log('🔄 Fetching new MapMyIndia access token...');
-                try {
-                    const response = await fetch('https://outpost.mappls.com/api/security/oauth/token', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body: new URLSearchParams({
-                            'grant_type': 'client_credentials',
-                            'client_id': MAPMYINDIA_CLIENT_ID,
-                            'client_secret': MAPMYINDIA_CLIENT_SECRET
-                        })
-                    });
-
-                    if (!response.ok) {
-                        console.error('❌ Token fetch failed:', response.status);
-                        throw new Error(`Token authentication failed: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    const token = data.access_token;
-                    const expiresIn = data.expires_in || 86400; // Default 24 hours
-
-                    // Cache token with expiry (subtract 5 minutes for safety)
-                    const expiryTime = Date.now() + ((expiresIn - 300) * 1000);
-                    localStorage.setItem(this.TOKEN_CACHE_KEY, token);
-                    localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
-
-                    console.log('✅ New access token obtained and cached');
-                    return token;
-
-                } catch (error) {
-                    console.error('❌ Error getting access token:', error);
-                    throw error;
-                }
-            },
-
-            // Clear cached token (for debugging)
-            clearToken() {
-                localStorage.removeItem(this.TOKEN_CACHE_KEY);
-                localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
-                console.log('🗑️ Cached token cleared');
-            }
-        };
-
-        // 🚀 ENHANCED VENUE SEARCH WITH SMART CACHING & FEATURES
-        const VenueSearchCache = {
-            CACHE_KEY: 'venue_search_cache',
-            RECENT_KEY: 'recent_venues',
-            POPULAR_KEY: 'popular_venues',
-            CACHE_DURATION: 7 * 24 * 60 * 60 * 1000, // 7 days
-
-            // Get cached search results
-            get(query) {
-                try {
-                    const cache = JSON.parse(localStorage.getItem(this.CACHE_KEY) || '{}');
-                    const cached = cache[query.toLowerCase()];
-                    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-                        return cached.results;
-                    }
-                } catch (e) {}
-                return null;
-            },
-
-            // Save search results to cache
-            set(query, results) {
-                try {
-                    const cache = JSON.parse(localStorage.getItem(this.CACHE_KEY) || '{}');
-                    cache[query.toLowerCase()] = {
-                        results: results,
-                        timestamp: Date.now()
-                    };
-                    // Keep only last 50 searches
-                    const entries = Object.entries(cache);
-                    if (entries.length > 50) {
-                        entries.sort((a, b) => b[1].timestamp - a[1].timestamp);
-                        const newCache = {};
-                        entries.slice(0, 50).forEach(([k, v]) => newCache[k] = v);
-                        localStorage.setItem(this.CACHE_KEY, JSON.stringify(newCache));
-                    } else {
-                        localStorage.setItem(this.CACHE_KEY, JSON.stringify(cache));
-                    }
-                } catch (e) {}
-            },
-
-            // Add to recent venues
-            addRecent(venue) {
-                try {
-                    let recent = JSON.parse(localStorage.getItem(this.RECENT_KEY) || '[]');
-                    // Remove if already exists
-                    recent = recent.filter(v => v.display_name !== venue.display_name);
-                    // Add to beginning
-                    recent.unshift(venue);
-                    // Keep only last 10
-                    recent = recent.slice(0, 10);
-                    localStorage.setItem(this.RECENT_KEY, JSON.stringify(recent));
-                } catch (e) {}
-            },
-
-            // Get recent venues
-            getRecent() {
-                try {
-                    return JSON.parse(localStorage.getItem(this.RECENT_KEY) || '[]');
-                } catch (e) {
-                    return [];
-                }
-            },
-
-            // Track popular venues
-            incrementPopular(venue) {
-                try {
-                    const popular = JSON.parse(localStorage.getItem(this.POPULAR_KEY) || '{}');
-                    const key = venue.display_name.toLowerCase();
-                    popular[key] = {
-                        venue: venue,
-                        count: (popular[key]?.count || 0) + 1
-                    };
-                    localStorage.setItem(this.POPULAR_KEY, JSON.stringify(popular));
-                } catch (e) {}
-            },
-
-            // Get popular venues
-            getPopular(limit = 5) {
-                try {
-                    const popular = JSON.parse(localStorage.getItem(this.POPULAR_KEY) || '{}');
-                    return Object.values(popular)
-                        .sort((a, b) => b.count - a.count)
-                        .slice(0, limit)
-                        .map(p => p.venue);
-                } catch (e) {
-                    return [];
-                }
-            }
-        };
-
-        // Initialize MapMyIndia Autocomplete
-        function initMapMyIndiaAutocomplete() {
             const venueInput = document.getElementById('venue');
-            const dropdown = document.getElementById('venueAutocompleteDropdown');
-
-            if (!venueInput || !dropdown) return;
-
-            console.log('🚀 Initializing Enhanced MapMyIndia autocomplete with Smart Features...');
-
-            // ALLOWED CITIES for filtering
-            const allowedCities = [
-                'ahmedabad', 'gandhinagar', 'mehsana', 'himmatnagar',
-                'rajkot', 'kadi', 'kalol', 'morbi'
-            ];
-
-            // Search function using MapMyIndia Autosuggest API with caching
-            async function searchAddress(query) {
-                if (query.length < 2) {
-                    // Show recent/popular when field is focused but empty
-                    if (query.length === 0) {
-                        showRecentAndPopular();
-                    } else {
-                        dropdown.classList.remove('show');
-                    }
-                    return;
-                }
-
-                try {
-                    // Check cache first 🎯
-                    const cachedResults = VenueSearchCache.get(query);
-                    if (cachedResults) {
-                        console.log('📦 Using cached results for:', query);
-                        displayResults(cachedResults, true);
-                        return;
-                    }
-
-                    // Get valid access token (browser-safe method)
-                    let accessToken;
-                    try {
-                        accessToken = await MapMyIndiaAuth.getAccessToken();
-                    } catch (authError) {
-                        console.error('❌ Authentication failed:', authError);
-                        dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Authentication Error<br><small style="margin-top:4px;display:block;">Please check your Client ID and Client Secret</small></div>';
-                        dropdown.classList.add('show');
-                        return;
-                    }
-
-                    // MapMyIndia Autosuggest API with token
-                    const url = `https://atlas.mappls.com/api/places/search/json?` +
-                        `query=${encodeURIComponent(query)}` +
-                        `&access_token=${accessToken}` +
-                        `&region=IND` +
-                        `&location=23.0225,72.5714`;  // Gujarat center coordinates
-
-                    const response = await fetch(url, {
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    });
-
-                    if (!response.ok) {
-                        console.error('❌ MapMyIndia API error:', response.status);
-                        if (response.status === 401 || response.status === 403) {
-                            // Token might be invalid, clear cache and show error
-                            MapMyIndiaAuth.clearToken();
-                            dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Authentication Error<br><small style="margin-top:4px;display:block;">Token expired. Try again.</small></div>';
-                        } else {
-                            dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Search temporarily unavailable<br><small style="margin-top:4px;display:block;">Try again in a moment</small></div>';
-                        }
-                        dropdown.classList.add('show');
-                        return;
-                    }
-
-                    const data = await response.json();
-                    const results = data.suggestedLocations || [];
-
-                    // STRICT FILTER: Only show results from allowed cities
-                    const cityFilteredResults = results.filter(result => {
-                        const addressLower = (result.placeName + ' ' + result.placeAddress).toLowerCase();
-                        return allowedCities.some(city => addressLower.includes(city));
-                    });
-
-                    // Transform to common format and sort
-                    const formattedResults = cityFilteredResults
-                        .filter(r => r.placeName && r.latitude && r.longitude)
-                        .map(r => ({
-                            place_id: r.eLoc || r.placeId,
-                            name: r.placeName,
-                            display_name: `${r.placeName}, ${r.placeAddress || 'Gujarat'}`,
-                            lat: r.latitude,
-                            lon: r.longitude,
-                            type: r.type || 'place',
-                            city: r.city || ''
-                        }))
-                        .slice(0, 5);
-
-                    // Cache results 💾
-                    VenueSearchCache.set(query, formattedResults);
-
-                    displayResults(formattedResults, false);
-                } catch (error) {
-                    console.error('❌ Error fetching address suggestions:', error);
-                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Network error<br><small style="margin-top:4px;display:block;">Check your internet connection</small></div>';
-                    dropdown.classList.add('show');
-                }
+            if (!venueInput) {
+                console.error('Venue input field not found');
+                return;
             }
 
-            // Show recent and popular venues
-            function showRecentAndPopular() {
-                const recent = VenueSearchCache.getRecent();
-                const popular = VenueSearchCache.getPopular(3);
-
-                if (recent.length === 0 && popular.length === 0) {
-                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">📍 Type to search venues<br><small style="margin-top:4px;display:block;">Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi</small></div>';
-                    dropdown.classList.add('show');
-                    return;
-                }
-
-                dropdown.innerHTML = '';
-
-                // Show popular venues
-                if (popular.length > 0) {
-                    const popularHeader = document.createElement('div');
-                    popularHeader.style.cssText = 'padding: 8px 12px; background: #f7fafc; font-weight: 600; font-size: 0.85em; color: #4a5568; border-bottom: 1px solid #e2e8f0;';
-                    popularHeader.innerHTML = '⭐ Most Used Venues';
-                    dropdown.appendChild(popularHeader);
-
-                    popular.forEach(venue => {
-                        dropdown.appendChild(createVenueItem(venue, '⭐'));
-                    });
-                }
-
-                // Show recent venues
-                if (recent.length > 0) {
-                    const recentHeader = document.createElement('div');
-                    recentHeader.style.cssText = 'padding: 8px 12px; background: #f7fafc; font-weight: 600; font-size: 0.85em; color: #4a5568; border-bottom: 1px solid #e2e8f0;';
-                    recentHeader.innerHTML = '🕒 Recent Searches';
-                    dropdown.appendChild(recentHeader);
-
-                    recent.slice(0, 5).forEach(venue => {
-                        dropdown.appendChild(createVenueItem(venue, '🕒'));
-                    });
-                }
-
-                dropdown.classList.add('show');
-            }
-
-            // Create venue item element
-            function createVenueItem(result, emoji = '') {
-                const item = document.createElement('div');
-                item.className = 'osm-autocomplete-item';
-
-                let locationName = result.name || result.display_name.split(',')[0];
-
-                // Extract city name
-                const addressLower = result.display_name.toLowerCase();
-                let cityName = '';
-                for (let city of allowedCities) {
-                    if (addressLower.includes(city)) {
-                        cityName = city.charAt(0).toUpperCase() + city.slice(1);
-                        break;
-                    }
-                }
-
-                const locationType = result.type ? result.type.charAt(0).toUpperCase() + result.type.slice(1) : '';
-                const badges = [];
-                if (locationType) badges.push(locationType);
-                if (cityName) badges.push(cityName);
-                const badgeText = badges.length > 0 ? ` • ${badges.join(' • ')}` : '';
-
-                const nameDiv = document.createElement('div');
-                nameDiv.className = 'osm-location-name';
-                nameDiv.innerHTML = `${emoji ? emoji + ' ' : ''}${locationName}<span style="font-size: 0.85em; color: #667eea; font-weight: 600;">${badgeText}</span>`;
-
-                let addressParts = result.display_name.split(',');
-                if (addressParts[0].trim() === locationName.trim()) {
-                    addressParts = addressParts.slice(1);
-                }
-                const formattedAddress = addressParts.join(',').trim();
-
-                const addressDiv = document.createElement('div');
-                addressDiv.className = 'osm-location-address';
-                addressDiv.textContent = formattedAddress;
-
-                item.appendChild(nameDiv);
-                item.appendChild(addressDiv);
-
-                item.addEventListener('click', () => {
-                    selectLocation(result);
+            try {
+                // Initialize Google Places Autocomplete
+                const autocomplete = new google.maps.places.Autocomplete(venueInput, {
+                    types: ['establishment', 'geocode'],
+                    componentRestrictions: { country: 'in' }, // Restrict to India
+                    fields: ['name', 'formatted_address', 'geometry', 'place_id', 'url']
                 });
 
-                return item;
-            }
+                // Listen for place selection
+                autocomplete.addListener('place_changed', () => {
+                    const place = autocomplete.getPlace();
 
-            // Display results in dropdown
-            function displayResults(results, fromCache = false) {
-                if (!results || results.length === 0) {
-                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">📍 No locations found in your cities.<br><small style="margin-top:4px;display:block;">Searching only: Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi</small></div>';
-                    dropdown.classList.add('show');
-                    return;
-                }
+                    if (!place.geometry || !place.geometry.location) {
+                        console.warn('No location details available for selected place');
+                        selectedPlaceData = null;
+                        return;
+                    }
 
-                dropdown.innerHTML = '';
+                    // Store place data globally
+                    selectedPlaceData = {
+                        name: place.name || place.formatted_address || venueInput.value,
+                        lat: place.geometry.location.lat(),
+                        lng: place.geometry.location.lng(),
+                        formatted_address: place.formatted_address || '',
+                        place_id: place.place_id || '',
+                        url: place.url || '',
+                        source: 'google_autocomplete'
+                    };
 
-                // Add cache indicator if results are from cache
-                if (fromCache) {
-                    const cacheIndicator = document.createElement('div');
-                    cacheIndicator.style.cssText = 'padding: 4px 12px; background: #f0fff4; font-size: 0.75em; color: #38a169; border-bottom: 1px solid #c6f6d5;';
-                    cacheIndicator.innerHTML = '⚡ Instant results (cached)';
-                    dropdown.appendChild(cacheIndicator);
-                }
+                    console.log('Place selected from autocomplete:', selectedPlaceData);
 
-                results.forEach((result, index) => {
-                    dropdown.appendChild(createVenueItem(result));
+                    // Auto-fill the venue field with proper name
+                    venueInput.value = selectedPlaceData.name;
+
+                    // Auto-fill the venueMapLink field with Google Maps URL
+                    const mapLinkInput = document.getElementById('venueMapLink');
+                    if (mapLinkInput && selectedPlaceData.lat && selectedPlaceData.lng) {
+                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${selectedPlaceData.lat},${selectedPlaceData.lng}&query_place_id=${selectedPlaceData.place_id}`;
+                        mapLinkInput.value = mapsUrl;
+                    }
                 });
 
-                dropdown.classList.add('show');
+                console.log('Google Maps Autocomplete initialized on venue field');
+            } catch (error) {
+                console.error('Error initializing Google Maps Autocomplete:', error);
             }
-
-            // Handle location selection
-            function selectLocation(result) {
-                // Store location data
-                window.selectedVenueLocation = {
-                    place_id: result.place_id,
-                    osm_id: result.osm_id,
-                    osm_type: result.osm_type,
-                    lat: parseFloat(result.lat),
-                    lng: parseFloat(result.lon),
-                    display_name: result.display_name,
-                    name: result.name || result.display_name.split(',')[0]
-                };
-
-                console.log('✅ Venue location selected:', window.selectedVenueLocation);
-
-                // Add to recent and track popularity
-                VenueSearchCache.addRecent(result);
-                VenueSearchCache.incrementPopular(result);
-
-                // Update input field
-                venueInput.value = result.display_name;
-
-                // Hide dropdown
-                dropdown.classList.remove('show');
-            }
-
-            // Input event listener with debounce
-            venueInput.addEventListener('input', function(e) {
-                const query = e.target.value.trim();
-
-                // Clear previous timeout
-                if (window.venueSearchTimeout) {
-                    clearTimeout(window.venueSearchTimeout);
-                }
-
-                // Clear location data when user types
-                window.selectedVenueLocation = null;
-
-                // Show loading message
-                if (query.length >= 2) {
-                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">🔍 Searching...</div>';
-                    dropdown.classList.add('show');
-                }
-
-                // Debounce search (wait 300ms after user stops typing)
-                if (query.length >= 2) {
-                    window.venueSearchTimeout = setTimeout(() => {
-                        searchAddress(query);
-                    }, 300);
-                } else if (query.length === 0) {
-                    // Show recent/popular when empty
-                    showRecentAndPopular();
-                } else {
-                    dropdown.classList.remove('show');
-                }
-            });
-
-            // Show recent/popular on focus
-            venueInput.addEventListener('focus', function(e) {
-                const query = e.target.value.trim();
-                if (query.length < 2) {
-                    showRecentAndPopular();
-                }
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (e.target !== venueInput && !dropdown.contains(e.target)) {
-                    dropdown.classList.remove('show');
-                }
-            });
-
-            // Prevent form submission on Enter in venue field
-            venueInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                }
-            });
-
-            console.log('🎉 Enhanced MapMyIndia autocomplete initialized with Smart Features!');
-            console.log('   ✅ MapMyIndia API - Best data for Indian locations');
-            console.log('   ✅ Smart Caching - Instant results for repeated searches');
-            console.log('   ✅ Recent Searches - Quick access to last 10 venues');
-            console.log('   ✅ Popular Venues - Most-used venues appear first');
-            console.log('   ✅ Offline Support - Works even with slow internet');
-            console.log('   ✅ City Filtering - Only Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi');
         }
+
+        // Make function globally accessible
+        window.initGoogleMaps = initGoogleMaps;
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
@@ -14806,9 +14362,6 @@ updateAllDisplays() {
                     console.log('💡 To enable: AdminUtils.enableML()');
                 }
             }, 1000);
-
-            // Initialize MapMyIndia autocomplete
-            initMapMyIndiaAutocomplete();
 
             // Multi-day event toggle
     const eventTypeSelect = document.getElementById('eventTypeSelect');
