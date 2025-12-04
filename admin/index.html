@@ -14256,12 +14256,82 @@ updateAllDisplays() {
         console.log('  - AdminUtils.resetMLSystem() - ⭐ DISABLE ML + clear all learned rules');
 
         // ============ MAPMYINDIA INITIALIZATION ============
+        // 🔑 ADD YOUR MAPMYINDIA KEYPAIR CREDENTIALS HERE
+        // Line 14260: Paste your Client ID from KeyPair
+        const MAPMYINDIA_CLIENT_ID = 'YOUR_CLIENT_ID_HERE';  // ← PASTE YOUR CLIENT ID HERE
         // 🔑 ADD YOUR MAPMYINDIA REST API KEY HERE (Line 14267)
         const MAPMYINDIA_REST_API_KEY = 'eb7884868bd73cd33bae02c73a99495c';  // ← PASTE YOUR "REST / Map SDK Key (Default Key)" HERE
 
-        // Global variable to store selected venue location
+        // Line 14263: Paste your Client Secret from KeyPair
+        const MAPMYINDIA_CLIENT_SECRET = 'YOUR_CLIENT_SECRET_HERE';  // ← PASTE YOUR CLIENT SECRET HERE
+
+        // Global variables
         window.selectedVenueLocation = null;
         window.venueSearchTimeout = null;
+        window.mapMyIndiaAccessToken = null;
+        window.mapMyIndiaTokenExpiry = null;
+
+        // 🔐 MapMyIndia Token Management (Browser-Safe Authentication)
+        const MapMyIndiaAuth = {
+            TOKEN_CACHE_KEY: 'mappls_access_token',
+            TOKEN_EXPIRY_KEY: 'mappls_token_expiry',
+
+            // Get valid access token (from cache or fetch new)
+            async getAccessToken() {
+                // Check if we have a valid cached token
+                const cachedToken = localStorage.getItem(this.TOKEN_CACHE_KEY);
+                const tokenExpiry = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
+
+                if (cachedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+                    console.log('✅ Using cached MapMyIndia access token');
+                    return cachedToken;
+                }
+
+                // Fetch new token
+                console.log('🔄 Fetching new MapMyIndia access token...');
+                try {
+                    const response = await fetch('https://outpost.mappls.com/api/security/oauth/token', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            'grant_type': 'client_credentials',
+                            'client_id': MAPMYINDIA_CLIENT_ID,
+                            'client_secret': MAPMYINDIA_CLIENT_SECRET
+                        })
+                    });
+
+                    if (!response.ok) {
+                        console.error('❌ Token fetch failed:', response.status);
+                        throw new Error(`Token authentication failed: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const token = data.access_token;
+                    const expiresIn = data.expires_in || 86400; // Default 24 hours
+
+                    // Cache token with expiry (subtract 5 minutes for safety)
+                    const expiryTime = Date.now() + ((expiresIn - 300) * 1000);
+                    localStorage.setItem(this.TOKEN_CACHE_KEY, token);
+                    localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
+
+                    console.log('✅ New access token obtained and cached');
+                    return token;
+
+                } catch (error) {
+                    console.error('❌ Error getting access token:', error);
+                    throw error;
+                }
+            },
+
+            // Clear cached token (for debugging)
+            clearToken() {
+                localStorage.removeItem(this.TOKEN_CACHE_KEY);
+                localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
+                console.log('🗑️ Cached token cleared');
+            }
+        };
 
         // 🚀 ENHANCED VENUE SEARCH WITH SMART CACHING & FEATURES
         const VenueSearchCache = {
@@ -14389,10 +14459,21 @@ updateAllDisplays() {
                         return;
                     }
 
-                    // MapMyIndia Autosuggest API
+                    // Get valid access token (browser-safe method)
+                    let accessToken;
+                    try {
+                        accessToken = await MapMyIndiaAuth.getAccessToken();
+                    } catch (authError) {
+                        console.error('❌ Authentication failed:', authError);
+                        dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Authentication Error<br><small style="margin-top:4px;display:block;">Please check your Client ID and Client Secret</small></div>';
+                        dropdown.classList.add('show');
+                        return;
+                    }
+
+                    // MapMyIndia Autosuggest API with token
                     const url = `https://atlas.mappls.com/api/places/search/json?` +
                         `query=${encodeURIComponent(query)}` +
-                        `&access_token=${MAPMYINDIA_REST_API_KEY}` +
+                        `&access_token=${accessToken}` +
                         `&region=IND` +
                         `&location=23.0225,72.5714`;  // Gujarat center coordinates
 
@@ -14405,7 +14486,9 @@ updateAllDisplays() {
                     if (!response.ok) {
                         console.error('❌ MapMyIndia API error:', response.status);
                         if (response.status === 401 || response.status === 403) {
-                            dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ API Key Error<br><small style="margin-top:4px;display:block;">Please check your MapMyIndia API key</small></div>';
+                            // Token might be invalid, clear cache and show error
+                            MapMyIndiaAuth.clearToken();
+                            dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Authentication Error<br><small style="margin-top:4px;display:block;">Token expired. Try again.</small></div>';
                         } else {
                             dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Search temporarily unavailable<br><small style="margin-top:4px;display:block;">Try again in a moment</small></div>';
                         }
