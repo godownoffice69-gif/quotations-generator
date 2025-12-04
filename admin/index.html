@@ -837,11 +837,64 @@
         .text-right { text-align: right; }
         .mt-1 { margin-top: 0.5rem; }
         .mb-1 { margin-bottom: 0.5rem; }
+
+        /* OpenStreetMap Autocomplete Dropdown */
+        .osm-autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: var(--shadow-lg);
+            margin-top: 2px;
+            display: none;
+        }
+
+        .osm-autocomplete-dropdown.show {
+            display: block;
+        }
+
+        .osm-autocomplete-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        .osm-autocomplete-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .osm-autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .osm-location-name {
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 2px;
+        }
+
+        .osm-location-address {
+            font-size: 0.85rem;
+            color: var(--text-gray);
+        }
     </style>
     <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <!-- Leaflet CSS for OpenStreetMap -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
@@ -1014,9 +1067,10 @@
                                 <label class="form-label">Contact</label>
                                 <input type="tel" id="contact" class="form-input">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" style="position: relative;">
                                 <label class="form-label">Venue</label>
-                                <input type="text" id="venue" class="form-input" placeholder="Enter venue address">
+                                <input type="text" id="venue" class="form-input" placeholder="Search for venue or address..." autocomplete="off">
+                                <div id="venueAutocompleteDropdown" class="osm-autocomplete-dropdown"></div>
                             </div>
                         </div>
 
@@ -4747,6 +4801,7 @@ async refreshOrderId() {
             clientName: Utils.get('clientName'),
             contact: Utils.get('contact'),
             venue: Utils.get('venue'),
+            venueLocation: window.selectedVenueLocation || null, // OpenStreetMap location data
             eventType: Utils.get('eventType'),
             transport: transport === 'Other' ? Utils.get('customTransport') : transport,
             driverName: Utils.get('driverName'),
@@ -5323,6 +5378,12 @@ convertToQuotationDateFormat(dateStr) {
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
 
+            // Restore venue location data if available
+            if (order.venueLocation) {
+                window.selectedVenueLocation = order.venueLocation;
+                console.log('Restored venue location:', window.selectedVenueLocation);
+            }
+
             // Show/hide transport fields
             if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
                 document.getElementById('customTransportGroup').classList.remove('hidden');
@@ -5462,6 +5523,12 @@ convertToQuotationDateFormat(dateStr) {
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
 
+            // Restore venue location data if available
+            if (order.venueLocation) {
+                window.selectedVenueLocation = order.venueLocation;
+                console.log('Restored venue location:', window.selectedVenueLocation);
+            }
+
             // Load helper names to text input
             if (order.helper) {
                 const helperInput = document.getElementById('helper');
@@ -5504,6 +5571,9 @@ convertToQuotationDateFormat(dateStr) {
                 Utils.set('orderDate', Utils.toDateString(new Date()));
                 document.getElementById('customTransportGroup').classList.add('hidden');
                 document.getElementById('customTransport2Group').classList.add('hidden');
+
+                // Clear venue location data
+                window.selectedVenueLocation = null;
 
                 // Clear multi-day data
                 if (window.dayFunctionsData) {
@@ -9586,6 +9656,13 @@ convertToQuotationDateFormat(dateStr) {
                     message += `Client: ${order.clientName || 'N/A'}\n`;
                     message += `Contact: ${order.contact || 'N/A'}\n`;
                     message += `Venue: ${order.venue || 'N/A'}\n`;
+
+                    // Add OpenStreetMap location link if available
+                    if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
+                        // OpenStreetMap link - opens in OSM or Google Maps
+                        const osmUrl = `https://www.openstreetmap.org/?mlat=${order.venueLocation.lat}&mlon=${order.venueLocation.lng}&zoom=17`;
+                        message += `Location: ${osmUrl}\n`;
+                    }
 
                     if (order.isMultiDay) {
                         message += `Multi-Day Event: ${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}\n`;
@@ -14184,6 +14261,144 @@ updateAllDisplays() {
         console.log('  - AdminUtils.enableML() - Enable ML corrections');
         console.log('  - AdminUtils.resetMLSystem() - ⭐ DISABLE ML + clear all learned rules');
 
+        // ============ OPENSTREETMAP INITIALIZATION ============
+        // Global variable to store selected venue location
+        window.selectedVenueLocation = null;
+        window.venueSearchTimeout = null;
+
+        // Initialize OpenStreetMap Autocomplete with Nominatim
+        function initOpenStreetMapAutocomplete() {
+            const venueInput = document.getElementById('venue');
+            const dropdown = document.getElementById('venueAutocompleteDropdown');
+
+            if (!venueInput || !dropdown) return;
+
+            console.log('Initializing OpenStreetMap autocomplete...');
+
+            // Search function using Nominatim API
+            async function searchAddress(query) {
+                if (query.length < 3) {
+                    dropdown.classList.remove('show');
+                    return;
+                }
+
+                try {
+                    // Nominatim API - FREE, NO API KEY REQUIRED
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+
+                    const response = await fetch(url, {
+                        headers: {
+                            'User-Agent': 'FirepowerSFX-OrderManagement' // Required by Nominatim
+                        }
+                    });
+
+                    if (!response.ok) {
+                        console.error('Nominatim API error:', response.status);
+                        return;
+                    }
+
+                    const results = await response.json();
+                    displayResults(results);
+                } catch (error) {
+                    console.error('Error fetching address suggestions:', error);
+                }
+            }
+
+            // Display results in dropdown
+            function displayResults(results) {
+                if (!results || results.length === 0) {
+                    dropdown.classList.remove('show');
+                    return;
+                }
+
+                dropdown.innerHTML = '';
+                results.forEach(result => {
+                    const item = document.createElement('div');
+                    item.className = 'osm-autocomplete-item';
+
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'osm-location-name';
+                    nameDiv.textContent = result.name || result.display_name.split(',')[0];
+
+                    const addressDiv = document.createElement('div');
+                    addressDiv.className = 'osm-location-address';
+                    addressDiv.textContent = result.display_name;
+
+                    item.appendChild(nameDiv);
+                    item.appendChild(addressDiv);
+
+                    // Click handler
+                    item.addEventListener('click', () => {
+                        selectLocation(result);
+                    });
+
+                    dropdown.appendChild(item);
+                });
+
+                dropdown.classList.add('show');
+            }
+
+            // Handle location selection
+            function selectLocation(result) {
+                // Store location data
+                window.selectedVenueLocation = {
+                    place_id: result.place_id,
+                    osm_id: result.osm_id,
+                    osm_type: result.osm_type,
+                    lat: parseFloat(result.lat),
+                    lng: parseFloat(result.lon),
+                    display_name: result.display_name,
+                    name: result.name || result.display_name.split(',')[0]
+                };
+
+                console.log('Venue location selected:', window.selectedVenueLocation);
+
+                // Update input field
+                venueInput.value = result.display_name;
+
+                // Hide dropdown
+                dropdown.classList.remove('show');
+            }
+
+            // Input event listener with debounce
+            venueInput.addEventListener('input', function(e) {
+                const query = e.target.value.trim();
+
+                // Clear previous timeout
+                if (window.venueSearchTimeout) {
+                    clearTimeout(window.venueSearchTimeout);
+                }
+
+                // Clear location data when user types
+                window.selectedVenueLocation = null;
+
+                // Debounce search (wait 500ms after user stops typing)
+                if (query.length >= 3) {
+                    window.venueSearchTimeout = setTimeout(() => {
+                        searchAddress(query);
+                    }, 500);
+                } else {
+                    dropdown.classList.remove('show');
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (e.target !== venueInput && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                }
+            });
+
+            // Prevent form submission on Enter in venue field
+            venueInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            });
+
+            console.log('OpenStreetMap autocomplete initialized successfully');
+        }
+
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
             // Check ML status on page load
@@ -14202,6 +14417,9 @@ updateAllDisplays() {
                     console.log('💡 To enable: AdminUtils.enableML()');
                 }
             }, 1000);
+
+            // Initialize OpenStreetMap autocomplete
+            initOpenStreetMapAutocomplete();
 
             // Multi-day event toggle
     const eventTypeSelect = document.getElementById('eventTypeSelect');
