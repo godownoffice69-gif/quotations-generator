@@ -14266,6 +14266,96 @@ updateAllDisplays() {
         window.selectedVenueLocation = null;
         window.venueSearchTimeout = null;
 
+        // 🚀 ENHANCED VENUE SEARCH WITH SMART CACHING & FEATURES
+        const VenueSearchCache = {
+            CACHE_KEY: 'venue_search_cache',
+            RECENT_KEY: 'recent_venues',
+            POPULAR_KEY: 'popular_venues',
+            CACHE_DURATION: 7 * 24 * 60 * 60 * 1000, // 7 days
+
+            // Get cached search results
+            get(query) {
+                try {
+                    const cache = JSON.parse(localStorage.getItem(this.CACHE_KEY) || '{}');
+                    const cached = cache[query.toLowerCase()];
+                    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+                        return cached.results;
+                    }
+                } catch (e) {}
+                return null;
+            },
+
+            // Save search results to cache
+            set(query, results) {
+                try {
+                    const cache = JSON.parse(localStorage.getItem(this.CACHE_KEY) || '{}');
+                    cache[query.toLowerCase()] = {
+                        results: results,
+                        timestamp: Date.now()
+                    };
+                    // Keep only last 50 searches
+                    const entries = Object.entries(cache);
+                    if (entries.length > 50) {
+                        entries.sort((a, b) => b[1].timestamp - a[1].timestamp);
+                        const newCache = {};
+                        entries.slice(0, 50).forEach(([k, v]) => newCache[k] = v);
+                        localStorage.setItem(this.CACHE_KEY, JSON.stringify(newCache));
+                    } else {
+                        localStorage.setItem(this.CACHE_KEY, JSON.stringify(cache));
+                    }
+                } catch (e) {}
+            },
+
+            // Add to recent venues
+            addRecent(venue) {
+                try {
+                    let recent = JSON.parse(localStorage.getItem(this.RECENT_KEY) || '[]');
+                    // Remove if already exists
+                    recent = recent.filter(v => v.display_name !== venue.display_name);
+                    // Add to beginning
+                    recent.unshift(venue);
+                    // Keep only last 10
+                    recent = recent.slice(0, 10);
+                    localStorage.setItem(this.RECENT_KEY, JSON.stringify(recent));
+                } catch (e) {}
+            },
+
+            // Get recent venues
+            getRecent() {
+                try {
+                    return JSON.parse(localStorage.getItem(this.RECENT_KEY) || '[]');
+                } catch (e) {
+                    return [];
+                }
+            },
+
+            // Track popular venues
+            incrementPopular(venue) {
+                try {
+                    const popular = JSON.parse(localStorage.getItem(this.POPULAR_KEY) || '{}');
+                    const key = venue.display_name.toLowerCase();
+                    popular[key] = {
+                        venue: venue,
+                        count: (popular[key]?.count || 0) + 1
+                    };
+                    localStorage.setItem(this.POPULAR_KEY, JSON.stringify(popular));
+                } catch (e) {}
+            },
+
+            // Get popular venues
+            getPopular(limit = 5) {
+                try {
+                    const popular = JSON.parse(localStorage.getItem(this.POPULAR_KEY) || '{}');
+                    return Object.values(popular)
+                        .sort((a, b) => b.count - a.count)
+                        .slice(0, limit)
+                        .map(p => p.venue);
+                } catch (e) {
+                    return [];
+                }
+            }
+        };
+
         // Initialize OpenStreetMap Autocomplete with Nominatim
         function initOpenStreetMapAutocomplete() {
             const venueInput = document.getElementById('venue');
@@ -14273,24 +14363,37 @@ updateAllDisplays() {
 
             if (!venueInput || !dropdown) return;
 
-            console.log('Initializing OpenStreetMap autocomplete...');
+            console.log('🚀 Initializing Enhanced OpenStreetMap autocomplete with Smart Features...');
 
-            // Search function using Nominatim API
+            // ALLOWED CITIES
+            const allowedCities = [
+                'ahmedabad', 'gandhinagar', 'mehsana', 'himmatnagar',
+                'rajkot', 'kadi', 'kalol', 'morbi'
+            ];
+
+            // Search function using Nominatim API with caching
             async function searchAddress(query) {
-                if (query.length < 3) {
-                    dropdown.classList.remove('show');
+                if (query.length < 2) {
+                    // Show recent/popular when field is focused but empty
+                    if (query.length === 0) {
+                        showRecentAndPopular();
+                    } else {
+                        dropdown.classList.remove('show');
+                    }
                     return;
                 }
 
                 try {
-                    // SPECIFIC CITIES ONLY: Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi
-                    const allowedCities = [
-                        'ahmedabad', 'gandhinagar', 'mehsana', 'himmatnagar',
-                        'rajkot', 'kadi', 'kalol', 'morbi'
-                    ];
+                    // Check cache first 🎯
+                    const cachedResults = VenueSearchCache.get(query);
+                    if (cachedResults) {
+                        console.log('📦 Using cached results for:', query);
+                        displayResults(cachedResults, true);
+                        return;
+                    }
 
                     // Gujarat viewbox (focused on these cities)
-                    const gujaratViewbox = '70.5,21.5,73.5,24.0'; // North-Central Gujarat area
+                    const gujaratViewbox = '70.5,21.5,73.5,24.0';
 
                     // Add city context to search query for better results
                     const enhancedQuery = `${query}, Gujarat`;
@@ -14299,10 +14402,10 @@ updateAllDisplays() {
                         `format=json` +
                         `&q=${encodeURIComponent(enhancedQuery)}` +
                         `&countrycodes=in` +
-                        `&limit=20` + // Get more results to filter
+                        `&limit=20` +
                         `&addressdetails=1` +
                         `&viewbox=${gujaratViewbox}` +
-                        `&bounded=1` + // Strict bounding to Gujarat region
+                        `&bounded=1` +
                         `&dedupe=1`;
 
                     const response = await fetch(url, {
@@ -14313,7 +14416,9 @@ updateAllDisplays() {
                     });
 
                     if (!response.ok) {
-                        console.error('Nominatim API error:', response.status);
+                        console.error('❌ Nominatim API error:', response.status);
+                        dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Search temporarily unavailable<br><small style="margin-top:4px;display:block;">Try again in a moment</small></div>';
+                        dropdown.classList.add('show');
                         return;
                     }
 
@@ -14322,11 +14427,7 @@ updateAllDisplays() {
                     // STRICT FILTER: Only show results from allowed cities
                     const cityFilteredResults = results.filter(result => {
                         const addressLower = result.display_name.toLowerCase();
-
-                        // Check if any of our allowed cities is in the address
-                        return allowedCities.some(city => {
-                            return addressLower.includes(city);
-                        });
+                        return allowedCities.some(city => addressLower.includes(city));
                     });
 
                     // Sort by importance and distance
@@ -14339,14 +14440,106 @@ updateAllDisplays() {
                         })
                         .slice(0, 5);
 
-                    displayResults(sortedResults);
+                    // Cache results 💾
+                    VenueSearchCache.set(query, sortedResults);
+
+                    displayResults(sortedResults, false);
                 } catch (error) {
-                    console.error('Error fetching address suggestions:', error);
+                    console.error('❌ Error fetching address suggestions:', error);
+                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #e53e3e;">⚠️ Network error<br><small style="margin-top:4px;display:block;">Check your internet connection</small></div>';
+                    dropdown.classList.add('show');
                 }
             }
 
+            // Show recent and popular venues
+            function showRecentAndPopular() {
+                const recent = VenueSearchCache.getRecent();
+                const popular = VenueSearchCache.getPopular(3);
+
+                if (recent.length === 0 && popular.length === 0) {
+                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">📍 Type to search venues<br><small style="margin-top:4px;display:block;">Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi</small></div>';
+                    dropdown.classList.add('show');
+                    return;
+                }
+
+                dropdown.innerHTML = '';
+
+                // Show popular venues
+                if (popular.length > 0) {
+                    const popularHeader = document.createElement('div');
+                    popularHeader.style.cssText = 'padding: 8px 12px; background: #f7fafc; font-weight: 600; font-size: 0.85em; color: #4a5568; border-bottom: 1px solid #e2e8f0;';
+                    popularHeader.innerHTML = '⭐ Most Used Venues';
+                    dropdown.appendChild(popularHeader);
+
+                    popular.forEach(venue => {
+                        dropdown.appendChild(createVenueItem(venue, '⭐'));
+                    });
+                }
+
+                // Show recent venues
+                if (recent.length > 0) {
+                    const recentHeader = document.createElement('div');
+                    recentHeader.style.cssText = 'padding: 8px 12px; background: #f7fafc; font-weight: 600; font-size: 0.85em; color: #4a5568; border-bottom: 1px solid #e2e8f0;';
+                    recentHeader.innerHTML = '🕒 Recent Searches';
+                    dropdown.appendChild(recentHeader);
+
+                    recent.slice(0, 5).forEach(venue => {
+                        dropdown.appendChild(createVenueItem(venue, '🕒'));
+                    });
+                }
+
+                dropdown.classList.add('show');
+            }
+
+            // Create venue item element
+            function createVenueItem(result, emoji = '') {
+                const item = document.createElement('div');
+                item.className = 'osm-autocomplete-item';
+
+                let locationName = result.name || result.display_name.split(',')[0];
+
+                // Extract city name
+                const addressLower = result.display_name.toLowerCase();
+                let cityName = '';
+                for (let city of allowedCities) {
+                    if (addressLower.includes(city)) {
+                        cityName = city.charAt(0).toUpperCase() + city.slice(1);
+                        break;
+                    }
+                }
+
+                const locationType = result.type ? result.type.charAt(0).toUpperCase() + result.type.slice(1) : '';
+                const badges = [];
+                if (locationType) badges.push(locationType);
+                if (cityName) badges.push(cityName);
+                const badgeText = badges.length > 0 ? ` • ${badges.join(' • ')}` : '';
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'osm-location-name';
+                nameDiv.innerHTML = `${emoji ? emoji + ' ' : ''}${locationName}<span style="font-size: 0.85em; color: #667eea; font-weight: 600;">${badgeText}</span>`;
+
+                let addressParts = result.display_name.split(',');
+                if (addressParts[0].trim() === locationName.trim()) {
+                    addressParts = addressParts.slice(1);
+                }
+                const formattedAddress = addressParts.join(',').trim();
+
+                const addressDiv = document.createElement('div');
+                addressDiv.className = 'osm-location-address';
+                addressDiv.textContent = formattedAddress;
+
+                item.appendChild(nameDiv);
+                item.appendChild(addressDiv);
+
+                item.addEventListener('click', () => {
+                    selectLocation(result);
+                });
+
+                return item;
+            }
+
             // Display results in dropdown
-            function displayResults(results) {
+            function displayResults(results, fromCache = false) {
                 if (!results || results.length === 0) {
                     dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">📍 No locations found in your cities.<br><small style="margin-top:4px;display:block;">Searching only: Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi</small></div>';
                     dropdown.classList.add('show');
@@ -14354,55 +14547,17 @@ updateAllDisplays() {
                 }
 
                 dropdown.innerHTML = '';
+
+                // Add cache indicator if results are from cache
+                if (fromCache) {
+                    const cacheIndicator = document.createElement('div');
+                    cacheIndicator.style.cssText = 'padding: 4px 12px; background: #f0fff4; font-size: 0.75em; color: #38a169; border-bottom: 1px solid #c6f6d5;';
+                    cacheIndicator.innerHTML = '⚡ Instant results (cached)';
+                    dropdown.appendChild(cacheIndicator);
+                }
+
                 results.forEach((result, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'osm-autocomplete-item';
-
-                    // Get location name
-                    let locationName = result.name || result.display_name.split(',')[0];
-
-                    // Extract city name from address
-                    const addressLower = result.display_name.toLowerCase();
-                    const allowedCities = ['ahmedabad', 'gandhinagar', 'mehsana', 'himmatnagar', 'rajkot', 'kadi', 'kalol', 'morbi'];
-                    let cityName = '';
-                    for (let city of allowedCities) {
-                        if (addressLower.includes(city)) {
-                            cityName = city.charAt(0).toUpperCase() + city.slice(1);
-                            break;
-                        }
-                    }
-
-                    // Add location type and city badge
-                    const locationType = result.type ? result.type.charAt(0).toUpperCase() + result.type.slice(1) : '';
-                    const badges = [];
-                    if (locationType) badges.push(locationType);
-                    if (cityName) badges.push(cityName);
-                    const badgeText = badges.length > 0 ? ` • ${badges.join(' • ')}` : '';
-
-                    const nameDiv = document.createElement('div');
-                    nameDiv.className = 'osm-location-name';
-                    nameDiv.innerHTML = `${locationName}<span style="font-size: 0.85em; color: #667eea; font-weight: 600;">${badgeText}</span>`;
-
-                    // Format address
-                    let addressParts = result.display_name.split(',');
-                    if (addressParts[0].trim() === locationName.trim()) {
-                        addressParts = addressParts.slice(1);
-                    }
-                    const formattedAddress = addressParts.join(',').trim();
-
-                    const addressDiv = document.createElement('div');
-                    addressDiv.className = 'osm-location-address';
-                    addressDiv.textContent = formattedAddress;
-
-                    item.appendChild(nameDiv);
-                    item.appendChild(addressDiv);
-
-                    // Click handler
-                    item.addEventListener('click', () => {
-                        selectLocation(result);
-                    });
-
-                    dropdown.appendChild(item);
+                    dropdown.appendChild(createVenueItem(result));
                 });
 
                 dropdown.classList.add('show');
@@ -14421,7 +14576,11 @@ updateAllDisplays() {
                     name: result.name || result.display_name.split(',')[0]
                 };
 
-                console.log('Venue location selected:', window.selectedVenueLocation);
+                console.log('✅ Venue location selected:', window.selectedVenueLocation);
+
+                // Add to recent and track popularity
+                VenueSearchCache.addRecent(result);
+                VenueSearchCache.incrementPopular(result);
 
                 // Update input field
                 venueInput.value = result.display_name;
@@ -14443,18 +14602,29 @@ updateAllDisplays() {
                 window.selectedVenueLocation = null;
 
                 // Show loading message
-                if (query.length >= 3) {
+                if (query.length >= 2) {
                     dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">🔍 Searching...</div>';
                     dropdown.classList.add('show');
                 }
 
                 // Debounce search (wait 300ms after user stops typing)
-                if (query.length >= 3) {
+                if (query.length >= 2) {
                     window.venueSearchTimeout = setTimeout(() => {
                         searchAddress(query);
                     }, 300);
+                } else if (query.length === 0) {
+                    // Show recent/popular when empty
+                    showRecentAndPopular();
                 } else {
                     dropdown.classList.remove('show');
+                }
+            });
+
+            // Show recent/popular on focus
+            venueInput.addEventListener('focus', function(e) {
+                const query = e.target.value.trim();
+                if (query.length < 2) {
+                    showRecentAndPopular();
                 }
             });
 
@@ -14472,7 +14642,12 @@ updateAllDisplays() {
                 }
             });
 
-            console.log('OpenStreetMap autocomplete initialized successfully');
+            console.log('🎉 Enhanced OpenStreetMap autocomplete initialized with Smart Features!');
+            console.log('   ✅ Smart Caching - Instant results for repeated searches');
+            console.log('   ✅ Recent Searches - Quick access to last 10 venues');
+            console.log('   ✅ Popular Venues - Most-used venues appear first');
+            console.log('   ✅ Offline Support - Works even with slow internet');
+            console.log('   ✅ City Filtering - Only Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi');
         }
 
         // ============ INITIALIZATION ============
