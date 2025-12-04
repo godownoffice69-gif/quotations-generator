@@ -9590,7 +9590,8 @@ convertToQuotationDateFormat(dateStr) {
                     message += `📍 *Venue:* ${order.venue || 'N/A'}\n`;
 
                     if (order.isMultiDay) {
-                        message += `📅 *Event:* ${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)} (${order.totalDays} days)\n`;
+                        message += `📅 *Multi-Day Event:* ${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}\n`;
+                        message += `📅 *Selected Date:* ${Utils.formatDate(selectedDate)}\n`;
                     } else {
                         message += `📅 *Date:* ${Utils.formatDate(order.date)}\n`;
                     }
@@ -9611,50 +9612,43 @@ convertToQuotationDateFormat(dateStr) {
                         message += `\n`;
                     }
 
-                    // Team allocation - handle both single-day and multi-day orders
+                    // Find specific day data for multi-day orders (ONLY for selected date)
+                    let specificDayData = null;
                     if (order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0) {
-                        // Multi-day order: show day-wise team allocation
-                        const hasAnyTeamData = order.dayWiseData.some(dayData =>
-                            dayData.functions && dayData.functions.some(func =>
-                                func.driver || func.operator || func.helper
-                            )
+                        specificDayData = order.dayWiseData.find(dayData => dayData.date === selectedDate);
+                    }
+
+                    // Team allocation - ONLY for selected date
+                    if (specificDayData) {
+                        // Multi-day order: show ONLY selected date's team
+                        const dayHasTeam = specificDayData.functions && specificDayData.functions.some(func =>
+                            func.driver || func.operator || func.helper
                         );
 
-                        if (hasAnyTeamData) {
-                            message += `👷 *Team Allocation (Day-wise):*\n`;
+                        if (dayHasTeam) {
+                            message += `👷 *Team for ${Utils.formatDate(selectedDate)}:*\n`;
 
-                            order.dayWiseData.forEach((dayData, dayIdx) => {
-                                const dayHasTeam = dayData.functions && dayData.functions.some(func =>
-                                    func.driver || func.operator || func.helper
-                                );
-
-                                if (dayHasTeam) {
-                                    message += `\n  *Day ${dayData.dayNumber || dayIdx + 1} (${Utils.formatDate(dayData.date)}):*\n`;
-
-                                    dayData.functions.forEach((func, funcIdx) => {
-                                        if (func.driver || func.operator || func.helper) {
-                                            if (dayData.functions.length > 1 || func.functionType) {
-                                                message += `    Function ${funcIdx + 1}${func.functionType ? ' - ' + func.functionType : ''}`;
-                                                if (func.timeSlot) message += ` (${func.timeSlot})`;
-                                                message += `:\n`;
-                                            }
-                                            if (func.driver) message += `      • Driver: ${func.driver}\n`;
-                                            if (func.operator) message += `      • Operator: ${func.operator}\n`;
-                                            if (func.helper) message += `      • Helper(s): ${func.helper}\n`;
-                                        }
-                                    });
+                            specificDayData.functions.forEach((func, funcIdx) => {
+                                if (func.driver || func.operator || func.helper) {
+                                    if (specificDayData.functions.length > 1 || func.functionType) {
+                                        message += `  *Function ${funcIdx + 1}${func.functionType ? ' - ' + func.functionType : ''}`;
+                                        if (func.timeSlot) message += ` (${func.timeSlot})`;
+                                        message += `:*\n`;
+                                    }
+                                    if (func.driver) message += `    • Driver: ${func.driver}\n`;
+                                    if (func.operator) message += `    • Operator: ${func.operator}\n`;
+                                    if (func.helper) message += `    • Helper(s): ${func.helper}\n`;
                                 }
                             });
-                            message += `\n`;
                         } else if (order.driverName || order.driverName2 || order.operator || order.helper) {
-                            // Fallback: show general team info if no day-wise data
+                            // Fallback: show general team info
                             message += `👷 *Team (General):*\n`;
                             if (order.driverName) message += `  • Driver: ${order.driverName}\n`;
                             if (order.driverName2) message += `  • Driver 2: ${order.driverName2}\n`;
                             if (order.operator) message += `  • Operator: ${order.operator}\n`;
                             if (order.helper) message += `  • Helper(s): ${order.helper}\n`;
                         }
-                    } else {
+                    } else if (!order.isMultiDay) {
                         // Single-day order: show team normally
                         if (order.driverName || order.driverName2 || order.operator || order.helper) {
                             message += `👷 *Team:*\n`;
@@ -9665,40 +9659,37 @@ convertToQuotationDateFormat(dateStr) {
                         }
                     }
 
-                    // Items - handle both single-day and multi-day orders
-                    if (order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0) {
-                        // Multi-day order: collect items from all days and functions
-                        message += `📦 *Items (Day-wise):*\n`;
+                    // Items - ONLY for selected date
+                    if (specificDayData) {
+                        // Multi-day order: show ONLY selected date's items
+                        const dayHasItems = specificDayData.functions && specificDayData.functions.some(func =>
+                            func.items && func.items.length > 0
+                        );
 
-                        order.dayWiseData.forEach((dayData, dayIdx) => {
-                            const dayHasItems = dayData.functions && dayData.functions.some(func => func.items && func.items.length > 0);
+                        if (dayHasItems) {
+                            message += `📦 *Items for ${Utils.formatDate(selectedDate)}:*\n`;
 
-                            if (dayHasItems) {
-                                message += `\n  *Day ${dayData.dayNumber || dayIdx + 1} (${Utils.formatDate(dayData.date)}):*\n`;
-
-                                dayData.functions.forEach((func, funcIdx) => {
-                                    if (func.items && func.items.length > 0) {
-                                        if (dayData.functions.length > 1 || func.functionType) {
-                                            message += `    Function ${funcIdx + 1}${func.functionType ? ' - ' + func.functionType : ''}`;
-                                            if (func.timeSlot) message += ` (${func.timeSlot})`;
-                                            message += `:\n`;
-                                        }
-
-                                        func.items.forEach(item => {
-                                            message += `      • ${item.name}: ${item.quantity}`;
-                                            if (item.remarks) message += ` (${item.remarks})`;
-                                            message += `\n`;
-                                        });
-
-                                        // Add function-specific notes if present
-                                        if (func.notes && func.notes.trim()) {
-                                            message += `      📝 Note: ${func.notes}\n`;
-                                        }
+                            specificDayData.functions.forEach((func, funcIdx) => {
+                                if (func.items && func.items.length > 0) {
+                                    if (specificDayData.functions.length > 1 || func.functionType) {
+                                        message += `  *Function ${funcIdx + 1}${func.functionType ? ' - ' + func.functionType : ''}`;
+                                        if (func.timeSlot) message += ` (${func.timeSlot})`;
+                                        message += `:*\n`;
                                     }
-                                });
-                            }
-                        });
-                        message += `\n`;
+
+                                    func.items.forEach(item => {
+                                        message += `    • ${item.name}: ${item.quantity}`;
+                                        if (item.remarks) message += ` (${item.remarks})`;
+                                        message += `\n`;
+                                    });
+
+                                    // Add function-specific notes if present
+                                    if (func.notes && func.notes.trim()) {
+                                        message += `    📝 Note: ${func.notes}\n`;
+                                    }
+                                }
+                            });
+                        }
                     } else if (order.items && order.items.length > 0) {
                         // Single-day order: show items normally
                         message += `📦 *Items:*\n`;
@@ -9709,9 +9700,9 @@ convertToQuotationDateFormat(dateStr) {
                         });
                     }
 
-                    // Notes
+                    // Order notes (general, not function-specific)
                     if (order.notes && order.notes.trim()) {
-                        message += `📝 *Notes:* ${order.notes}\n`;
+                        message += `📝 *Order Notes:* ${order.notes}\n`;
                     }
 
                     message += `\n`;
