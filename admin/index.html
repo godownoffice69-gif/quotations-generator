@@ -1123,6 +1123,30 @@
                         </div>
                     </form>
                 </div>
+
+                <!-- WhatsApp Date Filter Section -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <h2 class="card-title">📱 WhatsApp Orders Report</h2>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Select Date to View Orders</label>
+                        <input type="date" id="whatsappFilterDate" class="form-input" style="max-width: 300px;">
+                        <small style="color: var(--text-gray); display: block; margin-top: 0.5rem;">Select a date to see all orders and send them via WhatsApp</small>
+                    </div>
+                    <div id="whatsappOrdersPreview" style="margin-top: 1rem; display: none;">
+                        <div style="background: var(--bg-hover); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0;">📋 Orders Found: <span id="whatsappOrderCount">0</span></h4>
+                            <div id="whatsappOrdersList" style="max-height: 300px; overflow-y: auto; font-size: 0.9rem; white-space: pre-wrap; font-family: monospace; background: var(--bg-card); padding: 0.75rem; border-radius: 4px;"></div>
+                        </div>
+                        <button type="button" class="btn btn-success" id="sendWhatsAppOrdersBtn" style="width: 100%;">
+                            📱 Send on WhatsApp
+                        </button>
+                    </div>
+                    <div id="whatsappNoOrders" style="display: none; padding: 1rem; text-align: center; color: var(--text-gray);">
+                        📭 No orders found for selected date
+                    </div>
+                </div>
             </div>
 
             <!-- Other tabs will be dynamically populated -->
@@ -9430,9 +9454,9 @@ convertToQuotationDateFormat(dateStr) {
                 const driverName = Utils.get('driverName');
                 const operatorName = Utils.get('operator');
 
-                // Get multiple selected helpers from multi-select dropdown
-                const helperSelect = document.getElementById('helper');
-                const helperNames = helperSelect ? Array.from(helperSelect.selectedOptions).map(opt => opt.value).filter(v => v).join(', ') : '';
+                // Get helpers from text input (comma-separated)
+                const helperInput = document.getElementById('helper');
+                const helperNames = helperInput ? helperInput.value.trim() : '';
 
                 // Check if we have order data in the form
                 if (!clientName || !venue) {
@@ -9522,6 +9546,150 @@ convertToQuotationDateFormat(dateStr) {
                 this.saveNotificationToFirestore(notification);
 
                 this.showToast(`Opening WhatsApp for ${managerNames.length} manager(s): ${managerNames.join(', ')}`, 'success');
+            },
+
+            // WhatsApp Date Filter Methods
+            filterOrdersByDate(selectedDate) {
+                if (!selectedDate) return [];
+
+                // Filter orders that match the selected date
+                const filteredOrders = this.data.orders.filter(order => {
+                    if (order.isMultiDay) {
+                        // For multi-day events, check if selected date falls within the range
+                        const startDate = new Date(order.startDate);
+                        const endDate = new Date(order.endDate);
+                        const checkDate = new Date(selectedDate);
+                        return checkDate >= startDate && checkDate <= endDate;
+                    } else {
+                        // For single-day events, match the exact date
+                        return order.date === selectedDate;
+                    }
+                });
+
+                // Sort by order ID or creation time
+                return filteredOrders.sort((a, b) => {
+                    const aId = a.orderId || '';
+                    const bId = b.orderId || '';
+                    return aId.localeCompare(bId);
+                });
+            },
+
+            generateWhatsAppOrdersMessage(orders, selectedDate) {
+                if (!orders || orders.length === 0) return '';
+
+                let message = `📋 *ORDERS REPORT FOR ${Utils.formatDate(selectedDate)}*\n`;
+                message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+                message += `Total Orders: ${orders.length}\n\n`;
+
+                orders.forEach((order, index) => {
+                    message += `*ORDER #${index + 1}*\n`;
+                    message += `━━━━━━━━━━━━━━━━\n`;
+                    message += `📋 *Order ID:* ${order.orderId || 'N/A'}\n`;
+                    message += `👤 *Client:* ${order.clientName || 'N/A'}\n`;
+                    message += `📞 *Contact:* ${order.contact || 'N/A'}\n`;
+                    message += `📍 *Venue:* ${order.venue || 'N/A'}\n`;
+
+                    if (order.isMultiDay) {
+                        message += `📅 *Event:* ${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)} (${order.totalDays} days)\n`;
+                    } else {
+                        message += `📅 *Date:* ${Utils.formatDate(order.date)}\n`;
+                    }
+
+                    message += `🕐 *Ready Time:* ${order.readyTime || 'TBD'}\n`;
+                    message += `🎭 *Event Type:* ${order.eventType || 'N/A'}\n`;
+                    message += `📊 *Status:* ${order.status || 'Pending'}\n`;
+
+                    // Transport details
+                    if (order.transport || order.transport2) {
+                        message += `🚗 *Transport:* `;
+                        if (order.transport) {
+                            message += order.transport === 'Other' ? (order.customTransport || 'Other') : order.transport;
+                        }
+                        if (order.transport2) {
+                            message += `, ${order.transport2 === 'Other' ? (order.customTransport2 || 'Other') : order.transport2}`;
+                        }
+                        message += `\n`;
+                    }
+
+                    // Team allocation
+                    if (order.driverName || order.driverName2 || order.operator || order.helper) {
+                        message += `👷 *Team:*\n`;
+                        if (order.driverName) message += `  • Driver: ${order.driverName}\n`;
+                        if (order.driverName2) message += `  • Driver 2: ${order.driverName2}\n`;
+                        if (order.operator) message += `  • Operator: ${order.operator}\n`;
+                        if (order.helper) message += `  • Helper(s): ${order.helper}\n`;
+                    }
+
+                    // Items
+                    if (order.items && order.items.length > 0) {
+                        message += `📦 *Items:*\n`;
+                        order.items.forEach(item => {
+                            message += `  • ${item.name}: ${item.quantity}`;
+                            if (item.remarks) message += ` (${item.remarks})`;
+                            message += `\n`;
+                        });
+                    }
+
+                    // Notes
+                    if (order.notes && order.notes.trim()) {
+                        message += `📝 *Notes:* ${order.notes}\n`;
+                    }
+
+                    message += `\n`;
+                });
+
+                message += `━━━━━━━━━━━━━━━━━━━━\n`;
+                message += `--\n_FirepowerSFX Order Management_`;
+
+                return message;
+            },
+
+            updateWhatsAppDateFilter() {
+                const dateInput = document.getElementById('whatsappFilterDate');
+                const previewDiv = document.getElementById('whatsappOrdersPreview');
+                const noOrdersDiv = document.getElementById('whatsappNoOrders');
+                const ordersListDiv = document.getElementById('whatsappOrdersList');
+                const orderCountSpan = document.getElementById('whatsappOrderCount');
+
+                if (!dateInput || !dateInput.value) {
+                    previewDiv.style.display = 'none';
+                    noOrdersDiv.style.display = 'none';
+                    return;
+                }
+
+                const selectedDate = dateInput.value;
+                const filteredOrders = this.filterOrdersByDate(selectedDate);
+
+                if (filteredOrders.length === 0) {
+                    previewDiv.style.display = 'none';
+                    noOrdersDiv.style.display = 'block';
+                    return;
+                }
+
+                // Show preview
+                noOrdersDiv.style.display = 'none';
+                previewDiv.style.display = 'block';
+                orderCountSpan.textContent = filteredOrders.length;
+
+                // Generate and display message preview
+                const message = this.generateWhatsAppOrdersMessage(filteredOrders, selectedDate);
+                ordersListDiv.textContent = message;
+
+                // Store message for sending
+                this.whatsappCurrentMessage = message;
+            },
+
+            sendWhatsAppOrdersReport() {
+                if (!this.whatsappCurrentMessage) {
+                    this.showToast('Please select a date first', 'warning');
+                    return;
+                }
+
+                // Encode and open WhatsApp
+                const encodedMessage = encodeURIComponent(this.whatsappCurrentMessage);
+                window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+
+                this.showToast('Opening WhatsApp...', 'success');
             },
 
             renderCalendarTab() {
@@ -14041,6 +14209,23 @@ updateAllDisplays() {
             document.getElementById('endDate').required = true;
         }
     }
+
+    // WhatsApp Date Filter Event Listeners
+    const whatsappFilterDate = document.getElementById('whatsappFilterDate');
+    const sendWhatsAppOrdersBtn = document.getElementById('sendWhatsAppOrdersBtn');
+
+    if (whatsappFilterDate) {
+        whatsappFilterDate.addEventListener('change', () => {
+            OMS.updateWhatsAppDateFilter();
+        });
+    }
+
+    if (sendWhatsAppOrdersBtn) {
+        sendWhatsAppOrdersBtn.addEventListener('click', () => {
+            OMS.sendWhatsAppOrdersReport();
+        });
+    }
+
     // Calculate total days
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
