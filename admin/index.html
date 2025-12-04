@@ -842,6 +842,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <!-- Google Maps API -->
+    <!-- REPLACE 'YOUR_API_KEY_HERE' with your actual Google Maps API key -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places&callback=initMaps" async defer></script>
 </head>
 
 <body>
@@ -4747,6 +4751,7 @@ async refreshOrderId() {
             clientName: Utils.get('clientName'),
             contact: Utils.get('contact'),
             venue: Utils.get('venue'),
+            venueLocation: window.selectedVenueLocation || null, // Google Maps location data
             eventType: Utils.get('eventType'),
             transport: transport === 'Other' ? Utils.get('customTransport') : transport,
             driverName: Utils.get('driverName'),
@@ -5323,6 +5328,12 @@ convertToQuotationDateFormat(dateStr) {
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
 
+            // Restore venue location data if available
+            if (order.venueLocation) {
+                window.selectedVenueLocation = order.venueLocation;
+                console.log('Restored venue location:', window.selectedVenueLocation);
+            }
+
             // Show/hide transport fields
             if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
                 document.getElementById('customTransportGroup').classList.remove('hidden');
@@ -5462,6 +5473,12 @@ convertToQuotationDateFormat(dateStr) {
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
 
+            // Restore venue location data if available
+            if (order.venueLocation) {
+                window.selectedVenueLocation = order.venueLocation;
+                console.log('Restored venue location:', window.selectedVenueLocation);
+            }
+
             // Load helper names to text input
             if (order.helper) {
                 const helperInput = document.getElementById('helper');
@@ -5504,6 +5521,9 @@ convertToQuotationDateFormat(dateStr) {
                 Utils.set('orderDate', Utils.toDateString(new Date()));
                 document.getElementById('customTransportGroup').classList.add('hidden');
                 document.getElementById('customTransport2Group').classList.add('hidden');
+
+                // Clear venue location data
+                window.selectedVenueLocation = null;
 
                 // Clear multi-day data
                 if (window.dayFunctionsData) {
@@ -9586,6 +9606,12 @@ convertToQuotationDateFormat(dateStr) {
                     message += `Client: ${order.clientName || 'N/A'}\n`;
                     message += `Contact: ${order.contact || 'N/A'}\n`;
                     message += `Venue: ${order.venue || 'N/A'}\n`;
+
+                    // Add Google Maps location link if available
+                    if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
+                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${order.venueLocation.lat},${order.venueLocation.lng}`;
+                        message += `Location: ${mapsUrl}\n`;
+                    }
 
                     if (order.isMultiDay) {
                         message += `Multi-Day Event: ${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}\n`;
@@ -14183,6 +14209,61 @@ updateAllDisplays() {
         console.log('  - AdminUtils.disableML() - ⭐ DISABLE ML corrections (use original filter only)');
         console.log('  - AdminUtils.enableML() - Enable ML corrections');
         console.log('  - AdminUtils.resetMLSystem() - ⭐ DISABLE ML + clear all learned rules');
+
+        // ============ GOOGLE MAPS INITIALIZATION ============
+        // Global variable to store selected venue location
+        window.selectedVenueLocation = null;
+        window.venueAutocomplete = null;
+
+        // Initialize Google Maps (callback function)
+        window.initMaps = function() {
+            const venueInput = document.getElementById('venue');
+            if (!venueInput) return;
+
+            try {
+                // Initialize Places Autocomplete
+                window.venueAutocomplete = new google.maps.places.Autocomplete(venueInput, {
+                    types: ['establishment', 'geocode'], // Allow businesses and addresses
+                    fields: ['place_id', 'geometry', 'name', 'formatted_address']
+                });
+
+                // Listen for place selection
+                window.venueAutocomplete.addListener('place_changed', function() {
+                    const place = window.venueAutocomplete.getPlace();
+
+                    if (!place.geometry || !place.geometry.location) {
+                        console.log('No location data for selected place');
+                        window.selectedVenueLocation = null;
+                        return;
+                    }
+
+                    // Store location data
+                    window.selectedVenueLocation = {
+                        place_id: place.place_id,
+                        lat: place.geometry.location.lat(),
+                        lng: place.geometry.location.lng(),
+                        formatted_address: place.formatted_address || place.name,
+                        name: place.name || place.formatted_address
+                    };
+
+                    console.log('Venue location selected:', window.selectedVenueLocation);
+
+                    // Update venue input with formatted address
+                    venueInput.value = place.formatted_address || place.name;
+                });
+
+                // Clear location data when user manually edits
+                venueInput.addEventListener('input', function(e) {
+                    // Only clear if user is typing (not from autocomplete)
+                    if (!e.isTrusted) return;
+                    window.selectedVenueLocation = null;
+                });
+
+                console.log('Google Maps Autocomplete initialized successfully');
+            } catch (error) {
+                console.error('Error initializing Google Maps:', error);
+            }
+        };
 
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
