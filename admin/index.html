@@ -889,6 +889,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <!-- Google Maps JavaScript API -->
+    <!-- PASTE YOUR API KEY ON LINE 849 below, replacing YOUR_API_KEY_HERE -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places" async defer></script>
 </head>
 
 <body>
@@ -1061,10 +1065,16 @@
                                 <label class="form-label">Contact</label>
                                 <input type="tel" id="contact" class="form-input">
                             </div>
-                            <div class="form-group" style="position: relative;">
+                            <div class="form-group">
                                 <label class="form-label">Venue</label>
-                                <input type="text" id="venue" class="form-input" placeholder="Search for venue or address..." autocomplete="off">
-                                <div id="venueAutocompleteDropdown" class="osm-autocomplete-dropdown"></div>
+                                <input type="text" id="venue" class="form-input" placeholder="Enter venue name or address">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Google Maps Link (Optional)</label>
+                                <input type="text" id="venueMapLink" class="form-input" placeholder="Paste Google Maps link here (optional)">
+                                <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 4px;">
+                                    💡 Open Google Maps → Search venue → Click Share → Copy link → Paste here
+                                </small>
                             </div>
                         </div>
 
@@ -4783,6 +4793,14 @@ async refreshOrderId() {
         }
 
         const transport2 = Utils.get('transport2');
+
+        // Extract location from Google Maps link (if provided)
+        let venueLocation = null;
+        const mapLink = Utils.get('venueMapLink');
+        if (mapLink && mapLink.trim()) {
+            venueLocation = this.extractLocationFromMapsLink(mapLink);
+        }
+
         return {
             orderId: Utils.get('orderId'),
             isMultiDay: isMultiDay,
@@ -4795,6 +4813,8 @@ async refreshOrderId() {
             clientName: Utils.get('clientName'),
             contact: Utils.get('contact'),
             venue: Utils.get('venue'),
+            venueMapLink: mapLink || null, // Store the Google Maps link
+            venueLocation: venueLocation, // Extracted coordinates from Maps link
             venueLocation: window.selectedVenueLocation || null, // MapMyIndia location data
             eventType: Utils.get('eventType'),
             transport: transport === 'Other' ? Utils.get('customTransport') : transport,
@@ -4808,6 +4828,54 @@ async refreshOrderId() {
             items: isMultiDay ? [] : [...this.currentOrderItems],
             createdAt: new Date().toISOString()
         };
+    },
+
+    // Extract latitude and longitude from Google Maps link
+    extractLocationFromMapsLink(link) {
+        if (!link) return null;
+
+        try {
+            // Google Maps link formats:
+            // https://maps.app.goo.gl/... (short link - can't extract directly)
+            // https://www.google.com/maps/place/.../@LAT,LNG,ZOOMz/...
+            // https://www.google.com/maps/@LAT,LNG,ZOOMz
+            // https://maps.google.com/?q=LAT,LNG
+            // https://goo.gl/maps/... (short link)
+
+            // Try to find coordinates in various formats
+            let lat = null, lng = null;
+
+            // Format 1: @LAT,LNG or ?q=LAT,LNG
+            const coordMatch = link.match(/[@?](-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (coordMatch) {
+                lat = parseFloat(coordMatch[1]);
+                lng = parseFloat(coordMatch[2]);
+            }
+
+            // Format 2: /maps/place/NAME/@LAT,LNG
+            if (!lat) {
+                const placeMatch = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                if (placeMatch) {
+                    lat = parseFloat(placeMatch[1]);
+                    lng = parseFloat(placeMatch[2]);
+                }
+            }
+
+            if (lat && lng) {
+                console.log('Extracted coordinates from Maps link:', { lat, lng });
+                return {
+                    lat: lat,
+                    lng: lng,
+                    source: 'google_maps_link'
+                };
+            }
+
+            console.warn('Could not extract coordinates from Maps link:', link);
+            return null;
+        } catch (error) {
+            console.error('Error extracting location from Maps link:', error);
+            return null;
+        }
     },
 
 async saveOrder() {
@@ -5364,6 +5432,7 @@ convertToQuotationDateFormat(dateStr) {
                 clientName: order.clientName,
                 contact: order.contact,
                 venue: order.venue,
+                venueMapLink: order.venueMapLink || '',
                 startDate: order.startDate,
                 endDate: order.endDate,
                 transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
@@ -5371,12 +5440,6 @@ convertToQuotationDateFormat(dateStr) {
                 orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
-
-            // Restore venue location data if available
-            if (order.venueLocation) {
-                window.selectedVenueLocation = order.venueLocation;
-                console.log('Restored venue location:', window.selectedVenueLocation);
-            }
 
             // Show/hide transport fields
             if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
@@ -5503,6 +5566,7 @@ convertToQuotationDateFormat(dateStr) {
                 clientName: order.clientName,
                 contact: order.contact,
                 venue: order.venue,
+                venueMapLink: order.venueMapLink || '',
                 orderDate: order.date,
                 readyTime: order.readyTime,
                 eventType: order.eventType,
@@ -5516,12 +5580,6 @@ convertToQuotationDateFormat(dateStr) {
                 orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
-
-            // Restore venue location data if available
-            if (order.venueLocation) {
-                window.selectedVenueLocation = order.venueLocation;
-                console.log('Restored venue location:', window.selectedVenueLocation);
-            }
 
             // Load helper names to text input
             if (order.helper) {
