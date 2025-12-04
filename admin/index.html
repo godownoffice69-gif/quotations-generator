@@ -14283,12 +14283,29 @@ updateAllDisplays() {
                 }
 
                 try {
-                    // Nominatim API - FREE, NO API KEY REQUIRED
-                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+                    // Nominatim API with INDIA BIAS for better local results
+                    // Parameters explained:
+                    // - countrycodes=in: Prioritize India results
+                    // - limit=10: Get more results to filter
+                    // - addressdetails=1: Get full address breakdown
+                    // - accept-language=en: English results
+                    // - bounded=1&viewbox: Search within India bounds first
+
+                    const indiaViewbox = '68.1766,8.0758,97.4025,35.4940'; // India bounding box (minLon,minLat,maxLon,maxLat)
+
+                    const url = `https://nominatim.openstreetmap.org/search?` +
+                        `format=json` +
+                        `&q=${encodeURIComponent(query)}` +
+                        `&countrycodes=in` + // Show only India results
+                        `&limit=10` +
+                        `&addressdetails=1` +
+                        `&viewbox=${indiaViewbox}` + // Prefer results in this area
+                        `&dedupe=1`; // Remove duplicate results
 
                     const response = await fetch(url, {
                         headers: {
-                            'User-Agent': 'FirepowerSFX-OrderManagement' // Required by Nominatim
+                            'User-Agent': 'FirepowerSFX-OrderManagement',
+                            'Accept-Language': 'en' // English results
                         }
                     });
 
@@ -14298,7 +14315,19 @@ updateAllDisplays() {
                     }
 
                     const results = await response.json();
-                    displayResults(results);
+
+                    // Sort results by importance (higher importance = more relevant)
+                    const sortedResults = results
+                        .filter(r => r.display_name && r.lat && r.lon) // Filter valid results
+                        .sort((a, b) => {
+                            // Prioritize results with importance score
+                            const impA = parseFloat(a.importance || 0);
+                            const impB = parseFloat(b.importance || 0);
+                            return impB - impA;
+                        })
+                        .slice(0, 5); // Show top 5 most relevant
+
+                    displayResults(sortedResults);
                 } catch (error) {
                     console.error('Error fetching address suggestions:', error);
                 }
@@ -14307,22 +14336,37 @@ updateAllDisplays() {
             // Display results in dropdown
             function displayResults(results) {
                 if (!results || results.length === 0) {
-                    dropdown.classList.remove('show');
+                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">No locations found. Try different search terms.</div>';
+                    dropdown.classList.add('show');
                     return;
                 }
 
                 dropdown.innerHTML = '';
-                results.forEach(result => {
+                results.forEach((result, index) => {
                     const item = document.createElement('div');
                     item.className = 'osm-autocomplete-item';
 
+                    // Get better name from result
+                    let locationName = result.name || result.display_name.split(',')[0];
+
+                    // Add location type badge (e.g., "Hotel", "Restaurant", "City")
+                    const locationType = result.type ? ` • ${result.type.charAt(0).toUpperCase() + result.type.slice(1)}` : '';
+
                     const nameDiv = document.createElement('div');
                     nameDiv.className = 'osm-location-name';
-                    nameDiv.textContent = result.name || result.display_name.split(',')[0];
+                    nameDiv.innerHTML = `${locationName}<span style="font-size: 0.85em; color: #666; font-weight: normal;">${locationType}</span>`;
+
+                    // Format address - show state and country
+                    let addressParts = result.display_name.split(',');
+                    // Remove first part if it's the same as name
+                    if (addressParts[0].trim() === locationName.trim()) {
+                        addressParts = addressParts.slice(1);
+                    }
+                    const formattedAddress = addressParts.join(',').trim();
 
                     const addressDiv = document.createElement('div');
                     addressDiv.className = 'osm-location-address';
-                    addressDiv.textContent = result.display_name;
+                    addressDiv.textContent = formattedAddress;
 
                     item.appendChild(nameDiv);
                     item.appendChild(addressDiv);
@@ -14372,11 +14416,17 @@ updateAllDisplays() {
                 // Clear location data when user types
                 window.selectedVenueLocation = null;
 
-                // Debounce search (wait 500ms after user stops typing)
+                // Show loading message
+                if (query.length >= 3) {
+                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">🔍 Searching...</div>';
+                    dropdown.classList.add('show');
+                }
+
+                // Debounce search (wait 300ms after user stops typing)
                 if (query.length >= 3) {
                     window.venueSearchTimeout = setTimeout(() => {
                         searchAddress(query);
-                    }, 500);
+                    }, 300);
                 } else {
                     dropdown.classList.remove('show');
                 }
