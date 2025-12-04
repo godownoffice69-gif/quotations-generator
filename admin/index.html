@@ -1067,10 +1067,16 @@
                                 <label class="form-label">Contact</label>
                                 <input type="tel" id="contact" class="form-input">
                             </div>
-                            <div class="form-group" style="position: relative;">
+                            <div class="form-group">
                                 <label class="form-label">Venue</label>
-                                <input type="text" id="venue" class="form-input" placeholder="Search for venue or address..." autocomplete="off">
-                                <div id="venueAutocompleteDropdown" class="osm-autocomplete-dropdown"></div>
+                                <input type="text" id="venue" class="form-input" placeholder="Enter venue name or address">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Google Maps Link (Optional)</label>
+                                <input type="text" id="venueMapLink" class="form-input" placeholder="Paste Google Maps link here (optional)">
+                                <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 4px;">
+                                    💡 Open Google Maps → Search venue → Click Share → Copy link → Paste here
+                                </small>
                             </div>
                         </div>
 
@@ -4789,6 +4795,14 @@ async refreshOrderId() {
         }
 
         const transport2 = Utils.get('transport2');
+
+        // Extract location from Google Maps link (if provided)
+        let venueLocation = null;
+        const mapLink = Utils.get('venueMapLink');
+        if (mapLink && mapLink.trim()) {
+            venueLocation = this.extractLocationFromMapsLink(mapLink);
+        }
+
         return {
             orderId: Utils.get('orderId'),
             isMultiDay: isMultiDay,
@@ -4801,7 +4815,8 @@ async refreshOrderId() {
             clientName: Utils.get('clientName'),
             contact: Utils.get('contact'),
             venue: Utils.get('venue'),
-            venueLocation: window.selectedVenueLocation || null, // OpenStreetMap location data
+            venueMapLink: mapLink || null, // Store the Google Maps link
+            venueLocation: venueLocation, // Extracted coordinates from Maps link
             eventType: Utils.get('eventType'),
             transport: transport === 'Other' ? Utils.get('customTransport') : transport,
             driverName: Utils.get('driverName'),
@@ -4814,6 +4829,54 @@ async refreshOrderId() {
             items: isMultiDay ? [] : [...this.currentOrderItems],
             createdAt: new Date().toISOString()
         };
+    },
+
+    // Extract latitude and longitude from Google Maps link
+    extractLocationFromMapsLink(link) {
+        if (!link) return null;
+
+        try {
+            // Google Maps link formats:
+            // https://maps.app.goo.gl/... (short link - can't extract directly)
+            // https://www.google.com/maps/place/.../@LAT,LNG,ZOOMz/...
+            // https://www.google.com/maps/@LAT,LNG,ZOOMz
+            // https://maps.google.com/?q=LAT,LNG
+            // https://goo.gl/maps/... (short link)
+
+            // Try to find coordinates in various formats
+            let lat = null, lng = null;
+
+            // Format 1: @LAT,LNG or ?q=LAT,LNG
+            const coordMatch = link.match(/[@?](-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (coordMatch) {
+                lat = parseFloat(coordMatch[1]);
+                lng = parseFloat(coordMatch[2]);
+            }
+
+            // Format 2: /maps/place/NAME/@LAT,LNG
+            if (!lat) {
+                const placeMatch = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                if (placeMatch) {
+                    lat = parseFloat(placeMatch[1]);
+                    lng = parseFloat(placeMatch[2]);
+                }
+            }
+
+            if (lat && lng) {
+                console.log('Extracted coordinates from Maps link:', { lat, lng });
+                return {
+                    lat: lat,
+                    lng: lng,
+                    source: 'google_maps_link'
+                };
+            }
+
+            console.warn('Could not extract coordinates from Maps link:', link);
+            return null;
+        } catch (error) {
+            console.error('Error extracting location from Maps link:', error);
+            return null;
+        }
     },
 
 async saveOrder() {
@@ -5370,6 +5433,7 @@ convertToQuotationDateFormat(dateStr) {
                 clientName: order.clientName,
                 contact: order.contact,
                 venue: order.venue,
+                venueMapLink: order.venueMapLink || '',
                 startDate: order.startDate,
                 endDate: order.endDate,
                 transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
@@ -5377,12 +5441,6 @@ convertToQuotationDateFormat(dateStr) {
                 orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
-
-            // Restore venue location data if available
-            if (order.venueLocation) {
-                window.selectedVenueLocation = order.venueLocation;
-                console.log('Restored venue location:', window.selectedVenueLocation);
-            }
 
             // Show/hide transport fields
             if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
@@ -5509,6 +5567,7 @@ convertToQuotationDateFormat(dateStr) {
                 clientName: order.clientName,
                 contact: order.contact,
                 venue: order.venue,
+                venueMapLink: order.venueMapLink || '',
                 orderDate: order.date,
                 readyTime: order.readyTime,
                 eventType: order.eventType,
@@ -5522,12 +5581,6 @@ convertToQuotationDateFormat(dateStr) {
                 orderStatus: order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : '',
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
-
-            // Restore venue location data if available
-            if (order.venueLocation) {
-                window.selectedVenueLocation = order.venueLocation;
-                console.log('Restored venue location:', window.selectedVenueLocation);
-            }
 
             // Load helper names to text input
             if (order.helper) {
@@ -14261,220 +14314,6 @@ updateAllDisplays() {
         console.log('  - AdminUtils.enableML() - Enable ML corrections');
         console.log('  - AdminUtils.resetMLSystem() - ⭐ DISABLE ML + clear all learned rules');
 
-        // ============ OPENSTREETMAP INITIALIZATION ============
-        // Global variable to store selected venue location
-        window.selectedVenueLocation = null;
-        window.venueSearchTimeout = null;
-
-        // Initialize OpenStreetMap Autocomplete with Nominatim
-        function initOpenStreetMapAutocomplete() {
-            const venueInput = document.getElementById('venue');
-            const dropdown = document.getElementById('venueAutocompleteDropdown');
-
-            if (!venueInput || !dropdown) return;
-
-            console.log('Initializing OpenStreetMap autocomplete...');
-
-            // Search function using Nominatim API
-            async function searchAddress(query) {
-                if (query.length < 3) {
-                    dropdown.classList.remove('show');
-                    return;
-                }
-
-                try {
-                    // SPECIFIC CITIES ONLY: Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi
-                    const allowedCities = [
-                        'ahmedabad', 'gandhinagar', 'mehsana', 'himmatnagar',
-                        'rajkot', 'kadi', 'kalol', 'morbi'
-                    ];
-
-                    // Gujarat viewbox (focused on these cities)
-                    const gujaratViewbox = '70.5,21.5,73.5,24.0'; // North-Central Gujarat area
-
-                    // Add city context to search query for better results
-                    const enhancedQuery = `${query}, Gujarat`;
-
-                    const url = `https://nominatim.openstreetmap.org/search?` +
-                        `format=json` +
-                        `&q=${encodeURIComponent(enhancedQuery)}` +
-                        `&countrycodes=in` +
-                        `&limit=20` + // Get more results to filter
-                        `&addressdetails=1` +
-                        `&viewbox=${gujaratViewbox}` +
-                        `&bounded=1` + // Strict bounding to Gujarat region
-                        `&dedupe=1`;
-
-                    const response = await fetch(url, {
-                        headers: {
-                            'User-Agent': 'FirepowerSFX-OrderManagement',
-                            'Accept-Language': 'en'
-                        }
-                    });
-
-                    if (!response.ok) {
-                        console.error('Nominatim API error:', response.status);
-                        return;
-                    }
-
-                    const results = await response.json();
-
-                    // STRICT FILTER: Only show results from allowed cities
-                    const cityFilteredResults = results.filter(result => {
-                        const addressLower = result.display_name.toLowerCase();
-
-                        // Check if any of our allowed cities is in the address
-                        return allowedCities.some(city => {
-                            return addressLower.includes(city);
-                        });
-                    });
-
-                    // Sort by importance and distance
-                    const sortedResults = cityFilteredResults
-                        .filter(r => r.display_name && r.lat && r.lon)
-                        .sort((a, b) => {
-                            const impA = parseFloat(a.importance || 0);
-                            const impB = parseFloat(b.importance || 0);
-                            return impB - impA;
-                        })
-                        .slice(0, 5);
-
-                    displayResults(sortedResults);
-                } catch (error) {
-                    console.error('Error fetching address suggestions:', error);
-                }
-            }
-
-            // Display results in dropdown
-            function displayResults(results) {
-                if (!results || results.length === 0) {
-                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">📍 No locations found in your cities.<br><small style="margin-top:4px;display:block;">Searching only: Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi</small></div>';
-                    dropdown.classList.add('show');
-                    return;
-                }
-
-                dropdown.innerHTML = '';
-                results.forEach((result, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'osm-autocomplete-item';
-
-                    // Get location name
-                    let locationName = result.name || result.display_name.split(',')[0];
-
-                    // Extract city name from address
-                    const addressLower = result.display_name.toLowerCase();
-                    const allowedCities = ['ahmedabad', 'gandhinagar', 'mehsana', 'himmatnagar', 'rajkot', 'kadi', 'kalol', 'morbi'];
-                    let cityName = '';
-                    for (let city of allowedCities) {
-                        if (addressLower.includes(city)) {
-                            cityName = city.charAt(0).toUpperCase() + city.slice(1);
-                            break;
-                        }
-                    }
-
-                    // Add location type and city badge
-                    const locationType = result.type ? result.type.charAt(0).toUpperCase() + result.type.slice(1) : '';
-                    const badges = [];
-                    if (locationType) badges.push(locationType);
-                    if (cityName) badges.push(cityName);
-                    const badgeText = badges.length > 0 ? ` • ${badges.join(' • ')}` : '';
-
-                    const nameDiv = document.createElement('div');
-                    nameDiv.className = 'osm-location-name';
-                    nameDiv.innerHTML = `${locationName}<span style="font-size: 0.85em; color: #667eea; font-weight: 600;">${badgeText}</span>`;
-
-                    // Format address
-                    let addressParts = result.display_name.split(',');
-                    if (addressParts[0].trim() === locationName.trim()) {
-                        addressParts = addressParts.slice(1);
-                    }
-                    const formattedAddress = addressParts.join(',').trim();
-
-                    const addressDiv = document.createElement('div');
-                    addressDiv.className = 'osm-location-address';
-                    addressDiv.textContent = formattedAddress;
-
-                    item.appendChild(nameDiv);
-                    item.appendChild(addressDiv);
-
-                    // Click handler
-                    item.addEventListener('click', () => {
-                        selectLocation(result);
-                    });
-
-                    dropdown.appendChild(item);
-                });
-
-                dropdown.classList.add('show');
-            }
-
-            // Handle location selection
-            function selectLocation(result) {
-                // Store location data
-                window.selectedVenueLocation = {
-                    place_id: result.place_id,
-                    osm_id: result.osm_id,
-                    osm_type: result.osm_type,
-                    lat: parseFloat(result.lat),
-                    lng: parseFloat(result.lon),
-                    display_name: result.display_name,
-                    name: result.name || result.display_name.split(',')[0]
-                };
-
-                console.log('Venue location selected:', window.selectedVenueLocation);
-
-                // Update input field
-                venueInput.value = result.display_name;
-
-                // Hide dropdown
-                dropdown.classList.remove('show');
-            }
-
-            // Input event listener with debounce
-            venueInput.addEventListener('input', function(e) {
-                const query = e.target.value.trim();
-
-                // Clear previous timeout
-                if (window.venueSearchTimeout) {
-                    clearTimeout(window.venueSearchTimeout);
-                }
-
-                // Clear location data when user types
-                window.selectedVenueLocation = null;
-
-                // Show loading message
-                if (query.length >= 3) {
-                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">🔍 Searching...</div>';
-                    dropdown.classList.add('show');
-                }
-
-                // Debounce search (wait 300ms after user stops typing)
-                if (query.length >= 3) {
-                    window.venueSearchTimeout = setTimeout(() => {
-                        searchAddress(query);
-                    }, 300);
-                } else {
-                    dropdown.classList.remove('show');
-                }
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (e.target !== venueInput && !dropdown.contains(e.target)) {
-                    dropdown.classList.remove('show');
-                }
-            });
-
-            // Prevent form submission on Enter in venue field
-            venueInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                }
-            });
-
-            console.log('OpenStreetMap autocomplete initialized successfully');
-        }
-
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
             // Check ML status on page load
@@ -14493,9 +14332,6 @@ updateAllDisplays() {
                     console.log('💡 To enable: AdminUtils.enableML()');
                 }
             }, 1000);
-
-            // Initialize OpenStreetMap autocomplete
-            initOpenStreetMapAutocomplete();
 
             // Multi-day event toggle
     const eventTypeSelect = document.getElementById('eventTypeSelect');
