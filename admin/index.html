@@ -14283,29 +14283,32 @@ updateAllDisplays() {
                 }
 
                 try {
-                    // Nominatim API with INDIA BIAS for better local results
-                    // Parameters explained:
-                    // - countrycodes=in: Prioritize India results
-                    // - limit=10: Get more results to filter
-                    // - addressdetails=1: Get full address breakdown
-                    // - accept-language=en: English results
-                    // - bounded=1&viewbox: Search within India bounds first
+                    // SPECIFIC CITIES ONLY: Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi
+                    const allowedCities = [
+                        'ahmedabad', 'gandhinagar', 'mehsana', 'himmatnagar',
+                        'rajkot', 'kadi', 'kalol', 'morbi'
+                    ];
 
-                    const indiaViewbox = '68.1766,8.0758,97.4025,35.4940'; // India bounding box (minLon,minLat,maxLon,maxLat)
+                    // Gujarat viewbox (focused on these cities)
+                    const gujaratViewbox = '70.5,21.5,73.5,24.0'; // North-Central Gujarat area
+
+                    // Add city context to search query for better results
+                    const enhancedQuery = `${query}, Gujarat`;
 
                     const url = `https://nominatim.openstreetmap.org/search?` +
                         `format=json` +
-                        `&q=${encodeURIComponent(query)}` +
-                        `&countrycodes=in` + // Show only India results
-                        `&limit=10` +
+                        `&q=${encodeURIComponent(enhancedQuery)}` +
+                        `&countrycodes=in` +
+                        `&limit=20` + // Get more results to filter
                         `&addressdetails=1` +
-                        `&viewbox=${indiaViewbox}` + // Prefer results in this area
-                        `&dedupe=1`; // Remove duplicate results
+                        `&viewbox=${gujaratViewbox}` +
+                        `&bounded=1` + // Strict bounding to Gujarat region
+                        `&dedupe=1`;
 
                     const response = await fetch(url, {
                         headers: {
                             'User-Agent': 'FirepowerSFX-OrderManagement',
-                            'Accept-Language': 'en' // English results
+                            'Accept-Language': 'en'
                         }
                     });
 
@@ -14316,16 +14319,25 @@ updateAllDisplays() {
 
                     const results = await response.json();
 
-                    // Sort results by importance (higher importance = more relevant)
-                    const sortedResults = results
-                        .filter(r => r.display_name && r.lat && r.lon) // Filter valid results
+                    // STRICT FILTER: Only show results from allowed cities
+                    const cityFilteredResults = results.filter(result => {
+                        const addressLower = result.display_name.toLowerCase();
+
+                        // Check if any of our allowed cities is in the address
+                        return allowedCities.some(city => {
+                            return addressLower.includes(city);
+                        });
+                    });
+
+                    // Sort by importance and distance
+                    const sortedResults = cityFilteredResults
+                        .filter(r => r.display_name && r.lat && r.lon)
                         .sort((a, b) => {
-                            // Prioritize results with importance score
                             const impA = parseFloat(a.importance || 0);
                             const impB = parseFloat(b.importance || 0);
                             return impB - impA;
                         })
-                        .slice(0, 5); // Show top 5 most relevant
+                        .slice(0, 5);
 
                     displayResults(sortedResults);
                 } catch (error) {
@@ -14336,7 +14348,7 @@ updateAllDisplays() {
             // Display results in dropdown
             function displayResults(results) {
                 if (!results || results.length === 0) {
-                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">No locations found. Try different search terms.</div>';
+                    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">📍 No locations found in your cities.<br><small style="margin-top:4px;display:block;">Searching only: Ahmedabad, Gandhinagar, Mehsana, Himmatnagar, Rajkot, Kadi, Kalol, Morbi</small></div>';
                     dropdown.classList.add('show');
                     return;
                 }
@@ -14346,19 +14358,33 @@ updateAllDisplays() {
                     const item = document.createElement('div');
                     item.className = 'osm-autocomplete-item';
 
-                    // Get better name from result
+                    // Get location name
                     let locationName = result.name || result.display_name.split(',')[0];
 
-                    // Add location type badge (e.g., "Hotel", "Restaurant", "City")
-                    const locationType = result.type ? ` • ${result.type.charAt(0).toUpperCase() + result.type.slice(1)}` : '';
+                    // Extract city name from address
+                    const addressLower = result.display_name.toLowerCase();
+                    const allowedCities = ['ahmedabad', 'gandhinagar', 'mehsana', 'himmatnagar', 'rajkot', 'kadi', 'kalol', 'morbi'];
+                    let cityName = '';
+                    for (let city of allowedCities) {
+                        if (addressLower.includes(city)) {
+                            cityName = city.charAt(0).toUpperCase() + city.slice(1);
+                            break;
+                        }
+                    }
+
+                    // Add location type and city badge
+                    const locationType = result.type ? result.type.charAt(0).toUpperCase() + result.type.slice(1) : '';
+                    const badges = [];
+                    if (locationType) badges.push(locationType);
+                    if (cityName) badges.push(cityName);
+                    const badgeText = badges.length > 0 ? ` • ${badges.join(' • ')}` : '';
 
                     const nameDiv = document.createElement('div');
                     nameDiv.className = 'osm-location-name';
-                    nameDiv.innerHTML = `${locationName}<span style="font-size: 0.85em; color: #666; font-weight: normal;">${locationType}</span>`;
+                    nameDiv.innerHTML = `${locationName}<span style="font-size: 0.85em; color: #667eea; font-weight: 600;">${badgeText}</span>`;
 
-                    // Format address - show state and country
+                    // Format address
                     let addressParts = result.display_name.split(',');
-                    // Remove first part if it's the same as name
                     if (addressParts[0].trim() === locationName.trim()) {
                         addressParts = addressParts.slice(1);
                     }
