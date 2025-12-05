@@ -3343,6 +3343,7 @@ const OMS = {
 
     await this.loadFromStorage();
     await this.loadEventsListFromFirestore();
+    this.populateEventsDatalist(); // Populate events dropdown immediately
     await this.loadTrackingFromFirestore();
     this.setupRealtimeListeners();
     this.setupEventDelegation();
@@ -5226,7 +5227,16 @@ async addCustomEventsToList(orderData) {
 
 populateEventsDatalist() {
     const datalist = document.getElementById('eventsDatalist');
-    if (!datalist) return;
+    if (!datalist) {
+        console.warn('eventsDatalist element not found - will populate when orders tab is opened');
+        return;
+    }
+
+    // Check if eventsList is defined
+    if (!this.data.eventsList || !Array.isArray(this.data.eventsList)) {
+        console.warn('eventsList not initialized yet');
+        return;
+    }
 
     // Clear existing options
     datalist.innerHTML = '';
@@ -5237,6 +5247,8 @@ populateEventsDatalist() {
         option.value = event;
         datalist.appendChild(option);
     });
+
+    console.log(`✅ Populated events datalist with ${this.data.eventsList.length} options`);
 },
 
 // Automatic Inventory Deduction
@@ -9511,6 +9523,7 @@ convertToQuotationDateFormat(dateStr) {
                 const orderId = Utils.get('orderId') || 'NEW';
                 const clientName = Utils.get('clientName');
                 const venue = Utils.get('venue');
+                const venueMapLink = Utils.get('venueMapLink');
                 const date = Utils.get('orderDate');
                 const readyTime = Utils.get('readyTime');
                 const contact = Utils.get('contact');
@@ -9568,7 +9581,7 @@ convertToQuotationDateFormat(dateStr) {
                 teamToNotify.forEach((item, index) => {
                     setTimeout(() => {
                         this.sendTeamMemberNotification(item.member, item.role, {
-                            orderId, clientName, venue, date, readyTime, contact, items,
+                            orderId, clientName, venue, venueMapLink, date, readyTime, contact, items,
                             teamList: teamListForMessage
                         });
                     }, index * 500); // 500ms delay between each window
@@ -9592,7 +9605,7 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             sendTeamMemberNotification(teamMember, role, orderDetails) {
-                const { orderId, clientName, venue, date, readyTime, contact, items, teamList } = orderDetails;
+                const { orderId, clientName, venue, date, readyTime, contact, items, teamList, venueMapLink } = orderDetails;
 
                 // Format items list
                 const itemsList = items && items.length > 0
@@ -9604,6 +9617,9 @@ convertToQuotationDateFormat(dateStr) {
                 message += `📋 *Order ID:* ${orderId}\n`;
                 message += `👤 *Client:* ${clientName}\n`;
                 message += `📍 *Venue:* ${venue}\n`;
+                if (venueMapLink) {
+                    message += `🗺️ *Location:* ${venueMapLink}\n`;
+                }
                 message += `📅 *Date:* ${Utils.formatDate(date)}\n`;
                 message += `🕐 *Ready Time:* ${readyTime || 'TBD'}\n\n`;
                 message += `🎭 *Your Role:* ${role.toUpperCase()}\n\n`;
@@ -9640,6 +9656,7 @@ convertToQuotationDateFormat(dateStr) {
                 const currentOrderId = Utils.get('orderId');
                 const clientName = Utils.get('clientName');
                 const venue = Utils.get('venue');
+                const venueMapLink = Utils.get('venueMapLink');
                 const currentOrderDate = Utils.get('orderDate');
                 const currentStartDate = Utils.get('startDate');
                 const eventType = Utils.get('eventTypeSelect');
@@ -9674,6 +9691,9 @@ convertToQuotationDateFormat(dateStr) {
                 message += `*ORDER ID:* ${currentOrderId || 'NEW'}\n`;
                 message += `👤 *Client:* ${clientName}\n`;
                 message += `📍 *Venue:* ${venue}\n`;
+                if (venueMapLink) {
+                    message += `🗺️ *Location:* ${venueMapLink}\n`;
+                }
                 message += `📅 *Date:* ${Utils.formatDate(targetDate)}\n`;
                 message += `🕐 *Ready Time:* ${readyTime || 'TBD'}\n`;
                 message += `📊 *Status:* ${status || 'Pending'}\n\n`;
@@ -11933,7 +11953,7 @@ convertToQuotationDateFormat(dateStr) {
                 this.showAddPaymentModal();
                 setTimeout(() => {
                     Utils.set('paymentOrderId', orderId);
-                    this.updatePaymentOrderInfo();
+                    this.loadOrderItemsForPayment();
                 }, 100);
             },
 
@@ -12662,6 +12682,11 @@ async loadEventsListFromFirestore() {
             }
         } else {
             console.log('📝 No events list in Firestore yet - using default list');
+            // Ensure eventsList is defined before saving
+            if (!this.data.eventsList || !Array.isArray(this.data.eventsList) || this.data.eventsList.length === 0) {
+                console.warn('⚠️ eventsList not initialized, skipping Firestore save');
+                return;
+            }
             // Save the default list to Firestore
             await db.collection('settings').doc('eventsList').set({
                 events: this.data.eventsList,
