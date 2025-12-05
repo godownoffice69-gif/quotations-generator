@@ -10708,12 +10708,17 @@ convertToQuotationDateFormat(dateStr) {
                             </tr>
                         </thead>
                         <tbody>
-                            ${payments.slice(0, 50).map(p => `
+                            ${payments.slice(0, 50).map(p => {
+                                const hasBreakdown = p.itemBreakdown && p.itemBreakdown.length > 0;
+                                return `
                                 <tr>
                                     <td>${Utils.formatDate(p.paymentDate || p.timestamp?.toDate?.())}</td>
                                     <td>${p.orderId || 'N/A'}</td>
                                     <td>${p.customerName || 'N/A'}</td>
-                                    <td>₹${parseFloat(p.amount || 0).toLocaleString('en-IN')}</td>
+                                    <td>
+                                        ₹${parseFloat(p.amount || 0).toLocaleString('en-IN')}
+                                        ${hasBreakdown ? '<br><button class="btn btn-info btn-small" style="margin-top: 0.25rem;" onclick="OMS.togglePaymentBreakdown(\'' + p.id + '\')">📋 View Details</button>' : ''}
+                                    </td>
                                     <td>${p.paymentMethod || 'N/A'}</td>
                                     <td>${p.transactionId || 'N/A'}</td>
                                     <td>
@@ -10721,7 +10726,41 @@ convertToQuotationDateFormat(dateStr) {
                                         <button class="btn btn-danger btn-small" onclick="OMS.deletePayment('${p.id}')">Delete</button>
                                     </td>
                                 </tr>
-                            `).join('')}
+                                ${hasBreakdown ? `
+                                <tr id="breakdown_${p.id}" style="display: none; background: #f5f5f5;">
+                                    <td colspan="7" style="padding: 1rem;">
+                                        <div style="background: white; padding: 1rem; border-radius: 8px; border: 2px solid #667eea;">
+                                            <h4 style="margin: 0 0 1rem 0; color: #667eea;">📋 Item-wise Breakdown</h4>
+                                            <table style="width: 100%; border-collapse: collapse;">
+                                                <thead>
+                                                    <tr style="background: #f0f0f0;">
+                                                        <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Item Name</th>
+                                                        <th style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Quantity</th>
+                                                        <th style="padding: 0.5rem; text-align: right; border: 1px solid #ddd;">Price/Unit</th>
+                                                        <th style="padding: 0.5rem; text-align: right; border: 1px solid #ddd;">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${p.itemBreakdown.map(item => `
+                                                        <tr>
+                                                            <td style="padding: 0.5rem; border: 1px solid #ddd;">${item.itemName}</td>
+                                                            <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+                                                            <td style="padding: 0.5rem; text-align: right; border: 1px solid #ddd;">₹${parseFloat(item.pricePerUnit).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                            <td style="padding: 0.5rem; text-align: right; border: 1px solid #ddd; font-weight: bold;">₹${parseFloat(item.itemTotal).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                    <tr style="background: #e8eaf6; font-weight: bold;">
+                                                        <td colspan="3" style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Grand Total:</td>
+                                                        <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd; font-size: 1.1em; color: #667eea;">₹${parseFloat(p.amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                ` : ''}
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 ` : `<p style="text-align: center; padding: 2rem; color: var(--text-gray);">No payment records found. Click "Add Payment" to get started.</p>`}
@@ -11404,48 +11443,80 @@ convertToQuotationDateFormat(dateStr) {
 
                 const modalHTML = `
                     <div class="modal-overlay" id="paymentModal">
-                        <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-content" style="max-width: 800px;">
                             <button class="modal-close" onclick="OMS.closeModal('paymentModal')">×</button>
-                            <h2>💵 Add Payment</h2>
+                            <h2>💵 Add Payment - Item-wise Pricing</h2>
                             <form id="paymentForm" onsubmit="OMS.savePayment(event)">
                                 <div class="form-group">
                                     <label class="form-label required">Order</label>
-                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.updatePaymentOrderInfo()">
+                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.loadOrderItemsForPayment()">
                                         <option value="">Select Order</option>
                                         ${orders.map(o => `<option value="${o.docId || o.orderId}">${o.orderId || 'Pending'} - ${o.clientName} (₹${parseFloat(o.financials?.balanceDue || o.totalAmount || 0).toLocaleString('en-IN')} due)</option>`).join('')}
                                     </select>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label class="form-label required">Payment Date</label>
-                                        <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required>
+
+                                <div id="orderItemsContainer" style="display: none;">
+                                    <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                                        <h3 style="margin: 0 0 0.5rem 0;">Order Details</h3>
+                                        <p style="margin: 0;"><strong>Order ID:</strong> <span id="displayOrderId">-</span></p>
+                                        <p style="margin: 0;"><strong>Client:</strong> <span id="displayClientName">-</span></p>
                                     </div>
+
                                     <div class="form-group">
-                                        <label class="form-label required">Amount</label>
-                                        <input type="number" id="paymentAmount" class="form-input" min="1" step="0.01" required>
+                                        <label class="form-label"><strong>Item-wise Pricing</strong></label>
+                                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                                            <table style="width: 100%; border-collapse: collapse;" id="itemsPricingTable">
+                                                <thead>
+                                                    <tr style="border-bottom: 2px solid var(--border);">
+                                                        <th style="text-align: left; padding: 8px;">Item Name</th>
+                                                        <th style="text-align: center; padding: 8px;">Quantity</th>
+                                                        <th style="text-align: center; padding: 8px;">Price per Unit (₹)</th>
+                                                        <th style="text-align: right; padding: 8px;">Total (₹)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="itemsPricingBody">
+                                                    <!-- Items will be populated here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 1rem 0; padding: 1rem; background: #e8f5e9; border-radius: 8px;">
+                                        <button type="button" class="btn btn-info btn-small" onclick="OMS.calculatePaymentTotal()">🧮 See Total</button>
+                                        <div id="paymentTotalDisplay" style="font-size: 1.2rem; font-weight: bold; color: #2e7d32;">
+                                            Total: ₹<span id="calculatedTotal">0.00</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label required">Payment Date</label>
+                                            <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label required">Payment Method</label>
+                                            <select id="paymentMethod" class="form-select" required>
+                                                <option value="Cash">Cash</option>
+                                                <option value="UPI">UPI</option>
+                                                <option value="Bank Transfer">Bank Transfer</option>
+                                                <option value="Cheque">Cheque</option>
+                                                <option value="Card">Card</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Transaction ID</label>
+                                            <input type="text" id="paymentTransactionId" class="form-input">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Notes</label>
+                                            <textarea id="paymentNotes" class="form-textarea" rows="2"></textarea>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label class="form-label required">Payment Method</label>
-                                        <select id="paymentMethod" class="form-select" required>
-                                            <option value="Cash">Cash</option>
-                                            <option value="UPI">UPI</option>
-                                            <option value="Bank Transfer">Bank Transfer</option>
-                                            <option value="Cheque">Cheque</option>
-                                            <option value="Card">Card</option>
-                                            <option value="Other">Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Transaction ID</label>
-                                        <input type="text" id="paymentTransactionId" class="form-input">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Notes</label>
-                                    <textarea id="paymentNotes" class="form-textarea" rows="3"></textarea>
-                                </div>
+
                                 <div class="btn-group">
                                     <button type="submit" class="btn btn-success">💾 Save Payment</button>
                                     <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('paymentModal')">Cancel</button>
@@ -11458,13 +11529,127 @@ convertToQuotationDateFormat(dateStr) {
                 document.getElementById('modalsContainer').innerHTML = modalHTML;
             },
 
-            updatePaymentOrderInfo() {
+            loadOrderItemsForPayment() {
                 const orderId = Utils.get('paymentOrderId');
-                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
-                if (order) {
-                    const balanceDue = parseFloat(order.financials?.balanceDue || order.totalAmount || 0);
-                    Utils.set('paymentAmount', balanceDue);
+                if (!orderId) {
+                    document.getElementById('orderItemsContainer').style.display = 'none';
+                    return;
                 }
+
+                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+                if (!order) {
+                    document.getElementById('orderItemsContainer').style.display = 'none';
+                    return;
+                }
+
+                // Show order details
+                document.getElementById('displayOrderId').textContent = order.orderId || 'Pending';
+                document.getElementById('displayClientName').textContent = order.clientName || 'N/A';
+
+                // Get all items from order
+                let allItems = [];
+
+                if (order.isMultiDay && order.dayWiseData) {
+                    // Collect items from all days and functions
+                    order.dayWiseData.forEach(dayData => {
+                        if (dayData.functions) {
+                            dayData.functions.forEach(func => {
+                                if (func.items && func.items.length > 0) {
+                                    func.items.forEach(item => {
+                                        allItems.push({
+                                            name: item.name,
+                                            quantity: item.quantity,
+                                            remarks: item.remarks || ''
+                                        });
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else if (order.items && order.items.length > 0) {
+                    // Single day order items
+                    allItems = order.items.map(item => ({
+                        name: item.name,
+                        quantity: item.quantity,
+                        remarks: item.remarks || ''
+                    }));
+                }
+
+                if (allItems.length === 0) {
+                    document.getElementById('itemsPricingBody').innerHTML = `
+                        <tr><td colspan="4" style="text-align: center; padding: 1rem; color: #999;">No items found in this order</td></tr>
+                    `;
+                    document.getElementById('orderItemsContainer').style.display = 'block';
+                    return;
+                }
+
+                // Populate items table
+                const itemsHTML = allItems.map((item, index) => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px;">
+                            ${item.name}
+                            ${item.remarks ? `<br><small style="color: #666;">${item.remarks}</small>` : ''}
+                        </td>
+                        <td style="text-align: center; padding: 12px;">${item.quantity}</td>
+                        <td style="text-align: center; padding: 12px;">
+                            <input type="number"
+                                   class="form-input item-price-input"
+                                   id="itemPrice_${index}"
+                                   data-item-index="${index}"
+                                   data-quantity="${item.quantity}"
+                                   min="0"
+                                   step="0.01"
+                                   placeholder="0.00"
+                                   style="max-width: 120px; margin: 0 auto;"
+                                   oninput="OMS.updateItemTotal(${index})">
+                        </td>
+                        <td style="text-align: right; padding: 12px; font-weight: bold;">
+                            ₹<span id="itemTotal_${index}">0.00</span>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('itemsPricingBody').innerHTML = itemsHTML;
+                document.getElementById('orderItemsContainer').style.display = 'block';
+
+                // Reset total
+                document.getElementById('calculatedTotal').textContent = '0.00';
+            },
+
+            updateItemTotal(itemIndex) {
+                const priceInput = document.getElementById(`itemPrice_${itemIndex}`);
+                const totalSpan = document.getElementById(`itemTotal_${itemIndex}`);
+
+                if (!priceInput || !totalSpan) return;
+
+                const pricePerUnit = parseFloat(priceInput.value) || 0;
+                const quantity = parseInt(priceInput.dataset.quantity) || 0;
+                const total = pricePerUnit * quantity;
+
+                totalSpan.textContent = total.toFixed(2);
+
+                // Auto-calculate grand total when any item price changes
+                this.calculatePaymentTotal();
+            },
+
+            calculatePaymentTotal() {
+                const priceInputs = document.querySelectorAll('.item-price-input');
+                let grandTotal = 0;
+
+                priceInputs.forEach(input => {
+                    const pricePerUnit = parseFloat(input.value) || 0;
+                    const quantity = parseInt(input.dataset.quantity) || 0;
+                    grandTotal += (pricePerUnit * quantity);
+                });
+
+                document.getElementById('calculatedTotal').textContent = grandTotal.toFixed(2);
+
+                return grandTotal;
+            },
+
+            updatePaymentOrderInfo() {
+                // Deprecated - now using loadOrderItemsForPayment()
+                this.loadOrderItemsForPayment();
             },
 
             async savePayment(event) {
@@ -11478,11 +11663,44 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
+                // Collect item-wise breakdown
+                const priceInputs = document.querySelectorAll('.item-price-input');
+                const itemBreakdown = [];
+                let totalAmount = 0;
+
+                priceInputs.forEach((input, index) => {
+                    const pricePerUnit = parseFloat(input.value) || 0;
+                    const quantity = parseInt(input.dataset.quantity) || 0;
+                    const itemTotal = pricePerUnit * quantity;
+
+                    // Get item name from the table cell
+                    const row = input.closest('tr');
+                    const itemNameCell = row.querySelector('td:first-child');
+                    const itemName = itemNameCell ? itemNameCell.textContent.trim().split('\n')[0] : `Item ${index + 1}`;
+
+                    if (pricePerUnit > 0) {
+                        itemBreakdown.push({
+                            itemName: itemName,
+                            quantity: quantity,
+                            pricePerUnit: pricePerUnit,
+                            itemTotal: itemTotal
+                        });
+                        totalAmount += itemTotal;
+                    }
+                });
+
+                // Validate that at least one item has a price
+                if (itemBreakdown.length === 0 || totalAmount === 0) {
+                    this.showToast('Please enter at least one item price!', 'error');
+                    return;
+                }
+
                 const payment = {
                     orderId: order.orderId || 'Pending',
                     orderDocId: order.docId,
                     customerName: order.clientName,
-                    amount: parseFloat(Utils.get('paymentAmount')),
+                    amount: totalAmount,
+                    itemBreakdown: itemBreakdown, // Store item-wise breakdown
                     paymentDate: Utils.get('paymentDate'),
                     paymentMethod: Utils.get('paymentMethod'),
                     transactionId: Utils.get('paymentTransactionId'),
@@ -11506,13 +11724,24 @@ convertToQuotationDateFormat(dateStr) {
                         'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < (order.financials?.grandTotal || order.totalAmount || 0) ? 'partial' : 'pending'
                     });
 
-                    this.showToast('Payment added successfully!', 'success');
+                    this.showToast('✅ Payment with item-wise breakdown saved successfully!', 'success');
                     this.closeModal('paymentModal');
                     this.renderFinancials();
                     await this.loadOrdersFromFirestore();
                 } catch (error) {
                     console.error('Error saving payment:', error);
                     this.showToast('Error saving payment: ' + error.message, 'error');
+                }
+            },
+
+            togglePaymentBreakdown(paymentId) {
+                const breakdownRow = document.getElementById(`breakdown_${paymentId}`);
+                if (breakdownRow) {
+                    if (breakdownRow.style.display === 'none') {
+                        breakdownRow.style.display = 'table-row';
+                    } else {
+                        breakdownRow.style.display = 'none';
+                    }
                 }
             },
 
