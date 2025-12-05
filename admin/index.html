@@ -5638,7 +5638,13 @@ convertToQuotationDateFormat(dateStr) {
 
                                         // Set items for this function
                                         if (func.items && Array.isArray(func.items)) {
-                                            window.dayFunctionsData[dayIndex][funcIndex].items = [...func.items];
+                                            // IMPORTANT: Normalize item fields for consistency
+                                            window.dayFunctionsData[dayIndex][funcIndex].items = func.items.map(item => ({
+                                                name: item.name || '',
+                                                quantity: item.quantity || item.qty || 0,
+                                                remarks: item.remarks || item.desc || '',
+                                                price: item.price || 0
+                                            }));
                                             this.updateFunctionItemsList(dayIndex, funcIndex);
                                         }
                                     });
@@ -5718,7 +5724,21 @@ convertToQuotationDateFormat(dateStr) {
                 document.getElementById('customTransport2Group').classList.remove('hidden');
             }
 
-            this.currentOrderItems = order.items ? [...order.items] : [];
+            // IMPORTANT: Normalize item fields to ensure consistency
+            // Items from Firestore might use 'qty' but UI expects 'quantity'
+            this.currentOrderItems = order.items ? order.items.map(item => ({
+                name: item.name || '',
+                quantity: item.quantity || item.qty || 0, // Support both field names
+                remarks: item.remarks || item.desc || '', // Support both field names
+                price: item.price || 0
+            })) : [];
+
+            console.log(`📋 Loaded ${this.currentOrderItems.length} items for order`, {
+                orderId: order.orderId,
+                sampleItem: this.currentOrderItems[0],
+                isMerged: !!order.mergedFrom
+            });
+
             this.updateOrderItemsTable();
         }
 
@@ -10054,15 +10074,21 @@ convertToQuotationDateFormat(dateStr) {
                 // Initialize selected orders array
                 this.selectedOrdersForMerge = [];
 
+                // IMPORTANT: Filter out orders that have been merged into other orders
+                // Only show orders that are NOT marked as isMerged
+                const visibleOrders = this.data.orders.filter(o => !o.isMerged);
+                console.log(`📋 History: Showing ${visibleOrders.length} orders (filtered out ${this.data.orders.length - visibleOrders.length} merged orders)`);
+
                 this.renderTable('historyContainer', [
                     { key: 'select', label: '☑️', render: o => {
-                        const isMerged = o.mergedFrom && o.mergedFrom.length > 0;
-                        return `<input type="checkbox" class="order-select-checkbox" data-order-id="${o.docId || o.orderId}" ${isMerged ? 'disabled' : ''} onchange="OMS.toggleOrderSelection('${o.docId || o.orderId}')">`;
+                        const isMergedOrder = o.mergedFrom && o.mergedFrom.length > 0;
+                        return `<input type="checkbox" class="order-select-checkbox" data-order-id="${o.docId || o.orderId}" ${isMergedOrder ? 'disabled' : ''} onchange="OMS.toggleOrderSelection('${o.docId || o.orderId}')">`;
                     }},
                     { key: 'orderId', label: this.t('orderId'), render: o => {
-                        const mergeStatus = o.mergedFrom && o.mergedFrom.length > 0 ? '<span style="color: #667eea; font-weight: bold;">🔗 MERGED</span>' : '';
-                        const mergedMark = o.isMerged ? '<span style="color: #999; font-style: italic;">📎 (merged)</span>' : '';
-                        return `<span class="order-id-highlight">${o.orderId}</span> ${mergeStatus}${mergedMark}`;
+                        const mergeStatus = o.mergedFrom && o.mergedFrom.length > 0
+                            ? `<span style="color: #667eea; font-weight: bold;">🔗 MERGED (${o.mergedFrom.length} orders)</span>`
+                            : '';
+                        return `<span class="order-id-highlight">${o.orderId}</span> ${mergeStatus}`;
                     }},
                     { key: 'clientName', label: this.t('client') },
                     { key: 'venue', label: this.t('venue') },
@@ -10073,7 +10099,7 @@ convertToQuotationDateFormat(dateStr) {
                         return Utils.formatDate(o.date);
                     }},
                     { key: 'status', label: this.t('status'), render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${this.t(o.status.toLowerCase())}</span>` }
-                ], this.data.orders, (row) => {
+                ], visibleOrders, (row) => {
                     const isMergedOrder = row.mergedFrom && row.mergedFrom.length > 0;
                     const unmergeBtn = isMergedOrder ? `<button class="btn btn-info btn-small" onclick="OMS.unmergeOrder('${row.docId || row.orderId}')">🔓 Unmerge</button>` : '';
                     return `
