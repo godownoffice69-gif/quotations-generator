@@ -12659,47 +12659,46 @@ async loadOrdersFromFirestore() {
                 return;
             }
 
+            // IMPORTANT: Include ALL fields from Firestore
             const loadedOrder = {
+                ...orderData, // Include ALL fields (isMerged, mergedFrom, financials, etc.)
                 orderId: orderId, // Can be blank for pending/confirmed
                 docId: docId, // CRITICAL: Always store docId
-                date: Utils.convertDateFormat(customer.dates) || '',
-                readyTime: customer.timeSlot || '',
-                clientName: customer.name || '',
-                contact: customer.phone || '',
-                venue: customer.venue || '',
-                eventType: orderData.functionType || customer.functionType || '',
-                transport: orderData.transport || '',
-                driverName: orderData.driverName || '',
-                transport2: orderData.transport2 || '',
-                driverName2: orderData.driverName2 || '',
-                operator: orderData.operator || '',
-                helper: orderData.helper || '',
-                status: orderData.status || 'Confirmed',
-                notes: orderData.notes || '',
-                weather: orderData.weather || null,
+                // Legacy field mappings for backwards compatibility
+                date: orderData.date || Utils.convertDateFormat(customer.dates) || '',
+                readyTime: orderData.readyTime || customer.timeSlot || '',
+                clientName: orderData.clientName || customer.name || '',
+                contact: orderData.contact || customer.phone || '',
+                venue: orderData.venue || customer.venue || '',
+                eventType: orderData.eventType || orderData.functionType || customer.functionType || '',
+                // Normalize items to use consistent field names
                 items: (orderData.items || []).map(item => ({
                     name: item.name || '',
-                    quantity: item.qty || 0,
-                    remarks: item.desc || '',
+                    quantity: item.quantity || item.qty || 0,
+                    remarks: item.remarks || item.desc || '',
                     price: item.price || 0
-                })),
-                createdAt: orderData.createdAt || new Date().toISOString(),
-                updatedAt: orderData.updatedAt || null,
-                totalAmount: orderData.totalAmount || 0,
-                // Multi-day order fields
-                isMultiDay: orderData.isMultiDay || false,
-                startDate: orderData.startDate || null,
-                endDate: orderData.endDate || null,
-                dayWiseData: orderData.dayWiseData || []
+                }))
             };
 
-            // Debug log multi-day orders
+            // Debug log multi-day and merged orders
             if (orderData.isMultiDay) {
                 console.log(`📅 Loaded multi-day order ${orderId}:`, {
                     isMultiDay: loadedOrder.isMultiDay,
                     startDate: loadedOrder.startDate,
                     endDate: loadedOrder.endDate,
                     dayWiseData: loadedOrder.dayWiseData?.length || 0
+                });
+            }
+            if (orderData.isMerged) {
+                console.log(`🔗 Loaded merged order ${orderId}:`, {
+                    isMerged: loadedOrder.isMerged,
+                    mergedInto: loadedOrder.mergedInto
+                });
+            }
+            if (orderData.mergedFrom) {
+                console.log(`🔗 Loaded MERGED result order ${orderId}:`, {
+                    mergedFrom: loadedOrder.mergedFrom?.length || 0,
+                    mergedAt: loadedOrder.mergedAt
                 });
             }
 
@@ -13483,33 +13482,25 @@ setupRealtimeListeners() {
                         console.log('🆕 New order detected:', orderId || `[docId: ${docId}]`);
                     }
 
+                    // IMPORTANT: Include ALL fields from Firestore
                     const newOrder = {
+                        ...orderData, // Include ALL fields (isMerged, mergedFrom, financials, etc.)
                         orderId: orderId,
                         docId: docId, // CRITICAL: Always store docId
-                        isMultiDay: orderData.isMultiDay || false,
-                        startDate: orderData.startDate || null,
-                        endDate: orderData.endDate || null,
-                        dayWiseData: orderData.dayWiseData || [],
-                        date: orderData.isMultiDay ? '' : (Utils.convertDateFormat(customer.dates) || ''),
-                        readyTime: customer.timeSlot || '',
-                        clientName: customer.name || '',
-                        contact: customer.phone || '',
-                        venue: customer.venue || '',
-                        eventType: orderData.functionType || customer.functionType || '',
-                        transport: orderData.transport || '',
-                        driverName: orderData.driverName || '',
-                        operator: orderData.operator || '',
-                        helper: orderData.helper || '',
-                        status: orderData.status || 'Confirmed',
-                        notes: orderData.notes || '',
+                        // Legacy field mappings for backwards compatibility
+                        date: orderData.date || (orderData.isMultiDay ? '' : (Utils.convertDateFormat(customer.dates) || '')),
+                        readyTime: orderData.readyTime || customer.timeSlot || '',
+                        clientName: orderData.clientName || customer.name || '',
+                        contact: orderData.contact || customer.phone || '',
+                        venue: orderData.venue || customer.venue || '',
+                        eventType: orderData.eventType || orderData.functionType || customer.functionType || '',
+                        // Normalize items to use consistent field names
                         items: (orderData.items || []).map(item => ({
                             name: item.name || '',
-                            quantity: item.qty || 0,
-                            remarks: item.desc || '',
+                            quantity: item.quantity || item.qty || 0,
+                            remarks: item.remarks || item.desc || '',
                             price: item.price || 0
-                        })),
-                        createdAt: orderData.createdAt || new Date().toISOString(),
-                        totalAmount: orderData.totalAmount || 0
+                        }))
                     };
 
                     this.data.orders.unshift(newOrder);
