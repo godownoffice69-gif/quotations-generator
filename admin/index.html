@@ -293,30 +293,6 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        /* Google Maps Place Autocomplete Styling */
-        gmp-place-autocomplete {
-            width: 100%;
-            display: block;
-        }
-
-        gmp-place-autocomplete input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
-            font-size: 1rem;
-            transition: var(--transition);
-            background: var(--bg-input);
-            color: var(--text-dark);
-            font-family: inherit;
-        }
-
-        gmp-place-autocomplete input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
         /* Highlighted Date & Time Fields */
         .highlight-datetime {
             background-color: #fef3c7 !important;
@@ -868,6 +844,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
+    <!-- Google Maps JavaScript API with Places Library -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAInxvvhevCHpLy9P5K5VvBNxDgbtZF-A4&libraries=places&loading=async&callback=initGoogleMaps" async defer></script>
     <!-- Google Maps JavaScript API -->
     <!-- PASTE YOUR API KEY ON LINE 849 below, replacing YOUR_API_KEY_HERE -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAInxvvhevCHpLy9P5K5VvBNxDgbtZF-A4&libraries=places&loading=async&callback=initGoogleMaps" async defer></script>
@@ -1046,8 +1024,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Venue</label>
-                                <gmp-place-autocomplete id="venueAutocomplete" placeholder="Search for venue..."></gmp-place-autocomplete>
-                                <input type="hidden" id="venue" class="form-input">
+                                <input type="text" id="venue" class="form-input" placeholder="Search for venue...">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Google Maps Link (Auto-generated)</label>
@@ -5434,12 +5411,6 @@ convertToQuotationDateFormat(dateStr) {
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
 
-            // Populate autocomplete element with venue name
-            const venueAutocomplete = document.getElementById('venueAutocomplete');
-            if (venueAutocomplete && order.venue) {
-                venueAutocomplete.value = order.venue;
-            }
-
             // Restore venue location data if available
             if (order.venueLocation) {
                 window.selectedPlaceData = {
@@ -5593,12 +5564,6 @@ convertToQuotationDateFormat(dateStr) {
                 orderNotes: order.notes
             }).forEach(([key, value]) => Utils.set(key, value));
 
-            // Populate autocomplete element with venue name
-            const venueAutocomplete = document.getElementById('venueAutocomplete');
-            if (venueAutocomplete && order.venue) {
-                venueAutocomplete.value = order.venue;
-            }
-
             // Restore venue location data if available
             if (order.venueLocation) {
                 window.selectedPlaceData = {
@@ -5657,14 +5622,6 @@ convertToQuotationDateFormat(dateStr) {
 
                 // Clear venue location data from autocomplete
                 window.selectedPlaceData = null;
-                const venueAutocomplete = document.getElementById('venueAutocomplete');
-                if (venueAutocomplete) {
-                    venueAutocomplete.value = '';
-                }
-                const venueMapLink = document.getElementById('venueMapLink');
-                if (venueMapLink) {
-                    venueMapLink.value = '';
-                }
 
                 // Clear multi-day data
                 if (window.dayFunctionsData) {
@@ -14356,33 +14313,30 @@ updateAllDisplays() {
         let selectedPlaceData = null;
 
         // This function is called when Google Maps API finishes loading
-        async function initGoogleMaps() {
+        function initGoogleMaps() {
             console.log('Google Maps API loaded successfully');
 
-            // Wait for the autocomplete element to be ready
-            const autocompleteElement = document.getElementById('venueAutocomplete');
-            const venueHiddenInput = document.getElementById('venue');
+            const venueInput = document.getElementById('venue');
             const mapLinkInput = document.getElementById('venueMapLink');
 
-            if (!autocompleteElement) {
-                console.error('Venue autocomplete element not found');
+            if (!venueInput) {
+                console.error('Venue input field not found');
                 return;
             }
 
             try {
-                // Configure autocomplete to restrict to India
-                autocompleteElement.componentRestrictions = { country: 'in' };
-
-                // Request specific fields to get location data
-                autocompleteElement.fields = ['displayName', 'formattedAddress', 'location', 'id', 'googleMapsURI'];
+                // Initialize Autocomplete with new Places API
+                const autocomplete = new google.maps.places.Autocomplete(venueInput, {
+                    componentRestrictions: { country: 'in' },
+                    fields: ['name', 'formatted_address', 'geometry', 'place_id'],
+                    types: ['establishment', 'geocode']
+                });
 
                 // Listen for place selection
-                autocompleteElement.addEventListener('gmp-placeselect', async ({ place }) => {
-                    await place.fetchFields({
-                        fields: ['displayName', 'formattedAddress', 'location', 'id', 'googleMapsURI']
-                    });
+                autocomplete.addListener('place_changed', () => {
+                    const place = autocomplete.getPlace();
 
-                    if (!place.location) {
+                    if (!place.geometry || !place.geometry.location) {
                         console.warn('No location details available for selected place');
                         selectedPlaceData = null;
                         return;
@@ -14390,21 +14344,18 @@ updateAllDisplays() {
 
                     // Store place data globally
                     selectedPlaceData = {
-                        name: place.displayName || place.formattedAddress || '',
-                        lat: place.location.lat(),
-                        lng: place.location.lng(),
-                        formatted_address: place.formattedAddress || '',
-                        place_id: place.id || '',
-                        url: place.googleMapsURI || '',
+                        name: place.name || place.formatted_address || venueInput.value,
+                        lat: place.geometry.location.lat(),
+                        lng: place.geometry.location.lng(),
+                        formatted_address: place.formatted_address || '',
+                        place_id: place.place_id || '',
                         source: 'google_autocomplete'
                     };
 
                     console.log('Place selected from autocomplete:', selectedPlaceData);
 
-                    // Store venue name in hidden input (for form submission)
-                    if (venueHiddenInput) {
-                        venueHiddenInput.value = selectedPlaceData.name;
-                    }
+                    // Update venue input with selected place name
+                    venueInput.value = selectedPlaceData.name;
 
                     // Auto-fill the venueMapLink field with Google Maps URL
                     if (mapLinkInput && selectedPlaceData.lat && selectedPlaceData.lng) {
@@ -14413,7 +14364,7 @@ updateAllDisplays() {
                     }
                 });
 
-                console.log('Google Maps Place Autocomplete initialized successfully');
+                console.log('Google Maps Autocomplete initialized successfully');
             } catch (error) {
                 console.error('Error initializing Google Maps Autocomplete:', error);
             }
