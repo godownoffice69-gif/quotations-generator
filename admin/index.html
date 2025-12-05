@@ -1025,13 +1025,8 @@
                             <div class="form-group">
                                 <label class="form-label">Venue</label>
                                 <input type="text" id="venue" class="form-input" placeholder="Search for venue...">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Google Maps Link (Auto-generated)</label>
-                                <input type="text" id="venueMapLink" class="form-input" placeholder="Select a venue from search above" readonly>
-                                <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 4px;">
-                                    💡 Start typing venue name above and select from suggestions
-                                </small>
+                                <!-- Hidden field to store Google Maps link -->
+                                <input type="hidden" id="venueMapLink">
                             </div>
                         </div>
 
