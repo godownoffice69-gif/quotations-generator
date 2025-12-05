@@ -5486,6 +5486,13 @@ convertToQuotationDateFormat(dateStr) {
         console.log('🔍 Order status:', order.status);
         console.log('🔍 Is Multi-Day:', order.isMultiDay);
 
+        // Show merged order indicator if this is a merged order
+        if (order.mergedFrom && order.mergedFrom.length > 0) {
+            const mergedOrderIds = order.mergedFrom.map(m => m.orderId).join(', ');
+            this.showToast(`🔗 MERGED ORDER: This order was created by merging ${order.mergedFrom.length} orders (${mergedOrderIds})`, 'info', 8000);
+            console.log('🔗 This is a MERGED order from:', order.mergedFrom);
+        }
+
         // Check if this is a multi-day order
         if (order.isMultiDay) {
             // Load multi-day order
@@ -11566,59 +11573,59 @@ convertToQuotationDateFormat(dateStr) {
 
                 const modalHTML = `
                     <div class="modal show" id="paymentModal" onclick="if(event.target === this) OMS.closeModal('paymentModal')">
-                        <div class="modal-content" style="max-width: 800px;">
+                        <div class="modal-content" style="max-width: 900px; max-height: 95vh; overflow-y: auto;">
                             <button class="modal-close" onclick="OMS.closeModal('paymentModal')">×</button>
                             <h2>💵 Add Payment - Item-wise Pricing</h2>
-                            <form id="paymentForm" onsubmit="OMS.savePayment(event)">
-                                <div class="form-group">
-                                    <label class="form-label required">Order</label>
-                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.loadOrderItemsForPayment()">
-                                        <option value="">Select Order</option>
+                            <form id="paymentForm" onsubmit="OMS.savePayment(event)" style="display: block;">
+                                <div class="form-group" style="margin-bottom: 1.5rem;">
+                                    <label class="form-label required">Select Order</label>
+                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.loadOrderItemsForPayment()" style="width: 100%; padding: 0.75rem;">
+                                        <option value="">-- Select an Order --</option>
                                         ${orders.map(o => `<option value="${o.docId || o.orderId}">${o.orderId || 'Pending'} - ${o.clientName} (₹${parseFloat(o.financials?.balanceDue || o.totalAmount || 0).toLocaleString('en-IN')} due)</option>`).join('')}
                                     </select>
                                 </div>
 
-                                <div id="orderItemsContainer" style="display: none;">
-                                    <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-                                        <h3 style="margin: 0 0 0.5rem 0;">Order Details</h3>
-                                        <p style="margin: 0;"><strong>Order ID:</strong> <span id="displayOrderId">-</span></p>
-                                        <p style="margin: 0;"><strong>Client:</strong> <span id="displayClientName">-</span></p>
+                                <div id="orderItemsContainer" style="display: none; margin-top: 1.5rem;">
+                                    <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">Order Details</h3>
+                                        <p style="margin: 0.5rem 0;"><strong>Order ID:</strong> <span id="displayOrderId">-</span></p>
+                                        <p style="margin: 0.5rem 0;"><strong>Client:</strong> <span id="displayClientName">-</span></p>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label class="form-label"><strong>Item-wise Pricing</strong></label>
-                                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                                    <div style="margin-bottom: 1.5rem;">
+                                        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">📋 Item-wise Pricing</h3>
+                                        <div style="max-height: 400px; overflow-y: auto; border: 2px solid #e0e0e0; border-radius: 8px; padding: 1rem; background: white;">
                                             <table style="width: 100%; border-collapse: collapse;" id="itemsPricingTable">
                                                 <thead>
-                                                    <tr style="border-bottom: 2px solid var(--border);">
-                                                        <th style="text-align: left; padding: 8px;">Item Name</th>
-                                                        <th style="text-align: center; padding: 8px;">Quantity</th>
-                                                        <th style="text-align: center; padding: 8px;">Price per Unit (₹)</th>
-                                                        <th style="text-align: right; padding: 8px;">Total (₹)</th>
+                                                    <tr style="border-bottom: 2px solid #333; background: #f9f9f9;">
+                                                        <th style="text-align: left; padding: 12px; font-weight: 600;">Item Name</th>
+                                                        <th style="text-align: center; padding: 12px; font-weight: 600;">Quantity</th>
+                                                        <th style="text-align: center; padding: 12px; font-weight: 600;">Price per Unit (₹)</th>
+                                                        <th style="text-align: right; padding: 12px; font-weight: 600;">Total (₹)</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="itemsPricingBody">
-                                                    <!-- Items will be populated here -->
+                                                    <tr><td colspan="4" style="text-align: center; padding: 2rem; color: #999;">Select an order to see items</td></tr>
                                                 </tbody>
                                             </table>
                                         </div>
                                     </div>
 
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 1rem 0; padding: 1rem; background: #e8f5e9; border-radius: 8px;">
-                                        <button type="button" class="btn btn-info btn-small" onclick="OMS.calculatePaymentTotal()">🧮 See Total</button>
-                                        <div id="paymentTotalDisplay" style="font-size: 1.2rem; font-weight: bold; color: #2e7d32;">
-                                            Total: ₹<span id="calculatedTotal">0.00</span>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0; padding: 1.5rem; background: #e8f5e9; border-radius: 8px;">
+                                        <button type="button" class="btn btn-info btn-small" onclick="OMS.calculatePaymentTotal()">🧮 Calculate Total</button>
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #2e7d32;">
+                                            Grand Total: ₹<span id="calculatedTotal">0.00</span>
                                         </div>
                                     </div>
 
-                                    <div class="form-row">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                                         <div class="form-group">
                                             <label class="form-label required">Payment Date</label>
-                                            <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required>
+                                            <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required style="width: 100%; padding: 0.75rem;">
                                         </div>
                                         <div class="form-group">
                                             <label class="form-label required">Payment Method</label>
-                                            <select id="paymentMethod" class="form-select" required>
+                                            <select id="paymentMethod" class="form-select" required style="width: 100%; padding: 0.75rem;">
                                                 <option value="Cash">Cash</option>
                                                 <option value="UPI">UPI</option>
                                                 <option value="Bank Transfer">Bank Transfer</option>
@@ -11628,21 +11635,22 @@ convertToQuotationDateFormat(dateStr) {
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="form-row">
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                                         <div class="form-group">
                                             <label class="form-label">Transaction ID</label>
-                                            <input type="text" id="paymentTransactionId" class="form-input">
+                                            <input type="text" id="paymentTransactionId" class="form-input" style="width: 100%; padding: 0.75rem;">
                                         </div>
                                         <div class="form-group">
                                             <label class="form-label">Notes</label>
-                                            <textarea id="paymentNotes" class="form-textarea" rows="2"></textarea>
+                                            <textarea id="paymentNotes" class="form-textarea" rows="2" style="width: 100%; padding: 0.75rem;"></textarea>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="btn-group">
-                                    <button type="submit" class="btn btn-success">💾 Save Payment</button>
+                                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
                                     <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('paymentModal')">Cancel</button>
+                                    <button type="submit" class="btn btn-success">💾 Save Payment</button>
                                 </div>
                             </form>
                         </div>
@@ -11650,24 +11658,39 @@ convertToQuotationDateFormat(dateStr) {
                 `;
 
                 document.getElementById('modalsContainer').innerHTML = modalHTML;
+                console.log('✅ Payment modal created and displayed');
             },
 
             loadOrderItemsForPayment() {
+                console.log('🔍 loadOrderItemsForPayment called');
                 const orderId = Utils.get('paymentOrderId');
+                console.log('Selected Order ID:', orderId);
+
                 if (!orderId) {
-                    document.getElementById('orderItemsContainer').style.display = 'none';
+                    const container = document.getElementById('orderItemsContainer');
+                    if (container) container.style.display = 'none';
+                    console.log('⚠️ No order selected');
                     return;
                 }
 
                 const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+                console.log('Found order:', order ? order.orderId : 'NOT FOUND');
+
                 if (!order) {
-                    document.getElementById('orderItemsContainer').style.display = 'none';
+                    const container = document.getElementById('orderItemsContainer');
+                    if (container) container.style.display = 'none';
+                    console.log('❌ Order not found in data.orders');
                     return;
                 }
 
                 // Show order details
-                document.getElementById('displayOrderId').textContent = order.orderId || 'Pending';
-                document.getElementById('displayClientName').textContent = order.clientName || 'N/A';
+                const displayOrderId = document.getElementById('displayOrderId');
+                const displayClientName = document.getElementById('displayClientName');
+
+                if (displayOrderId) displayOrderId.textContent = order.orderId || 'Pending';
+                if (displayClientName) displayClientName.textContent = order.clientName || 'N/A';
+
+                console.log('✅ Order details populated');
 
                 // Get all items from order
                 let allItems = [];
@@ -11732,11 +11755,31 @@ convertToQuotationDateFormat(dateStr) {
                     </tr>
                 `).join('');
 
-                document.getElementById('itemsPricingBody').innerHTML = itemsHTML;
-                document.getElementById('orderItemsContainer').style.display = 'block';
+                const itemsPricingBody = document.getElementById('itemsPricingBody');
+                const orderItemsContainer = document.getElementById('orderItemsContainer');
+                const calculatedTotal = document.getElementById('calculatedTotal');
 
-                // Reset total
-                document.getElementById('calculatedTotal').textContent = '0.00';
+                if (itemsPricingBody) {
+                    itemsPricingBody.innerHTML = itemsHTML;
+                    console.log(`✅ Populated ${allItems.length} items in table`);
+                } else {
+                    console.error('❌ itemsPricingBody element not found!');
+                }
+
+                if (orderItemsContainer) {
+                    orderItemsContainer.style.display = 'block';
+                    console.log('✅ orderItemsContainer displayed');
+                } else {
+                    console.error('❌ orderItemsContainer element not found!');
+                }
+
+                if (calculatedTotal) {
+                    calculatedTotal.textContent = '0.00';
+                } else {
+                    console.error('❌ calculatedTotal element not found!');
+                }
+
+                console.log('✅✅ Payment modal fully populated and visible');
             },
 
             updateItemTotal(itemIndex) {
@@ -13427,43 +13470,36 @@ if (change.type === 'modified') {
     );
 
     if (index !== -1) {
-        // Update existing order
+        // IMPORTANT: Preserve ALL fields from Firebase including merged data and financials
         this.data.orders[index] = {
+            ...orderData, // Include ALL fields from Firebase
             orderId: orderId,
             docId: docId, // CRITICAL: Always keep docId
-            isMultiDay: orderData.isMultiDay || false,
-            startDate: orderData.startDate || null,
-            endDate: orderData.endDate || null,
-            dayWiseData: orderData.dayWiseData || [],
-            date: orderData.isMultiDay ? '' : (Utils.convertDateFormat(customer.dates) || ''),
-            readyTime: customer.timeSlot || '',
-            clientName: customer.name || '',
-            contact: customer.phone || '',
-            venue: customer.venue || '',
-            eventType: orderData.functionType || customer.functionType || '',
-            transport: orderData.transport || '',
-            driverName: orderData.driverName || '',
-            operator: orderData.operator || '',
-            helper: orderData.helper || '',
-            status: orderData.status || 'Confirmed',
-            notes: orderData.notes || '',
-            items: (orderData.items || []).map(item => ({
-                name: item.name || '',
-                quantity: item.qty || 0,
-                remarks: item.desc || '',
-                price: item.price || 0
-            })),
-            createdAt: orderData.createdAt || new Date().toISOString(),
-            totalAmount: orderData.totalAmount || 0
+            // Legacy field mappings for backwards compatibility
+            date: orderData.date || (orderData.isMultiDay ? '' : (Utils.convertDateFormat(customer.dates) || '')),
+            readyTime: orderData.readyTime || customer.timeSlot || '',
+            clientName: orderData.clientName || customer.name || '',
+            contact: orderData.contact || customer.phone || '',
+            venue: orderData.venue || customer.venue || '',
+            eventType: orderData.eventType || orderData.functionType || customer.functionType || ''
         };
 
         this.saveToStorage(); // Save to local storage
         this.updateAllDisplays();
-        // Update dashboard statistics in real-time
+
+        // Force update all tabs in real-time
         if (this.currentTab === 'dashboard') {
             this.renderDashboard();
+        } else if (this.currentTab === 'history') {
+            this.renderHistory();
+        } else if (this.currentTab === 'calendar') {
+            this.renderCalendarTab();
+        } else if (this.currentTab === 'financials') {
+            this.renderFinancials();
         }
-        this.showToast(`✏️ Order updated: ${this.data.orders[index].clientName}`, 'success');
+
+        console.log('✅ Real-time update applied successfully');
+        this.showToast(`✏️ Order updated: ${this.data.orders[index].clientName}`, 'info', 3000);
     } else {
         // FIXED: Check deletedOrders by docId AND orderId
         const wasDeleted = this.data.deletedOrders.some(o =>
