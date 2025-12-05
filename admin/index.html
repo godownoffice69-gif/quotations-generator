@@ -1033,7 +1033,8 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Event Type</label>
-                                <input type="text" id="eventType" class="form-input">
+                                <input type="text" id="eventType" class="form-input" list="eventsDatalist" placeholder="Select or type event">
+                                <datalist id="eventsDatalist"></datalist>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Transport</label>
@@ -3255,6 +3256,13 @@ const OMS = {
                 payments: [],
                 expenses: [],
                 trackingData: [],
+                eventsList: [
+                    'Haldi', 'Mehendi', 'Barat', 'Carnival', 'Varmala', 'Sangeet',
+                    'Entry of groom', 'Entry of Bride', 'Entry of Couple', 'Bride Welcome',
+                    'Surprise Barat', 'Reception', 'Wedding', 'Mameru', 'Gotreju', 'Sufi Night',
+                    'Birthday', 'Party', 'New Year Party', 'Anniversary', 'Shobha yatra',
+                    'Ganesh Agman', 'Ganesh Visarjan'
+                ],
                 settings: {
                     printFontSize: 26,
                     printBgColor: '#ffffff',
@@ -3339,6 +3347,7 @@ const OMS = {
     await this.getCurrentUser();
 
     await this.loadFromStorage();
+    await this.loadEventsListFromFirestore();
     await this.loadTrackingFromFirestore();
     this.setupRealtimeListeners();
     this.setupEventDelegation();
@@ -3628,8 +3637,8 @@ const OMS = {
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">${this.t('functionType')}</label>
-                        <input type="text" id="${functionId}Type" class="form-input"
-                               placeholder="${this.t('enterFunctionType')}"
+                        <input type="text" id="${functionId}Type" class="form-input" list="eventsDatalist"
+                               placeholder="Select or type event"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'functionType', this.value)">
                     </div>
                     <div class="form-group">
@@ -5078,10 +5087,13 @@ if (localIndex !== -1) {
         this.showToast('Order updated! ✏️');
     }
 
+    // Save new custom events to the list
+    await this.addCustomEventsToList(orderData);
+
     // Clear editing flags
     this.editingOrderId = null;
     this.editingDocId = null;
-    
+
 } else {
             // CREATE new order
             console.log('🆕 Creating new order');
@@ -5149,6 +5161,10 @@ if (!localExists) {
 
                 this.showToast(`Order ${displayId} saved to Firestore! 🆕`);
                 this.refreshOrderId();
+
+                // Save new custom events to the list
+                await this.addCustomEventsToList(orderData);
+
                 this.saveToStorage();
                 this.updateAllDisplays();
                 localStorage.removeItem('oms_draft');
@@ -5158,6 +5174,74 @@ if (!localExists) {
         console.error('❌ Error saving to Firestore:', error);
         this.showToast('Error saving order: ' + error.message, 'error');
     }
+},
+
+async addCustomEventsToList(orderData) {
+    try {
+        const newEvents = new Set();
+
+        // Collect event from single-day order
+        if (!orderData.isMultiDay && orderData.eventType && orderData.eventType.trim()) {
+            const event = orderData.eventType.trim();
+            if (!this.data.eventsList.includes(event)) {
+                newEvents.add(event);
+            }
+        }
+
+        // Collect events from multi-day order functions
+        if (orderData.isMultiDay && orderData.dayWiseData) {
+            orderData.dayWiseData.forEach(day => {
+                if (day.functions) {
+                    day.functions.forEach(func => {
+                        if (func.functionType && func.functionType.trim()) {
+                            const event = func.functionType.trim();
+                            if (!this.data.eventsList.includes(event)) {
+                                newEvents.add(event);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // Add new events to the list
+        if (newEvents.size > 0) {
+            newEvents.forEach(event => {
+                this.data.eventsList.push(event);
+            });
+
+            // Sort alphabetically
+            this.data.eventsList.sort();
+
+            // Save to Firestore
+            await db.collection('settings').doc('eventsList').set({
+                events: this.data.eventsList,
+                updatedAt: new Date().toISOString()
+            });
+
+            // Refresh the datalist
+            this.populateEventsDatalist();
+
+            console.log('✅ Added new custom events:', Array.from(newEvents));
+        }
+    } catch (error) {
+        console.error('Error saving custom events:', error);
+    }
+},
+
+populateEventsDatalist() {
+    const datalist = document.getElementById('eventsDatalist');
+    if (!datalist) return;
+
+    // Clear existing options
+    datalist.innerHTML = '';
+
+    // Add all events as options
+    this.data.eventsList.forEach(event => {
+        const option = document.createElement('option');
+        option.value = event;
+        datalist.appendChild(option);
+    });
 },
 
 // Automatic Inventory Deduction
@@ -7726,7 +7810,10 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'analytics') this.renderAnalytics();
                     else if (tabName === 'financials') this.renderFinancials();
                     else if (tabName === 'settings') this.renderSettings();
-                    else if (tabName === 'orders') this.initItemSearch();
+                    else if (tabName === 'orders') {
+                        this.initItemSearch();
+                        this.populateEventsDatalist();
+                    }
                 }, 50);
             },
 
@@ -12548,6 +12635,40 @@ async loadTrackingFromFirestore() {
         }
 
         this.data.trackingData = [];
+    }
+},
+
+async loadEventsListFromFirestore() {
+    try {
+        console.log('📋 Loading events list from Firestore...');
+
+        // Check if user is authenticated
+        if (!auth.currentUser) {
+            console.warn('⚠️ Not authenticated yet - using default events list');
+            return;
+        }
+
+        const eventsDoc = await db.collection('settings').doc('eventsList').get();
+
+        if (eventsDoc.exists) {
+            const data = eventsDoc.data();
+            if (data.events && Array.isArray(data.events)) {
+                this.data.eventsList = data.events;
+                console.log(`✅ Loaded ${this.data.eventsList.length} events from Firestore`);
+            }
+        } else {
+            console.log('📝 No events list in Firestore yet - using default list');
+            // Save the default list to Firestore
+            await db.collection('settings').doc('eventsList').set({
+                events: this.data.eventsList,
+                createdAt: new Date().toISOString()
+            });
+            console.log('✅ Saved default events list to Firestore');
+        }
+
+    } catch (error) {
+        console.error('❌ Error loading events list:', error);
+        console.warn('⚠️ Using default events list');
     }
 },
 
