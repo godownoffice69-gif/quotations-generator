@@ -5229,17 +5229,33 @@ async addCustomEventsToList(orderData) {
 },
 
 populateEventsDatalist() {
+    console.log('🔍 populateEventsDatalist called');
+
     const eventTypeSelect = document.getElementById('eventType');
     if (!eventTypeSelect) {
-        console.warn('eventType element not found - will populate when orders tab is opened');
+        console.warn('⚠️ eventType element not found - will populate when orders tab is opened');
         return;
     }
 
     // Check if eventsList is defined
     if (!this.data.eventsList || !Array.isArray(this.data.eventsList)) {
-        console.warn('eventsList not initialized yet');
-        return;
+        console.error('❌ eventsList not initialized!', {
+            exists: !!this.data.eventsList,
+            isArray: Array.isArray(this.data.eventsList),
+            length: this.data.eventsList?.length
+        });
+        // Try to initialize with default list
+        this.data.eventsList = [
+            'Haldi', 'Mehendi', 'Barat', 'Carnival', 'Varmala', 'Sangeet',
+            'Entry of groom', 'Entry of Bride', 'Entry of Couple', 'Bride Welcome',
+            'Surprise Barat', 'Reception', 'Wedding', 'Mameru', 'Gotreju', 'Sufi Night',
+            'Birthday', 'Party', 'New Year Party', 'Anniversary', 'Shobha yatra',
+            'Ganesh Agman', 'Ganesh Visarjan'
+        ];
+        console.log('✅ Initialized default events list with', this.data.eventsList.length, 'events');
     }
+
+    console.log(`📋 Populating dropdown with ${this.data.eventsList.length} events`);
 
     // Get current value to preserve selection
     const currentValue = eventTypeSelect.value;
@@ -5248,11 +5264,14 @@ populateEventsDatalist() {
     eventTypeSelect.innerHTML = '<option value="">Select Event Type</option>';
 
     // Add all events as options
-    this.data.eventsList.forEach(event => {
+    this.data.eventsList.forEach((event, index) => {
         const option = document.createElement('option');
         option.value = event;
         option.textContent = event;
         eventTypeSelect.appendChild(option);
+        if (index < 3) {
+            console.log(`  ✓ Added option: ${event}`);
+        }
     });
 
     // Restore previous selection if it exists
@@ -5260,7 +5279,8 @@ populateEventsDatalist() {
         eventTypeSelect.value = currentValue;
     }
 
-    console.log(`✅ Populated events dropdown with ${this.data.eventsList.length} options`);
+    console.log(`✅✅ Events dropdown fully populated! Total options: ${eventTypeSelect.options.length}`);
+    console.log(`   First 5 options:`, Array.from(eventTypeSelect.options).slice(0, 5).map(o => o.value));
 },
 
 // Automatic Inventory Deduction
@@ -7838,7 +7858,12 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'settings') this.renderSettings();
                     else if (tabName === 'orders') {
                         this.initItemSearch();
+                        // Always populate events dropdown when orders tab is opened
+                        console.log('📋 Orders tab opened - populating events dropdown');
                         this.populateEventsDatalist();
+                        // Also populate driver and operator dropdowns
+                        this.populateDriverDropdowns();
+                        this.populateOperatorDropdowns();
                     }
                 }, 50);
             },
@@ -12721,6 +12746,19 @@ async loadEventsListFromFirestore() {
     try {
         console.log('📋 Loading events list from Firestore...');
 
+        // Ensure eventsList has a default value if not already set
+        if (!this.data.eventsList || !Array.isArray(this.data.eventsList) || this.data.eventsList.length === 0) {
+            console.log('📝 Initializing default events list');
+            this.data.eventsList = [
+                'Haldi', 'Mehendi', 'Barat', 'Carnival', 'Varmala', 'Sangeet',
+                'Entry of groom', 'Entry of Bride', 'Entry of Couple', 'Bride Welcome',
+                'Surprise Barat', 'Reception', 'Wedding', 'Mameru', 'Gotreju', 'Sufi Night',
+                'Birthday', 'Party', 'New Year Party', 'Anniversary', 'Shobha yatra',
+                'Ganesh Agman', 'Ganesh Visarjan'
+            ];
+            console.log('✅ Default events list initialized with', this.data.eventsList.length, 'events');
+        }
+
         // Check if user is authenticated
         if (!auth.currentUser) {
             console.warn('⚠️ Not authenticated yet - using default events list');
@@ -12736,12 +12774,7 @@ async loadEventsListFromFirestore() {
                 console.log(`✅ Loaded ${this.data.eventsList.length} events from Firestore`);
             }
         } else {
-            console.log('📝 No events list in Firestore yet - using default list');
-            // Ensure eventsList is defined before saving
-            if (!this.data.eventsList || !Array.isArray(this.data.eventsList) || this.data.eventsList.length === 0) {
-                console.warn('⚠️ eventsList not initialized, skipping Firestore save');
-                return;
-            }
+            console.log('📝 No events list in Firestore yet - saving default list');
             // Save the default list to Firestore
             await db.collection('settings').doc('eventsList').set({
                 events: this.data.eventsList,
@@ -12753,6 +12786,16 @@ async loadEventsListFromFirestore() {
     } catch (error) {
         console.error('❌ Error loading events list:', error);
         console.warn('⚠️ Using default events list');
+        // Ensure default list is available even on error
+        if (!this.data.eventsList || !Array.isArray(this.data.eventsList) || this.data.eventsList.length === 0) {
+            this.data.eventsList = [
+                'Haldi', 'Mehendi', 'Barat', 'Carnival', 'Varmala', 'Sangeet',
+                'Entry of groom', 'Entry of Bride', 'Entry of Couple', 'Bride Welcome',
+                'Surprise Barat', 'Reception', 'Wedding', 'Mameru', 'Gotreju', 'Sufi Night',
+                'Birthday', 'Party', 'New Year Party', 'Anniversary', 'Shobha yatra',
+                'Ganesh Agman', 'Ganesh Visarjan'
+            ];
+        }
     }
 },
 
