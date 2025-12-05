@@ -5740,6 +5740,9 @@ convertToQuotationDateFormat(dateStr) {
             });
 
             this.updateOrderItemsTable();
+
+            // Show original orders cards if this is a merged order
+            this.renderOriginalOrdersCards(order);
         }
 
         // Trigger status change to show/hide order ID field
@@ -5752,6 +5755,225 @@ convertToQuotationDateFormat(dateStr) {
         }, 100);
             },
 
+            // Render editable cards for original orders in a merged order
+            renderOriginalOrdersCards(order) {
+                const container = document.getElementById('originalOrdersContainer');
+
+                // If container doesn't exist yet, create it
+                if (!container) {
+                    const orderForm = document.getElementById('orderForm');
+                    if (orderForm) {
+                        const newContainer = document.createElement('div');
+                        newContainer.id = 'originalOrdersContainer';
+                        newContainer.style.marginTop = '2rem';
+                        orderForm.parentNode.insertBefore(newContainer, orderForm.nextSibling);
+                    }
+                }
+
+                const originalOrdersContainer = document.getElementById('originalOrdersContainer');
+                if (!originalOrdersContainer) return;
+
+                // Check if this is a merged order
+                if (!order.mergedFrom || order.mergedFrom.length === 0) {
+                    originalOrdersContainer.innerHTML = '';
+                    return;
+                }
+
+                console.log('🔗 Rendering original orders cards for merged order:', order.orderId);
+
+                // Generate HTML for original orders cards
+                const cardsHTML = `
+                    <div class="card" style="margin-top: 2rem; background: #f9f9f9; border: 2px solid #667eea;">
+                        <div class="card-header" style="background: #667eea; color: white; padding: 1rem;">
+                            <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                🔗 ORIGINAL ORDERS (${order.mergedFrom.length})
+                            </h3>
+                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">
+                                You can edit each original order's details below and save changes individually
+                            </p>
+                        </div>
+                        <div style="padding: 1.5rem;">
+                            ${order.mergedFrom.map((originalOrder, index) => this.renderOriginalOrderCard(originalOrder, index)).join('')}
+                        </div>
+                    </div>
+                `;
+
+                originalOrdersContainer.innerHTML = cardsHTML;
+            },
+
+            renderOriginalOrderCard(originalOrderData, index) {
+                const order = originalOrderData.orderData;
+                const cardId = `originalOrder_${index}`;
+
+                // Get items list
+                const itemsList = order.items && order.items.length > 0
+                    ? order.items.map(item => `${item.name} x${item.quantity || item.qty || 0}`).join(', ')
+                    : 'No items';
+
+                return `
+                    <div class="card" style="margin-bottom: 1.5rem; background: white; border: 1px solid #ddd;" id="${cardId}">
+                        <div style="background: #f5f5f5; padding: 1rem; border-bottom: 2px solid #ddd;">
+                            <h4 style="margin: 0; color: #667eea; display: flex; justify-content: space-between; align-items: center;">
+                                📋 Order: ${order.orderId}
+                                <button type="button" class="btn btn-small"
+                                        style="background: #667eea; color: white;"
+                                        onclick="OMS.toggleOriginalOrderEdit('${cardId}')">
+                                    ✏️ Edit
+                                </button>
+                            </h4>
+                        </div>
+
+                        <!-- View Mode -->
+                        <div id="${cardId}_view" style="padding: 1.5rem;">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                                <div><strong>📅 Date:</strong> ${order.date || 'N/A'}</div>
+                                <div><strong>⏰ Ready Time:</strong> ${order.readyTime || 'N/A'}</div>
+                                <div><strong>👤 Client:</strong> ${order.clientName || 'N/A'}</div>
+                                <div><strong>📞 Contact:</strong> ${order.contact || 'N/A'}</div>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <strong>📍 Venue:</strong> ${order.venue || 'N/A'}
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                                <div><strong>🚗 Transport:</strong> ${order.transport || 'N/A'}</div>
+                                <div><strong>🚘 Driver:</strong> ${order.driverName || 'N/A'}</div>
+                                <div><strong>🎬 Operator:</strong> ${order.operator || 'N/A'}</div>
+                                <div><strong>👷 Helper:</strong> ${order.helper || 'N/A'}</div>
+                            </div>
+                            <div style="padding: 1rem; background: #f9f9f9; border-radius: 4px;">
+                                <strong>📦 Items:</strong> ${itemsList}
+                            </div>
+                            ${order.notes ? `<div style="margin-top: 1rem;"><strong>📝 Notes:</strong><br>${order.notes}</div>` : ''}
+                        </div>
+
+                        <!-- Edit Mode (Hidden by default) -->
+                        <div id="${cardId}_edit" style="display: none; padding: 1.5rem; background: #fefefe;">
+                            <form onsubmit="OMS.saveOriginalOrder(event, ${index}, '${order.docId}')">
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                                    <div class="form-group">
+                                        <label class="form-label">📅 Date</label>
+                                        <input type="date" class="form-input" id="${cardId}_date" value="${order.date || ''}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">⏰ Ready Time</label>
+                                        <input type="text" class="form-input" id="${cardId}_readyTime" value="${order.readyTime || ''}" placeholder="e.g., 10:00 AM">
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 1rem;">
+                                    <label class="form-label">📍 Venue</label>
+                                    <input type="text" class="form-input" id="${cardId}_venue" value="${order.venue || ''}" required>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                                    <div class="form-group">
+                                        <label class="form-label">🚗 Transport</label>
+                                        <input type="text" class="form-input" id="${cardId}_transport" value="${order.transport || ''}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">🚘 Driver</label>
+                                        <input type="text" class="form-input" id="${cardId}_driverName" value="${order.driverName || ''}">
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                                    <div class="form-group">
+                                        <label class="form-label">🎬 Operator</label>
+                                        <input type="text" class="form-input" id="${cardId}_operator" value="${order.operator || ''}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">👷 Helper</label>
+                                        <input type="text" class="form-input" id="${cardId}_helper" value="${order.helper || ''}">
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 1rem;">
+                                    <label class="form-label">📝 Notes</label>
+                                    <textarea class="form-textarea" id="${cardId}_notes" rows="3">${order.notes || ''}</textarea>
+                                </div>
+
+                                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                                    <button type="button" class="btn btn-secondary" onclick="OMS.toggleOriginalOrderEdit('${cardId}')">
+                                        Cancel
+                                    </button>
+                                    <button type="submit" class="btn btn-success">
+                                        💾 Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            },
+
+            toggleOriginalOrderEdit(cardId) {
+                const viewMode = document.getElementById(`${cardId}_view`);
+                const editMode = document.getElementById(`${cardId}_edit`);
+
+                if (viewMode && editMode) {
+                    const isEditing = editMode.style.display !== 'none';
+                    viewMode.style.display = isEditing ? 'block' : 'none';
+                    editMode.style.display = isEditing ? 'none' : 'block';
+                }
+            },
+
+            async saveOriginalOrder(event, index, docId) {
+                event.preventDefault();
+                const cardId = `originalOrder_${index}`;
+
+                try {
+                    // Collect form data
+                    const updatedData = {
+                        date: Utils.get(`${cardId}_date`),
+                        readyTime: Utils.get(`${cardId}_readyTime`),
+                        venue: Utils.get(`${cardId}_venue`),
+                        transport: Utils.get(`${cardId}_transport`),
+                        driverName: Utils.get(`${cardId}_driverName`),
+                        operator: Utils.get(`${cardId}_operator`),
+                        helper: Utils.get(`${cardId}_helper`),
+                        notes: Utils.get(`${cardId}_notes`)
+                    };
+
+                    console.log('💾 Saving original order changes:', docId, updatedData);
+
+                    // Get the full order from Firestore
+                    const orderDoc = await db.collection('orders').doc(docId).get();
+                    if (!orderDoc.exists) {
+                        throw new Error('Order not found in Firestore');
+                    }
+
+                    const fullOrder = orderDoc.data();
+
+                    // Update with new data
+                    const updatedOrder = {
+                        ...fullOrder,
+                        ...updatedData,
+                        updatedAt: new Date().toISOString()
+                    };
+
+                    // Save to Firestore
+                    await db.collection('orders').doc(docId).update(updatedOrder);
+
+                    this.showToast(`✅ Order updated successfully!`, 'success');
+
+                    // Toggle back to view mode
+                    this.toggleOriginalOrderEdit(cardId);
+
+                    // Reload orders to refresh display
+                    await this.loadOrdersFromFirestore();
+
+                    // Reload the current merged order
+                    const currentOrder = this.data.orders.find(o => o.docId === this.editingDocId);
+                    if (currentOrder) {
+                        this.loadOrderToForm(currentOrder);
+                    }
+
+                } catch (error) {
+                    console.error('❌ Error saving original order:', error);
+                    this.showToast(`Error: ${error.message}`, 'error');
+                }
+            },
+
             clearForm() {
                 this.editingOrderId = null;  // Clear editing flags
                 this.editingDocId = null;
@@ -5760,6 +5982,12 @@ convertToQuotationDateFormat(dateStr) {
                 document.getElementById('orderForm').reset();
                 this.currentOrderItems = [];
                 this.updateOrderItemsTable();
+
+                // Clear original orders cards
+                const originalOrdersContainer = document.getElementById('originalOrdersContainer');
+                if (originalOrdersContainer) {
+                    originalOrdersContainer.innerHTML = '';
+                }
                 this.refreshOrderId();
                 Utils.set('orderDate', Utils.toDateString(new Date()));
                 document.getElementById('customTransportGroup').classList.add('hidden');
