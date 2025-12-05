@@ -10565,11 +10565,14 @@ convertToQuotationDateFormat(dateStr) {
     `;
 },
 
-            renderFinancials() {
+            async renderFinancials() {
     const container = document.getElementById('financials');
     const orders = this.data.orders || [];
     const expenses = this.data.expenses || [];
     const payments = this.data.payments || [];
+
+    // Check if user can view financials
+    const canManageFinancials = await this.canViewFinancials();
 
     // Initialize default date range (current month)
     const now = new Date();
@@ -10768,8 +10771,10 @@ convertToQuotationDateFormat(dateStr) {
 
             <!-- Quick Actions -->
             <div class="btn-group">
-                <button class="btn btn-success" onclick="OMS.showAddPaymentModal()">💵 Add Payment</button>
-                <button class="btn btn-warning" onclick="OMS.showAddExpenseModal()">💸 Add Expense</button>
+                ${canManageFinancials ? `
+                    <button class="btn btn-success" onclick="OMS.showAddPaymentModal()">💵 Add Payment</button>
+                    <button class="btn btn-warning" onclick="OMS.showAddExpenseModal()">💸 Add Expense</button>
+                ` : ''}
                 <button class="btn btn-info" onclick="OMS.exportFinancialReport()">📊 Export Report</button>
                 <button class="btn btn-primary" onclick="OMS.showMonthlyComparison()">📈 Monthly Comparison</button>
             </div>
@@ -10809,8 +10814,10 @@ convertToQuotationDateFormat(dateStr) {
                                     <td>${p.paymentMethod || 'N/A'}</td>
                                     <td>${p.transactionId || 'N/A'}</td>
                                     <td>
-                                        <button class="btn btn-info btn-small" onclick="OMS.editPayment('${p.id}')">Edit</button>
-                                        <button class="btn btn-danger btn-small" onclick="OMS.deletePayment('${p.id}')">Delete</button>
+                                        ${canManageFinancials ? `
+                                            <button class="btn btn-info btn-small" onclick="OMS.editPayment('${p.id}')">Edit</button>
+                                            <button class="btn btn-danger btn-small" onclick="OMS.deletePayment('${p.id}')">Delete</button>
+                                        ` : '<span style="color: var(--text-gray); font-style: italic;">View Only</span>'}
                                     </td>
                                 </tr>
                                 ${hasBreakdown ? `
@@ -10883,8 +10890,10 @@ convertToQuotationDateFormat(dateStr) {
                                     <td>${e.vendor || 'N/A'}</td>
                                     <td>${e.paymentMethod || 'N/A'}</td>
                                     <td>
-                                        <button class="btn btn-info btn-small" onclick="OMS.editExpense('${e.id}')">Edit</button>
-                                        <button class="btn btn-danger btn-small" onclick="OMS.deleteExpense('${e.id}')">Delete</button>
+                                        ${canManageFinancials ? `
+                                            <button class="btn btn-info btn-small" onclick="OMS.editExpense('${e.id}')">Edit</button>
+                                            <button class="btn btn-danger btn-small" onclick="OMS.deleteExpense('${e.id}')">Delete</button>
+                                        ` : '<span style="color: var(--text-gray); font-style: italic;">View Only</span>'}
                                     </td>
                                 </tr>
                             `).join('')}
