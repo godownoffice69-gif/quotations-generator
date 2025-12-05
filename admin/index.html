@@ -1028,7 +1028,8 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Event Type</label>
-                                <input type="text" id="eventType" class="form-input">
+                                <input type="text" id="eventType" class="form-input" list="eventsDatalist" placeholder="Select or type event">
+                                <datalist id="eventsDatalist"></datalist>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Transport</label>
@@ -3250,6 +3251,13 @@ const OMS = {
                 payments: [],
                 expenses: [],
                 trackingData: [],
+                eventsList: [
+                    'Haldi', 'Mehendi', 'Barat', 'Carnival', 'Varmala', 'Sangeet',
+                    'Entry of groom', 'Entry of Bride', 'Entry of Couple', 'Bride Welcome',
+                    'Surprise Barat', 'Reception', 'Wedding', 'Mameru', 'Gotreju', 'Sufi Night',
+                    'Birthday', 'Party', 'New Year Party', 'Anniversary', 'Shobha yatra',
+                    'Ganesh Agman', 'Ganesh Visarjan'
+                ],
                 settings: {
                     printFontSize: 26,
                     printBgColor: '#ffffff',
@@ -3334,6 +3342,7 @@ const OMS = {
     await this.getCurrentUser();
 
     await this.loadFromStorage();
+    await this.loadEventsListFromFirestore();
     await this.loadTrackingFromFirestore();
     this.setupRealtimeListeners();
     this.setupEventDelegation();
@@ -3623,8 +3632,8 @@ const OMS = {
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">${this.t('functionType')}</label>
-                        <input type="text" id="${functionId}Type" class="form-input"
-                               placeholder="${this.t('enterFunctionType')}"
+                        <input type="text" id="${functionId}Type" class="form-input" list="eventsDatalist"
+                               placeholder="Select or type event"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'functionType', this.value)">
                     </div>
                     <div class="form-group">
@@ -5073,10 +5082,13 @@ if (localIndex !== -1) {
         this.showToast('Order updated! ✏️');
     }
 
+    // Save new custom events to the list
+    await this.addCustomEventsToList(orderData);
+
     // Clear editing flags
     this.editingOrderId = null;
     this.editingDocId = null;
-    
+
 } else {
             // CREATE new order
             console.log('🆕 Creating new order');
@@ -5144,6 +5156,10 @@ if (!localExists) {
 
                 this.showToast(`Order ${displayId} saved to Firestore! 🆕`);
                 this.refreshOrderId();
+
+                // Save new custom events to the list
+                await this.addCustomEventsToList(orderData);
+
                 this.saveToStorage();
                 this.updateAllDisplays();
                 localStorage.removeItem('oms_draft');
@@ -5153,6 +5169,74 @@ if (!localExists) {
         console.error('❌ Error saving to Firestore:', error);
         this.showToast('Error saving order: ' + error.message, 'error');
     }
+},
+
+async addCustomEventsToList(orderData) {
+    try {
+        const newEvents = new Set();
+
+        // Collect event from single-day order
+        if (!orderData.isMultiDay && orderData.eventType && orderData.eventType.trim()) {
+            const event = orderData.eventType.trim();
+            if (!this.data.eventsList.includes(event)) {
+                newEvents.add(event);
+            }
+        }
+
+        // Collect events from multi-day order functions
+        if (orderData.isMultiDay && orderData.dayWiseData) {
+            orderData.dayWiseData.forEach(day => {
+                if (day.functions) {
+                    day.functions.forEach(func => {
+                        if (func.functionType && func.functionType.trim()) {
+                            const event = func.functionType.trim();
+                            if (!this.data.eventsList.includes(event)) {
+                                newEvents.add(event);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // Add new events to the list
+        if (newEvents.size > 0) {
+            newEvents.forEach(event => {
+                this.data.eventsList.push(event);
+            });
+
+            // Sort alphabetically
+            this.data.eventsList.sort();
+
+            // Save to Firestore
+            await db.collection('settings').doc('eventsList').set({
+                events: this.data.eventsList,
+                updatedAt: new Date().toISOString()
+            });
+
+            // Refresh the datalist
+            this.populateEventsDatalist();
+
+            console.log('✅ Added new custom events:', Array.from(newEvents));
+        }
+    } catch (error) {
+        console.error('Error saving custom events:', error);
+    }
+},
+
+populateEventsDatalist() {
+    const datalist = document.getElementById('eventsDatalist');
+    if (!datalist) return;
+
+    // Clear existing options
+    datalist.innerHTML = '';
+
+    // Add all events as options
+    this.data.eventsList.forEach(event => {
+        const option = document.createElement('option');
+        option.value = event;
+        datalist.appendChild(option);
+    });
 },
 
 // Automatic Inventory Deduction
@@ -7721,7 +7805,10 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'analytics') this.renderAnalytics();
                     else if (tabName === 'financials') this.renderFinancials();
                     else if (tabName === 'settings') this.renderSettings();
-                    else if (tabName === 'orders') this.initItemSearch();
+                    else if (tabName === 'orders') {
+                        this.initItemSearch();
+                        this.populateEventsDatalist();
+                    }
                 }, 50);
             },
 
@@ -9886,6 +9973,7 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
                         <div class="btn-group">
                             <button class="btn btn-success" data-action="exportData">${this.t('export')}</button>
+                            <button class="btn btn-primary" id="mergeSelectedBtn" style="display: none;" onclick="OMS.showMergeModal()">🔗 Merge Selected Orders</button>
                         </div>
                         <div class="form-group" style="margin: 20px 0;">
                             <label class="form-label">🔍 Search Orders</label>
@@ -9899,8 +9987,19 @@ convertToQuotationDateFormat(dateStr) {
                 // Add search functionality
                 this.setupHistorySearch();
 
+                // Initialize selected orders array
+                this.selectedOrdersForMerge = [];
+
                 this.renderTable('historyContainer', [
-                    { key: 'orderId', label: this.t('orderId'), render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
+                    { key: 'select', label: '☑️', render: o => {
+                        const isMerged = o.mergedFrom && o.mergedFrom.length > 0;
+                        return `<input type="checkbox" class="order-select-checkbox" data-order-id="${o.docId || o.orderId}" ${isMerged ? 'disabled' : ''} onchange="OMS.toggleOrderSelection('${o.docId || o.orderId}')">`;
+                    }},
+                    { key: 'orderId', label: this.t('orderId'), render: o => {
+                        const mergeStatus = o.mergedFrom && o.mergedFrom.length > 0 ? '<span style="color: #667eea; font-weight: bold;">🔗 MERGED</span>' : '';
+                        const mergedMark = o.isMerged ? '<span style="color: #999; font-style: italic;">📎 (merged)</span>' : '';
+                        return `<span class="order-id-highlight">${o.orderId}</span> ${mergeStatus}${mergedMark}`;
+                    }},
                     { key: 'clientName', label: this.t('client') },
                     { key: 'venue', label: this.t('venue') },
                     { key: 'date', label: this.t('date'), render: o => {
@@ -9910,13 +10009,18 @@ convertToQuotationDateFormat(dateStr) {
                         return Utils.formatDate(o.date);
                     }},
                     { key: 'status', label: this.t('status'), render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${this.t(o.status.toLowerCase())}</span>` }
-                ], this.data.orders, (row) => `
-                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.docId || row.orderId}">${this.t('edit')}</button>
-                    <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
-                    <button class="btn btn-primary btn-small" onclick="OMS.addPaymentForOrder('${row.docId || row.orderId}')">💵 Payment</button>
-                    <button class="btn btn-warning btn-small" onclick="OMS.addExpenseForOrder('${row.docId || row.orderId}')">💸 Expense</button>
-                    <button class="btn btn-danger btn-small" data-action="delete" data-type="order" data-id="${row.docId || row.orderId}">${this.t('delete')}</button>
-                `);
+                ], this.data.orders, (row) => {
+                    const isMergedOrder = row.mergedFrom && row.mergedFrom.length > 0;
+                    const unmergeBtn = isMergedOrder ? `<button class="btn btn-info btn-small" onclick="OMS.unmergeOrder('${row.docId || row.orderId}')">🔓 Unmerge</button>` : '';
+                    return `
+                        <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.docId || row.orderId}">${this.t('edit')}</button>
+                        <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
+                        <button class="btn btn-primary btn-small" onclick="OMS.addPaymentForOrder('${row.docId || row.orderId}')">💵 Payment</button>
+                        <button class="btn btn-warning btn-small" onclick="OMS.addExpenseForOrder('${row.docId || row.orderId}')">💸 Expense</button>
+                        ${unmergeBtn}
+                        <button class="btn btn-danger btn-small" data-action="delete" data-type="order" data-id="${row.docId || row.orderId}">${this.t('delete')}</button>
+                    `;
+                });
             },
 
             setupHistorySearch() {
@@ -10012,6 +10116,264 @@ convertToQuotationDateFormat(dateStr) {
                         searchResults.style.display = 'none';
                     }
                 });
+            },
+
+            // ============ MERGE/UNMERGE ORDERS ============
+            toggleOrderSelection(orderId) {
+                const checkbox = document.querySelector(`.order-select-checkbox[data-order-id="${orderId}"]`);
+                if (!checkbox) return;
+
+                if (checkbox.checked) {
+                    if (!this.selectedOrdersForMerge.includes(orderId)) {
+                        this.selectedOrdersForMerge.push(orderId);
+                    }
+                } else {
+                    this.selectedOrdersForMerge = this.selectedOrdersForMerge.filter(id => id !== orderId);
+                }
+
+                // Show/hide merge button based on selection count
+                const mergeBtn = document.getElementById('mergeSelectedBtn');
+                if (mergeBtn) {
+                    mergeBtn.style.display = this.selectedOrdersForMerge.length >= 2 ? 'inline-block' : 'none';
+                    mergeBtn.textContent = `🔗 Merge Selected Orders (${this.selectedOrdersForMerge.length})`;
+                }
+            },
+
+            showMergeModal() {
+                if (this.selectedOrdersForMerge.length < 2) {
+                    alert('Please select at least 2 orders to merge');
+                    return;
+                }
+
+                // Get selected orders
+                const selectedOrders = this.selectedOrdersForMerge.map(id =>
+                    this.data.orders.find(o => (o.docId || o.orderId) === id)
+                ).filter(o => o);
+
+                if (selectedOrders.length < 2) {
+                    alert('Error: Could not find selected orders');
+                    return;
+                }
+
+                // Create modal HTML
+                const modalHTML = `
+                    <div class="modal-overlay" id="mergeModalOverlay" onclick="if(event.target === this) document.getElementById('mergeModalOverlay').remove();">
+                        <div class="modal" style="max-width: 600px;">
+                            <div class="modal-header">
+                                <h2>🔗 Merge Orders</h2>
+                            </div>
+                            <div class="modal-body">
+                                <p style="margin-bottom: 1rem; color: #666;">Select which order to keep as the base. All other orders' content will be merged into it.</p>
+
+                                <div class="form-group">
+                                    <label class="form-label">Select Base Order:</label>
+                                    <select id="mergeBaseOrder" class="form-select" onchange="OMS.updateMergeOrderId()">
+                                        ${selectedOrders.map(order => `
+                                            <option value="${order.docId || order.orderId}">
+                                                ${order.orderId} - ${order.clientName} (${order.isMultiDay ? `${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}` : Utils.formatDate(order.date)})
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Merged Order ID (editable):</label>
+                                    <input type="text" id="mergedOrderId" class="form-input" value="${selectedOrders[0].orderId}">
+                                    <small style="color: #666;">You can change the Order ID for the merged order</small>
+                                </div>
+
+                                <div style="background: #f0f0f0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                                    <h4 style="margin: 0 0 0.5rem 0;">Orders to be merged:</h4>
+                                    <ul style="margin: 0; padding-left: 1.5rem;">
+                                        ${selectedOrders.map(order => `
+                                            <li>${order.orderId} - ${order.clientName}</li>
+                                        `).join('')}
+                                    </ul>
+                                    <p style="margin-top: 0.5rem; font-size: 0.9em; color: #666;">
+                                        Original orders will be marked as "merged" and can be unmerged later.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-secondary" onclick="document.getElementById('mergeModalOverlay').remove()">Cancel</button>
+                                <button class="btn btn-primary" onclick="OMS.performMerge()">🔗 Merge Orders</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+            },
+
+            updateMergeOrderId() {
+                const baseOrderSelect = document.getElementById('mergeBaseOrder');
+                const orderIdInput = document.getElementById('mergedOrderId');
+                if (!baseOrderSelect || !orderIdInput) return;
+
+                const baseOrderId = baseOrderSelect.value;
+                const baseOrder = this.data.orders.find(o => (o.docId || o.orderId) === baseOrderId);
+                if (baseOrder) {
+                    orderIdInput.value = baseOrder.orderId;
+                }
+            },
+
+            async performMerge() {
+                const baseOrderSelect = document.getElementById('mergeBaseOrder');
+                const orderIdInput = document.getElementById('mergedOrderId');
+
+                if (!baseOrderSelect || !orderIdInput) return;
+
+                const baseOrderId = baseOrderSelect.value;
+                const newOrderId = orderIdInput.value.trim();
+
+                if (!newOrderId) {
+                    alert('Please enter an Order ID for the merged order');
+                    return;
+                }
+
+                try {
+                    // Get all selected orders
+                    const ordersToMerge = this.selectedOrdersForMerge.map(id =>
+                        this.data.orders.find(o => (o.docId || o.orderId) === id)
+                    ).filter(o => o);
+
+                    // Get base order
+                    const baseOrder = ordersToMerge.find(o => (o.docId || o.orderId) === baseOrderId);
+                    const otherOrders = ordersToMerge.filter(o => (o.docId || o.orderId) !== baseOrderId);
+
+                    if (!baseOrder) {
+                        alert('Error: Base order not found');
+                        return;
+                    }
+
+                    // Store original orders data for unmerge
+                    const mergedFromData = ordersToMerge.map(order => ({
+                        docId: order.docId,
+                        orderId: order.orderId,
+                        orderData: JSON.parse(JSON.stringify(order)) // Deep copy
+                    }));
+
+                    // Create merged order by combining content
+                    const mergedOrder = JSON.parse(JSON.stringify(baseOrder)); // Deep copy
+                    mergedOrder.orderId = newOrderId;
+                    mergedOrder.mergedFrom = mergedFromData;
+                    mergedOrder.mergedAt = new Date().toISOString();
+
+                    // Merge items from other orders (for single-day orders)
+                    if (!mergedOrder.isMultiDay) {
+                        otherOrders.forEach(order => {
+                            if (!order.isMultiDay && order.items && order.items.length > 0) {
+                                mergedOrder.items = [...(mergedOrder.items || []), ...order.items];
+                            }
+                        });
+                    }
+
+                    // Merge day-wise data for multi-day orders
+                    if (mergedOrder.isMultiDay) {
+                        otherOrders.forEach(order => {
+                            if (order.isMultiDay && order.dayWiseData) {
+                                // Merge dayWiseData intelligently
+                                order.dayWiseData.forEach(dayData => {
+                                    const existingDayIndex = mergedOrder.dayWiseData.findIndex(d => d.date === dayData.date);
+                                    if (existingDayIndex >= 0) {
+                                        // Merge functions for same date
+                                        mergedOrder.dayWiseData[existingDayIndex].functions = [
+                                            ...(mergedOrder.dayWiseData[existingDayIndex].functions || []),
+                                            ...(dayData.functions || [])
+                                        ];
+                                    } else {
+                                        // Add new date
+                                        mergedOrder.dayWiseData.push(dayData);
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    // Merge notes
+                    const allNotes = ordersToMerge.map(o => o.notes).filter(n => n && n.trim()).join('\n---\n');
+                    if (allNotes) {
+                        mergedOrder.notes = allNotes;
+                    }
+
+                    // Update merged order in Firebase
+                    await this.updateOrderInFirebase(mergedOrder, baseOrder.docId);
+
+                    // Mark other orders as merged
+                    for (const order of otherOrders) {
+                        const updatedOrder = { ...order, isMerged: true, mergedInto: newOrderId };
+                        await this.updateOrderInFirebase(updatedOrder, order.docId);
+                    }
+
+                    // Reload data
+                    await this.loadData();
+
+                    // Close modal
+                    document.getElementById('mergeModalOverlay')?.remove();
+
+                    // Clear selection
+                    this.selectedOrdersForMerge = [];
+
+                    // Refresh history view
+                    this.renderHistory();
+
+                    alert(`✅ Successfully merged ${ordersToMerge.length} orders into ${newOrderId}`);
+
+                } catch (error) {
+                    console.error('Error merging orders:', error);
+                    alert('Error merging orders: ' + error.message);
+                }
+            },
+
+            async unmergeOrder(orderId) {
+                if (!confirm('Are you sure you want to unmerge this order? This will restore all original separate orders.')) {
+                    return;
+                }
+
+                try {
+                    // Find the merged order
+                    const mergedOrder = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+
+                    if (!mergedOrder || !mergedOrder.mergedFrom) {
+                        alert('Error: This is not a merged order');
+                        return;
+                    }
+
+                    // Restore all original orders
+                    for (const originalData of mergedOrder.mergedFrom) {
+                        const restoredOrder = originalData.orderData;
+                        delete restoredOrder.isMerged;
+                        delete restoredOrder.mergedInto;
+
+                        await this.updateOrderInFirebase(restoredOrder, originalData.docId);
+                    }
+
+                    // Delete the merged order
+                    await this.deleteOrder(mergedOrder.docId || mergedOrder.orderId);
+
+                    // Reload data
+                    await this.loadData();
+
+                    // Refresh history view
+                    this.renderHistory();
+
+                    alert(`✅ Successfully unmerged order. ${mergedOrder.mergedFrom.length} original orders restored.`);
+
+                } catch (error) {
+                    console.error('Error unmerging order:', error);
+                    alert('Error unmerging order: ' + error.message);
+                }
+            },
+
+            async updateOrderInFirebase(orderData, docId) {
+                if (!docId) {
+                    throw new Error('Document ID is required for update');
+                }
+
+                const orderRef = firebase.firestore().collection('orders').doc(docId);
+                await orderRef.update(orderData);
+
+                console.log(`Order ${docId} updated in Firebase`);
             },
 
             renderAnalytics() {
@@ -10198,11 +10560,14 @@ convertToQuotationDateFormat(dateStr) {
     `;
 },
 
-            renderFinancials() {
+            async renderFinancials() {
     const container = document.getElementById('financials');
     const orders = this.data.orders || [];
     const expenses = this.data.expenses || [];
     const payments = this.data.payments || [];
+
+    // Check if user can view financials
+    const canManageFinancials = await this.canViewFinancials();
 
     // Initialize default date range (current month)
     const now = new Date();
@@ -10401,8 +10766,10 @@ convertToQuotationDateFormat(dateStr) {
 
             <!-- Quick Actions -->
             <div class="btn-group">
-                <button class="btn btn-success" onclick="OMS.showAddPaymentModal()">💵 Add Payment</button>
-                <button class="btn btn-warning" onclick="OMS.showAddExpenseModal()">💸 Add Expense</button>
+                ${canManageFinancials ? `
+                    <button class="btn btn-success" onclick="OMS.showAddPaymentModal()">💵 Add Payment</button>
+                    <button class="btn btn-warning" onclick="OMS.showAddExpenseModal()">💸 Add Expense</button>
+                ` : ''}
                 <button class="btn btn-info" onclick="OMS.exportFinancialReport()">📊 Export Report</button>
                 <button class="btn btn-primary" onclick="OMS.showMonthlyComparison()">📈 Monthly Comparison</button>
             </div>
@@ -10428,20 +10795,61 @@ convertToQuotationDateFormat(dateStr) {
                             </tr>
                         </thead>
                         <tbody>
-                            ${payments.slice(0, 50).map(p => `
+                            ${payments.slice(0, 50).map(p => {
+                                const hasBreakdown = p.itemBreakdown && p.itemBreakdown.length > 0;
+                                return `
                                 <tr>
                                     <td>${Utils.formatDate(p.paymentDate || p.timestamp?.toDate?.())}</td>
                                     <td>${p.orderId || 'N/A'}</td>
                                     <td>${p.customerName || 'N/A'}</td>
-                                    <td>₹${parseFloat(p.amount || 0).toLocaleString('en-IN')}</td>
+                                    <td>
+                                        ₹${parseFloat(p.amount || 0).toLocaleString('en-IN')}
+                                        ${hasBreakdown ? '<br><button class="btn btn-info btn-small" style="margin-top: 0.25rem;" onclick="OMS.togglePaymentBreakdown(\'' + p.id + '\')">📋 View Details</button>' : ''}
+                                    </td>
                                     <td>${p.paymentMethod || 'N/A'}</td>
                                     <td>${p.transactionId || 'N/A'}</td>
                                     <td>
-                                        <button class="btn btn-info btn-small" onclick="OMS.editPayment('${p.id}')">Edit</button>
-                                        <button class="btn btn-danger btn-small" onclick="OMS.deletePayment('${p.id}')">Delete</button>
+                                        ${canManageFinancials ? `
+                                            <button class="btn btn-info btn-small" onclick="OMS.editPayment('${p.id}')">Edit</button>
+                                            <button class="btn btn-danger btn-small" onclick="OMS.deletePayment('${p.id}')">Delete</button>
+                                        ` : '<span style="color: var(--text-gray); font-style: italic;">View Only</span>'}
                                     </td>
                                 </tr>
-                            `).join('')}
+                                ${hasBreakdown ? `
+                                <tr id="breakdown_${p.id}" style="display: none; background: #f5f5f5;">
+                                    <td colspan="7" style="padding: 1rem;">
+                                        <div style="background: white; padding: 1rem; border-radius: 8px; border: 2px solid #667eea;">
+                                            <h4 style="margin: 0 0 1rem 0; color: #667eea;">📋 Item-wise Breakdown</h4>
+                                            <table style="width: 100%; border-collapse: collapse;">
+                                                <thead>
+                                                    <tr style="background: #f0f0f0;">
+                                                        <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Item Name</th>
+                                                        <th style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Quantity</th>
+                                                        <th style="padding: 0.5rem; text-align: right; border: 1px solid #ddd;">Price/Unit</th>
+                                                        <th style="padding: 0.5rem; text-align: right; border: 1px solid #ddd;">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${p.itemBreakdown.map(item => `
+                                                        <tr>
+                                                            <td style="padding: 0.5rem; border: 1px solid #ddd;">${item.itemName}</td>
+                                                            <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+                                                            <td style="padding: 0.5rem; text-align: right; border: 1px solid #ddd;">₹${parseFloat(item.pricePerUnit).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                            <td style="padding: 0.5rem; text-align: right; border: 1px solid #ddd; font-weight: bold;">₹${parseFloat(item.itemTotal).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                    <tr style="background: #e8eaf6; font-weight: bold;">
+                                                        <td colspan="3" style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Grand Total:</td>
+                                                        <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd; font-size: 1.1em; color: #667eea;">₹${parseFloat(p.amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                ` : ''}
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 ` : `<p style="text-align: center; padding: 2rem; color: var(--text-gray);">No payment records found. Click "Add Payment" to get started.</p>`}
@@ -10477,8 +10885,10 @@ convertToQuotationDateFormat(dateStr) {
                                     <td>${e.vendor || 'N/A'}</td>
                                     <td>${e.paymentMethod || 'N/A'}</td>
                                     <td>
-                                        <button class="btn btn-info btn-small" onclick="OMS.editExpense('${e.id}')">Edit</button>
-                                        <button class="btn btn-danger btn-small" onclick="OMS.deleteExpense('${e.id}')">Delete</button>
+                                        ${canManageFinancials ? `
+                                            <button class="btn btn-info btn-small" onclick="OMS.editExpense('${e.id}')">Edit</button>
+                                            <button class="btn btn-danger btn-small" onclick="OMS.deleteExpense('${e.id}')">Delete</button>
+                                        ` : '<span style="color: var(--text-gray); font-style: italic;">View Only</span>'}
                                     </td>
                                 </tr>
                             `).join('')}
@@ -11124,48 +11534,80 @@ convertToQuotationDateFormat(dateStr) {
 
                 const modalHTML = `
                     <div class="modal-overlay" id="paymentModal">
-                        <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-content" style="max-width: 800px;">
                             <button class="modal-close" onclick="OMS.closeModal('paymentModal')">×</button>
-                            <h2>💵 Add Payment</h2>
+                            <h2>💵 Add Payment - Item-wise Pricing</h2>
                             <form id="paymentForm" onsubmit="OMS.savePayment(event)">
                                 <div class="form-group">
                                     <label class="form-label required">Order</label>
-                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.updatePaymentOrderInfo()">
+                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.loadOrderItemsForPayment()">
                                         <option value="">Select Order</option>
                                         ${orders.map(o => `<option value="${o.docId || o.orderId}">${o.orderId || 'Pending'} - ${o.clientName} (₹${parseFloat(o.financials?.balanceDue || o.totalAmount || 0).toLocaleString('en-IN')} due)</option>`).join('')}
                                     </select>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label class="form-label required">Payment Date</label>
-                                        <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required>
+
+                                <div id="orderItemsContainer" style="display: none;">
+                                    <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                                        <h3 style="margin: 0 0 0.5rem 0;">Order Details</h3>
+                                        <p style="margin: 0;"><strong>Order ID:</strong> <span id="displayOrderId">-</span></p>
+                                        <p style="margin: 0;"><strong>Client:</strong> <span id="displayClientName">-</span></p>
                                     </div>
+
                                     <div class="form-group">
-                                        <label class="form-label required">Amount</label>
-                                        <input type="number" id="paymentAmount" class="form-input" min="1" step="0.01" required>
+                                        <label class="form-label"><strong>Item-wise Pricing</strong></label>
+                                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                                            <table style="width: 100%; border-collapse: collapse;" id="itemsPricingTable">
+                                                <thead>
+                                                    <tr style="border-bottom: 2px solid var(--border);">
+                                                        <th style="text-align: left; padding: 8px;">Item Name</th>
+                                                        <th style="text-align: center; padding: 8px;">Quantity</th>
+                                                        <th style="text-align: center; padding: 8px;">Price per Unit (₹)</th>
+                                                        <th style="text-align: right; padding: 8px;">Total (₹)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="itemsPricingBody">
+                                                    <!-- Items will be populated here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 1rem 0; padding: 1rem; background: #e8f5e9; border-radius: 8px;">
+                                        <button type="button" class="btn btn-info btn-small" onclick="OMS.calculatePaymentTotal()">🧮 See Total</button>
+                                        <div id="paymentTotalDisplay" style="font-size: 1.2rem; font-weight: bold; color: #2e7d32;">
+                                            Total: ₹<span id="calculatedTotal">0.00</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label required">Payment Date</label>
+                                            <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label required">Payment Method</label>
+                                            <select id="paymentMethod" class="form-select" required>
+                                                <option value="Cash">Cash</option>
+                                                <option value="UPI">UPI</option>
+                                                <option value="Bank Transfer">Bank Transfer</option>
+                                                <option value="Cheque">Cheque</option>
+                                                <option value="Card">Card</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Transaction ID</label>
+                                            <input type="text" id="paymentTransactionId" class="form-input">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Notes</label>
+                                            <textarea id="paymentNotes" class="form-textarea" rows="2"></textarea>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label class="form-label required">Payment Method</label>
-                                        <select id="paymentMethod" class="form-select" required>
-                                            <option value="Cash">Cash</option>
-                                            <option value="UPI">UPI</option>
-                                            <option value="Bank Transfer">Bank Transfer</option>
-                                            <option value="Cheque">Cheque</option>
-                                            <option value="Card">Card</option>
-                                            <option value="Other">Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Transaction ID</label>
-                                        <input type="text" id="paymentTransactionId" class="form-input">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Notes</label>
-                                    <textarea id="paymentNotes" class="form-textarea" rows="3"></textarea>
-                                </div>
+
                                 <div class="btn-group">
                                     <button type="submit" class="btn btn-success">💾 Save Payment</button>
                                     <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('paymentModal')">Cancel</button>
@@ -11178,13 +11620,127 @@ convertToQuotationDateFormat(dateStr) {
                 document.getElementById('modalsContainer').innerHTML = modalHTML;
             },
 
-            updatePaymentOrderInfo() {
+            loadOrderItemsForPayment() {
                 const orderId = Utils.get('paymentOrderId');
-                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
-                if (order) {
-                    const balanceDue = parseFloat(order.financials?.balanceDue || order.totalAmount || 0);
-                    Utils.set('paymentAmount', balanceDue);
+                if (!orderId) {
+                    document.getElementById('orderItemsContainer').style.display = 'none';
+                    return;
                 }
+
+                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+                if (!order) {
+                    document.getElementById('orderItemsContainer').style.display = 'none';
+                    return;
+                }
+
+                // Show order details
+                document.getElementById('displayOrderId').textContent = order.orderId || 'Pending';
+                document.getElementById('displayClientName').textContent = order.clientName || 'N/A';
+
+                // Get all items from order
+                let allItems = [];
+
+                if (order.isMultiDay && order.dayWiseData) {
+                    // Collect items from all days and functions
+                    order.dayWiseData.forEach(dayData => {
+                        if (dayData.functions) {
+                            dayData.functions.forEach(func => {
+                                if (func.items && func.items.length > 0) {
+                                    func.items.forEach(item => {
+                                        allItems.push({
+                                            name: item.name,
+                                            quantity: item.quantity,
+                                            remarks: item.remarks || ''
+                                        });
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else if (order.items && order.items.length > 0) {
+                    // Single day order items
+                    allItems = order.items.map(item => ({
+                        name: item.name,
+                        quantity: item.quantity,
+                        remarks: item.remarks || ''
+                    }));
+                }
+
+                if (allItems.length === 0) {
+                    document.getElementById('itemsPricingBody').innerHTML = `
+                        <tr><td colspan="4" style="text-align: center; padding: 1rem; color: #999;">No items found in this order</td></tr>
+                    `;
+                    document.getElementById('orderItemsContainer').style.display = 'block';
+                    return;
+                }
+
+                // Populate items table
+                const itemsHTML = allItems.map((item, index) => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px;">
+                            ${item.name}
+                            ${item.remarks ? `<br><small style="color: #666;">${item.remarks}</small>` : ''}
+                        </td>
+                        <td style="text-align: center; padding: 12px;">${item.quantity}</td>
+                        <td style="text-align: center; padding: 12px;">
+                            <input type="number"
+                                   class="form-input item-price-input"
+                                   id="itemPrice_${index}"
+                                   data-item-index="${index}"
+                                   data-quantity="${item.quantity}"
+                                   min="0"
+                                   step="0.01"
+                                   placeholder="0.00"
+                                   style="max-width: 120px; margin: 0 auto;"
+                                   oninput="OMS.updateItemTotal(${index})">
+                        </td>
+                        <td style="text-align: right; padding: 12px; font-weight: bold;">
+                            ₹<span id="itemTotal_${index}">0.00</span>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('itemsPricingBody').innerHTML = itemsHTML;
+                document.getElementById('orderItemsContainer').style.display = 'block';
+
+                // Reset total
+                document.getElementById('calculatedTotal').textContent = '0.00';
+            },
+
+            updateItemTotal(itemIndex) {
+                const priceInput = document.getElementById(`itemPrice_${itemIndex}`);
+                const totalSpan = document.getElementById(`itemTotal_${itemIndex}`);
+
+                if (!priceInput || !totalSpan) return;
+
+                const pricePerUnit = parseFloat(priceInput.value) || 0;
+                const quantity = parseInt(priceInput.dataset.quantity) || 0;
+                const total = pricePerUnit * quantity;
+
+                totalSpan.textContent = total.toFixed(2);
+
+                // Auto-calculate grand total when any item price changes
+                this.calculatePaymentTotal();
+            },
+
+            calculatePaymentTotal() {
+                const priceInputs = document.querySelectorAll('.item-price-input');
+                let grandTotal = 0;
+
+                priceInputs.forEach(input => {
+                    const pricePerUnit = parseFloat(input.value) || 0;
+                    const quantity = parseInt(input.dataset.quantity) || 0;
+                    grandTotal += (pricePerUnit * quantity);
+                });
+
+                document.getElementById('calculatedTotal').textContent = grandTotal.toFixed(2);
+
+                return grandTotal;
+            },
+
+            updatePaymentOrderInfo() {
+                // Deprecated - now using loadOrderItemsForPayment()
+                this.loadOrderItemsForPayment();
             },
 
             async savePayment(event) {
@@ -11198,11 +11754,44 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
+                // Collect item-wise breakdown
+                const priceInputs = document.querySelectorAll('.item-price-input');
+                const itemBreakdown = [];
+                let totalAmount = 0;
+
+                priceInputs.forEach((input, index) => {
+                    const pricePerUnit = parseFloat(input.value) || 0;
+                    const quantity = parseInt(input.dataset.quantity) || 0;
+                    const itemTotal = pricePerUnit * quantity;
+
+                    // Get item name from the table cell
+                    const row = input.closest('tr');
+                    const itemNameCell = row.querySelector('td:first-child');
+                    const itemName = itemNameCell ? itemNameCell.textContent.trim().split('\n')[0] : `Item ${index + 1}`;
+
+                    if (pricePerUnit > 0) {
+                        itemBreakdown.push({
+                            itemName: itemName,
+                            quantity: quantity,
+                            pricePerUnit: pricePerUnit,
+                            itemTotal: itemTotal
+                        });
+                        totalAmount += itemTotal;
+                    }
+                });
+
+                // Validate that at least one item has a price
+                if (itemBreakdown.length === 0 || totalAmount === 0) {
+                    this.showToast('Please enter at least one item price!', 'error');
+                    return;
+                }
+
                 const payment = {
                     orderId: order.orderId || 'Pending',
                     orderDocId: order.docId,
                     customerName: order.clientName,
-                    amount: parseFloat(Utils.get('paymentAmount')),
+                    amount: totalAmount,
+                    itemBreakdown: itemBreakdown, // Store item-wise breakdown
                     paymentDate: Utils.get('paymentDate'),
                     paymentMethod: Utils.get('paymentMethod'),
                     transactionId: Utils.get('paymentTransactionId'),
@@ -11226,13 +11815,24 @@ convertToQuotationDateFormat(dateStr) {
                         'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < (order.financials?.grandTotal || order.totalAmount || 0) ? 'partial' : 'pending'
                     });
 
-                    this.showToast('Payment added successfully!', 'success');
+                    this.showToast('✅ Payment with item-wise breakdown saved successfully!', 'success');
                     this.closeModal('paymentModal');
                     this.renderFinancials();
                     await this.loadOrdersFromFirestore();
                 } catch (error) {
                     console.error('Error saving payment:', error);
                     this.showToast('Error saving payment: ' + error.message, 'error');
+                }
+            },
+
+            togglePaymentBreakdown(paymentId) {
+                const breakdownRow = document.getElementById(`breakdown_${paymentId}`);
+                if (breakdownRow) {
+                    if (breakdownRow.style.display === 'none') {
+                        breakdownRow.style.display = 'table-row';
+                    } else {
+                        breakdownRow.style.display = 'none';
+                    }
                 }
             },
 
@@ -12039,6 +12639,40 @@ async loadTrackingFromFirestore() {
         }
 
         this.data.trackingData = [];
+    }
+},
+
+async loadEventsListFromFirestore() {
+    try {
+        console.log('📋 Loading events list from Firestore...');
+
+        // Check if user is authenticated
+        if (!auth.currentUser) {
+            console.warn('⚠️ Not authenticated yet - using default events list');
+            return;
+        }
+
+        const eventsDoc = await db.collection('settings').doc('eventsList').get();
+
+        if (eventsDoc.exists) {
+            const data = eventsDoc.data();
+            if (data.events && Array.isArray(data.events)) {
+                this.data.eventsList = data.events;
+                console.log(`✅ Loaded ${this.data.eventsList.length} events from Firestore`);
+            }
+        } else {
+            console.log('📝 No events list in Firestore yet - using default list');
+            // Save the default list to Firestore
+            await db.collection('settings').doc('eventsList').set({
+                events: this.data.eventsList,
+                createdAt: new Date().toISOString()
+            });
+            console.log('✅ Saved default events list to Firestore');
+        }
+
+    } catch (error) {
+        console.error('❌ Error loading events list:', error);
+        console.warn('⚠️ Using default events list');
     }
 },
 
