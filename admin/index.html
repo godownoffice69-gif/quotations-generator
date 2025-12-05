@@ -1028,8 +1028,9 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Event Type</label>
-                                <input type="text" id="eventType" class="form-input" list="eventsDatalist" placeholder="Select or type event">
-                                <datalist id="eventsDatalist"></datalist>
+                                <select id="eventType" class="form-select">
+                                    <option value="">Select Event Type</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Transport</label>
@@ -3633,9 +3634,11 @@ const OMS = {
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">${this.t('functionType')}</label>
-                        <input type="text" id="${functionId}Type" class="form-input" list="eventsDatalist"
-                               placeholder="Select or type event"
+                        <select id="${functionId}Type" class="form-select"
                                onchange="OMS.updateFunctionData(${dayIndex}, ${functionIndex}, 'functionType', this.value)">
+                            <option value="">Select Event Type</option>
+                            ${(this.data.eventsList || []).map(event => `<option value="${event}">${event}</option>`).join('')}
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">${this.t('timeSlot')}</label>
@@ -4109,7 +4112,7 @@ const OMS = {
 
                             // Show modal with draft info
                             const modalHTML = `
-                                <div class="modal-overlay" id="draftModal">
+                                <div class="modal show" id="draftModal" onclick="if(event.target === this) document.getElementById('draftModal').remove()">
                                     <div class="modal-content" style="max-width: 500px;">
                                         ${message}
                                     </div>
@@ -5226,9 +5229,9 @@ async addCustomEventsToList(orderData) {
 },
 
 populateEventsDatalist() {
-    const datalist = document.getElementById('eventsDatalist');
-    if (!datalist) {
-        console.warn('eventsDatalist element not found - will populate when orders tab is opened');
+    const eventTypeSelect = document.getElementById('eventType');
+    if (!eventTypeSelect) {
+        console.warn('eventType element not found - will populate when orders tab is opened');
         return;
     }
 
@@ -5238,17 +5241,26 @@ populateEventsDatalist() {
         return;
     }
 
-    // Clear existing options
-    datalist.innerHTML = '';
+    // Get current value to preserve selection
+    const currentValue = eventTypeSelect.value;
+
+    // Clear existing options except the first one
+    eventTypeSelect.innerHTML = '<option value="">Select Event Type</option>';
 
     // Add all events as options
     this.data.eventsList.forEach(event => {
         const option = document.createElement('option');
         option.value = event;
-        datalist.appendChild(option);
+        option.textContent = event;
+        eventTypeSelect.appendChild(option);
     });
 
-    console.log(`✅ Populated events datalist with ${this.data.eventsList.length} options`);
+    // Restore previous selection if it exists
+    if (currentValue && this.data.eventsList.includes(currentValue)) {
+        eventTypeSelect.value = currentValue;
+    }
+
+    console.log(`✅ Populated events dropdown with ${this.data.eventsList.length} options`);
 },
 
 // Automatic Inventory Deduction
@@ -10177,8 +10189,8 @@ convertToQuotationDateFormat(dateStr) {
 
                 // Create modal HTML
                 const modalHTML = `
-                    <div class="modal-overlay" id="mergeModalOverlay" onclick="if(event.target === this) document.getElementById('mergeModalOverlay').remove();">
-                        <div class="modal" style="max-width: 600px;">
+                    <div class="modal show" id="mergeModalOverlay" onclick="if(event.target === this) document.getElementById('mergeModalOverlay').remove();">
+                        <div class="modal-content" style="max-width: 600px;">
                             <div class="modal-header">
                                 <h2>🔗 Merge Orders</h2>
                             </div>
@@ -10326,7 +10338,7 @@ convertToQuotationDateFormat(dateStr) {
                     }
 
                     // Reload data
-                    await this.loadData();
+                    await this.loadOrdersFromFirestore();
 
                     // Close modal
                     document.getElementById('mergeModalOverlay')?.remove();
@@ -10372,7 +10384,7 @@ convertToQuotationDateFormat(dateStr) {
                     await this.deleteOrder(mergedOrder.docId || mergedOrder.orderId);
 
                     // Reload data
-                    await this.loadData();
+                    await this.loadOrdersFromFirestore();
 
                     // Refresh history view
                     this.renderHistory();
@@ -11553,7 +11565,7 @@ convertToQuotationDateFormat(dateStr) {
                 const orders = this.data.orders.filter(o => o.status !== 'Cancelled');
 
                 const modalHTML = `
-                    <div class="modal-overlay" id="paymentModal">
+                    <div class="modal show" id="paymentModal" onclick="if(event.target === this) OMS.closeModal('paymentModal')">
                         <div class="modal-content" style="max-width: 800px;">
                             <button class="modal-close" onclick="OMS.closeModal('paymentModal')">×</button>
                             <h2>💵 Add Payment - Item-wise Pricing</h2>
@@ -11858,7 +11870,7 @@ convertToQuotationDateFormat(dateStr) {
 
             async showAddExpenseModal() {
                 const modalHTML = `
-                    <div class="modal-overlay" id="expenseModal">
+                    <div class="modal show" id="expenseModal" onclick="if(event.target === this) OMS.closeModal('expenseModal')">
                         <div class="modal-content" style="max-width: 600px;">
                             <button class="modal-close" onclick="OMS.closeModal('expenseModal')">×</button>
                             <h2>💸 Add Expense</h2>
@@ -11982,7 +11994,7 @@ convertToQuotationDateFormat(dateStr) {
 
                 // Show a simplified payment modal for the current order
                 const modalHTML = `
-                    <div class="modal-overlay" id="quickPaymentModal">
+                    <div class="modal show" id="quickPaymentModal" onclick="if(event.target === this) OMS.closeModal('quickPaymentModal')">
                         <div class="modal-content" style="max-width: 500px;">
                             <button class="modal-close" onclick="OMS.closeModal('quickPaymentModal')">×</button>
                             <h2>💵 Quick Payment</h2>
@@ -12144,7 +12156,7 @@ convertToQuotationDateFormat(dateStr) {
                 const orders = this.data.orders.filter(o => o.status !== 'Cancelled');
 
                 const modalHTML = `
-                    <div class="modal-overlay" id="editPaymentModal">
+                    <div class="modal show" id="editPaymentModal" onclick="if(event.target === this) OMS.closeModal('editPaymentModal')">
                         <div class="modal-content" style="max-width: 600px;">
                             <button class="modal-close" onclick="OMS.closeModal('editPaymentModal')">×</button>
                             <h2>✏️ Edit Payment</h2>
@@ -12266,7 +12278,7 @@ convertToQuotationDateFormat(dateStr) {
                 }
 
                 const modalHTML = `
-                    <div class="modal-overlay" id="editExpenseModal">
+                    <div class="modal show" id="editExpenseModal" onclick="if(event.target === this) OMS.closeModal('editExpenseModal')">
                         <div class="modal-content" style="max-width: 600px;">
                             <button class="modal-close" onclick="OMS.closeModal('editExpenseModal')">×</button>
                             <h2>✏️ Edit Expense</h2>
@@ -12403,7 +12415,7 @@ convertToQuotationDateFormat(dateStr) {
                 }
 
                 const modalHTML = `
-                    <div class="modal-overlay" id="monthlyComparisonModal">
+                    <div class="modal show" id="monthlyComparisonModal" onclick="if(event.target === this) OMS.closeModal('monthlyComparisonModal')">
                         <div class="modal-content" style="max-width: 900px;">
                             <button class="modal-close" onclick="OMS.closeModal('monthlyComparisonModal')">×</button>
                             <h2>📈 Monthly Revenue Comparison (Last 12 Months)</h2>
