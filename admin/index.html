@@ -851,63 +851,122 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
-        /* Firepower SFX Login Theme */
+        /* 🔥 BURNING FLAMES LOGIN THEME - OPTION 1 */
+
         #loginScreen {
             cursor: none !important;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><rect width="100%25" height="100%25" fill="%23000"/></svg>');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Fire Background Image Layer */
+        #loginScreen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://raw.githubusercontent.com/user-attachments/assets/fire-background.jpg') center/cover no-repeat;
+            background-blend-mode: screen;
+            opacity: 0.85;
+            animation: flame-flicker 3s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        /* Realistic Flame Flicker Animation */
+        @keyframes flame-flicker {
+            0%, 100% {
+                filter: brightness(1) contrast(1.1);
+                transform: scale(1);
+            }
+            25% {
+                filter: brightness(1.15) contrast(1.2);
+                transform: scale(1.02);
+            }
+            50% {
+                filter: brightness(0.95) contrast(1.05);
+                transform: scale(1.01);
+            }
+            75% {
+                filter: brightness(1.1) contrast(1.15);
+                transform: scale(1.015);
+            }
+        }
+
+        /* Heat Distortion Overlay */
+        #loginScreen::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(255,140,0,0.1) 50%, rgba(255,69,0,0.2) 100%);
+            animation: heat-wave 4s ease-in-out infinite;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes heat-wave {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
         }
 
         #loginScreen * {
             cursor: none !important;
         }
 
-        /* Custom Cursor */
+        /* Custom Cursor - Fire Themed */
         .custom-cursor {
             position: fixed;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #ffd700;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #ff6b00;
             border-radius: 50%;
             pointer-events: none;
             z-index: 10000;
             transform: translate(-50%, -50%);
-            background: radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%);
-            box-shadow: 0 0 15px rgba(255,215,0,0.8), 0 0 30px rgba(255,215,0,0.4);
+            background: radial-gradient(circle, rgba(255,107,0,0.7) 0%, rgba(255,69,0,0.3) 50%, transparent 70%);
+            box-shadow: 0 0 20px rgba(255,107,0,0.9), 0 0 40px rgba(255,69,0,0.5), inset 0 0 10px rgba(255,140,0,0.6);
             transition: all 0.1s ease;
+            animation: cursor-pulse 1.5s ease-in-out infinite;
         }
 
-        /* Sparkle Trail */
+        @keyframes cursor-pulse {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(255,107,0,0.9), 0 0 40px rgba(255,69,0,0.5);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(255,140,0,1), 0 0 60px rgba(255,107,0,0.7);
+            }
+        }
+
+        /* Ember Sparkle Trail */
         .sparkle {
             position: fixed;
             pointer-events: none;
             z-index: 9998;
-            animation: sparkle-fade 1s ease-out forwards;
+            animation: ember-rise 2s ease-out forwards;
         }
 
-        @keyframes sparkle-fade {
+        @keyframes ember-rise {
             0% {
                 opacity: 1;
-                transform: scale(1) rotate(0deg);
+                transform: translateY(0) scale(1) rotate(0deg);
+                filter: brightness(1.5);
             }
             100% {
                 opacity: 0;
-                transform: scale(0) rotate(360deg);
+                transform: translateY(-80px) scale(0.3) rotate(180deg);
+                filter: brightness(0.5);
             }
         }
 
-        /* Animated Background Gradient */
-        @keyframes gradient-shift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        #loginScreen {
-            background: linear-gradient(-45deg, #1a0033, #2d0a4e, #4a148c, #6a1b9a, #8e24aa) !important;
-            background-size: 400% 400% !important;
-            animation: gradient-shift 15s ease infinite !important;
-        }
-
-        /* Floating Particles Canvas */
+        /* Floating Embers Canvas */
         #particles-canvas {
             position: absolute;
             top: 0;
@@ -915,45 +974,72 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 1;
+            z-index: 2;
         }
 
-        /* Login Card Glow Effect */
+        /* Login Card with Fire Glow */
         .login-card {
             position: relative;
-            z-index: 2;
-            animation: card-pulse 3s ease-in-out infinite;
+            z-index: 3;
+            background: rgba(0, 0, 0, 0.85) !important;
+            border: 2px solid rgba(255,107,0,0.4);
+            backdrop-filter: blur(10px);
+            animation: card-fire-glow 2s ease-in-out infinite;
         }
 
-        @keyframes card-pulse {
+        @keyframes card-fire-glow {
             0%, 100% {
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 40px rgba(255,215,0,0.1);
+                box-shadow: 0 20px 60px rgba(0,0,0,0.7),
+                            0 0 30px rgba(255,107,0,0.3),
+                            inset 0 0 30px rgba(255,69,0,0.1);
+                border-color: rgba(255,107,0,0.4);
             }
             50% {
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 60px rgba(255,215,0,0.3);
+                box-shadow: 0 20px 60px rgba(0,0,0,0.7),
+                            0 0 50px rgba(255,140,0,0.5),
+                            inset 0 0 40px rgba(255,107,0,0.2);
+                border-color: rgba(255,140,0,0.6);
             }
         }
 
-        /* Logo Animation */
+        /* Logo with Fire Animation */
         .login-logo {
-            animation: logo-float 3s ease-in-out infinite;
+            animation: logo-burn 3s ease-in-out infinite;
+            color: #ff6b00 !important;
+            text-shadow: 0 0 10px rgba(255,107,0,0.8),
+                         0 0 20px rgba(255,69,0,0.6),
+                         0 0 30px rgba(255,140,0,0.4);
         }
 
-        @keyframes logo-float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+        @keyframes logo-burn {
+            0%, 100% {
+                transform: translateY(0px);
+                text-shadow: 0 0 10px rgba(255,107,0,0.8),
+                             0 0 20px rgba(255,69,0,0.6),
+                             0 0 30px rgba(255,140,0,0.4);
+            }
+            50% {
+                transform: translateY(-8px);
+                text-shadow: 0 0 15px rgba(255,140,0,1),
+                             0 0 30px rgba(255,107,0,0.8),
+                             0 0 45px rgba(255,69,0,0.6);
+            }
         }
 
-        /* Button Hover Effect */
+        /* Fire-themed Button */
         #loginBtn {
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            background: linear-gradient(135deg, #ff6b00 0%, #ff4500 100%) !important;
+            border: 2px solid #ff8c00;
         }
 
         #loginBtn:hover {
             transform: scale(1.05);
-            box-shadow: 0 10px 30px rgba(255,215,0,0.4);
+            box-shadow: 0 10px 30px rgba(255,107,0,0.6),
+                        0 0 40px rgba(255,69,0,0.4);
+            border-color: #ffa500;
         }
 
         #loginBtn::before {
@@ -964,7 +1050,7 @@
             width: 0;
             height: 0;
             border-radius: 50%;
-            background: rgba(255,255,255,0.3);
+            background: rgba(255,215,0,0.4);
             transform: translate(-50%, -50%);
             transition: width 0.6s, height 0.6s;
         }
@@ -974,11 +1060,30 @@
             height: 300px;
         }
 
-        /* Input Focus Glow */
+        /* Input Fields with Fire Glow */
+        #loginEmail, #loginPassword {
+            background: rgba(0, 0, 0, 0.6) !important;
+            color: #fff !important;
+            border: 2px solid rgba(255,107,0,0.3) !important;
+        }
+
         #loginEmail:focus, #loginPassword:focus {
-            border-color: #ffd700 !important;
-            box-shadow: 0 0 20px rgba(255,215,0,0.3) !important;
+            border-color: #ff6b00 !important;
+            box-shadow: 0 0 20px rgba(255,107,0,0.5),
+                        inset 0 0 10px rgba(255,69,0,0.2) !important;
             outline: none !important;
+            background: rgba(0, 0, 0, 0.7) !important;
+        }
+
+        /* Labels in Fire Theme */
+        .login-card label {
+            color: #ffa500 !important;
+            text-shadow: 0 0 5px rgba(255,107,0,0.5);
+        }
+
+        /* Footer Text */
+        .login-card > div:last-child {
+            color: #ff8c00 !important;
         }
     </style>
 
@@ -5148,6 +5253,8 @@ const firestoreData = {
     clientName: orderData.clientName,
     contact: orderData.contact,
     venue: orderData.venue,
+    venueMapLink: orderData.venueMapLink || null,  // CRITICAL: Save venue map link
+    venueLocation: orderData.venueLocation || null, // CRITICAL: Save venue coordinates
     date: orderData.date || '',
     readyTime: orderData.readyTime || '',
     eventType: orderData.eventType || '',
