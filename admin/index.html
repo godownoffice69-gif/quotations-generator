@@ -10102,13 +10102,13 @@ convertToQuotationDateFormat(dateStr) {
                 let message = `📅 ${Utils.formatDate(selectedDate)}\n`;
                 message += `Total Orders: ${orders.length}\n\n`;
 
-                // Collect special items with quantities for grand total calculation
-                let dryIceItems = {};
-                let flowersItems = {};
-                let electricityItems = {};
+                // Collect special items for RAW MATERIAL calculations (like preparation tab)
+                let totalDryIceMachines = 0;
+                let totalFlowerShowerMachines = 0;
+                let totalElectricityKV = 0;
 
                 orders.forEach((order, index) => {
-                    // Collect special items
+                    // Collect all items from this order
                     let orderItems = [];
 
                     // Find specific day data for multi-day orders
@@ -10128,32 +10128,33 @@ convertToQuotationDateFormat(dateStr) {
                         orderItems = order.items;
                     }
 
-                    // Check for special items and aggregate quantities
+                    // Calculate dry ice machines (20kg per machine)
                     orderItems.forEach(item => {
-                        const itemNameLower = item.name.toLowerCase();
-                        const quantity = item.quantity || '';
+                        const itemNameLower = item.name?.toLowerCase() || '';
+                        const qty = item.quantity || 0;
 
-                        if (itemNameLower.includes('dry ice') || itemNameLower.includes('dryice')) {
-                            if (!dryIceItems[item.name]) {
-                                dryIceItems[item.name] = 0;
-                            }
-                            // Try to parse numeric quantity (e.g., "10kg" -> 10, "5pc" -> 5)
-                            const numericQty = parseFloat(quantity) || 1;
-                            dryIceItems[item.name] += numericQty;
+                        // Dry ice machines
+                        if (itemNameLower.includes('dry ice')) {
+                            totalDryIceMachines += qty;
                         }
-                        if (itemNameLower.includes('flower') || itemNameLower.includes('floral')) {
-                            if (!flowersItems[item.name]) {
-                                flowersItems[item.name] = 0;
-                            }
-                            const numericQty = parseFloat(quantity) || 1;
-                            flowersItems[item.name] += numericQty;
+
+                        // Flower shower machines
+                        if ((itemNameLower.includes('flower') && itemNameLower.includes('shower')) ||
+                            itemNameLower.includes('flower shower machine')) {
+                            totalFlowerShowerMachines += qty;
                         }
-                        if (itemNameLower.includes('electric') || itemNameLower.includes('power')) {
-                            if (!electricityItems[item.name]) {
-                                electricityItems[item.name] = 0;
+
+                        // Electricity - 3KV machines
+                        const electricity3KV = ['showven sonic boom (co2 jet)', 'sonic boom', 'dry ice machine', '5 head flame'];
+                        if (electricity3KV.some(name => itemNameLower.includes(name))) {
+                            totalElectricityKV += qty * 3;
+                        }
+                        // Electricity - 1KV machines
+                        else {
+                            const electricity1KV = ['sparkular', 'spinner', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+                            if (electricity1KV.some(name => itemNameLower.includes(name))) {
+                                totalElectricityKV += qty * 1;
                             }
-                            const numericQty = parseFloat(quantity) || 1;
-                            electricityItems[item.name] += numericQty;
                         }
                     });
 
@@ -10225,33 +10226,24 @@ convertToQuotationDateFormat(dateStr) {
                     message += `\n`;
                 });
 
-                // Special items GRAND TOTAL summary (only once for entire message)
-                if (Object.keys(dryIceItems).length > 0) {
+                // RAW MATERIALS GRAND TOTAL summary (calculated like preparation tab)
+                if (totalDryIceMachines > 0) {
+                    const dryIceNeeded = totalDryIceMachines * 20; // 20kg per machine
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `🧊 DRY ICE - GRAND TOTAL:\n`;
-                    for (const [itemName, totalQty] of Object.entries(dryIceItems)) {
-                        // Format the total with proper unit from quantity
-                        message += `${itemName}: ${totalQty}\n`;
-                    }
-                    message += `\n`;
+                    message += `🧊 DRY ICE - GRAND TOTAL: ${dryIceNeeded}kg\n`;
+                    message += `(${totalDryIceMachines} machine${totalDryIceMachines !== 1 ? 's' : ''} × 20kg)\n\n`;
                 }
 
-                if (Object.keys(flowersItems).length > 0) {
+                if (totalFlowerShowerMachines > 0) {
+                    const flowersNeeded = totalFlowerShowerMachines * 20; // 20kg per machine
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `🌸 FLOWERS - GRAND TOTAL:\n`;
-                    for (const [itemName, totalQty] of Object.entries(flowersItems)) {
-                        message += `${itemName}: ${totalQty}\n`;
-                    }
-                    message += `\n`;
+                    message += `🌸 FLOWERS - GRAND TOTAL: ${flowersNeeded}kg\n`;
+                    message += `(${totalFlowerShowerMachines} machine${totalFlowerShowerMachines !== 1 ? 's' : ''} × 20kg)\n\n`;
                 }
 
-                if (Object.keys(electricityItems).length > 0) {
+                if (totalElectricityKV > 0) {
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `⚡ ELECTRICITY - GRAND TOTAL:\n`;
-                    for (const [itemName, totalQty] of Object.entries(electricityItems)) {
-                        message += `${itemName}: ${totalQty}\n`;
-                    }
-                    message += `\n`;
+                    message += `⚡ ELECTRICITY - GRAND TOTAL: ${totalElectricityKV}KV\n\n`;
                 }
 
                 message += `FirepowerSFX Order Management`;
