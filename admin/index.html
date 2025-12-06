@@ -10098,170 +10098,132 @@ convertToQuotationDateFormat(dateStr) {
             generateWhatsAppOrdersMessage(orders, selectedDate) {
                 if (!orders || orders.length === 0) return '';
 
-                let message = `ORDERS REPORT FOR ${Utils.formatDate(selectedDate)}\n\n`;
+                // Header with date (only once for entire message)
+                let message = `📅 ${Utils.formatDate(selectedDate)}\n`;
                 message += `Total Orders: ${orders.length}\n\n`;
 
+                // Collect dry ice, flowers, electricity info from all orders
+                let dryIceOrders = [];
+                let flowersOrders = [];
+                let electricityOrders = [];
+
                 orders.forEach((order, index) => {
-                    message += `ORDER ${index + 1}\n`;
-                    message += `Order ID: ${order.orderId || 'N/A'}\n`;
-                    message += `Client: ${order.clientName || 'N/A'}\n`;
-                    message += `Contact: ${order.contact || 'N/A'}\n`;
-                    message += `Venue: ${order.venue || 'N/A'}\n`;
+                    // Collect special items
+                    let orderItems = [];
 
-                    // Add Google Maps location link - check multiple sources
-                    let locationAdded = false;
-
-                    // First, try to use coordinates if available
-                    if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
-                        let mapsUrl;
-
-                        // If we have a place_id from Google autocomplete, use it (shows full venue name)
-                        if (order.venueLocation.place_id) {
-                            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue || 'Venue')}&query_place_id=${order.venueLocation.place_id}`;
-                        }
-                        // Otherwise, combine venue name with coordinates for better context
-                        else if (order.venue && order.venue !== 'N/A') {
-                            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}+${order.venueLocation.lat},${order.venueLocation.lng}`;
-                        }
-                        // Fallback to just coordinates
-                        else {
-                            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${order.venueLocation.lat},${order.venueLocation.lng}`;
-                        }
-
-                        message += `📍 Location: ${mapsUrl}\n`;
-                        locationAdded = true;
-                    }
-                    // Second, try to use stored Google Maps link
-                    else if (order.venueMapLink && order.venueMapLink.trim()) {
-                        message += `📍 Location: ${order.venueMapLink}\n`;
-                        locationAdded = true;
-                    }
-                    // Third, if venue name exists, create a search link
-                    else if (order.venue && order.venue !== 'N/A' && order.venue.trim()) {
-                        const searchQuery = encodeURIComponent(order.venue);
-                        const searchUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
-                        message += `📍 Search Location: ${searchUrl}\n`;
-                        locationAdded = true;
-                    }
-
-                    if (order.isMultiDay) {
-                        message += `Multi-Day Event: ${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}\n`;
-                        message += `Selected Date: ${Utils.formatDate(selectedDate)}\n`;
-                    } else {
-                        message += `Date: ${Utils.formatDate(order.date)}\n`;
-                    }
-
-                    message += `Ready Time: ${order.readyTime || 'TBD'}\n`;
-                    message += `Event Type: ${order.eventType || 'N/A'}\n`;
-                    message += `Status: ${order.status || 'Pending'}\n`;
-
-                    // Transport details
-                    if (order.transport || order.transport2) {
-                        message += `Transport: `;
-                        if (order.transport) {
-                            message += order.transport === 'Other' ? (order.customTransport || 'Other') : order.transport;
-                        }
-                        if (order.transport2) {
-                            message += `, ${order.transport2 === 'Other' ? (order.customTransport2 || 'Other') : order.transport2}`;
-                        }
-                        message += `\n`;
-                    }
-
-                    // Find specific day data for multi-day orders (ONLY for selected date)
+                    // Find specific day data for multi-day orders
                     let specificDayData = null;
                     if (order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0) {
                         specificDayData = order.dayWiseData.find(dayData => dayData.date === selectedDate);
                     }
 
-                    // Team allocation - ONLY for selected date
-                    if (specificDayData) {
-                        // Multi-day order: show ONLY selected date's team
-                        const dayHasTeam = specificDayData.functions && specificDayData.functions.some(func =>
-                            func.driver || func.operator || func.helper
-                        );
-
-                        if (dayHasTeam) {
-                            message += `Team for ${Utils.formatDate(selectedDate)}:\n`;
-
-                            specificDayData.functions.forEach((func, funcIdx) => {
-                                if (func.driver || func.operator || func.helper) {
-                                    if (specificDayData.functions.length > 1 || func.functionType) {
-                                        message += `  Function ${funcIdx + 1}${func.functionType ? ' - ' + func.functionType : ''}`;
-                                        if (func.timeSlot) message += ` (${func.timeSlot})`;
-                                        message += `:\n`;
-                                    }
-                                    if (func.driver) message += `    Driver: ${func.driver}\n`;
-                                    if (func.operator) message += `    Operator: ${func.operator}\n`;
-                                    if (func.helper) message += `    Helper: ${func.helper}\n`;
-                                }
-                            });
-                        } else if (order.driverName || order.driverName2 || order.operator || order.helper) {
-                            // Fallback: show general team info
-                            message += `Team:\n`;
-                            if (order.driverName) message += `  Driver: ${order.driverName}\n`;
-                            if (order.driverName2) message += `  Driver 2: ${order.driverName2}\n`;
-                            if (order.operator) message += `  Operator: ${order.operator}\n`;
-                            if (order.helper) message += `  Helper: ${order.helper}\n`;
-                        }
-                    } else if (!order.isMultiDay) {
-                        // Single-day order: show team normally
-                        if (order.driverName || order.driverName2 || order.operator || order.helper) {
-                            message += `Team:\n`;
-                            if (order.driverName) message += `  Driver: ${order.driverName}\n`;
-                            if (order.driverName2) message += `  Driver 2: ${order.driverName2}\n`;
-                            if (order.operator) message += `  Operator: ${order.operator}\n`;
-                            if (order.helper) message += `  Helper: ${order.helper}\n`;
-                        }
+                    // Collect items from order
+                    if (specificDayData && specificDayData.functions) {
+                        specificDayData.functions.forEach(func => {
+                            if (func.items && func.items.length > 0) {
+                                orderItems = orderItems.concat(func.items);
+                            }
+                        });
+                    } else if (order.items && order.items.length > 0) {
+                        orderItems = order.items;
                     }
 
-                    // Items - ONLY for selected date
-                    if (specificDayData) {
-                        // Multi-day order: show ONLY selected date's items
-                        const dayHasItems = specificDayData.functions && specificDayData.functions.some(func =>
-                            func.items && func.items.length > 0
-                        );
-
-                        if (dayHasItems) {
-                            message += `Items for ${Utils.formatDate(selectedDate)}:\n`;
-
-                            specificDayData.functions.forEach((func, funcIdx) => {
-                                if (func.items && func.items.length > 0) {
-                                    if (specificDayData.functions.length > 1 || func.functionType) {
-                                        message += `  Function ${funcIdx + 1}${func.functionType ? ' - ' + func.functionType : ''}`;
-                                        if (func.timeSlot) message += ` (${func.timeSlot})`;
-                                        message += `:\n`;
-                                    }
-
-                                    func.items.forEach(item => {
-                                        message += `    ${item.name}: ${item.quantity}`;
-                                        if (item.remarks) message += ` (${item.remarks})`;
-                                        message += `\n`;
-                                    });
-
-                                    // Add function-specific notes if present
-                                    if (func.notes && func.notes.trim()) {
-                                        message += `    Note: ${func.notes}\n`;
-                                    }
-                                }
-                            });
+                    // Check for special items
+                    orderItems.forEach(item => {
+                        const itemNameLower = item.name.toLowerCase();
+                        if (itemNameLower.includes('dry ice') || itemNameLower.includes('dryice')) {
+                            dryIceOrders.push(`${order.clientName} - ${item.name} ${item.quantity}`);
                         }
+                        if (itemNameLower.includes('flower') || itemNameLower.includes('floral')) {
+                            flowersOrders.push(`${order.clientName} - ${item.name} ${item.quantity}`);
+                        }
+                        if (itemNameLower.includes('electric') || itemNameLower.includes('power')) {
+                            electricityOrders.push(`${order.clientName} - ${item.name} ${item.quantity}`);
+                        }
+                    });
+
+                    // Order details (compact format)
+                    message += `━━━━━━━━━━━━━━━━\n`;
+                    message += `${order.clientName || 'N/A'}\n`;
+                    message += `Contact: ${order.contact || 'N/A'}\n`;
+
+                    // Venue with location combined
+                    if (order.venue && order.venue !== 'N/A') {
+                        message += `Venue: ${order.venue}`;
+
+                        // Add Google Maps location in same line
+                        if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
+                            let mapsUrl;
+                            if (order.venueLocation.place_id) {
+                                mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}&query_place_id=${order.venueLocation.place_id}`;
+                            } else {
+                                mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}+${order.venueLocation.lat},${order.venueLocation.lng}`;
+                            }
+                            message += `\n📍 ${mapsUrl}`;
+                        } else if (order.venueMapLink && order.venueMapLink.trim()) {
+                            message += `\n📍 ${order.venueMapLink}`;
+                        }
+                        message += `\n`;
+                    }
+
+                    message += `Time: ${order.readyTime || 'TBD'}\n`;
+
+                    // Functions and items (compact format - no "Items:" label)
+                    if (specificDayData && specificDayData.functions) {
+                        specificDayData.functions.forEach((func, funcIdx) => {
+                            if (func.items && func.items.length > 0) {
+                                // Function name
+                                if (func.functionType) {
+                                    message += `Function - ${func.functionType}`;
+                                    if (func.timeSlot) message += ` (${func.timeSlot})`;
+                                    message += `\n`;
+                                } else if (specificDayData.functions.length > 1) {
+                                    message += `Function ${funcIdx + 1}`;
+                                    if (func.timeSlot) message += ` (${func.timeSlot})`;
+                                    message += `\n`;
+                                }
+
+                                // Items directly (no "Items:" label)
+                                func.items.forEach(item => {
+                                    message += `${item.name} ${item.quantity}`;
+                                    if (item.remarks) message += ` (${item.remarks})`;
+                                    message += `\n`;
+                                });
+                            }
+                        });
                     } else if (order.items && order.items.length > 0) {
-                        // Single-day order: show items normally
-                        message += `Items:\n`;
+                        // Single-day order items
                         order.items.forEach(item => {
-                            message += `  ${item.name}: ${item.quantity}`;
+                            message += `${item.name} ${item.quantity}`;
                             if (item.remarks) message += ` (${item.remarks})`;
                             message += `\n`;
                         });
                     }
 
-                    // Order notes (general, not function-specific)
-                    if (order.notes && order.notes.trim()) {
-                        message += `Order Notes: ${order.notes}\n`;
-                    }
-
                     message += `\n`;
                 });
+
+                // Special items summary (only once for entire message)
+                if (dryIceOrders.length > 0) {
+                    message += `━━━━━━━━━━━━━━━━\n`;
+                    message += `🧊 DRY ICE:\n`;
+                    dryIceOrders.forEach(item => message += `${item}\n`);
+                    message += `\n`;
+                }
+
+                if (flowersOrders.length > 0) {
+                    message += `━━━━━━━━━━━━━━━━\n`;
+                    message += `🌸 FLOWERS:\n`;
+                    flowersOrders.forEach(item => message += `${item}\n`);
+                    message += `\n`;
+                }
+
+                if (electricityOrders.length > 0) {
+                    message += `━━━━━━━━━━━━━━━━\n`;
+                    message += `⚡ ELECTRICITY:\n`;
+                    electricityOrders.forEach(item => message += `${item}\n`);
+                    message += `\n`;
+                }
 
                 message += `FirepowerSFX Order Management`;
 
