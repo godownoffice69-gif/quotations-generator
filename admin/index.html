@@ -5260,17 +5260,28 @@ if (localIndex !== -1) {
             console.log('🆕 Creating new order');
 
             // Save to Firestore
+            console.log('💾 Saving to Firestore - venue data:', {
+                venue: firestoreData.venue,
+                venueLocation: firestoreData.venueLocation,
+                venueMapLink: firestoreData.venueMapLink
+            });
+
             let docRef;
             if (finalOrderId) {
                 // Order has FP ID - use it as doc ID
                 docRef = await db.collection('orders').doc(finalOrderId).set(firestoreData);
                 orderData.docId = finalOrderId;
+                console.log('✅ Saved with FP ID:', finalOrderId);
             } else {
                 // No ID (pending/confirmed) - let Firestore generate doc ID
                 docRef = await db.collection('orders').add(firestoreData);
                 orderData.docId = docRef.id;
-                console.log('📝 Auto-generated docId:', docRef.id);
+                console.log('✅ Saved with auto ID:', docRef.id);
             }
+
+            // Verify what was actually saved
+            console.log('✅ venueLocation saved:', !!firestoreData.venueLocation, firestoreData.venueLocation);
+            console.log('✅ venueMapLink saved:', !!firestoreData.venueMapLink, firestoreData.venueMapLink);
 
 // Add to local array with all multi-day data
 const completeOrderData = {
