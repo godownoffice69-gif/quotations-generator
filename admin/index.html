@@ -10276,7 +10276,7 @@ convertToQuotationDateFormat(dateStr) {
                 document.getElementById('calendar').innerHTML = this.renderCalendar(this.currentCalendarDate || new Date());
             },
 
-            renderHistory() {
+            async renderHistory() {
                 const container = document.getElementById('history');
                 container.innerHTML = `
                     <div class="card">
@@ -10301,6 +10301,9 @@ convertToQuotationDateFormat(dateStr) {
 
                 // Initialize selected orders array
                 this.selectedOrdersForMerge = [];
+
+                // Check if user can manage financials
+                const canManageFinancials = await this.canViewFinancials();
 
                 // IMPORTANT: Filter out orders that have been merged into other orders
                 // Only show orders that are NOT marked as isMerged
@@ -10330,11 +10333,14 @@ convertToQuotationDateFormat(dateStr) {
                 ], visibleOrders, (row) => {
                     const isMergedOrder = row.mergedFrom && row.mergedFrom.length > 0;
                     const unmergeBtn = isMergedOrder ? `<button class="btn btn-info btn-small" onclick="OMS.unmergeOrder('${row.docId || row.orderId}')">🔓 Unmerge</button>` : '';
+                    const paymentExpenseButtons = canManageFinancials ? `
+                        <button class="btn btn-primary btn-small" onclick="OMS.addPaymentForOrder('${row.docId || row.orderId}')">💵 Payment</button>
+                        <button class="btn btn-warning btn-small" onclick="OMS.addExpenseForOrder('${row.docId || row.orderId}')">💸 Expense</button>
+                    ` : '';
                     return `
                         <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.docId || row.orderId}">${this.t('edit')}</button>
                         <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
-                        <button class="btn btn-primary btn-small" onclick="OMS.addPaymentForOrder('${row.docId || row.orderId}')">💵 Payment</button>
-                        <button class="btn btn-warning btn-small" onclick="OMS.addExpenseForOrder('${row.docId || row.orderId}')">💸 Expense</button>
+                        ${paymentExpenseButtons}
                         ${unmergeBtn}
                         <button class="btn btn-danger btn-small" data-action="delete" data-type="order" data-id="${row.docId || row.orderId}">${this.t('delete')}</button>
                     `;
@@ -11890,11 +11896,32 @@ convertToQuotationDateFormat(dateStr) {
                                         </div>
                                     </div>
 
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0; padding: 1.5rem; background: #e8f5e9; border-radius: 8px;">
-                                        <button type="button" class="btn btn-info btn-small" onclick="OMS.calculatePaymentTotal()">🧮 Calculate Total</button>
-                                        <div style="font-size: 1.5rem; font-weight: bold; color: #2e7d32;">
-                                            Grand Total: ₹<span id="calculatedTotal">0.00</span>
-                                        </div>
+                                    <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+                                        <table style="width: 100%; border-collapse: collapse;">
+                                            <tbody>
+                                                <tr style="border-bottom: 2px solid #ddd;">
+                                                    <td style="padding: 12px; text-align: right; font-size: 1.1rem; font-weight: 600;">Subtotal</td>
+                                                    <td style="padding: 12px; text-align: right; font-size: 1.1rem; font-weight: 600; width: 150px;">₹<span id="calculatedSubtotal">0.00</span></td>
+                                                </tr>
+                                                <tr style="border-bottom: 2px solid #ddd;">
+                                                    <td style="padding: 12px; text-align: right;">
+                                                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                                                            <span style="font-size: 1rem;">Discount</span>
+                                                            <select id="discountType" class="form-select" style="width: 80px; padding: 0.5rem;" onchange="OMS.calculatePaymentTotal()">
+                                                                <option value="percentage">%</option>
+                                                                <option value="fixed">₹</option>
+                                                            </select>
+                                                            <input type="number" id="discountValue" class="form-input" placeholder="0" min="0" step="0.01" style="width: 100px; padding: 0.5rem;" oninput="OMS.calculatePaymentTotal()">
+                                                        </div>
+                                                    </td>
+                                                    <td style="padding: 12px; text-align: right; color: #d32f2f; font-weight: 600;">-₹<span id="discountAmount">0.00</span></td>
+                                                </tr>
+                                                <tr style="background: #e8f5e9;">
+                                                    <td style="padding: 15px; text-align: right; font-size: 1.3rem; font-weight: bold; color: #2e7d32;">💳 GRAND TOTAL</td>
+                                                    <td style="padding: 15px; text-align: right; font-size: 1.3rem; font-weight: bold; color: #2e7d32;">₹<span id="calculatedTotal">0.00</span></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
 
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
@@ -12058,6 +12085,17 @@ convertToQuotationDateFormat(dateStr) {
                     console.error('❌ calculatedTotal element not found!');
                 }
 
+                // Reset discount fields
+                const discountTypeElement = document.getElementById('discountType');
+                const discountValueElement = document.getElementById('discountValue');
+                const subtotalElement = document.getElementById('calculatedSubtotal');
+                const discountAmountElement = document.getElementById('discountAmount');
+
+                if (discountTypeElement) discountTypeElement.value = 'percentage';
+                if (discountValueElement) discountValueElement.value = '';
+                if (subtotalElement) subtotalElement.textContent = '0.00';
+                if (discountAmountElement) discountAmountElement.textContent = '0.00';
+
                 console.log('✅✅ Payment modal fully populated and visible');
             },
 
@@ -12079,15 +12117,53 @@ convertToQuotationDateFormat(dateStr) {
 
             calculatePaymentTotal() {
                 const priceInputs = document.querySelectorAll('.item-price-input');
-                let grandTotal = 0;
+                let subtotal = 0;
 
+                // Calculate subtotal from all items
                 priceInputs.forEach(input => {
                     const pricePerUnit = parseFloat(input.value) || 0;
                     const quantity = parseInt(input.dataset.quantity) || 0;
-                    grandTotal += (pricePerUnit * quantity);
+                    subtotal += (pricePerUnit * quantity);
                 });
 
-                document.getElementById('calculatedTotal').textContent = grandTotal.toFixed(2);
+                // Update subtotal display
+                const subtotalElement = document.getElementById('calculatedSubtotal');
+                if (subtotalElement) {
+                    subtotalElement.textContent = subtotal.toFixed(2);
+                }
+
+                // Calculate discount
+                const discountType = document.getElementById('discountType')?.value || 'percentage';
+                const discountValue = parseFloat(document.getElementById('discountValue')?.value) || 0;
+                let discountAmount = 0;
+
+                if (discountType === 'percentage') {
+                    // If Type = Percentage: discount_amount = subtotal × (value / 100)
+                    discountAmount = subtotal * (discountValue / 100);
+                } else if (discountType === 'fixed') {
+                    // If Type = Fixed Amount: discount_amount = value
+                    discountAmount = discountValue;
+                }
+
+                // Ensure discount doesn't exceed subtotal
+                if (discountAmount > subtotal) {
+                    discountAmount = subtotal;
+                }
+
+                // Update discount amount display
+                const discountAmountElement = document.getElementById('discountAmount');
+                if (discountAmountElement) {
+                    discountAmountElement.textContent = discountAmount.toFixed(2);
+                }
+
+                // Calculate grand total
+                const grandTotal = subtotal - discountAmount;
+
+                // Update grand total display
+                const grandTotalElement = document.getElementById('calculatedTotal');
+                if (grandTotalElement) {
+                    grandTotalElement.textContent = grandTotal.toFixed(2);
+                }
 
                 return grandTotal;
             },
@@ -12111,7 +12187,7 @@ convertToQuotationDateFormat(dateStr) {
                 // Collect item-wise breakdown
                 const priceInputs = document.querySelectorAll('.item-price-input');
                 const itemBreakdown = [];
-                let totalAmount = 0;
+                let subtotal = 0;
 
                 priceInputs.forEach((input, index) => {
                     const pricePerUnit = parseFloat(input.value) || 0;
@@ -12130,21 +12206,46 @@ convertToQuotationDateFormat(dateStr) {
                             pricePerUnit: pricePerUnit,
                             itemTotal: itemTotal
                         });
-                        totalAmount += itemTotal;
+                        subtotal += itemTotal;
                     }
                 });
 
                 // Validate that at least one item has a price
-                if (itemBreakdown.length === 0 || totalAmount === 0) {
+                if (itemBreakdown.length === 0 || subtotal === 0) {
                     this.showToast('Please enter at least one item price!', 'error');
                     return;
                 }
+
+                // Get discount information
+                const discountType = Utils.get('discountType') || 'percentage';
+                const discountValue = parseFloat(Utils.get('discountValue')) || 0;
+                let discountAmount = 0;
+
+                if (discountType === 'percentage') {
+                    discountAmount = subtotal * (discountValue / 100);
+                } else if (discountType === 'fixed') {
+                    discountAmount = discountValue;
+                }
+
+                // Ensure discount doesn't exceed subtotal
+                if (discountAmount > subtotal) {
+                    discountAmount = subtotal;
+                }
+
+                // Calculate final amount
+                const totalAmount = subtotal - discountAmount;
 
                 const payment = {
                     orderId: order.orderId || 'Pending',
                     orderDocId: order.docId,
                     customerName: order.clientName,
                     amount: totalAmount,
+                    subtotal: subtotal,
+                    discount: {
+                        type: discountType,
+                        value: discountValue,
+                        amount: discountAmount
+                    },
                     itemBreakdown: itemBreakdown, // Store item-wise breakdown
                     paymentDate: Utils.get('paymentDate'),
                     paymentMethod: Utils.get('paymentMethod'),
