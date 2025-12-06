@@ -11966,6 +11966,15 @@ convertToQuotationDateFormat(dateStr) {
 
                 document.getElementById('modalsContainer').innerHTML = modalHTML;
                 console.log('✅ Payment modal created and displayed');
+
+                // Ensure the items container is hidden initially until an order is selected
+                setTimeout(() => {
+                    const container = document.getElementById('orderItemsContainer');
+                    if (container) {
+                        container.style.display = 'none';
+                        console.log('🔒 Initial state: orderItemsContainer hidden');
+                    }
+                }, 50);
             },
 
             loadOrderItemsForPayment() {
@@ -12095,7 +12104,16 @@ convertToQuotationDateFormat(dateStr) {
 
                 if (orderItemsContainer) {
                     orderItemsContainer.style.display = 'block';
+                    orderItemsContainer.style.visibility = 'visible';
+                    orderItemsContainer.style.opacity = '1';
+                    orderItemsContainer.style.height = 'auto';
                     console.log('✅ orderItemsContainer displayed (style.display = block)');
+
+                    // Scroll the container into view to ensure it's visible
+                    setTimeout(() => {
+                        orderItemsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        console.log('📜 Scrolled container into view');
+                    }, 100);
                 } else {
                     console.error('❌ orderItemsContainer element not found!');
                 }
