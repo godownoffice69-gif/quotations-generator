@@ -847,11 +847,152 @@
     <!-- Google Maps JavaScript API with Places Library -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAInxvvhevCHpLy9P5K5VvBNxDgbtZF-A4&libraries=places&loading=async&callback=initGoogleMaps" async defer></script>
 
+    <!-- Confetti Library for Login Success -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        /* Firepower SFX Login Theme */
+        #loginScreen {
+            cursor: none !important;
+        }
+
+        #loginScreen * {
+            cursor: none !important;
+        }
+
+        /* Custom Cursor */
+        .custom-cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffd700;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%);
+            box-shadow: 0 0 15px rgba(255,215,0,0.8), 0 0 30px rgba(255,215,0,0.4);
+            transition: all 0.1s ease;
+        }
+
+        /* Sparkle Trail */
+        .sparkle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9998;
+            animation: sparkle-fade 1s ease-out forwards;
+        }
+
+        @keyframes sparkle-fade {
+            0% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0) rotate(360deg);
+            }
+        }
+
+        /* Animated Background Gradient */
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #loginScreen {
+            background: linear-gradient(-45deg, #1a0033, #2d0a4e, #4a148c, #6a1b9a, #8e24aa) !important;
+            background-size: 400% 400% !important;
+            animation: gradient-shift 15s ease infinite !important;
+        }
+
+        /* Floating Particles Canvas */
+        #particles-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Login Card Glow Effect */
+        .login-card {
+            position: relative;
+            z-index: 2;
+            animation: card-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes card-pulse {
+            0%, 100% {
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 40px rgba(255,215,0,0.1);
+            }
+            50% {
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 60px rgba(255,215,0,0.3);
+            }
+        }
+
+        /* Logo Animation */
+        .login-logo {
+            animation: logo-float 3s ease-in-out infinite;
+        }
+
+        @keyframes logo-float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Button Hover Effect */
+        #loginBtn {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #loginBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(255,215,0,0.4);
+        }
+
+        #loginBtn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        #loginBtn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Input Focus Glow */
+        #loginEmail:focus, #loginPassword:focus {
+            border-color: #ffd700 !important;
+            box-shadow: 0 0 20px rgba(255,215,0,0.3) !important;
+            outline: none !important;
+        }
+    </style>
+
 <body>
+    <!-- Custom Cursor -->
+    <div class="custom-cursor" id="customCursor"></div>
+
     <!-- Login Screen -->
-    <div id="loginScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 3rem; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
-            <h1 style="text-align: center; color: #667eea; margin-bottom: 2rem; font-size: 2rem;">🔐 Admin Login</h1>
+    <div id="loginScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <!-- Floating Particles Background -->
+        <canvas id="particles-canvas"></canvas>
+
+        <div class="login-card" style="background: white; padding: 3rem; border-radius: 12px; max-width: 400px; width: 90%;">
+            <h1 class="login-logo" style="text-align: center; color: #667eea; margin-bottom: 2rem; font-size: 2rem;">🎆 Firepower SFX</h1>
             
             <form id="loginForm">
                 <div style="margin-bottom: 1.5rem;">
@@ -15872,6 +16013,31 @@ if (diffDays > 30) {
                 try {
                     await auth.signInWithEmailAndPassword(email, password);
                     console.log('✅ Login successful!');
+
+                    // 🎆 FIREPOWER SFX LOGIN SUCCESS!
+                    loginBtn.textContent = '✅ Success!';
+                    loginBtn.style.background = 'linear-gradient(135deg, #00c853 0%, #00e676 100%)';
+
+                    // Confetti Blast!
+                    if (typeof confetti !== 'undefined') {
+                        const count = 200;
+                        const defaults = {
+                            origin: { y: 0.7 },
+                            colors: ['#FFD700', '#FFA500', '#FF6347', '#8B00FF', '#00BFFF']
+                        };
+
+                        function fire(particleRatio, opts) {
+                            confetti(Object.assign({}, defaults, opts, {
+                                particleCount: Math.floor(count * particleRatio)
+                            }));
+                        }
+
+                        fire(0.25, { spread: 26, startVelocity: 55 });
+                        fire(0.2, { spread: 60 });
+                        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+                        fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+                        fire(0.1, { spread: 120, startVelocity: 45 });
+                    }
                 } catch (error) {
                     console.error('❌ Login error:', error);
                     loginError.textContent = 'Invalid email or password. Please try again.';
@@ -15929,6 +16095,144 @@ if (diffDays > 30) {
 
     // NO date restrictions - allow adding past, present, and future orders
     console.log('✅ Date restrictions removed - can add orders from any date');
+
+    // ============ FIREPOWER SFX LOGIN THEME ANIMATIONS ============
+
+    // Custom Cursor with Sparkle Trail
+    const cursor = document.getElementById('customCursor');
+    const loginScreen = document.getElementById('loginScreen');
+    let lastSparkle = 0;
+
+    document.addEventListener('mousemove', (e) => {
+        if (loginScreen.style.display === 'flex') {
+            // Move custom cursor
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+
+            // Create sparkle trail (throttled to every 50ms)
+            const now = Date.now();
+            if (now - lastSparkle > 50) {
+                createSparkle(e.clientX, e.clientY);
+                lastSparkle = now;
+            }
+        }
+    });
+
+    // Show/hide custom cursor based on login screen visibility
+    const observer = new MutationObserver(() => {
+        if (loginScreen.style.display === 'flex') {
+            cursor.style.display = 'block';
+        } else {
+            cursor.style.display = 'none';
+        }
+    });
+
+    observer.observe(loginScreen, { attributes: true, attributeFilter: ['style'] });
+
+    function createSparkle(x, y) {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'sparkle';
+        sparkle.style.left = x + 'px';
+        sparkle.style.top = y + 'px';
+        sparkle.style.width = '4px';
+        sparkle.style.height = '4px';
+        sparkle.style.background = `radial-gradient(circle, #ffd700, #ff${Math.floor(Math.random() * 100)}00)`;
+        sparkle.style.borderRadius = '50%';
+        sparkle.style.boxShadow = '0 0 6px #ffd700';
+        document.body.appendChild(sparkle);
+
+        setTimeout(() => sparkle.remove(), 1000);
+    }
+
+    // Floating Particles Background
+    const canvas = document.getElementById('particles-canvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+
+    if (canvas && ctx) {
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const particles = [];
+        const particleCount = 50;
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = Math.random() * 0.5 - 0.25;
+                this.speedY = Math.random() * -1 - 0.5;
+                this.opacity = Math.random() * 0.5 + 0.3;
+                this.color = ['#ffd700', '#ffa500', '#ff6347'][Math.floor(Math.random() * 3)];
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                if (this.y < 0 || this.x < 0 || this.x > canvas.width) {
+                    this.reset();
+                    this.y = canvas.height;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.opacity;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Glow effect
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // Create particles
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        function animateParticles() {
+            if (loginScreen.style.display === 'flex') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                particles.forEach(particle => {
+                    particle.update();
+                    particle.draw();
+                });
+
+                requestAnimationFrame(animateParticles);
+            } else {
+                // Clear canvas when login screen hidden
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // Start animation when login screen is visible
+        const particleObserver = new MutationObserver(() => {
+            if (loginScreen.style.display === 'flex') {
+                animateParticles();
+            }
+        });
+
+        particleObserver.observe(loginScreen, { attributes: true, attributeFilter: ['style'] });
+    }
+
+    console.log('🎆 Firepower SFX Login Theme Activated!');
+
         });
 
     </script>
