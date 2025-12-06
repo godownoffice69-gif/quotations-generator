@@ -10113,7 +10113,21 @@ convertToQuotationDateFormat(dateStr) {
 
                     // First, try to use coordinates if available
                     if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
-                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${order.venueLocation.lat},${order.venueLocation.lng}`;
+                        let mapsUrl;
+
+                        // If we have a place_id from Google autocomplete, use it (shows full venue name)
+                        if (order.venueLocation.place_id) {
+                            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue || 'Venue')}&query_place_id=${order.venueLocation.place_id}`;
+                        }
+                        // Otherwise, combine venue name with coordinates for better context
+                        else if (order.venue && order.venue !== 'N/A') {
+                            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}+${order.venueLocation.lat},${order.venueLocation.lng}`;
+                        }
+                        // Fallback to just coordinates
+                        else {
+                            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${order.venueLocation.lat},${order.venueLocation.lng}`;
+                        }
+
                         message += `📍 Location: ${mapsUrl}\n`;
                         locationAdded = true;
                     }
