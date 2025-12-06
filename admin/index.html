@@ -11855,6 +11855,7 @@ convertToQuotationDateFormat(dateStr) {
 
             async showAddPaymentModal() {
                 const orders = this.data.orders.filter(o => o.status !== 'Cancelled');
+                console.log(`💳 Opening payment modal with ${orders.length} active orders`);
 
                 const modalHTML = `
                     <div class="modal show" id="paymentModal" onclick="if(event.target === this) OMS.closeModal('paymentModal')">
@@ -11969,23 +11970,33 @@ convertToQuotationDateFormat(dateStr) {
 
             loadOrderItemsForPayment() {
                 console.log('🔍 loadOrderItemsForPayment called');
+                const orderSelect = document.getElementById('paymentOrderId');
+                console.log('📋 Order select element:', orderSelect);
+
                 const orderId = Utils.get('paymentOrderId');
                 console.log('Selected Order ID:', orderId);
 
                 if (!orderId) {
                     const container = document.getElementById('orderItemsContainer');
-                    if (container) container.style.display = 'none';
-                    console.log('⚠️ No order selected');
+                    if (container) {
+                        container.style.display = 'none';
+                        console.log('⚠️ No order selected - hiding container');
+                    } else {
+                        console.error('❌ orderItemsContainer not found in DOM!');
+                    }
                     return;
                 }
 
                 const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
-                console.log('Found order:', order ? order.orderId : 'NOT FOUND');
+                console.log('🔍 Searching for order with ID:', orderId);
+                console.log('📦 Total orders in data:', this.data.orders.length);
+                console.log('Found order:', order ? `${order.orderId} (${order.clientName})` : 'NOT FOUND');
 
                 if (!order) {
                     const container = document.getElementById('orderItemsContainer');
                     if (container) container.style.display = 'none';
-                    console.log('❌ Order not found in data.orders');
+                    console.error('❌ Order not found in data.orders');
+                    console.log('🔍 Available order IDs:', this.data.orders.map(o => o.docId || o.orderId).slice(0, 5));
                     return;
                 }
 
@@ -12000,8 +12011,10 @@ convertToQuotationDateFormat(dateStr) {
 
                 // Get all items from order
                 let allItems = [];
+                console.log('📋 Order type:', order.isMultiDay ? 'Multi-day' : 'Single-day');
 
                 if (order.isMultiDay && order.dayWiseData) {
+                    console.log('📅 Processing multi-day order with', order.dayWiseData?.length || 0, 'days');
                     // Collect items from all days and functions
                     order.dayWiseData.forEach(dayData => {
                         if (dayData.functions) {
@@ -12019,6 +12032,7 @@ convertToQuotationDateFormat(dateStr) {
                         }
                     });
                 } else if (order.items && order.items.length > 0) {
+                    console.log('📦 Processing single-day order with', order.items.length, 'items');
                     // Single day order items
                     allItems = order.items.map(item => ({
                         name: item.name,
@@ -12026,6 +12040,8 @@ convertToQuotationDateFormat(dateStr) {
                         remarks: item.remarks || ''
                     }));
                 }
+
+                console.log(`✅ Found ${allItems.length} items total`);
 
                 if (allItems.length === 0) {
                     document.getElementById('itemsPricingBody').innerHTML = `
@@ -12065,6 +12081,11 @@ convertToQuotationDateFormat(dateStr) {
                 const orderItemsContainer = document.getElementById('orderItemsContainer');
                 const calculatedTotal = document.getElementById('calculatedTotal');
 
+                console.log('🔍 DOM Elements check:');
+                console.log('  - itemsPricingBody:', itemsPricingBody ? '✅ Found' : '❌ Not found');
+                console.log('  - orderItemsContainer:', orderItemsContainer ? '✅ Found' : '❌ Not found');
+                console.log('  - calculatedTotal:', calculatedTotal ? '✅ Found' : '❌ Not found');
+
                 if (itemsPricingBody) {
                     itemsPricingBody.innerHTML = itemsHTML;
                     console.log(`✅ Populated ${allItems.length} items in table`);
@@ -12074,7 +12095,7 @@ convertToQuotationDateFormat(dateStr) {
 
                 if (orderItemsContainer) {
                     orderItemsContainer.style.display = 'block';
-                    console.log('✅ orderItemsContainer displayed');
+                    console.log('✅ orderItemsContainer displayed (style.display = block)');
                 } else {
                     console.error('❌ orderItemsContainer element not found!');
                 }
@@ -12383,13 +12404,23 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
-            addPaymentForOrder(orderId) {
+            async addPaymentForOrder(orderId) {
                 // Open payment modal with pre-selected order
-                this.showAddPaymentModal();
+                await this.showAddPaymentModal();
+
+                // Wait for modal to be fully rendered in DOM
                 setTimeout(() => {
-                    Utils.set('paymentOrderId', orderId);
-                    this.loadOrderItemsForPayment();
-                }, 100);
+                    const selectElement = document.getElementById('paymentOrderId');
+                    if (selectElement) {
+                        selectElement.value = orderId;
+                        // Trigger change event to ensure any listeners are notified
+                        selectElement.dispatchEvent(new Event('change'));
+                        // Also call loadOrderItemsForPayment directly
+                        this.loadOrderItemsForPayment();
+                    } else {
+                        console.error('❌ Payment order select element not found!');
+                    }
+                }, 300);
             },
 
             addExpenseForOrder(orderId) {
