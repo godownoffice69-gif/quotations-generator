@@ -10102,10 +10102,10 @@ convertToQuotationDateFormat(dateStr) {
                 let message = `📅 ${Utils.formatDate(selectedDate)}\n`;
                 message += `Total Orders: ${orders.length}\n\n`;
 
-                // Collect dry ice, flowers, electricity info from all orders
-                let dryIceOrders = [];
-                let flowersOrders = [];
-                let electricityOrders = [];
+                // Collect special items with quantities for grand total calculation
+                let dryIceItems = {};
+                let flowersItems = {};
+                let electricityItems = {};
 
                 orders.forEach((order, index) => {
                     // Collect special items
@@ -10128,17 +10128,32 @@ convertToQuotationDateFormat(dateStr) {
                         orderItems = order.items;
                     }
 
-                    // Check for special items
+                    // Check for special items and aggregate quantities
                     orderItems.forEach(item => {
                         const itemNameLower = item.name.toLowerCase();
+                        const quantity = item.quantity || '';
+
                         if (itemNameLower.includes('dry ice') || itemNameLower.includes('dryice')) {
-                            dryIceOrders.push(`${order.clientName} - ${item.name} ${item.quantity}`);
+                            if (!dryIceItems[item.name]) {
+                                dryIceItems[item.name] = 0;
+                            }
+                            // Try to parse numeric quantity (e.g., "10kg" -> 10, "5pc" -> 5)
+                            const numericQty = parseFloat(quantity) || 1;
+                            dryIceItems[item.name] += numericQty;
                         }
                         if (itemNameLower.includes('flower') || itemNameLower.includes('floral')) {
-                            flowersOrders.push(`${order.clientName} - ${item.name} ${item.quantity}`);
+                            if (!flowersItems[item.name]) {
+                                flowersItems[item.name] = 0;
+                            }
+                            const numericQty = parseFloat(quantity) || 1;
+                            flowersItems[item.name] += numericQty;
                         }
                         if (itemNameLower.includes('electric') || itemNameLower.includes('power')) {
-                            electricityOrders.push(`${order.clientName} - ${item.name} ${item.quantity}`);
+                            if (!electricityItems[item.name]) {
+                                electricityItems[item.name] = 0;
+                            }
+                            const numericQty = parseFloat(quantity) || 1;
+                            electricityItems[item.name] += numericQty;
                         }
                     });
 
@@ -10151,17 +10166,24 @@ convertToQuotationDateFormat(dateStr) {
                     if (order.venue && order.venue !== 'N/A') {
                         message += `Venue: ${order.venue}`;
 
-                        // Add Google Maps location in same line
+                        // Add Google Maps location link - check all possible sources
+                        let mapsUrl = null;
+
+                        // Priority 1: venueLocation with coordinates
                         if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
-                            let mapsUrl;
                             if (order.venueLocation.place_id) {
                                 mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}&query_place_id=${order.venueLocation.place_id}`;
                             } else {
                                 mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}+${order.venueLocation.lat},${order.venueLocation.lng}`;
                             }
+                        }
+                        // Priority 2: venueMapLink (stored link)
+                        else if (order.venueMapLink && order.venueMapLink.trim()) {
+                            mapsUrl = order.venueMapLink;
+                        }
+
+                        if (mapsUrl) {
                             message += `\n📍 ${mapsUrl}`;
-                        } else if (order.venueMapLink && order.venueMapLink.trim()) {
-                            message += `\n📍 ${order.venueMapLink}`;
                         }
                         message += `\n`;
                     }
@@ -10203,25 +10225,32 @@ convertToQuotationDateFormat(dateStr) {
                     message += `\n`;
                 });
 
-                // Special items summary (only once for entire message)
-                if (dryIceOrders.length > 0) {
+                // Special items GRAND TOTAL summary (only once for entire message)
+                if (Object.keys(dryIceItems).length > 0) {
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `🧊 DRY ICE:\n`;
-                    dryIceOrders.forEach(item => message += `${item}\n`);
+                    message += `🧊 DRY ICE - GRAND TOTAL:\n`;
+                    for (const [itemName, totalQty] of Object.entries(dryIceItems)) {
+                        // Format the total with proper unit from quantity
+                        message += `${itemName}: ${totalQty}\n`;
+                    }
                     message += `\n`;
                 }
 
-                if (flowersOrders.length > 0) {
+                if (Object.keys(flowersItems).length > 0) {
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `🌸 FLOWERS:\n`;
-                    flowersOrders.forEach(item => message += `${item}\n`);
+                    message += `🌸 FLOWERS - GRAND TOTAL:\n`;
+                    for (const [itemName, totalQty] of Object.entries(flowersItems)) {
+                        message += `${itemName}: ${totalQty}\n`;
+                    }
                     message += `\n`;
                 }
 
-                if (electricityOrders.length > 0) {
+                if (Object.keys(electricityItems).length > 0) {
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `⚡ ELECTRICITY:\n`;
-                    electricityOrders.forEach(item => message += `${item}\n`);
+                    message += `⚡ ELECTRICITY - GRAND TOTAL:\n`;
+                    for (const [itemName, totalQty] of Object.entries(electricityItems)) {
+                        message += `${itemName}: ${totalQty}\n`;
+                    }
                     message += `\n`;
                 }
 
