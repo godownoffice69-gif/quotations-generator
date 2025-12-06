@@ -4813,21 +4813,31 @@ async refreshOrderId() {
             // https://www.google.com/maps/place/.../@LAT,LNG,ZOOMz/...
             // https://www.google.com/maps/@LAT,LNG,ZOOMz
             // https://maps.google.com/?q=LAT,LNG
+            // https://www.google.com/maps/search/?api=1&query=LAT,LNG
             // https://goo.gl/maps/... (short link)
 
             // Try to find coordinates in various formats
             let lat = null, lng = null;
 
-            // Format 1: @LAT,LNG or ?q=LAT,LNG
-            const coordMatch = link.match(/[@?](-?\d+\.\d+),(-?\d+\.\d+)/);
-            if (coordMatch) {
-                lat = parseFloat(coordMatch[1]);
-                lng = parseFloat(coordMatch[2]);
+            // Format 1: query=LAT,LNG (from API links)
+            const queryMatch = link.match(/[?&]query=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+            if (queryMatch) {
+                lat = parseFloat(queryMatch[1]);
+                lng = parseFloat(queryMatch[2]);
             }
 
-            // Format 2: /maps/place/NAME/@LAT,LNG
+            // Format 2: @LAT,LNG or ?q=LAT,LNG
             if (!lat) {
-                const placeMatch = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                const coordMatch = link.match(/[@?]q?=?(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+                if (coordMatch) {
+                    lat = parseFloat(coordMatch[1]);
+                    lng = parseFloat(coordMatch[2]);
+                }
+            }
+
+            // Format 3: /maps/place/NAME/@LAT,LNG
+            if (!lat) {
+                const placeMatch = link.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
                 if (placeMatch) {
                     lat = parseFloat(placeMatch[1]);
                     lng = parseFloat(placeMatch[2]);
@@ -4835,7 +4845,6 @@ async refreshOrderId() {
             }
 
             if (lat && lng) {
-                console.log('Extracted coordinates from Maps link:', { lat, lng });
                 return {
                     lat: lat,
                     lng: lng,
@@ -4843,7 +4852,12 @@ async refreshOrderId() {
                 };
             }
 
-            console.warn('Could not extract coordinates from Maps link:', link);
+            // Only warn once per unique link to avoid console spam
+            if (!this._warnedLinks) this._warnedLinks = new Set();
+            if (!this._warnedLinks.has(link)) {
+                console.warn('Could not extract coordinates from Maps link:', link);
+                this._warnedLinks.add(link);
+            }
             return null;
         } catch (error) {
             console.error('Error extracting location from Maps link:', error);
