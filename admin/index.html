@@ -10094,10 +10094,26 @@ convertToQuotationDateFormat(dateStr) {
                     message += `Contact: ${order.contact || 'N/A'}\n`;
                     message += `Venue: ${order.venue || 'N/A'}\n`;
 
-                    // Add Google Maps location link if available
+                    // Add Google Maps location link - check multiple sources
+                    let locationAdded = false;
+
+                    // First, try to use coordinates if available
                     if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
                         const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${order.venueLocation.lat},${order.venueLocation.lng}`;
-                        message += `Location: ${mapsUrl}\n`;
+                        message += `📍 Location: ${mapsUrl}\n`;
+                        locationAdded = true;
+                    }
+                    // Second, try to use stored Google Maps link
+                    else if (order.venueMapLink && order.venueMapLink.trim()) {
+                        message += `📍 Location: ${order.venueMapLink}\n`;
+                        locationAdded = true;
+                    }
+                    // Third, if venue name exists, create a search link
+                    else if (order.venue && order.venue !== 'N/A' && order.venue.trim()) {
+                        const searchQuery = encodeURIComponent(order.venue);
+                        const searchUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
+                        message += `📍 Search Location: ${searchUrl}\n`;
+                        locationAdded = true;
                     }
 
                     if (order.isMultiDay) {
