@@ -10228,30 +10228,32 @@ convertToQuotationDateFormat(dateStr) {
                 // Special items GRAND TOTAL summary (only once for entire message)
                 if (Object.keys(dryIceItems).length > 0) {
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `🧊 DRY ICE - GRAND TOTAL:\n`;
-                    for (const [itemName, totalQty] of Object.entries(dryIceItems)) {
-                        // Format the total with proper unit from quantity
-                        message += `${itemName}: ${totalQty}\n`;
+                    // Calculate total sum of all dry ice quantities
+                    let dryIceTotal = 0;
+                    for (const qty of Object.values(dryIceItems)) {
+                        dryIceTotal += qty;
                     }
-                    message += `\n`;
+                    message += `🧊 DRY ICE - GRAND TOTAL: ${dryIceTotal}kg\n\n`;
                 }
 
                 if (Object.keys(flowersItems).length > 0) {
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `🌸 FLOWERS - GRAND TOTAL:\n`;
-                    for (const [itemName, totalQty] of Object.entries(flowersItems)) {
-                        message += `${itemName}: ${totalQty}\n`;
+                    // Calculate total sum of all flowers quantities
+                    let flowersTotal = 0;
+                    for (const qty of Object.values(flowersItems)) {
+                        flowersTotal += qty;
                     }
-                    message += `\n`;
+                    message += `🌸 FLOWERS - GRAND TOTAL: ${flowersTotal}pc\n\n`;
                 }
 
                 if (Object.keys(electricityItems).length > 0) {
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `⚡ ELECTRICITY - GRAND TOTAL:\n`;
-                    for (const [itemName, totalQty] of Object.entries(electricityItems)) {
-                        message += `${itemName}: ${totalQty}\n`;
+                    // Calculate total sum of all electricity quantities
+                    let electricityTotal = 0;
+                    for (const qty of Object.values(electricityItems)) {
+                        electricityTotal += qty;
                     }
-                    message += `\n`;
+                    message += `⚡ ELECTRICITY - GRAND TOTAL: ${electricityTotal}kW\n\n`;
                 }
 
                 message += `FirepowerSFX Order Management`;
