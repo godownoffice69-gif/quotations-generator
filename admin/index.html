@@ -4767,12 +4767,19 @@ async refreshOrderId() {
                 place_id: window.selectedPlaceData.place_id,
                 formatted_address: window.selectedPlaceData.formatted_address
             };
-            console.log('Using location from autocomplete:', venueLocation);
+            console.log('✅ Using location from autocomplete:', venueLocation);
+            console.log('📍 Will save to Firestore:', {
+                venue: Utils.get('venue'),
+                venueLocation: venueLocation,
+                venueMapLink: mapLink
+            });
         }
         // Otherwise, try to extract from manually pasted Maps link
         else if (mapLink && mapLink.trim()) {
             venueLocation = this.extractLocationFromMapsLink(mapLink);
-            console.log('Using location extracted from Maps link:', venueLocation);
+            console.log('✅ Using location extracted from Maps link:', venueLocation);
+        } else {
+            console.warn('⚠️ No venue location data available - neither autocomplete nor map link provided');
         }
 
         return {
@@ -8123,9 +8130,7 @@ convertToQuotationDateFormat(dateStr) {
                         // Always populate events dropdown when orders tab is opened
                         console.log('📋 Orders tab opened - populating events dropdown');
                         this.populateEventsDatalist();
-                        // Also populate driver and operator dropdowns
-                        this.populateDriverDropdowns();
-                        this.populateOperatorDropdowns();
+                        // Driver and operator dropdowns are populated when form is rendered
                     }
                 }, 50);
             },
@@ -10167,6 +10172,13 @@ convertToQuotationDateFormat(dateStr) {
                     if (order.venue && order.venue !== 'N/A') {
                         message += `Venue: ${order.venue}`;
 
+                        // DEBUG: Log venue location data
+                        console.log(`🗺️ Order ${order.orderId} venue data:`, {
+                            venue: order.venue,
+                            venueLocation: order.venueLocation,
+                            venueMapLink: order.venueMapLink
+                        });
+
                         // Add Google Maps location link - check all possible sources
                         let mapsUrl = null;
 
@@ -10174,13 +10186,18 @@ convertToQuotationDateFormat(dateStr) {
                         if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
                             if (order.venueLocation.place_id) {
                                 mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}&query_place_id=${order.venueLocation.place_id}`;
+                                console.log(`✅ Using place_id link for ${order.orderId}`);
                             } else {
                                 mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}+${order.venueLocation.lat},${order.venueLocation.lng}`;
+                                console.log(`✅ Using lat/lng link for ${order.orderId}`);
                             }
                         }
                         // Priority 2: venueMapLink (stored link)
                         else if (order.venueMapLink && order.venueMapLink.trim()) {
                             mapsUrl = order.venueMapLink;
+                            console.log(`✅ Using venueMapLink for ${order.orderId}`);
+                        } else {
+                            console.warn(`⚠️ No location data found for ${order.orderId}`);
                         }
 
                         if (mapsUrl) {
