@@ -10660,6 +10660,7 @@ convertToQuotationDateFormat(dateStr) {
                     const unmergeBtn = isMergedOrder ? `<button class="btn btn-info btn-small" onclick="OMS.unmergeOrder('${row.docId || row.orderId}')">🔓 Unmerge</button>` : '';
                     const paymentExpenseButtons = canManageFinancials ? `
                         <button class="btn btn-primary btn-small" onclick="OMS.addPaymentForOrder('${row.docId || row.orderId}')">💵 Payment</button>
+                        <button class="btn btn-info btn-small" onclick="OMS.showPaymentScheduleModal('${row.docId || row.orderId}')">📅 Schedule</button>
                         <button class="btn btn-warning btn-small" onclick="OMS.addExpenseForOrder('${row.docId || row.orderId}')">💸 Expense</button>
                     ` : '';
                     return `
@@ -11437,6 +11438,7 @@ convertToQuotationDateFormat(dateStr) {
                                 <th>Date</th>
                                 <th>Order ID</th>
                                 <th>Customer</th>
+                                <th>Payment Type</th>
                                 <th>Amount</th>
                                 <th>Method</th>
                                 <th>Transaction ID</th>
@@ -11446,11 +11448,13 @@ convertToQuotationDateFormat(dateStr) {
                         <tbody>
                             ${payments.slice(0, 50).map(p => {
                                 const hasBreakdown = p.itemBreakdown && p.itemBreakdown.length > 0;
+                                const paymentTypeDisplay = p.paymentType || 'N/A';
                                 return `
                                 <tr>
                                     <td>${Utils.formatDate(p.paymentDate || p.timestamp?.toDate?.())}</td>
                                     <td>${p.orderId || 'N/A'}</td>
                                     <td>${p.customerName || 'N/A'}</td>
+                                    <td><strong>${paymentTypeDisplay}</strong></td>
                                     <td>
                                         ₹${parseFloat(p.amount || 0).toLocaleString('en-IN')}
                                         ${hasBreakdown ? '<br><button class="btn btn-info btn-small" style="margin-top: 0.25rem;" onclick="OMS.togglePaymentBreakdown(\'' + p.id + '\')">📋 View Details</button>' : ''}
@@ -11466,7 +11470,7 @@ convertToQuotationDateFormat(dateStr) {
                                 </tr>
                                 ${hasBreakdown ? `
                                 <tr id="breakdown_${p.id}" style="display: none; background: #f5f5f5;">
-                                    <td colspan="7" style="padding: 1rem;">
+                                    <td colspan="8" style="padding: 1rem;">
                                         <div style="background: white; padding: 1rem; border-radius: 8px; border: 2px solid #667eea;">
                                             <h4 style="margin: 0 0 1rem 0; color: #667eea;">📋 Item-wise Breakdown</h4>
                                             <table style="width: 100%; border-collapse: collapse;">
@@ -11503,6 +11507,186 @@ convertToQuotationDateFormat(dateStr) {
                     </table>
                 ` : `<p style="text-align: center; padding: 2rem; color: var(--text-gray);">No payment records found. Click "Add Payment" to get started.</p>`}
             </div>
+        </div>
+
+        <!-- Payment Timeline & Schedules Section -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">📅 Payment Schedules & Timeline</h3>
+            </div>
+            ${(() => {
+                // Get all orders with payment schedules
+                const ordersWithSchedules = orders.filter(o => o.paymentSchedule && o.paymentSchedule.length > 0);
+
+                if (ordersWithSchedules.length === 0) {
+                    return '<div style="padding: 2rem; text-align: center; color: var(--text-gray);">No payment schedules found. Create schedules from the Orders tab using the "📅 Schedule" button.</div>';
+                }
+
+                // Calculate stats
+                const today = new Date();
+                const dueThisWeek = [];
+                const overdue = [];
+                const upcoming = [];
+
+                ordersWithSchedules.forEach(order => {
+                    order.paymentSchedule.forEach(inst => {
+                        if (inst.isPaid) return; // Skip paid installments
+
+                        const dueDate = new Date(inst.dueDate);
+                        const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+                        if (dueDate < today) {
+                            overdue.push({ order, installment: inst });
+                        } else if (dueDate <= sevenDaysFromNow) {
+                            dueThisWeek.push({ order, installment: inst });
+                        } else {
+                            upcoming.push({ order, installment: inst });
+                        }
+                    });
+                });
+
+                const totalOverdue = overdue.reduce((sum, item) => sum + parseFloat(item.installment.amount), 0);
+                const totalDueThisWeek = dueThisWeek.reduce((sum, item) => sum + parseFloat(item.installment.amount), 0);
+                const totalUpcoming = upcoming.reduce((sum, item) => sum + parseFloat(item.installment.amount), 0);
+
+                return `
+                    <!-- Quick Stats -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: linear-gradient(135deg, #f44336 0%, #e91e63 100%); color: white; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold;">₹${totalOverdue.toLocaleString('en-IN')}</div>
+                            <div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">🔴 Overdue (${overdue.length} payments)</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #ff9800 0%, #ffc107 100%); color: white; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold;">₹${totalDueThisWeek.toLocaleString('en-IN')}</div>
+                            <div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">⏳ Due This Week (${dueThisWeek.length} payments)</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%); color: white; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold;">₹${totalUpcoming.toLocaleString('en-IN')}</div>
+                            <div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">⏱️ Upcoming (${upcoming.length} payments)</div>
+                        </div>
+                    </div>
+
+                    <!-- Orders with Payment Timelines -->
+                    <div style="max-height: 600px; overflow-y: auto;">
+                        ${ordersWithSchedules.map(order => {
+                            const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || 0);
+                            const totalPaid = parseFloat(order.financials?.advancePaid || 0);
+                            const balanceDue = parseFloat(order.financials?.balanceDue || 0);
+                            const paymentProgress = orderTotal > 0 ? (totalPaid / orderTotal) * 100 : 0;
+
+                            // Sort schedule by due date
+                            const sortedSchedule = (order.paymentSchedule || []).sort((a, b) =>
+                                new Date(a.dueDate) - new Date(b.dueDate)
+                            );
+
+                            return `
+                                <div style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; background: white;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                        <div>
+                                            <h4 style="margin: 0 0 0.5rem 0; color: #667eea;">${order.orderId || 'Pending'} - ${order.clientName}</h4>
+                                            <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                                                Event: ${order.isMultiDay ? `${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}` : Utils.formatDate(order.date)}
+                                            </p>
+                                        </div>
+                                        <button class="btn btn-info btn-small" onclick="OMS.showPaymentScheduleModal('${order.docId || order.orderId}')">📅 Manage Schedule</button>
+                                    </div>
+
+                                    <!-- Payment Progress Bar -->
+                                    <div style="margin-bottom: 1rem;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                            <span style="font-size: 0.9rem; color: #666;">Payment Progress</span>
+                                            <span style="font-size: 0.9rem; font-weight: bold; color: ${paymentProgress === 100 ? '#4caf50' : '#667eea'};">
+                                                ${paymentProgress.toFixed(0)}% (₹${totalPaid.toLocaleString('en-IN')} / ₹${orderTotal.toLocaleString('en-IN')})
+                                            </span>
+                                        </div>
+                                        <div style="width: 100%; height: 12px; background: #e0e0e0; border-radius: 6px; overflow: hidden;">
+                                            <div style="width: ${paymentProgress}%; height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); transition: width 0.3s ease;"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Payment Timeline -->
+                                    <div style="background: #f9f9f9; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                                        <h5 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: #666;">Payment Timeline</h5>
+                                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                            ${sortedSchedule.map((inst, idx) => {
+                                                const dueDate = new Date(inst.dueDate);
+                                                const isOverdue = !inst.isPaid && dueDate < today;
+                                                const isDueSoon = !inst.isPaid && dueDate >= today && dueDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+                                                let bgColor = '';
+                                                let icon = '';
+                                                if (inst.isPaid) {
+                                                    bgColor = '#4caf50';
+                                                    icon = '✅';
+                                                } else if (isOverdue) {
+                                                    bgColor = '#f44336';
+                                                    icon = '🔴';
+                                                } else if (isDueSoon) {
+                                                    bgColor = '#ff9800';
+                                                    icon = '⏳';
+                                                } else {
+                                                    bgColor = '#9e9e9e';
+                                                    icon = '⏱️';
+                                                }
+
+                                                return `
+                                                    <div style="flex: 1; min-width: 150px; background: ${bgColor}; color: white; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem;">
+                                                        <div style="font-weight: bold; margin-bottom: 0.25rem;">${icon} ${inst.paymentType}</div>
+                                                        <div style="opacity: 0.9;">₹${parseFloat(inst.amount).toLocaleString('en-IN')}</div>
+                                                        <div style="opacity: 0.9; font-size: 0.75rem; margin-top: 0.25rem;">${Utils.formatDate(inst.dueDate)}</div>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                        </div>
+                                    </div>
+
+                                    <!-- Installments Details -->
+                                    <details style="margin-top: 1rem;">
+                                        <summary style="cursor: pointer; font-weight: 600; color: #667eea;">View Detailed Schedule (${sortedSchedule.length} installments)</summary>
+                                        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                                            <thead>
+                                                <tr style="background: #f0f0f0; border-bottom: 2px solid #ddd;">
+                                                    <th style="padding: 0.5rem; text-align: left;">Type</th>
+                                                    <th style="padding: 0.5rem; text-align: right;">Amount</th>
+                                                    <th style="padding: 0.5rem; text-align: center;">Due Date</th>
+                                                    <th style="padding: 0.5rem; text-align: center;">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${sortedSchedule.map(inst => {
+                                                    const dueDate = new Date(inst.dueDate);
+                                                    const isOverdue = !inst.isPaid && dueDate < today;
+                                                    const isDueSoon = !inst.isPaid && dueDate >= today && dueDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+                                                    let statusBadge = '';
+                                                    if (inst.isPaid) {
+                                                        statusBadge = '<span style="background: #4caf50; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">✅ PAID</span>';
+                                                    } else if (isOverdue) {
+                                                        statusBadge = '<span style="background: #f44336; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">🔴 OVERDUE</span>';
+                                                    } else if (isDueSoon) {
+                                                        statusBadge = '<span style="background: #ff9800; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">⏳ DUE SOON</span>';
+                                                    } else {
+                                                        statusBadge = '<span style="background: #9e9e9e; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">⏱️ PENDING</span>';
+                                                    }
+
+                                                    return `
+                                                        <tr style="border-bottom: 1px solid #eee;">
+                                                            <td style="padding: 0.5rem;"><strong>${inst.paymentType}</strong></td>
+                                                            <td style="padding: 0.5rem; text-align: right;">₹${parseFloat(inst.amount).toLocaleString('en-IN')}</td>
+                                                            <td style="padding: 0.5rem; text-align: center;">${Utils.formatDate(inst.dueDate)}</td>
+                                                            <td style="padding: 0.5rem; text-align: center;">${statusBadge}</td>
+                                                        </tr>
+                                                    `;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </details>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            })()}
         </div>
 
         <!-- Expenses Section -->
@@ -12252,9 +12436,23 @@ convertToQuotationDateFormat(dateStr) {
 
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                                         <div class="form-group">
+                                            <label class="form-label required">Payment Type</label>
+                                            <select id="paymentType" class="form-select" required style="width: 100%; padding: 0.75rem;">
+                                                <option value="">-- Select Payment Type --</option>
+                                                <option value="Booking Payment">🟢 Booking Payment</option>
+                                                <option value="Pre-Event Payment">🟡 Pre-Event Payment</option>
+                                                <option value="Post-Event Payment">🔵 Post-Event Payment</option>
+                                                <option value="Final Settlement">🟣 Final Settlement</option>
+                                                <option value="Refund">🔴 Refund</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
                                             <label class="form-label required">Payment Date</label>
                                             <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required style="width: 100%; padding: 0.75rem;">
                                         </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                                         <div class="form-group">
                                             <label class="form-label required">Payment Method</label>
                                             <select id="paymentMethod" class="form-select" required style="width: 100%; padding: 0.75rem;">
@@ -12266,17 +12464,15 @@ convertToQuotationDateFormat(dateStr) {
                                                 <option value="Other">Other</option>
                                             </select>
                                         </div>
-                                    </div>
-
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                                         <div class="form-group">
                                             <label class="form-label">Transaction ID</label>
                                             <input type="text" id="paymentTransactionId" class="form-input" style="width: 100%; padding: 0.75rem;">
                                         </div>
-                                        <div class="form-group">
-                                            <label class="form-label">Notes</label>
-                                            <textarea id="paymentNotes" class="form-textarea" rows="2" style="width: 100%; padding: 0.75rem;"></textarea>
-                                        </div>
+                                    </div>
+
+                                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                                        <label class="form-label">Notes</label>
+                                        <textarea id="paymentNotes" class="form-textarea" rows="2" placeholder="e.g., 2nd installment received, Balance after event, etc." style="width: 100%; padding: 0.75rem;"></textarea>
                                     </div>
                                 </div>
 
@@ -12593,6 +12789,7 @@ convertToQuotationDateFormat(dateStr) {
                         amount: discountAmount
                     },
                     itemBreakdown: itemBreakdown, // Store item-wise breakdown
+                    paymentType: Utils.get('paymentType'), // Booking, Pre-Event, Post-Event, Final, Refund
                     paymentDate: Utils.get('paymentDate'),
                     paymentMethod: Utils.get('paymentMethod'),
                     transactionId: Utils.get('paymentTransactionId'),
@@ -12757,6 +12954,252 @@ convertToQuotationDateFormat(dateStr) {
                         const notes = `Related to Order: ${order.orderId || 'Pending'} - ${order.clientName}`;
                         Utils.set('expenseDescription', notes);
                     }, 100);
+                }
+            },
+
+            async showPaymentScheduleModal(orderId) {
+                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+                if (!order) {
+                    this.showToast('Order not found!', 'error');
+                    return;
+                }
+
+                // Get existing payment schedule or initialize empty array
+                const paymentSchedule = order.paymentSchedule || [];
+
+                // Calculate totals
+                const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || 0);
+                const totalPaid = parseFloat(order.financials?.advancePaid || 0);
+                const totalScheduled = paymentSchedule.reduce((sum, inst) => sum + parseFloat(inst.amount || 0), 0);
+                const totalPaidFromSchedule = paymentSchedule.filter(inst => inst.isPaid).reduce((sum, inst) => sum + parseFloat(inst.amount || 0), 0);
+                const remaining = orderTotal - totalScheduled;
+
+                // Get all payments for this order
+                const orderPayments = this.data.payments.filter(p => p.orderDocId === order.docId || p.orderId === order.orderId);
+
+                const modalHTML = `
+                    <div class="modal show" id="paymentScheduleModal" onclick="if(event.target === this) OMS.closeModal('paymentScheduleModal')">
+                        <div class="modal-content" style="max-width: 900px;">
+                            <button class="modal-close" onclick="OMS.closeModal('paymentScheduleModal')">×</button>
+                            <h2>📅 Payment Schedule - ${order.orderId || 'Pending'}</h2>
+
+                            <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                <h3 style="margin: 0 0 1rem 0;">Order Details</h3>
+                                <p style="margin: 0.5rem 0;"><strong>Client:</strong> ${order.clientName}</p>
+                                <p style="margin: 0.5rem 0;"><strong>Event Date:</strong> ${order.isMultiDay ? `${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}` : Utils.formatDate(order.date)}</p>
+                                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
+                                    <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">₹${orderTotal.toLocaleString('en-IN')}</div>
+                                        <div style="color: #666; font-size: 0.9rem;">Total Amount</div>
+                                    </div>
+                                    <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #4caf50;">₹${totalPaid.toLocaleString('en-IN')}</div>
+                                        <div style="color: #666; font-size: 0.9rem;">Total Paid</div>
+                                    </div>
+                                    <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #ff9800;">₹${totalScheduled.toLocaleString('en-IN')}</div>
+                                        <div style="color: #666; font-size: 0.9rem;">Scheduled</div>
+                                    </div>
+                                    <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: ${remaining >= 0 ? '#f44336' : '#4caf50'};">₹${remaining.toLocaleString('en-IN')}</div>
+                                        <div style="color: #666; font-size: 0.9rem;">Unscheduled</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 1.5rem;">
+                                <h3 style="margin: 0 0 1rem 0;">📋 Payment Installments</h3>
+                                <div style="max-height: 400px; overflow-y: auto; border: 2px solid #e0e0e0; border-radius: 8px; background: white;">
+                                    <table style="width: 100%; border-collapse: collapse;" id="scheduleTable">
+                                        <thead style="position: sticky; top: 0; background: #f9f9f9; z-index: 10;">
+                                            <tr style="border-bottom: 2px solid #333;">
+                                                <th style="text-align: left; padding: 12px; font-weight: 600;">#</th>
+                                                <th style="text-align: left; padding: 12px; font-weight: 600;">Payment Type</th>
+                                                <th style="text-align: center; padding: 12px; font-weight: 600;">Amount (₹)</th>
+                                                <th style="text-align: center; padding: 12px; font-weight: 600;">Due Date</th>
+                                                <th style="text-align: center; padding: 12px; font-weight: 600;">Status</th>
+                                                <th style="text-align: center; padding: 12px; font-weight: 600;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="scheduleTableBody">
+                                            ${paymentSchedule.length === 0 ? `
+                                                <tr><td colspan="6" style="text-align: center; padding: 2rem; color: #999;">No installments added yet. Click "Add Installment" below.</td></tr>
+                                            ` : paymentSchedule.map((inst, index) => {
+                                                const dueDate = new Date(inst.dueDate);
+                                                const today = new Date();
+                                                const isOverdue = !inst.isPaid && dueDate < today;
+                                                const isDueSoon = !inst.isPaid && dueDate >= today && dueDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+                                                let statusBadge = '';
+                                                if (inst.isPaid) {
+                                                    statusBadge = '<span style="background: #4caf50; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem;">✅ PAID</span>';
+                                                } else if (isOverdue) {
+                                                    statusBadge = '<span style="background: #f44336; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem;">🔴 OVERDUE</span>';
+                                                } else if (isDueSoon) {
+                                                    statusBadge = '<span style="background: #ff9800; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem;">⏳ DUE SOON</span>';
+                                                } else {
+                                                    statusBadge = '<span style="background: #9e9e9e; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem;">⏱️ PENDING</span>';
+                                                }
+
+                                                return `
+                                                    <tr style="border-bottom: 1px solid #eee;">
+                                                        <td style="padding: 12px;">${index + 1}</td>
+                                                        <td style="padding: 12px;"><strong>${inst.paymentType || 'N/A'}</strong></td>
+                                                        <td style="padding: 12px; text-align: center;">₹${parseFloat(inst.amount).toLocaleString('en-IN')}</td>
+                                                        <td style="padding: 12px; text-align: center;">${Utils.formatDate(inst.dueDate)}</td>
+                                                        <td style="padding: 12px; text-align: center;">${statusBadge}</td>
+                                                        <td style="padding: 12px; text-align: center;">
+                                                            ${!inst.isPaid ? `<button class="btn btn-danger btn-small" onclick="OMS.deleteInstallment('${orderId}', ${index})">Delete</button>` : ''}
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">➕ Add New Installment</h3>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Type</label>
+                                        <select id="newInstallmentType" class="form-select" style="width: 100%; padding: 0.75rem;">
+                                            <option value="">-- Select Type --</option>
+                                            <option value="Booking Payment">🟢 Booking Payment</option>
+                                            <option value="Pre-Event Payment">🟡 Pre-Event Payment</option>
+                                            <option value="Post-Event Payment">🔵 Post-Event Payment</option>
+                                            <option value="Final Settlement">🟣 Final Settlement</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label required">Amount (₹)</label>
+                                        <input type="number" id="newInstallmentAmount" class="form-input" min="1" step="0.01" placeholder="0.00" style="width: 100%; padding: 0.75rem;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label required">Due Date</label>
+                                        <input type="date" id="newInstallmentDueDate" class="form-input" value="${Utils.toDateString(new Date())}" style="width: 100%; padding: 0.75rem;">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-success" onclick="OMS.addInstallment('${orderId}')" style="margin-top: 1rem;">➕ Add Installment</button>
+                            </div>
+
+                            <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                <h3 style="margin: 0 0 1rem 0;">💳 Recorded Payments</h3>
+                                ${orderPayments.length === 0 ? '<p style="color: #999;">No payments recorded yet.</p>' : `
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <thead>
+                                            <tr style="background: #e0e0e0;">
+                                                <th style="padding: 0.5rem; text-align: left;">Date</th>
+                                                <th style="padding: 0.5rem; text-align: left;">Type</th>
+                                                <th style="padding: 0.5rem; text-align: right;">Amount</th>
+                                                <th style="padding: 0.5rem; text-align: left;">Method</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${orderPayments.map(p => `
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 0.5rem;">${Utils.formatDate(p.paymentDate || p.timestamp?.toDate?.())}</td>
+                                                    <td style="padding: 0.5rem;"><strong>${p.paymentType || 'N/A'}</strong></td>
+                                                    <td style="padding: 0.5rem; text-align: right;">₹${parseFloat(p.amount).toLocaleString('en-IN')}</td>
+                                                    <td style="padding: 0.5rem;">${p.paymentMethod}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                `}
+                            </div>
+
+                            <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
+                                <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('paymentScheduleModal')">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalsContainer').innerHTML = modalHTML;
+            },
+
+            async addInstallment(orderId) {
+                const type = Utils.get('newInstallmentType');
+                const amount = parseFloat(Utils.get('newInstallmentAmount'));
+                const dueDate = Utils.get('newInstallmentDueDate');
+
+                if (!type || !amount || !dueDate) {
+                    this.showToast('Please fill all fields!', 'error');
+                    return;
+                }
+
+                if (amount <= 0) {
+                    this.showToast('Amount must be greater than 0!', 'error');
+                    return;
+                }
+
+                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+                if (!order) {
+                    this.showToast('Order not found!', 'error');
+                    return;
+                }
+
+                // Initialize payment schedule if it doesn't exist
+                if (!order.paymentSchedule) {
+                    order.paymentSchedule = [];
+                }
+
+                // Add new installment
+                const newInstallment = {
+                    paymentType: type,
+                    amount: amount,
+                    dueDate: dueDate,
+                    isPaid: false,
+                    createdAt: new Date().toISOString()
+                };
+
+                order.paymentSchedule.push(newInstallment);
+
+                // Save to Firestore
+                try {
+                    await db.collection('orders').doc(order.docId).update({
+                        paymentSchedule: order.paymentSchedule
+                    });
+
+                    this.showToast('Installment added successfully!', 'success');
+
+                    // Refresh the modal
+                    this.showPaymentScheduleModal(orderId);
+                } catch (error) {
+                    console.error('Error adding installment:', error);
+                    this.showToast('Error adding installment: ' + error.message, 'error');
+                    // Remove the added installment on error
+                    order.paymentSchedule.pop();
+                }
+            },
+
+            async deleteInstallment(orderId, installmentIndex) {
+                if (!confirm('Delete this installment?')) return;
+
+                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+                if (!order || !order.paymentSchedule) {
+                    this.showToast('Order or schedule not found!', 'error');
+                    return;
+                }
+
+                // Remove installment
+                order.paymentSchedule.splice(installmentIndex, 1);
+
+                // Save to Firestore
+                try {
+                    await db.collection('orders').doc(order.docId).update({
+                        paymentSchedule: order.paymentSchedule
+                    });
+
+                    this.showToast('Installment deleted successfully!', 'success');
+
+                    // Refresh the modal
+                    this.showPaymentScheduleModal(orderId);
+                } catch (error) {
+                    console.error('Error deleting installment:', error);
+                    this.showToast('Error deleting installment: ' + error.message, 'error');
                 }
             },
 
