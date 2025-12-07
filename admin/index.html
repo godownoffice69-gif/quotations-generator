@@ -9523,12 +9523,198 @@ convertToQuotationDateFormat(dateStr) {
                 this.showToast('Customer database refreshed!');
             },
 
-            viewCustomerOrders(customerId) {
+            async viewCustomerOrders(customerId) {
                 const customer = this.data.customers.find(c => c.id === customerId);
-                if (!customer) return;
-                
-                this.switchTab('history');
-                // Filter logic would go here
+                if (!customer) {
+                    this.showToast('Customer not found!', 'error');
+                    return;
+                }
+
+                // Get all orders for this customer
+                const customerOrders = this.data.orders.filter(o =>
+                    o.clientName === customer.name || o.contact === customer.contact
+                ).sort((a, b) => {
+                    // Sort by date, newest first
+                    const dateA = new Date(a.orderDate || a.createdAt || 0);
+                    const dateB = new Date(b.orderDate || b.createdAt || 0);
+                    return dateB - dateA;
+                });
+
+                // Calculate customer lifetime stats
+                const totalSpent = customerOrders.reduce((sum, o) => sum + parseFloat(o.financials?.grandTotal || o.totalAmount || 0), 0);
+                const totalPaid = customerOrders.reduce((sum, o) => sum + parseFloat(o.financials?.advancePaid || 0), 0);
+                const totalPending = totalSpent - totalPaid;
+                const fullyPaidOrders = customerOrders.filter(o => parseFloat(o.financials?.balanceDue || 0) === 0).length;
+
+                // Check if user can view financials
+                const canViewFinancials = await this.canViewFinancials();
+
+                const modalHTML = `
+                    <div class="modal show" id="customerProfileModal" onclick="if(event.target === this) OMS.closeModal('customerProfileModal')" style="z-index: 10000;">
+                        <div class="modal-content" style="max-width: 1200px; max-height: 90vh; overflow-y: auto;">
+                            <button class="modal-close" onclick="OMS.closeModal('customerProfileModal')">×</button>
+                            <h2>👤 Customer Profile</h2>
+
+                            <!-- Customer Info -->
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.75rem;">${customer.name}</h3>
+                                        <p style="margin: 0.25rem 0; opacity: 0.9;">📞 ${customer.contact || 'N/A'}</p>
+                                        ${customer.email ? `<p style="margin: 0.25rem 0; opacity: 0.9;">📧 ${customer.email}</p>` : ''}
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 1.25rem; font-weight: bold;">Total Orders: ${customerOrders.length}</div>
+                                        ${canViewFinancials ? `<div style="font-size: 0.9rem; opacity: 0.9; margin-top: 0.25rem;">Lifetime Value: ₹${totalSpent.toLocaleString('en-IN')}</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${canViewFinancials ? `
+                                <!-- Lifetime Stats -->
+                                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                                    <div style="background: #e8f5e9; padding: 1rem; border-radius: 8px; text-align: center; border: 2px solid #4caf50;">
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #2e7d32;">₹${totalSpent.toLocaleString('en-IN')}</div>
+                                        <div style="color: #666; font-size: 0.85rem; margin-top: 0.25rem;">Total Spent</div>
+                                    </div>
+                                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; text-align: center; border: 2px solid #2196f3;">
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #1565c0;">₹${totalPaid.toLocaleString('en-IN')}</div>
+                                        <div style="color: #666; font-size: 0.85rem; margin-top: 0.25rem;">Total Paid</div>
+                                    </div>
+                                    <div style="background: #ffebee; padding: 1rem; border-radius: 8px; text-align: center; border: 2px solid #f44336;">
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #c62828;">₹${totalPending.toLocaleString('en-IN')}</div>
+                                        <div style="color: #666; font-size: 0.85rem; margin-top: 0.25rem;">Pending</div>
+                                    </div>
+                                    <div style="background: #f3e5f5; padding: 1rem; border-radius: 8px; text-align: center; border: 2px solid #9c27b0;">
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #6a1b9a;">${fullyPaidOrders}/${customerOrders.length}</div>
+                                        <div style="color: #666; font-size: 0.85rem; margin-top: 0.25rem;">Fully Paid</div>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <!-- All Orders -->
+                            <div>
+                                <h3 style="margin: 0 0 1rem 0;">📋 All Orders</h3>
+                                ${customerOrders.length === 0 ? '<p style="text-align: center; color: #999; padding: 2rem;">No orders found for this customer.</p>' : customerOrders.map(order => {
+                                    const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || 0);
+                                    const totalPaid = parseFloat(order.financials?.advancePaid || 0);
+                                    const balanceDue = parseFloat(order.financials?.balanceDue || 0);
+                                    const paymentProgress = orderTotal > 0 ? (totalPaid / orderTotal) * 100 : 0;
+                                    const paymentStatus = order.financials?.paymentStatus || 'pending';
+
+                                    // Get payment history for this order
+                                    const orderPayments = this.data.payments.filter(p => p.orderDocId === order.docId || p.orderId === order.orderId);
+
+                                    // Get items
+                                    let items = [];
+                                    if (order.isMultiDay && order.dayWiseData) {
+                                        order.dayWiseData.forEach(day => {
+                                            if (day.functions) {
+                                                day.functions.forEach(func => {
+                                                    if (func.items) {
+                                                        items.push(...func.items);
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    } else if (order.items) {
+                                        items = order.items;
+                                    }
+
+                                    const statusColors = {
+                                        'confirmed': '#2196f3',
+                                        'pending': '#ff9800',
+                                        'completed': '#4caf50',
+                                        'cancelled': '#f44336'
+                                    };
+                                    const statusColor = statusColors[order.status?.toLowerCase()] || '#9e9e9e';
+
+                                    return `
+                                        <div style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; background: white;">
+                                            <!-- Order Header -->
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                                                <div>
+                                                    <h4 style="margin: 0 0 0.5rem 0; color: #667eea; font-size: 1.1rem;">${order.orderId || 'Pending'}</h4>
+                                                    <p style="margin: 0.25rem 0; color: #666; font-size: 0.9rem;">
+                                                        📅 ${order.isMultiDay ? `${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}` : Utils.formatDate(order.date)}
+                                                    </p>
+                                                    <p style="margin: 0.25rem 0; color: #666; font-size: 0.9rem;">
+                                                        📍 ${order.venue || 'N/A'}
+                                                    </p>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <span style="background: ${statusColor}; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">${order.status || 'Pending'}</span>
+                                                    ${canViewFinancials ? `
+                                                        <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+                                                            Total: <strong style="color: #667eea;">₹${orderTotal.toLocaleString('en-IN')}</strong>
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+
+                                            ${canViewFinancials ? `
+                                                <!-- Payment Progress -->
+                                                <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                                                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                        <span style="font-size: 0.9rem; font-weight: 600;">Payment Status</span>
+                                                        <span style="font-size: 0.9rem; font-weight: bold; color: ${paymentProgress === 100 ? '#4caf50' : '#667eea'};">
+                                                            ${paymentProgress.toFixed(0)}% (₹${totalPaid.toLocaleString('en-IN')} / ₹${orderTotal.toLocaleString('en-IN')})
+                                                        </span>
+                                                    </div>
+                                                    <div style="width: 100%; height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden;">
+                                                        <div style="width: ${paymentProgress}%; height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); transition: width 0.3s ease;"></div>
+                                                    </div>
+                                                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
+                                                        <span>✅ Paid: ₹${totalPaid.toLocaleString('en-IN')}</span>
+                                                        <span>⏳ Due: ₹${balanceDue.toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Payment History -->
+                                                ${orderPayments.length > 0 ? `
+                                                    <details style="margin-bottom: 1rem;">
+                                                        <summary style="cursor: pointer; font-weight: 600; color: #667eea; padding: 0.5rem 0;">💳 Payment History (${orderPayments.length} payments)</summary>
+                                                        <div style="margin-top: 0.75rem; padding-left: 1rem;">
+                                                            ${orderPayments.map(payment => `
+                                                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #eee;">
+                                                                    <div>
+                                                                        <div style="font-weight: 600; color: #333;">${payment.paymentType || 'Payment'}</div>
+                                                                        <div style="font-size: 0.85rem; color: #666;">${Utils.formatDate(payment.paymentDate || payment.timestamp?.toDate?.())} • ${payment.paymentMethod}</div>
+                                                                    </div>
+                                                                    <div style="font-weight: bold; color: #4caf50;">₹${parseFloat(payment.amount).toLocaleString('en-IN')}</div>
+                                                                </div>
+                                                            `).join('')}
+                                                        </div>
+                                                    </details>
+                                                ` : '<p style="font-size: 0.85rem; color: #999; margin-bottom: 1rem;">No payments recorded yet.</p>'}
+                                            ` : ''}
+
+                                            <!-- Order Items -->
+                                            <details>
+                                                <summary style="cursor: pointer; font-weight: 600; color: #667eea; padding: 0.5rem 0;">📦 Items (${items.length})</summary>
+                                                <div style="margin-top: 0.75rem; padding-left: 1rem;">
+                                                    ${items.map(item => `
+                                                        <div style="display: flex; justify-content: space-between; padding: 0.25rem 0;">
+                                                            <span style="color: #333;">${item.name}</span>
+                                                            <span style="font-weight: 600; color: #667eea;">x${item.quantity}</span>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </details>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+
+                            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
+                                <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('customerProfileModal')">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="OMS.createOrderForCustomer('${customerId}'); OMS.closeModal('customerProfileModal');">➕ New Order</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalsContainer').innerHTML = modalHTML;
             },
 
             createOrderForCustomer(customerId) {
