@@ -12638,12 +12638,16 @@ convertToQuotationDateFormat(dateStr) {
                 console.log('✅ Payment modal created and displayed');
             },
 
-            loadOrderForPayment() {
+            async loadOrderForPayment() {
                 const orderId = Utils.get('paymentOrderId');
                 if (!orderId) {
                     document.getElementById('orderDetailsSection').style.display = 'none';
                     return;
                 }
+
+                // Reload payments from Firestore to ensure fresh data
+                console.log('🔄 Reloading payments from Firestore...');
+                await this.loadPaymentsFromFirestore();
 
                 const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
                 if (!order) {
@@ -12729,8 +12733,20 @@ convertToQuotationDateFormat(dateStr) {
                 const previousPayments = this.data.payments.filter(p => p.orderDocId === order.docId || p.orderId === order.orderId);
                 if (previousPayments.length > 0) {
                     const paymentsHTML = previousPayments.map(p => `
-                        <div style="padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0;">
-                            <strong>${Utils.formatDate(p.paymentDate)}</strong>: ₹${parseFloat(p.amount).toLocaleString('en-IN')} (${p.paymentMethod})
+                        <div style="padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                            <div style="flex: 1;">
+                                <div style="margin-bottom: 0.25rem;">
+                                    <strong style="color: #1976d2;">${Utils.formatDate(p.paymentDate)}</strong>:
+                                    <span style="font-weight: bold; color: #4caf50;">₹${parseFloat(p.amount).toLocaleString('en-IN')}</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: #666;">
+                                    ${p.paymentMethod}${p.transactionId ? ` - ${p.transactionId}` : ''}${p.notes ? ` - ${p.notes}` : ''}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                                <button class="btn btn-warning btn-small" onclick="OMS.editPayment('${p.id}')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="Edit payment">✏️ Edit</button>
+                                <button class="btn btn-danger btn-small" onclick="OMS.deletePayment('${p.id}')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="Delete payment">🗑️ Delete</button>
+                            </div>
                         </div>
                     `).join('');
                     document.getElementById('previousPaymentsList').innerHTML = paymentsHTML;
@@ -12967,6 +12983,263 @@ convertToQuotationDateFormat(dateStr) {
                     } else {
                         breakdownRow.style.display = 'none';
                     }
+                }
+            },
+
+            async deletePayment(paymentId) {
+                const payment = this.data.payments.find(p => p.id === paymentId);
+                if (!payment) {
+                    this.showToast('Payment not found!', 'error');
+                    return;
+                }
+
+                if (!confirm(`Delete payment of ₹${parseFloat(payment.amount).toLocaleString('en-IN')} dated ${Utils.formatDate(payment.paymentDate)}?`)) {
+                    return;
+                }
+
+                try {
+                    // Delete payment from Firestore
+                    await db.collection('payments').doc(paymentId).delete();
+                    console.log('✅ Payment deleted from Firestore');
+
+                    // Recalculate order financials
+                    const order = this.data.orders.find(o => o.docId === payment.orderDocId || o.orderId === payment.orderId);
+                    if (order) {
+                        // Get all remaining payments for this order (excluding the deleted one)
+                        const remainingPayments = this.data.payments.filter(p =>
+                            p.id !== paymentId && (p.orderDocId === order.docId || p.orderId === order.orderId)
+                        );
+
+                        // Calculate new totals
+                        const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || 0);
+                        const newTotalPaid = remainingPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+                        const newBalance = orderTotal - newTotalPaid;
+
+                        // Calculate credit due date if balance remains
+                        let creditDueDate = null;
+                        if (newBalance > 0) {
+                            const eventDate = new Date(order.isMultiDay ? order.endDate : order.date);
+                            creditDueDate = new Date(eventDate);
+                            creditDueDate.setMonth(creditDueDate.getMonth() + 1);
+                            creditDueDate = Utils.toDateString(creditDueDate);
+                        }
+
+                        // Update order financials in Firestore
+                        const updateData = {
+                            'financials.advancePaid': newTotalPaid,
+                            'financials.balanceDue': newBalance,
+                            'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < orderTotal ? 'partial' : 'pending'
+                        };
+
+                        if (creditDueDate) {
+                            updateData['financials.creditDueDate'] = creditDueDate;
+                        } else {
+                            // Remove credit due date if fully paid
+                            updateData['financials.creditDueDate'] = firebase.firestore.FieldValue.delete();
+                        }
+
+                        // Update last payment date if there are remaining payments
+                        if (remainingPayments.length > 0) {
+                            const lastPayment = remainingPayments.reduce((latest, p) =>
+                                new Date(p.paymentDate) > new Date(latest.paymentDate) ? p : latest
+                            );
+                            updateData['financials.lastPaymentDate'] = lastPayment.paymentDate;
+                        } else {
+                            updateData['financials.lastPaymentDate'] = firebase.firestore.FieldValue.delete();
+                        }
+
+                        await db.collection('orders').doc(order.docId).update(updateData);
+                        console.log('✅ Order financials updated after payment deletion');
+                    }
+
+                    this.showToast('✅ Payment deleted successfully!', 'success');
+
+                    // Reload data from Firestore
+                    await this.loadPaymentsFromFirestore();
+                    await this.loadOrdersFromFirestore();
+
+                    // Refresh the payment modal if open
+                    if (window.currentPaymentOrder) {
+                        await this.loadOrderForPayment();
+                    }
+
+                    // Update all displays
+                    this.renderFinancials();
+                    if (this.currentTab === 'history') {
+                        this.renderHistory();
+                    }
+                } catch (error) {
+                    console.error('Error deleting payment:', error);
+                    this.showToast('Error deleting payment: ' + error.message, 'error');
+                }
+            },
+
+            async editPayment(paymentId) {
+                const payment = this.data.payments.find(p => p.id === paymentId);
+                if (!payment) {
+                    this.showToast('Payment not found!', 'error');
+                    return;
+                }
+
+                const order = this.data.orders.find(o => o.docId === payment.orderDocId || o.orderId === payment.orderId);
+
+                const modalHTML = `
+                    <div class="modal show" id="editPaymentModal" onclick="if(event.target === this) OMS.closeModal('editPaymentModal')">
+                        <div class="modal-content" style="max-width: 600px;">
+                            <button class="modal-close" onclick="OMS.closeModal('editPaymentModal')">×</button>
+                            <h2>✏️ Edit Payment</h2>
+                            <form id="editPaymentForm" onsubmit="OMS.saveEditedPayment(event, '${paymentId}')" style="display: block;">
+                                <div class="form-group">
+                                    <label class="form-label">Order</label>
+                                    <input type="text" class="form-input" value="${order ? (order.orderId || 'Pending') + ' - ' + order.clientName : 'Unknown'}" readonly style="background: #f5f5f5;">
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Date</label>
+                                        <input type="date" id="editPaymentDate" class="form-input" value="${payment.paymentDate}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label required">Amount (₹)</label>
+                                        <input type="number" id="editPaymentAmount" class="form-input" value="${payment.amount}" min="0" step="0.01" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Method</label>
+                                        <select id="editPaymentMethod" class="form-select" required>
+                                            <option value="Cash" ${payment.paymentMethod === 'Cash' ? 'selected' : ''}>Cash</option>
+                                            <option value="UPI" ${payment.paymentMethod === 'UPI' ? 'selected' : ''}>UPI</option>
+                                            <option value="Bank Transfer" ${payment.paymentMethod === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option>
+                                            <option value="Cheque" ${payment.paymentMethod === 'Cheque' ? 'selected' : ''}>Cheque</option>
+                                            <option value="Card" ${payment.paymentMethod === 'Card' ? 'selected' : ''}>Card</option>
+                                            <option value="Other" ${payment.paymentMethod === 'Other' ? 'selected' : ''}>Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Transaction ID</label>
+                                        <input type="text" id="editPaymentTransactionId" class="form-input" value="${payment.transactionId || ''}" placeholder="Optional">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Notes</label>
+                                    <textarea id="editPaymentNotes" class="form-input" rows="3" placeholder="Optional notes">${payment.notes || ''}</textarea>
+                                </div>
+
+                                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                                    <button type="submit" class="btn btn-primary" style="flex: 1;">💾 Save Changes</button>
+                                    <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('editPaymentModal')" style="flex: 1;">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalsContainer').innerHTML = modalHTML;
+            },
+
+            async saveEditedPayment(event, paymentId) {
+                event.preventDefault();
+
+                const payment = this.data.payments.find(p => p.id === paymentId);
+                if (!payment) {
+                    this.showToast('Payment not found!', 'error');
+                    return;
+                }
+
+                const oldAmount = parseFloat(payment.amount);
+                const newAmount = parseFloat(Utils.get('editPaymentAmount'));
+
+                if (!newAmount || newAmount <= 0) {
+                    this.showToast('Please enter a valid payment amount!', 'error');
+                    return;
+                }
+
+                try {
+                    // Update payment in Firestore
+                    const updateData = {
+                        amount: newAmount,
+                        paymentDate: Utils.get('editPaymentDate'),
+                        paymentMethod: Utils.get('editPaymentMethod'),
+                        transactionId: Utils.get('editPaymentTransactionId') || '',
+                        notes: Utils.get('editPaymentNotes') || ''
+                    };
+
+                    await db.collection('payments').doc(paymentId).update(updateData);
+                    console.log('✅ Payment updated in Firestore');
+
+                    // If amount changed, recalculate order financials
+                    if (oldAmount !== newAmount) {
+                        const order = this.data.orders.find(o => o.docId === payment.orderDocId || o.orderId === payment.orderId);
+                        if (order) {
+                            // Reload payments to get fresh data
+                            await this.loadPaymentsFromFirestore();
+
+                            // Get all payments for this order
+                            const orderPayments = this.data.payments.filter(p =>
+                                p.orderDocId === order.docId || p.orderId === order.orderId
+                            );
+
+                            // Calculate new totals
+                            const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || 0);
+                            const totalPaid = orderPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+                            const newBalance = orderTotal - totalPaid;
+
+                            // Calculate credit due date if balance remains
+                            let creditDueDate = null;
+                            if (newBalance > 0) {
+                                const eventDate = new Date(order.isMultiDay ? order.endDate : order.date);
+                                creditDueDate = new Date(eventDate);
+                                creditDueDate.setMonth(creditDueDate.getMonth() + 1);
+                                creditDueDate = Utils.toDateString(creditDueDate);
+                            }
+
+                            // Update order financials
+                            const orderUpdateData = {
+                                'financials.advancePaid': totalPaid,
+                                'financials.balanceDue': newBalance,
+                                'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < orderTotal ? 'partial' : 'pending'
+                            };
+
+                            if (creditDueDate) {
+                                orderUpdateData['financials.creditDueDate'] = creditDueDate;
+                            } else {
+                                orderUpdateData['financials.creditDueDate'] = firebase.firestore.FieldValue.delete();
+                            }
+
+                            // Update last payment date
+                            const lastPayment = orderPayments.reduce((latest, p) =>
+                                new Date(p.paymentDate) > new Date(latest.paymentDate) ? p : latest
+                            );
+                            orderUpdateData['financials.lastPaymentDate'] = lastPayment.paymentDate;
+
+                            await db.collection('orders').doc(order.docId).update(orderUpdateData);
+                            console.log('✅ Order financials updated after payment edit');
+                        }
+                    }
+
+                    this.showToast('✅ Payment updated successfully!', 'success');
+                    this.closeModal('editPaymentModal');
+
+                    // Reload data from Firestore
+                    await this.loadPaymentsFromFirestore();
+                    await this.loadOrdersFromFirestore();
+
+                    // Refresh the payment modal if open
+                    if (window.currentPaymentOrder) {
+                        await this.loadOrderForPayment();
+                    }
+
+                    // Update all displays
+                    this.renderFinancials();
+                    if (this.currentTab === 'history') {
+                        this.renderHistory();
+                    }
+                } catch (error) {
+                    console.error('Error updating payment:', error);
+                    this.showToast('Error updating payment: ' + error.message, 'error');
                 }
             },
 
