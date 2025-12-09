@@ -1369,11 +1369,6 @@
                             </div>
                         </div>
 
-                        <div class="btn-group" style="margin-top: 0.5rem;">
-                            <button type="button" class="btn btn-success" onclick="OMS.notifyAllocatedTeam()">📱 Notify Allocated Team</button>
-                            <button type="button" class="btn btn-info" onclick="OMS.sendManagerReport()">📊 Send Manager Report</button>
-                        </div>
-
                         <div class="form-group">
                             <label class="form-label">Notes</label>
                             <textarea id="orderNotes" class="form-textarea"></textarea>
@@ -1394,7 +1389,6 @@
                             <button type="button" class="btn btn-secondary" data-action="preview">👁️ Preview</button>
                             <button type="button" class="btn btn-info" data-action="duplicate">📋 Duplicate Last</button>
                             <button type="button" class="btn btn-warning" data-action="sameDay">📅 Same Day</button>
-                            <button type="button" class="btn btn-danger" data-action="clear">🗑️ Clear (Ctrl+D)</button>
                         </div>
                     </form>
                 </div>
@@ -1463,10 +1457,6 @@
             <div class="shortcut-item">
                 <span>New Order</span>
                 <span class="shortcut-key">Ctrl + N</span>
-            </div>
-            <div class="shortcut-item">
-                <span>Clear Form</span>
-                <span class="shortcut-key">Ctrl + D</span>
             </div>
             <div class="shortcut-item">
                 <span>Global Search</span>
@@ -5375,6 +5365,9 @@ if (localIndex !== -1) {
         }
 
         this.showToast('Order updated! ✏️');
+
+        // Auto-clear form after update
+        this.clearForm(true);
     }
 
     // Save new custom events to the list
@@ -5461,6 +5454,9 @@ if (!localExists) {
                 });
 
                 this.showToast(`Order ${displayId} saved to Firestore! 🆕`);
+
+                // Auto-clear form after save
+                this.clearForm(true);
                 this.refreshOrderId();
 
                 // Save new custom events to the list
@@ -6276,10 +6272,10 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
-            clearForm() {
+            clearForm(skipConfirmation = false) {
                 this.editingOrderId = null;  // Clear editing flags
                 this.editingDocId = null;
-                if (this.hasUnsavedChanges() && !confirm('Clear all data?')) return;
+                if (!skipConfirmation && this.hasUnsavedChanges() && !confirm('Clear all data?')) return;
 
                 document.getElementById('orderForm').reset();
                 this.currentOrderItems = [];
@@ -10846,7 +10842,6 @@ convertToQuotationDateFormat(dateStr) {
                     const unmergeBtn = isMergedOrder ? `<button class="btn btn-info btn-small" onclick="OMS.unmergeOrder('${row.docId || row.orderId}')">🔓 Unmerge</button>` : '';
                     const paymentExpenseButtons = canManageFinancials ? `
                         <button class="btn btn-primary btn-small" onclick="OMS.addPaymentForOrder('${row.docId || row.orderId}')">💵 Payment</button>
-                        <button class="btn btn-info btn-small" onclick="OMS.showPaymentScheduleModal('${row.docId || row.orderId}')">📅 Schedule</button>
                         <button class="btn btn-warning btn-small" onclick="OMS.addExpenseForOrder('${row.docId || row.orderId}')">💸 Expense</button>
                     ` : '';
                     return `
@@ -11695,17 +11690,17 @@ convertToQuotationDateFormat(dateStr) {
             </div>
         </div>
 
-        <!-- Payment Timeline & Schedules Section -->
+        <!-- Credit Reminders Section -->
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">📅 Payment Schedules & Timeline</h3>
+                <h3 class="card-title">⏰ Credit Payment Reminders</h3>
             </div>
             ${(() => {
-                // Get all orders with payment schedules
-                const ordersWithSchedules = orders.filter(o => o.paymentSchedule && o.paymentSchedule.length > 0);
+                // Get all payments with credit due dates
+                const paymentsWithCredit = payments.filter(p => p.creditDueDate && p.remainingBalance > 0);
 
-                if (ordersWithSchedules.length === 0) {
-                    return '<div style="padding: 2rem; text-align: center; color: var(--text-gray);">No payment schedules found. Create schedules from the Orders tab using the "📅 Schedule" button.</div>';
+                if (paymentsWithCredit.length === 0) {
+                    return '<div style="padding: 2rem; text-align: center; color: var(--text-gray);">No pending credit payments. All orders are up to date!</div>';
                 }
 
                 // Calculate stats
@@ -12550,116 +12545,88 @@ convertToQuotationDateFormat(dateStr) {
 
             async showAddPaymentModal() {
                 const orders = this.data.orders.filter(o => o.status !== 'Cancelled');
-                console.log(`💳 Opening payment modal with ${orders.length} active orders`);
+                console.log(`💳 Opening simplified payment modal with ${orders.length} active orders`);
 
                 const modalHTML = `
                     <div class="modal show" id="paymentModal" onclick="if(event.target === this) OMS.closeModal('paymentModal')">
-                        <div class="modal-content" style="max-width: 900px;">
+                        <div class="modal-content" style="max-width: 600px;">
                             <button class="modal-close" onclick="OMS.closeModal('paymentModal')">×</button>
-                            <h2>💵 Add Payment - Item-wise Pricing</h2>
+                            <h2>💵 Add Payment</h2>
                             <form id="paymentForm" onsubmit="OMS.savePayment(event)" style="display: block;">
                                 <div class="form-group" style="margin-bottom: 1.5rem;">
                                     <label class="form-label required">Select Order</label>
-                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.loadOrderItemsForPayment()" style="width: 100%; padding: 0.75rem;">
+                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.updatePaymentSummary()" style="width: 100%; padding: 0.75rem;">
                                         <option value="">-- Select an Order --</option>
-                                        ${orders.map(o => `<option value="${o.docId || o.orderId}">${o.orderId || 'Pending'} - ${o.clientName} (₹${parseFloat(o.financials?.balanceDue || o.totalAmount || 0).toLocaleString('en-IN')} due)</option>`).join('')}
+                                        ${orders.map(o => {
+                                            const total = parseFloat(o.financials?.grandTotal || o.totalAmount || 0);
+                                            const paid = parseFloat(o.financials?.advancePaid || 0);
+                                            const due = parseFloat(o.financials?.balanceDue || total);
+                                            return `<option value="${o.docId || o.orderId}" data-total="${total}" data-paid="${paid}" data-due="${due}">${o.orderId || 'Pending'} - ${o.clientName} (₹${due.toLocaleString('en-IN')} due)</option>`;
+                                        }).join('')}
                                     </select>
                                 </div>
 
-                                <div id="orderItemsContainer" style="display: block; margin-top: 1.5rem;">
-                                    <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                                        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">Order Details</h3>
-                                        <p style="margin: 0.5rem 0;"><strong>Order ID:</strong> <span id="displayOrderId">-</span></p>
-                                        <p style="margin: 0.5rem 0;"><strong>Client:</strong> <span id="displayClientName">-</span></p>
-                                    </div>
-
-                                    <div style="margin-bottom: 1.5rem;">
-                                        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">📋 Item-wise Pricing</h3>
-                                        <div style="max-height: 400px; overflow-y: auto; border: 2px solid #e0e0e0; border-radius: 8px; padding: 1rem; background: white;">
-                                            <table style="width: 100%; border-collapse: collapse;" id="itemsPricingTable">
-                                                <thead>
-                                                    <tr style="border-bottom: 2px solid #333; background: #f9f9f9;">
-                                                        <th style="text-align: left; padding: 12px; font-weight: 600;">Item Name</th>
-                                                        <th style="text-align: center; padding: 12px; font-weight: 600;">Quantity</th>
-                                                        <th style="text-align: center; padding: 12px; font-weight: 600;">Price per Unit (₹)</th>
-                                                        <th style="text-align: right; padding: 12px; font-weight: 600;">Total (₹)</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="itemsPricingBody">
-                                                    <tr><td colspan="4" style="text-align: center; padding: 2rem; color: #999;">Select an order to see items</td></tr>
-                                                </tbody>
-                                            </table>
+                                <div id="paymentSummary" style="display: none; background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                    <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">Order Summary</h3>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                        <div style="background: white; padding: 1rem; border-radius: 8px;">
+                                            <div style="color: #666; font-size: 0.9rem;">Order Total</div>
+                                            <div style="font-size: 1.3rem; font-weight: bold; color: #667eea;">₹<span id="displayOrderTotal">0</span></div>
+                                        </div>
+                                        <div style="background: white; padding: 1rem; border-radius: 8px;">
+                                            <div style="color: #666; font-size: 0.9rem;">Already Paid</div>
+                                            <div style="font-size: 1.3rem; font-weight: bold; color: #4caf50;">₹<span id="displayAlreadyPaid">0</span></div>
                                         </div>
                                     </div>
-
-                                    <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
-                                        <table style="width: 100%; border-collapse: collapse;">
-                                            <tbody>
-                                                <tr style="border-bottom: 2px solid #ddd;">
-                                                    <td style="padding: 12px; text-align: right; font-size: 1.1rem; font-weight: 600;">Subtotal</td>
-                                                    <td style="padding: 12px; text-align: right; font-size: 1.1rem; font-weight: 600; width: 150px;">₹<span id="calculatedSubtotal">0.00</span></td>
-                                                </tr>
-                                                <tr style="border-bottom: 2px solid #ddd;">
-                                                    <td style="padding: 12px; text-align: right;">
-                                                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
-                                                            <span style="font-size: 1rem;">Discount</span>
-                                                            <select id="discountType" class="form-select" style="width: 80px; padding: 0.5rem;" onchange="OMS.calculatePaymentTotal()">
-                                                                <option value="percentage">%</option>
-                                                                <option value="fixed">₹</option>
-                                                            </select>
-                                                            <input type="number" id="discountValue" class="form-input" placeholder="0" min="0" step="0.01" style="width: 100px; padding: 0.5rem;" oninput="OMS.calculatePaymentTotal()">
-                                                        </div>
-                                                    </td>
-                                                    <td style="padding: 12px; text-align: right; color: #d32f2f; font-weight: 600;">-₹<span id="discountAmount">0.00</span></td>
-                                                </tr>
-                                                <tr style="background: #e8f5e9;">
-                                                    <td style="padding: 15px; text-align: right; font-size: 1.3rem; font-weight: bold; color: #2e7d32;">💳 GRAND TOTAL</td>
-                                                    <td style="padding: 15px; text-align: right; font-size: 1.3rem; font-weight: bold; color: #2e7d32;">₹<span id="calculatedTotal">0.00</span></td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                    <div style="background: #fff3cd; padding: 1rem; border-radius: 8px; border-left: 4px solid #ffc107;">
+                                        <div style="color: #856404; font-size: 0.9rem;">Pending Amount</div>
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #856404;">₹<span id="displayPendingAmount">0</span></div>
                                     </div>
+                                </div>
 
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                                        <div class="form-group">
-                                            <label class="form-label required">Payment Type</label>
-                                            <select id="paymentType" class="form-select" required style="width: 100%; padding: 0.75rem;">
-                                                <option value="">-- Select Payment Type --</option>
-                                                <option value="Booking Payment">🟢 Booking Payment</option>
-                                                <option value="Pre-Event Payment">🟡 Pre-Event Payment</option>
-                                                <option value="Post-Event Payment">🔵 Post-Event Payment</option>
-                                                <option value="Final Settlement">🟣 Final Settlement</option>
-                                                <option value="Refund">🔴 Refund</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="form-label required">Payment Date</label>
-                                            <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required style="width: 100%; padding: 0.75rem;">
-                                        </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Amount (₹)</label>
+                                        <input type="number" id="paymentAmount" class="form-input" required min="0" step="0.01" placeholder="0.00" style="width: 100%; padding: 0.75rem;" oninput="OMS.updateRemainingAmount()">
                                     </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Remaining After Payment</label>
+                                        <input type="text" id="remainingAmount" class="form-input" readonly style="width: 100%; padding: 0.75rem; background: #e8f5e9; font-weight: bold; color: #2e7d32;">
+                                    </div>
+                                </div>
 
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                                        <div class="form-group">
-                                            <label class="form-label required">Payment Method</label>
-                                            <select id="paymentMethod" class="form-select" required style="width: 100%; padding: 0.75rem;">
-                                                <option value="Cash">Cash</option>
-                                                <option value="UPI">UPI</option>
-                                                <option value="Bank Transfer">Bank Transfer</option>
-                                                <option value="Cheque">Cheque</option>
-                                                <option value="Card">Card</option>
-                                                <option value="Other">Other</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="form-label">Transaction ID</label>
-                                            <input type="text" id="paymentTransactionId" class="form-input" style="width: 100%; padding: 0.75rem;">
-                                        </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Date</label>
+                                        <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required style="width: 100%; padding: 0.75rem;" onchange="OMS.updateCreditDueDate()">
                                     </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Credit Due Date (1 Month)</label>
+                                        <input type="date" id="creditDueDate" class="form-input" readonly style="width: 100%; padding: 0.75rem; background: #f5f5f5;">
+                                    </div>
+                                </div>
 
-                                    <div class="form-group" style="margin-bottom: 1.5rem;">
-                                        <label class="form-label">Notes</label>
-                                        <textarea id="paymentNotes" class="form-textarea" rows="2" placeholder="e.g., 2nd installment received, Balance after event, etc." style="width: 100%; padding: 0.75rem;"></textarea>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div class="form-group">
+                                        <label class="form-label required">Payment Method</label>
+                                        <select id="paymentMethod" class="form-select" required style="width: 100%; padding: 0.75rem;">
+                                            <option value="Cash">Cash</option>
+                                            <option value="UPI">UPI</option>
+                                            <option value="Bank Transfer">Bank Transfer</option>
+                                            <option value="Cheque">Cheque</option>
+                                            <option value="Card">Card</option>
+                                            <option value="Other">Other</option>
+                                        </select>
                                     </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Transaction ID</label>
+                                        <input type="text" id="paymentTransactionId" class="form-input" style="width: 100%; padding: 0.75rem;">
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 1.5rem;">
+                                    <label class="form-label">Notes</label>
+                                    <textarea id="paymentNotes" class="form-textarea" rows="2" placeholder="e.g., Partial payment, Balance after event, etc." style="width: 100%; padding: 0.75rem;"></textarea>
                                 </div>
 
                                 <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
@@ -12672,233 +12639,76 @@ convertToQuotationDateFormat(dateStr) {
                 `;
 
                 document.getElementById('modalsContainer').innerHTML = modalHTML;
-                console.log('✅ Payment modal created and displayed');
+
+                // Initialize credit due date
+                this.updateCreditDueDate();
+
+                console.log('✅ Simplified payment modal created and displayed');
             },
 
-            loadOrderItemsForPayment() {
-                console.log('🔍 loadOrderItemsForPayment called');
-                const orderSelect = document.getElementById('paymentOrderId');
-                console.log('📋 Order select element:', orderSelect);
+            updatePaymentSummary() {
+                const selectElement = document.getElementById('paymentOrderId');
+                const selectedOption = selectElement.options[selectElement.selectedIndex];
 
-                const orderId = Utils.get('paymentOrderId');
-                console.log('Selected Order ID:', orderId);
+                if (!selectedOption || !selectedOption.value) {
+                    document.getElementById('paymentSummary').style.display = 'none';
+                    return;
+                }
 
-                if (!orderId) {
-                    const container = document.getElementById('orderItemsContainer');
-                    if (container) {
-                        container.style.display = 'none';
-                        console.log('⚠️ No order selected - hiding container');
+                const total = parseFloat(selectedOption.getAttribute('data-total')) || 0;
+                const paid = parseFloat(selectedOption.getAttribute('data-paid')) || 0;
+                const due = parseFloat(selectedOption.getAttribute('data-due')) || 0;
+
+                document.getElementById('displayOrderTotal').textContent = total.toLocaleString('en-IN');
+                document.getElementById('displayAlreadyPaid').textContent = paid.toLocaleString('en-IN');
+                document.getElementById('displayPendingAmount').textContent = due.toLocaleString('en-IN');
+                document.getElementById('paymentSummary').style.display = 'block';
+
+                // Update remaining amount if payment amount is already entered
+                this.updateRemainingAmount();
+            },
+
+            updateRemainingAmount() {
+                const selectElement = document.getElementById('paymentOrderId');
+                const selectedOption = selectElement?.options[selectElement.selectedIndex];
+
+                if (!selectedOption || !selectedOption.value) {
+                    return;
+                }
+
+                const due = parseFloat(selectedOption.getAttribute('data-due')) || 0;
+                const paymentAmount = parseFloat(document.getElementById('paymentAmount')?.value) || 0;
+                const remaining = due - paymentAmount;
+
+                const remainingElement = document.getElementById('remainingAmount');
+                if (remainingElement) {
+                    remainingElement.value = `₹${Math.max(0, remaining).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                    // Change color based on whether fully paid or not
+                    if (remaining <= 0) {
+                        remainingElement.style.background = '#d4edda';
+                        remainingElement.style.color = '#155724';
                     } else {
-                        console.error('❌ orderItemsContainer not found in DOM!');
+                        remainingElement.style.background = '#fff3cd';
+                        remainingElement.style.color = '#856404';
                     }
-                    return;
                 }
-
-                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
-                console.log('🔍 Searching for order with ID:', orderId);
-                console.log('📦 Total orders in data:', this.data.orders.length);
-                console.log('Found order:', order ? `${order.orderId} (${order.clientName})` : 'NOT FOUND');
-
-                if (!order) {
-                    const container = document.getElementById('orderItemsContainer');
-                    if (container) container.style.display = 'none';
-                    console.error('❌ Order not found in data.orders');
-                    console.log('🔍 Available order IDs:', this.data.orders.map(o => o.docId || o.orderId).slice(0, 5));
-                    return;
-                }
-
-                // Show order details
-                const displayOrderId = document.getElementById('displayOrderId');
-                const displayClientName = document.getElementById('displayClientName');
-
-                if (displayOrderId) displayOrderId.textContent = order.orderId || 'Pending';
-                if (displayClientName) displayClientName.textContent = order.clientName || 'N/A';
-
-                console.log('✅ Order details populated');
-
-                // Get all items from order
-                let allItems = [];
-                console.log('📋 Order type:', order.isMultiDay ? 'Multi-day' : 'Single-day');
-
-                if (order.isMultiDay && order.dayWiseData) {
-                    console.log('📅 Processing multi-day order with', order.dayWiseData?.length || 0, 'days');
-                    // Collect items from all days and functions
-                    order.dayWiseData.forEach(dayData => {
-                        if (dayData.functions) {
-                            dayData.functions.forEach(func => {
-                                if (func.items && func.items.length > 0) {
-                                    func.items.forEach(item => {
-                                        allItems.push({
-                                            name: item.name,
-                                            quantity: item.quantity,
-                                            remarks: item.remarks || ''
-                                        });
-                                    });
-                                }
-                            });
-                        }
-                    });
-                } else if (order.items && order.items.length > 0) {
-                    console.log('📦 Processing single-day order with', order.items.length, 'items');
-                    // Single day order items
-                    allItems = order.items.map(item => ({
-                        name: item.name,
-                        quantity: item.quantity,
-                        remarks: item.remarks || ''
-                    }));
-                }
-
-                console.log(`✅ Found ${allItems.length} items total`);
-
-                if (allItems.length === 0) {
-                    document.getElementById('itemsPricingBody').innerHTML = `
-                        <tr><td colspan="4" style="text-align: center; padding: 1rem; color: #999;">No items found in this order</td></tr>
-                    `;
-                    document.getElementById('orderItemsContainer').style.display = 'block';
-                    return;
-                }
-
-                // Populate items table
-                const itemsHTML = allItems.map((item, index) => `
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 12px;">
-                            ${item.name}
-                            ${item.remarks ? `<br><small style="color: #666;">${item.remarks}</small>` : ''}
-                        </td>
-                        <td style="text-align: center; padding: 12px;">${item.quantity}</td>
-                        <td style="text-align: center; padding: 12px;">
-                            <input type="number"
-                                   class="form-input item-price-input"
-                                   id="itemPrice_${index}"
-                                   data-item-index="${index}"
-                                   data-quantity="${item.quantity}"
-                                   min="0"
-                                   step="0.01"
-                                   placeholder="0.00"
-                                   style="max-width: 120px; margin: 0 auto;"
-                                   oninput="OMS.updateItemTotal(${index})">
-                        </td>
-                        <td style="text-align: right; padding: 12px; font-weight: bold;">
-                            ₹<span id="itemTotal_${index}">0.00</span>
-                        </td>
-                    </tr>
-                `).join('');
-
-                const itemsPricingBody = document.getElementById('itemsPricingBody');
-                const orderItemsContainer = document.getElementById('orderItemsContainer');
-                const calculatedTotal = document.getElementById('calculatedTotal');
-
-                console.log('🔍 DOM Elements check:');
-                console.log('  - itemsPricingBody:', itemsPricingBody ? '✅ Found' : '❌ Not found');
-                console.log('  - orderItemsContainer:', orderItemsContainer ? '✅ Found' : '❌ Not found');
-                console.log('  - calculatedTotal:', calculatedTotal ? '✅ Found' : '❌ Not found');
-
-                if (itemsPricingBody) {
-                    itemsPricingBody.innerHTML = itemsHTML;
-                    console.log(`✅ Populated ${allItems.length} items in table`);
-                } else {
-                    console.error('❌ itemsPricingBody element not found!');
-                }
-
-                if (orderItemsContainer) {
-                    orderItemsContainer.style.display = 'block';
-                    console.log('✅ orderItemsContainer displayed (style.display = block)');
-                } else {
-                    console.error('❌ orderItemsContainer element not found!');
-                }
-
-                if (calculatedTotal) {
-                    calculatedTotal.textContent = '0.00';
-                } else {
-                    console.error('❌ calculatedTotal element not found!');
-                }
-
-                // Reset discount fields
-                const discountTypeElement = document.getElementById('discountType');
-                const discountValueElement = document.getElementById('discountValue');
-                const subtotalElement = document.getElementById('calculatedSubtotal');
-                const discountAmountElement = document.getElementById('discountAmount');
-
-                if (discountTypeElement) discountTypeElement.value = 'percentage';
-                if (discountValueElement) discountValueElement.value = '';
-                if (subtotalElement) subtotalElement.textContent = '0.00';
-                if (discountAmountElement) discountAmountElement.textContent = '0.00';
-
-                console.log('✅✅ Payment modal fully populated and visible');
             },
 
-            updateItemTotal(itemIndex) {
-                const priceInput = document.getElementById(`itemPrice_${itemIndex}`);
-                const totalSpan = document.getElementById(`itemTotal_${itemIndex}`);
+            updateCreditDueDate() {
+                const paymentDateElement = document.getElementById('paymentDate');
+                if (!paymentDateElement) return;
 
-                if (!priceInput || !totalSpan) return;
+                const paymentDate = new Date(paymentDateElement.value);
 
-                const pricePerUnit = parseFloat(priceInput.value) || 0;
-                const quantity = parseInt(priceInput.dataset.quantity) || 0;
-                const total = pricePerUnit * quantity;
+                // Add 1 month to payment date
+                const creditDueDate = new Date(paymentDate);
+                creditDueDate.setMonth(creditDueDate.getMonth() + 1);
 
-                totalSpan.textContent = total.toFixed(2);
-
-                // Auto-calculate grand total when any item price changes
-                this.calculatePaymentTotal();
-            },
-
-            calculatePaymentTotal() {
-                const priceInputs = document.querySelectorAll('.item-price-input');
-                let subtotal = 0;
-
-                // Calculate subtotal from all items
-                priceInputs.forEach(input => {
-                    const pricePerUnit = parseFloat(input.value) || 0;
-                    const quantity = parseInt(input.dataset.quantity) || 0;
-                    subtotal += (pricePerUnit * quantity);
-                });
-
-                // Update subtotal display
-                const subtotalElement = document.getElementById('calculatedSubtotal');
-                if (subtotalElement) {
-                    subtotalElement.textContent = subtotal.toFixed(2);
+                const creditDueDateElement = document.getElementById('creditDueDate');
+                if (creditDueDateElement) {
+                    creditDueDateElement.value = Utils.toDateString(creditDueDate);
                 }
-
-                // Calculate discount
-                const discountType = document.getElementById('discountType')?.value || 'percentage';
-                const discountValue = parseFloat(document.getElementById('discountValue')?.value) || 0;
-                let discountAmount = 0;
-
-                if (discountType === 'percentage') {
-                    // If Type = Percentage: discount_amount = subtotal × (value / 100)
-                    discountAmount = subtotal * (discountValue / 100);
-                } else if (discountType === 'fixed') {
-                    // If Type = Fixed Amount: discount_amount = value
-                    discountAmount = discountValue;
-                }
-
-                // Ensure discount doesn't exceed subtotal
-                if (discountAmount > subtotal) {
-                    discountAmount = subtotal;
-                }
-
-                // Update discount amount display
-                const discountAmountElement = document.getElementById('discountAmount');
-                if (discountAmountElement) {
-                    discountAmountElement.textContent = discountAmount.toFixed(2);
-                }
-
-                // Calculate grand total
-                const grandTotal = subtotal - discountAmount;
-
-                // Update grand total display
-                const grandTotalElement = document.getElementById('calculatedTotal');
-                if (grandTotalElement) {
-                    grandTotalElement.textContent = grandTotal.toFixed(2);
-                }
-
-                return grandTotal;
-            },
-
-            updatePaymentOrderInfo() {
-                // Deprecated - now using loadOrderItemsForPayment()
-                this.loadOrderItemsForPayment();
             },
 
             async savePayment(event) {
@@ -12912,97 +12722,75 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
-                // Collect item-wise breakdown
-                const priceInputs = document.querySelectorAll('.item-price-input');
-                const itemBreakdown = [];
-                let subtotal = 0;
-
-                priceInputs.forEach((input, index) => {
-                    const pricePerUnit = parseFloat(input.value) || 0;
-                    const quantity = parseInt(input.dataset.quantity) || 0;
-                    const itemTotal = pricePerUnit * quantity;
-
-                    // Get item name from the table cell
-                    const row = input.closest('tr');
-                    const itemNameCell = row.querySelector('td:first-child');
-                    const itemName = itemNameCell ? itemNameCell.textContent.trim().split('\n')[0] : `Item ${index + 1}`;
-
-                    if (pricePerUnit > 0) {
-                        itemBreakdown.push({
-                            itemName: itemName,
-                            quantity: quantity,
-                            pricePerUnit: pricePerUnit,
-                            itemTotal: itemTotal
-                        });
-                        subtotal += itemTotal;
-                    }
-                });
-
-                // Validate that at least one item has a price
-                if (itemBreakdown.length === 0 || subtotal === 0) {
-                    this.showToast('Please enter at least one item price!', 'error');
+                const paymentAmount = parseFloat(Utils.get('paymentAmount'));
+                if (!paymentAmount || paymentAmount <= 0) {
+                    this.showToast('Please enter a valid payment amount!', 'error');
                     return;
                 }
 
-                // Get discount information
-                const discountType = Utils.get('discountType') || 'percentage';
-                const discountValue = parseFloat(Utils.get('discountValue')) || 0;
-                let discountAmount = 0;
+                const paymentDate = Utils.get('paymentDate');
+                const creditDueDate = Utils.get('creditDueDate');
 
-                if (discountType === 'percentage') {
-                    discountAmount = subtotal * (discountValue / 100);
-                } else if (discountType === 'fixed') {
-                    discountAmount = discountValue;
-                }
-
-                // Ensure discount doesn't exceed subtotal
-                if (discountAmount > subtotal) {
-                    discountAmount = subtotal;
-                }
-
-                // Calculate final amount
-                const totalAmount = subtotal - discountAmount;
+                // Calculate current order financials
+                const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || 0);
+                const alreadyPaid = parseFloat(order.financials?.advancePaid || 0);
+                const currentBalance = parseFloat(order.financials?.balanceDue || orderTotal);
+                const newBalance = Math.max(0, currentBalance - paymentAmount);
+                const totalPaid = alreadyPaid + paymentAmount;
 
                 const payment = {
                     orderId: order.orderId || 'Pending',
                     orderDocId: order.docId,
                     customerName: order.clientName,
-                    amount: totalAmount,
-                    subtotal: subtotal,
-                    discount: {
-                        type: discountType,
-                        value: discountValue,
-                        amount: discountAmount
-                    },
-                    itemBreakdown: itemBreakdown, // Store item-wise breakdown
-                    paymentType: Utils.get('paymentType'), // Booking, Pre-Event, Post-Event, Final, Refund
-                    paymentDate: Utils.get('paymentDate'),
+                    amount: paymentAmount,
+                    orderTotal: orderTotal,
+                    totalPaid: totalPaid,
+                    remainingBalance: newBalance,
+                    paymentDate: paymentDate,
+                    creditDueDate: creditDueDate,  // 1-month credit period
                     paymentMethod: Utils.get('paymentMethod'),
                     transactionId: Utils.get('paymentTransactionId'),
                     notes: Utils.get('paymentNotes'),
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt: new Date().toISOString()
                 };
 
                 try {
+                    // Save payment to Firestore
                     const docRef = await db.collection('payments').add(payment);
                     payment.id = docRef.id;
-                    this.data.payments.push(payment);
 
-                    // Update order balance
-                    const currentBalance = parseFloat(order.financials?.balanceDue || order.totalAmount || 0);
-                    const newBalance = currentBalance - payment.amount;
-                    const advancePaid = parseFloat(order.financials?.advancePaid || 0) + payment.amount;
-
+                    // Update order financials in Firestore
                     await db.collection('orders').doc(order.docId).update({
-                        'financials.advancePaid': advancePaid,
-                        'financials.balanceDue': Math.max(0, newBalance),
-                        'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < (order.financials?.grandTotal || order.totalAmount || 0) ? 'partial' : 'pending'
+                        'financials.advancePaid': totalPaid,
+                        'financials.balanceDue': newBalance,
+                        'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < orderTotal ? 'partial' : 'pending',
+                        'financials.lastPaymentDate': paymentDate,
+                        'financials.creditDueDate': creditDueDate
                     });
 
-                    this.showToast('✅ Payment with item-wise breakdown saved successfully!', 'success');
+                    // Update local order data immediately to prevent duplicate display
+                    const localOrder = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+                    if (localOrder) {
+                        if (!localOrder.financials) localOrder.financials = {};
+                        localOrder.financials.advancePaid = totalPaid;
+                        localOrder.financials.balanceDue = newBalance;
+                        localOrder.financials.paymentStatus = newBalance <= 0 ? 'paid' : newBalance < orderTotal ? 'partial' : 'pending';
+                        localOrder.financials.lastPaymentDate = paymentDate;
+                        localOrder.financials.creditDueDate = creditDueDate;
+                    }
+
+                    // Add payment to local array
+                    this.data.payments.push(payment);
+
+                    this.showToast('✅ Payment saved successfully!', 'success');
                     this.closeModal('paymentModal');
+
+                    // Update displays without full reload to prevent duplicates
                     this.renderFinancials();
-                    await this.loadOrdersFromFirestore();
+                    if (this.currentTab === 'history') {
+                        this.renderHistory();
+                    }
                 } catch (error) {
                     console.error('Error saving payment:', error);
                     this.showToast('Error saving payment: ' + error.message, 'error');
@@ -13121,14 +12909,13 @@ convertToQuotationDateFormat(dateStr) {
                     const selectElement = document.getElementById('paymentOrderId');
                     if (selectElement) {
                         selectElement.value = orderId;
-                        // Trigger change event to ensure any listeners are notified
+                        // Trigger change event to update the summary
                         selectElement.dispatchEvent(new Event('change'));
-                        // Also call loadOrderItemsForPayment directly
-                        this.loadOrderItemsForPayment();
+                        this.updatePaymentSummary();
                     } else {
                         console.error('❌ Payment order select element not found!');
                     }
-                }, 300);
+                }, 100);
             },
 
             addExpenseForOrder(orderId) {
@@ -13143,251 +12930,6 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
-            async showPaymentScheduleModal(orderId) {
-                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
-                if (!order) {
-                    this.showToast('Order not found!', 'error');
-                    return;
-                }
-
-                // Get existing payment schedule or initialize empty array
-                const paymentSchedule = order.paymentSchedule || [];
-
-                // Calculate totals
-                const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || 0);
-                const totalPaid = parseFloat(order.financials?.advancePaid || 0);
-                const totalScheduled = paymentSchedule.reduce((sum, inst) => sum + parseFloat(inst.amount || 0), 0);
-                const totalPaidFromSchedule = paymentSchedule.filter(inst => inst.isPaid).reduce((sum, inst) => sum + parseFloat(inst.amount || 0), 0);
-                const remaining = orderTotal - totalScheduled;
-
-                // Get all payments for this order
-                const orderPayments = this.data.payments.filter(p => p.orderDocId === order.docId || p.orderId === order.orderId);
-
-                const modalHTML = `
-                    <div class="modal show" id="paymentScheduleModal" onclick="if(event.target === this) OMS.closeModal('paymentScheduleModal')">
-                        <div class="modal-content" style="max-width: 900px;">
-                            <button class="modal-close" onclick="OMS.closeModal('paymentScheduleModal')">×</button>
-                            <h2>📅 Payment Schedule - ${order.orderId || 'Pending'}</h2>
-
-                            <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                                <h3 style="margin: 0 0 1rem 0;">Order Details</h3>
-                                <p style="margin: 0.5rem 0;"><strong>Client:</strong> ${order.clientName}</p>
-                                <p style="margin: 0.5rem 0;"><strong>Event Date:</strong> ${order.isMultiDay ? `${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}` : Utils.formatDate(order.date)}</p>
-                                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
-                                    <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
-                                        <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">₹${orderTotal.toLocaleString('en-IN')}</div>
-                                        <div style="color: #666; font-size: 0.9rem;">Total Amount</div>
-                                    </div>
-                                    <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
-                                        <div style="font-size: 1.5rem; font-weight: bold; color: #4caf50;">₹${totalPaid.toLocaleString('en-IN')}</div>
-                                        <div style="color: #666; font-size: 0.9rem;">Total Paid</div>
-                                    </div>
-                                    <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
-                                        <div style="font-size: 1.5rem; font-weight: bold; color: #ff9800;">₹${totalScheduled.toLocaleString('en-IN')}</div>
-                                        <div style="color: #666; font-size: 0.9rem;">Scheduled</div>
-                                    </div>
-                                    <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
-                                        <div style="font-size: 1.5rem; font-weight: bold; color: ${remaining >= 0 ? '#f44336' : '#4caf50'};">₹${remaining.toLocaleString('en-IN')}</div>
-                                        <div style="color: #666; font-size: 0.9rem;">Unscheduled</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style="margin-bottom: 1.5rem;">
-                                <h3 style="margin: 0 0 1rem 0;">📋 Payment Installments</h3>
-                                <div style="max-height: 400px; overflow-y: auto; border: 2px solid #e0e0e0; border-radius: 8px; background: white;">
-                                    <table style="width: 100%; border-collapse: collapse;" id="scheduleTable">
-                                        <thead style="position: sticky; top: 0; background: #f9f9f9; z-index: 10;">
-                                            <tr style="border-bottom: 2px solid #333;">
-                                                <th style="text-align: left; padding: 12px; font-weight: 600;">#</th>
-                                                <th style="text-align: left; padding: 12px; font-weight: 600;">Payment Type</th>
-                                                <th style="text-align: center; padding: 12px; font-weight: 600;">Amount (₹)</th>
-                                                <th style="text-align: center; padding: 12px; font-weight: 600;">Due Date</th>
-                                                <th style="text-align: center; padding: 12px; font-weight: 600;">Status</th>
-                                                <th style="text-align: center; padding: 12px; font-weight: 600;">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="scheduleTableBody">
-                                            ${paymentSchedule.length === 0 ? `
-                                                <tr><td colspan="6" style="text-align: center; padding: 2rem; color: #999;">No installments added yet. Click "Add Installment" below.</td></tr>
-                                            ` : paymentSchedule.map((inst, index) => {
-                                                const dueDate = new Date(inst.dueDate);
-                                                const today = new Date();
-                                                const isOverdue = !inst.isPaid && dueDate < today;
-                                                const isDueSoon = !inst.isPaid && dueDate >= today && dueDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-                                                let statusBadge = '';
-                                                if (inst.isPaid) {
-                                                    statusBadge = '<span style="background: #4caf50; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem;">✅ PAID</span>';
-                                                } else if (isOverdue) {
-                                                    statusBadge = '<span style="background: #f44336; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem;">🔴 OVERDUE</span>';
-                                                } else if (isDueSoon) {
-                                                    statusBadge = '<span style="background: #ff9800; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem;">⏳ DUE SOON</span>';
-                                                } else {
-                                                    statusBadge = '<span style="background: #9e9e9e; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem;">⏱️ PENDING</span>';
-                                                }
-
-                                                return `
-                                                    <tr style="border-bottom: 1px solid #eee;">
-                                                        <td style="padding: 12px;">${index + 1}</td>
-                                                        <td style="padding: 12px;"><strong>${inst.paymentType || 'N/A'}</strong></td>
-                                                        <td style="padding: 12px; text-align: center;">₹${parseFloat(inst.amount).toLocaleString('en-IN')}</td>
-                                                        <td style="padding: 12px; text-align: center;">${Utils.formatDate(inst.dueDate)}</td>
-                                                        <td style="padding: 12px; text-align: center;">${statusBadge}</td>
-                                                        <td style="padding: 12px; text-align: center;">
-                                                            ${!inst.isPaid ? `<button class="btn btn-danger btn-small" onclick="OMS.deleteInstallment('${orderId}', ${index})">Delete</button>` : ''}
-                                                        </td>
-                                                    </tr>
-                                                `;
-                                            }).join('')}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">➕ Add New Installment</h3>
-                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
-                                    <div class="form-group">
-                                        <label class="form-label required">Payment Type</label>
-                                        <select id="newInstallmentType" class="form-select" style="width: 100%; padding: 0.75rem;">
-                                            <option value="">-- Select Type --</option>
-                                            <option value="Booking Payment">🟢 Booking Payment</option>
-                                            <option value="Pre-Event Payment">🟡 Pre-Event Payment</option>
-                                            <option value="Post-Event Payment">🔵 Post-Event Payment</option>
-                                            <option value="Final Settlement">🟣 Final Settlement</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label required">Amount (₹)</label>
-                                        <input type="number" id="newInstallmentAmount" class="form-input" min="1" step="0.01" placeholder="0.00" style="width: 100%; padding: 0.75rem;">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label required">Due Date</label>
-                                        <input type="date" id="newInstallmentDueDate" class="form-input" value="${Utils.toDateString(new Date())}" style="width: 100%; padding: 0.75rem;">
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-success" onclick="OMS.addInstallment('${orderId}')" style="margin-top: 1rem;">➕ Add Installment</button>
-                            </div>
-
-                            <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                                <h3 style="margin: 0 0 1rem 0;">💳 Recorded Payments</h3>
-                                ${orderPayments.length === 0 ? '<p style="color: #999;">No payments recorded yet.</p>' : `
-                                    <table style="width: 100%; border-collapse: collapse;">
-                                        <thead>
-                                            <tr style="background: #e0e0e0;">
-                                                <th style="padding: 0.5rem; text-align: left;">Date</th>
-                                                <th style="padding: 0.5rem; text-align: left;">Type</th>
-                                                <th style="padding: 0.5rem; text-align: right;">Amount</th>
-                                                <th style="padding: 0.5rem; text-align: left;">Method</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${orderPayments.map(p => `
-                                                <tr style="border-bottom: 1px solid #ddd;">
-                                                    <td style="padding: 0.5rem;">${Utils.formatDate(p.paymentDate || p.timestamp?.toDate?.())}</td>
-                                                    <td style="padding: 0.5rem;"><strong>${p.paymentType || 'N/A'}</strong></td>
-                                                    <td style="padding: 0.5rem; text-align: right;">₹${parseFloat(p.amount).toLocaleString('en-IN')}</td>
-                                                    <td style="padding: 0.5rem;">${p.paymentMethod}</td>
-                                                </tr>
-                                            `).join('')}
-                                        </tbody>
-                                    </table>
-                                `}
-                            </div>
-
-                            <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
-                                <button type="button" class="btn btn-secondary" onclick="OMS.closeModal('paymentScheduleModal')">Close</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                document.getElementById('modalsContainer').innerHTML = modalHTML;
-            },
-
-            async addInstallment(orderId) {
-                const type = Utils.get('newInstallmentType');
-                const amount = parseFloat(Utils.get('newInstallmentAmount'));
-                const dueDate = Utils.get('newInstallmentDueDate');
-
-                if (!type || !amount || !dueDate) {
-                    this.showToast('Please fill all fields!', 'error');
-                    return;
-                }
-
-                if (amount <= 0) {
-                    this.showToast('Amount must be greater than 0!', 'error');
-                    return;
-                }
-
-                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
-                if (!order) {
-                    this.showToast('Order not found!', 'error');
-                    return;
-                }
-
-                // Initialize payment schedule if it doesn't exist
-                if (!order.paymentSchedule) {
-                    order.paymentSchedule = [];
-                }
-
-                // Add new installment
-                const newInstallment = {
-                    paymentType: type,
-                    amount: amount,
-                    dueDate: dueDate,
-                    isPaid: false,
-                    createdAt: new Date().toISOString()
-                };
-
-                order.paymentSchedule.push(newInstallment);
-
-                // Save to Firestore
-                try {
-                    await db.collection('orders').doc(order.docId).update({
-                        paymentSchedule: order.paymentSchedule
-                    });
-
-                    this.showToast('Installment added successfully!', 'success');
-
-                    // Refresh the modal
-                    this.showPaymentScheduleModal(orderId);
-                } catch (error) {
-                    console.error('Error adding installment:', error);
-                    this.showToast('Error adding installment: ' + error.message, 'error');
-                    // Remove the added installment on error
-                    order.paymentSchedule.pop();
-                }
-            },
-
-            async deleteInstallment(orderId, installmentIndex) {
-                if (!confirm('Delete this installment?')) return;
-
-                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
-                if (!order || !order.paymentSchedule) {
-                    this.showToast('Order or schedule not found!', 'error');
-                    return;
-                }
-
-                // Remove installment
-                order.paymentSchedule.splice(installmentIndex, 1);
-
-                // Save to Firestore
-                try {
-                    await db.collection('orders').doc(order.docId).update({
-                        paymentSchedule: order.paymentSchedule
-                    });
-
-                    this.showToast('Installment deleted successfully!', 'success');
-
-                    // Refresh the modal
-                    this.showPaymentScheduleModal(orderId);
-                } catch (error) {
-                    console.error('Error deleting installment:', error);
-                    this.showToast('Error deleting installment: ' + error.message, 'error');
-                }
-            },
 
             quickAddPayment() {
                 // Check if there's a current order being edited or if we need to save first
