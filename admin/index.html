@@ -854,7 +854,6 @@
         /* 🔥 BURNING FLAMES LOGIN THEME - OPTION 1 */
 
         #loginScreen {
-            cursor: none !important;
             background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><rect width="100%25" height="100%25" fill="%23000"/></svg>');
             background-size: cover;
             background-position: center;
@@ -916,55 +915,6 @@
             50% { opacity: 0.6; }
         }
 
-        #loginScreen * {
-            cursor: none !important;
-        }
-
-        /* Custom Cursor - Fire Themed */
-        .custom-cursor {
-            position: fixed;
-            width: 24px;
-            height: 24px;
-            border: 2px solid #ff6b00;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 10000;
-            transform: translate(-50%, -50%);
-            background: radial-gradient(circle, rgba(255,107,0,0.7) 0%, rgba(255,69,0,0.3) 50%, transparent 70%);
-            box-shadow: 0 0 20px rgba(255,107,0,0.9), 0 0 40px rgba(255,69,0,0.5), inset 0 0 10px rgba(255,140,0,0.6);
-            transition: all 0.1s ease;
-            animation: cursor-pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes cursor-pulse {
-            0%, 100% {
-                box-shadow: 0 0 20px rgba(255,107,0,0.9), 0 0 40px rgba(255,69,0,0.5);
-            }
-            50% {
-                box-shadow: 0 0 30px rgba(255,140,0,1), 0 0 60px rgba(255,107,0,0.7);
-            }
-        }
-
-        /* Ember Sparkle Trail */
-        .sparkle {
-            position: fixed;
-            pointer-events: none;
-            z-index: 9998;
-            animation: ember-rise 2s ease-out forwards;
-        }
-
-        @keyframes ember-rise {
-            0% {
-                opacity: 1;
-                transform: translateY(0) scale(1) rotate(0deg);
-                filter: brightness(1.5);
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-80px) scale(0.3) rotate(180deg);
-                filter: brightness(0.5);
-            }
-        }
 
         /* Floating Embers Canvas */
         #particles-canvas {
@@ -1110,9 +1060,6 @@
     </style>
 
 <body>
-    <!-- Custom Cursor -->
-    <div class="custom-cursor" id="customCursor"></div>
-
     <!-- Login Screen -->
     <div id="loginScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: flex-end; justify-content: flex-end; padding: 2rem;">
         <!-- Floating Particles Background -->
@@ -12545,64 +12492,90 @@ convertToQuotationDateFormat(dateStr) {
 
             async showAddPaymentModal() {
                 const orders = this.data.orders.filter(o => o.status !== 'Cancelled');
-                console.log(`💳 Opening simplified payment modal with ${orders.length} active orders`);
+                console.log(`💳 Opening payment modal with ${orders.length} active orders`);
 
                 const modalHTML = `
                     <div class="modal show" id="paymentModal" onclick="if(event.target === this) OMS.closeModal('paymentModal')">
-                        <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-content" style="max-width: 800px;">
                             <button class="modal-close" onclick="OMS.closeModal('paymentModal')">×</button>
                             <h2>💵 Add Payment</h2>
                             <form id="paymentForm" onsubmit="OMS.savePayment(event)" style="display: block;">
                                 <div class="form-group" style="margin-bottom: 1.5rem;">
                                     <label class="form-label required">Select Order</label>
-                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.updatePaymentSummary()" style="width: 100%; padding: 0.75rem;">
+                                    <select id="paymentOrderId" class="form-select" required onchange="OMS.loadOrderForPayment()" style="width: 100%; padding: 0.75rem;">
                                         <option value="">-- Select an Order --</option>
                                         ${orders.map(o => {
                                             const total = parseFloat(o.financials?.grandTotal || o.totalAmount || 0);
                                             const paid = parseFloat(o.financials?.advancePaid || 0);
                                             const due = parseFloat(o.financials?.balanceDue || total);
-                                            return `<option value="${o.docId || o.orderId}" data-total="${total}" data-paid="${paid}" data-due="${due}">${o.orderId || 'Pending'} - ${o.clientName} (₹${due.toLocaleString('en-IN')} due)</option>`;
+                                            return `<option value="${o.docId || o.orderId}">${o.orderId || 'Pending'} - ${o.clientName} (₹${due.toLocaleString('en-IN')} due)</option>`;
                                         }).join('')}
                                     </select>
                                 </div>
 
-                                <div id="paymentSummary" style="display: none; background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                                    <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">Order Summary</h3>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                                        <div style="background: white; padding: 1rem; border-radius: 8px;">
-                                            <div style="color: #666; font-size: 0.9rem;">Order Total</div>
-                                            <div style="font-size: 1.3rem; font-weight: bold; color: #667eea;">₹<span id="displayOrderTotal">0</span></div>
+                                <div id="orderDetailsSection" style="display: none;">
+                                    <!-- Order Items -->
+                                    <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">📋 Order Items</h3>
+                                        <div style="max-height: 300px; overflow-y: auto; border: 2px solid #e0e0e0; border-radius: 8px; background: white;">
+                                            <table style="width: 100%; border-collapse: collapse;" id="paymentItemsTable">
+                                                <thead style="position: sticky; top: 0; background: #f9f9f9;">
+                                                    <tr style="border-bottom: 2px solid #ddd;">
+                                                        <th style="text-align: left; padding: 8px;">Item</th>
+                                                        <th style="text-align: center; padding: 8px;">Qty</th>
+                                                        <th style="text-align: right; padding: 8px;">Price</th>
+                                                        <th style="text-align: right; padding: 8px;">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="paymentItemsBody">
+                                                </tbody>
+                                            </table>
                                         </div>
-                                        <div style="background: white; padding: 1rem; border-radius: 8px;">
-                                            <div style="color: #666; font-size: 0.9rem;">Already Paid</div>
-                                            <div style="font-size: 1.3rem; font-weight: bold; color: #4caf50;">₹<span id="displayAlreadyPaid">0</span></div>
+                                    </div>
+
+                                    <!-- Payment Summary -->
+                                    <div style="background: #e8f5e9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                                            <div style="text-align: center;">
+                                                <div style="color: #666; font-size: 0.9rem;">Order Total</div>
+                                                <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">₹<span id="displayOrderTotal">0</span></div>
+                                            </div>
+                                            <div style="text-align: center;">
+                                                <div style="color: #666; font-size: 0.9rem;">Already Received</div>
+                                                <div style="font-size: 1.5rem; font-weight: bold; color: #4caf50;">₹<span id="displayAlreadyPaid">0</span></div>
+                                            </div>
+                                            <div style="text-align: center;">
+                                                <div style="color: #666; font-size: 0.9rem;">Balance Remaining</div>
+                                                <div style="font-size: 1.5rem; font-weight: bold; color: #f44336;">₹<span id="displayPendingAmount">0</span></div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div style="background: #fff3cd; padding: 1rem; border-radius: 8px; border-left: 4px solid #ffc107;">
-                                        <div style="color: #856404; font-size: 0.9rem;">Pending Amount</div>
-                                        <div style="font-size: 1.5rem; font-weight: bold; color: #856404;">₹<span id="displayPendingAmount">0</span></div>
-                                    </div>
-                                </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                                    <div class="form-group">
-                                        <label class="form-label required">Payment Amount (₹)</label>
-                                        <input type="number" id="paymentAmount" class="form-input" required min="0" step="0.01" placeholder="0.00" style="width: 100%; padding: 0.75rem;" oninput="OMS.updateRemainingAmount()">
+                                    <!-- Previous Payments -->
+                                    <div id="previousPaymentsSection" style="display: none; background: #fff9e6; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #ffc107;">
+                                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; color: #856404;">💰 Previous Payments</h4>
+                                        <div id="previousPaymentsList" style="font-size: 0.9rem;"></div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Remaining After Payment</label>
-                                        <input type="text" id="remainingAmount" class="form-input" readonly style="width: 100%; padding: 0.75rem; background: #e8f5e9; font-weight: bold; color: #2e7d32;">
-                                    </div>
-                                </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                                    <div class="form-group">
-                                        <label class="form-label required">Payment Date</label>
-                                        <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required style="width: 100%; padding: 0.75rem;" onchange="OMS.updateCreditDueDate()">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Credit Due Date (1 Month)</label>
-                                        <input type="date" id="creditDueDate" class="form-input" readonly style="width: 100%; padding: 0.75rem; background: #f5f5f5;">
+                                    <!-- New Payment Entry -->
+                                    <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                        <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: #1976d2;">➕ Record New Payment</h4>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                            <div class="form-group">
+                                                <label class="form-label required">Payment Date</label>
+                                                <input type="date" id="paymentDate" class="form-input" value="${Utils.toDateString(new Date())}" required style="width: 100%; padding: 0.75rem;">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label required">Amount Received (₹)</label>
+                                                <input type="number" id="paymentAmount" class="form-input" required min="0" step="0.01" placeholder="0.00" style="width: 100%; padding: 0.75rem;" oninput="OMS.updateRemainingAfterNewPayment()">
+                                            </div>
+                                        </div>
+                                        <div style="background: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <span style="color: #666;">After this payment, remaining balance:</span>
+                                                <span style="font-size: 1.2rem; font-weight: bold; color: #f44336;" id="newRemainingBalance">₹0</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -12639,75 +12612,116 @@ convertToQuotationDateFormat(dateStr) {
                 `;
 
                 document.getElementById('modalsContainer').innerHTML = modalHTML;
-
-                // Initialize credit due date
-                this.updateCreditDueDate();
-
-                console.log('✅ Simplified payment modal created and displayed');
+                console.log('✅ Payment modal created and displayed');
             },
 
-            updatePaymentSummary() {
-                const selectElement = document.getElementById('paymentOrderId');
-                const selectedOption = selectElement.options[selectElement.selectedIndex];
-
-                if (!selectedOption || !selectedOption.value) {
-                    document.getElementById('paymentSummary').style.display = 'none';
+            loadOrderForPayment() {
+                const orderId = Utils.get('paymentOrderId');
+                if (!orderId) {
+                    document.getElementById('orderDetailsSection').style.display = 'none';
                     return;
                 }
 
-                const total = parseFloat(selectedOption.getAttribute('data-total')) || 0;
-                const paid = parseFloat(selectedOption.getAttribute('data-paid')) || 0;
-                const due = parseFloat(selectedOption.getAttribute('data-due')) || 0;
-
-                document.getElementById('displayOrderTotal').textContent = total.toLocaleString('en-IN');
-                document.getElementById('displayAlreadyPaid').textContent = paid.toLocaleString('en-IN');
-                document.getElementById('displayPendingAmount').textContent = due.toLocaleString('en-IN');
-                document.getElementById('paymentSummary').style.display = 'block';
-
-                // Update remaining amount if payment amount is already entered
-                this.updateRemainingAmount();
-            },
-
-            updateRemainingAmount() {
-                const selectElement = document.getElementById('paymentOrderId');
-                const selectedOption = selectElement?.options[selectElement.selectedIndex];
-
-                if (!selectedOption || !selectedOption.value) {
+                const order = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
+                if (!order) {
+                    console.error('Order not found');
                     return;
                 }
 
-                const due = parseFloat(selectedOption.getAttribute('data-due')) || 0;
+                // Get all items from order
+                let allItems = [];
+                let orderTotal = 0;
+
+                if (order.isMultiDay && order.dayWiseData) {
+                    // Multi-day order - collect items from all days
+                    order.dayWiseData.forEach(day => {
+                        if (day.functions) {
+                            day.functions.forEach(func => {
+                                if (func.items && func.items.length > 0) {
+                                    func.items.forEach(item => {
+                                        allItems.push({
+                                            name: item.name,
+                                            quantity: item.quantity,
+                                            price: item.price || 0,
+                                            total: (item.price || 0) * (item.quantity || 0)
+                                        });
+                                        orderTotal += (item.price || 0) * (item.quantity || 0);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else if (order.items && order.items.length > 0) {
+                    // Single day order
+                    allItems = order.items.map(item => ({
+                        name: item.name,
+                        quantity: item.quantity,
+                        price: item.price || 0,
+                        total: (item.price || 0) * (item.quantity || 0)
+                    }));
+                    orderTotal = allItems.reduce((sum, item) => sum + item.total, 0);
+                }
+
+                // Use financials data if available, otherwise use calculated total
+                orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || orderTotal);
+                const alreadyPaid = parseFloat(order.financials?.advancePaid || 0);
+                const balanceDue = parseFloat(order.financials?.balanceDue || orderTotal - alreadyPaid);
+
+                // Display items
+                const itemsHTML = allItems.length > 0 ? allItems.map(item => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px;">${item.name}</td>
+                        <td style="text-align: center; padding: 8px;">${item.quantity}</td>
+                        <td style="text-align: right; padding: 8px;">₹${item.price.toLocaleString('en-IN')}</td>
+                        <td style="text-align: right; padding: 8px; font-weight: bold;">₹${item.total.toLocaleString('en-IN')}</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="4" style="text-align: center; padding: 1rem; color: #999;">No items found</td></tr>';
+
+                document.getElementById('paymentItemsBody').innerHTML = itemsHTML;
+
+                // Display summary
+                document.getElementById('displayOrderTotal').textContent = orderTotal.toLocaleString('en-IN');
+                document.getElementById('displayAlreadyPaid').textContent = alreadyPaid.toLocaleString('en-IN');
+                document.getElementById('displayPendingAmount').textContent = balanceDue.toLocaleString('en-IN');
+
+                // Get and display previous payments
+                const previousPayments = this.data.payments.filter(p => p.orderDocId === order.docId || p.orderId === order.orderId);
+                if (previousPayments.length > 0) {
+                    const paymentsHTML = previousPayments.map(p => `
+                        <div style="padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0;">
+                            <strong>${Utils.formatDate(p.paymentDate)}</strong>: ₹${parseFloat(p.amount).toLocaleString('en-IN')} (${p.paymentMethod})
+                        </div>
+                    `).join('');
+                    document.getElementById('previousPaymentsList').innerHTML = paymentsHTML;
+                    document.getElementById('previousPaymentsSection').style.display = 'block';
+                } else {
+                    document.getElementById('previousPaymentsSection').style.display = 'none';
+                }
+
+                // Store current balance for calculation
+                window.currentOrderBalance = balanceDue;
+
+                document.getElementById('orderDetailsSection').style.display = 'block';
+                console.log('✅ Order loaded for payment');
+            },
+
+            updateRemainingAfterNewPayment() {
                 const paymentAmount = parseFloat(document.getElementById('paymentAmount')?.value) || 0;
-                const remaining = due - paymentAmount;
+                const currentBalance = window.currentOrderBalance || 0;
+                const newBalance = Math.max(0, currentBalance - paymentAmount);
 
-                const remainingElement = document.getElementById('remainingAmount');
-                if (remainingElement) {
-                    remainingElement.value = `₹${Math.max(0, remaining).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                const newRemainingElement = document.getElementById('newRemainingBalance');
+                if (newRemainingElement) {
+                    newRemainingElement.textContent = `₹${newBalance.toLocaleString('en-IN')}`;
 
-                    // Change color based on whether fully paid or not
-                    if (remaining <= 0) {
-                        remainingElement.style.background = '#d4edda';
-                        remainingElement.style.color = '#155724';
+                    // Change color based on payment status
+                    if (newBalance === 0) {
+                        newRemainingElement.style.color = '#4caf50'; // Green - Fully paid
+                    } else if (newBalance < currentBalance) {
+                        newRemainingElement.style.color = '#ff9800'; // Orange - Partial payment
                     } else {
-                        remainingElement.style.background = '#fff3cd';
-                        remainingElement.style.color = '#856404';
+                        newRemainingElement.style.color = '#f44336'; // Red - No payment or overpayment
                     }
-                }
-            },
-
-            updateCreditDueDate() {
-                const paymentDateElement = document.getElementById('paymentDate');
-                if (!paymentDateElement) return;
-
-                const paymentDate = new Date(paymentDateElement.value);
-
-                // Add 1 month to payment date
-                const creditDueDate = new Date(paymentDate);
-                creditDueDate.setMonth(creditDueDate.getMonth() + 1);
-
-                const creditDueDateElement = document.getElementById('creditDueDate');
-                if (creditDueDateElement) {
-                    creditDueDateElement.value = Utils.toDateString(creditDueDate);
                 }
             },
 
@@ -12729,7 +12743,6 @@ convertToQuotationDateFormat(dateStr) {
                 }
 
                 const paymentDate = Utils.get('paymentDate');
-                const creditDueDate = Utils.get('creditDueDate');
 
                 // Calculate current order financials
                 const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || 0);
@@ -12738,16 +12751,26 @@ convertToQuotationDateFormat(dateStr) {
                 const newBalance = Math.max(0, currentBalance - paymentAmount);
                 const totalPaid = alreadyPaid + paymentAmount;
 
+                // Calculate credit due date (1 month after event date)
+                let creditDueDate = null;
+                if (newBalance > 0) {
+                    // If balance remains, calculate credit period from event date
+                    const eventDate = new Date(order.isMultiDay ? order.endDate : order.date);
+                    creditDueDate = new Date(eventDate);
+                    creditDueDate.setMonth(creditDueDate.getMonth() + 1);
+                    creditDueDate = Utils.toDateString(creditDueDate);
+                }
+
                 const payment = {
                     orderId: order.orderId || 'Pending',
                     orderDocId: order.docId,
                     customerName: order.clientName,
+                    eventDate: order.isMultiDay ? order.endDate : order.date,
                     amount: paymentAmount,
                     orderTotal: orderTotal,
                     totalPaid: totalPaid,
                     remainingBalance: newBalance,
                     paymentDate: paymentDate,
-                    creditDueDate: creditDueDate,  // 1-month credit period
                     paymentMethod: Utils.get('paymentMethod'),
                     transactionId: Utils.get('paymentTransactionId'),
                     notes: Utils.get('paymentNotes'),
@@ -12761,32 +12784,27 @@ convertToQuotationDateFormat(dateStr) {
                     payment.id = docRef.id;
 
                     // Update order financials in Firestore
-                    await db.collection('orders').doc(order.docId).update({
+                    const updateData = {
                         'financials.advancePaid': totalPaid,
                         'financials.balanceDue': newBalance,
                         'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < orderTotal ? 'partial' : 'pending',
-                        'financials.lastPaymentDate': paymentDate,
-                        'financials.creditDueDate': creditDueDate
-                    });
+                        'financials.lastPaymentDate': paymentDate
+                    };
 
-                    // Update local order data immediately to prevent duplicate display
-                    const localOrder = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
-                    if (localOrder) {
-                        if (!localOrder.financials) localOrder.financials = {};
-                        localOrder.financials.advancePaid = totalPaid;
-                        localOrder.financials.balanceDue = newBalance;
-                        localOrder.financials.paymentStatus = newBalance <= 0 ? 'paid' : newBalance < orderTotal ? 'partial' : 'pending';
-                        localOrder.financials.lastPaymentDate = paymentDate;
-                        localOrder.financials.creditDueDate = creditDueDate;
+                    // Add credit due date only if balance remains
+                    if (creditDueDate) {
+                        updateData['financials.creditDueDate'] = creditDueDate;
                     }
 
-                    // Add payment to local array
-                    this.data.payments.push(payment);
+                    await db.collection('orders').doc(order.docId).update(updateData);
 
-                    this.showToast('✅ Payment saved successfully!', 'success');
+                    this.showToast('✅ Payment recorded successfully!', 'success');
                     this.closeModal('paymentModal');
 
-                    // Update displays without full reload to prevent duplicates
+                    // Reload orders from Firestore to ensure data consistency
+                    await this.loadOrdersFromFirestore();
+
+                    // Now update displays with fresh data
                     this.renderFinancials();
                     if (this.currentTab === 'history') {
                         this.renderHistory();
@@ -12909,9 +12927,9 @@ convertToQuotationDateFormat(dateStr) {
                     const selectElement = document.getElementById('paymentOrderId');
                     if (selectElement) {
                         selectElement.value = orderId;
-                        // Trigger change event to update the summary
+                        // Trigger change event and load order details
                         selectElement.dispatchEvent(new Event('change'));
-                        this.updatePaymentSummary();
+                        this.loadOrderForPayment();
                     } else {
                         console.error('❌ Payment order select element not found!');
                     }
@@ -16408,52 +16426,6 @@ if (diffDays > 30) {
     console.log('✅ Date restrictions removed - can add orders from any date');
 
     // ============ FIREPOWER SFX LOGIN THEME ANIMATIONS ============
-
-    // Custom Cursor with Sparkle Trail
-    const cursor = document.getElementById('customCursor');
-    const loginScreen = document.getElementById('loginScreen');
-    let lastSparkle = 0;
-
-    document.addEventListener('mousemove', (e) => {
-        if (loginScreen.style.display === 'flex') {
-            // Move custom cursor
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
-
-            // Create sparkle trail (throttled to every 50ms)
-            const now = Date.now();
-            if (now - lastSparkle > 50) {
-                createSparkle(e.clientX, e.clientY);
-                lastSparkle = now;
-            }
-        }
-    });
-
-    // Show/hide custom cursor based on login screen visibility
-    const observer = new MutationObserver(() => {
-        if (loginScreen.style.display === 'flex') {
-            cursor.style.display = 'block';
-        } else {
-            cursor.style.display = 'none';
-        }
-    });
-
-    observer.observe(loginScreen, { attributes: true, attributeFilter: ['style'] });
-
-    function createSparkle(x, y) {
-        const sparkle = document.createElement('div');
-        sparkle.className = 'sparkle';
-        sparkle.style.left = x + 'px';
-        sparkle.style.top = y + 'px';
-        sparkle.style.width = '4px';
-        sparkle.style.height = '4px';
-        sparkle.style.background = `radial-gradient(circle, #ffd700, #ff${Math.floor(Math.random() * 100)}00)`;
-        sparkle.style.borderRadius = '50%';
-        sparkle.style.boxShadow = '0 0 6px #ffd700';
-        document.body.appendChild(sparkle);
-
-        setTimeout(() => sparkle.remove(), 1000);
-    }
 
     // Floating Particles Background
     const canvas = document.getElementById('particles-canvas');
