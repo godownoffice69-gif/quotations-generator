@@ -4791,6 +4791,10 @@ order: async () => {
 
     if (success) {
         this.saveToStorage();
+
+        // Reload data from Firestore to ensure all tabs are in sync
+        await this.loadOrdersFromFirestore();
+
         this.updateAllDisplays();
         this.showToast(`${type} deleted successfully`);
         this.showUndoBar(`${type} deleted`);
@@ -12514,7 +12518,20 @@ convertToQuotationDateFormat(dateStr) {
                                 </div>
 
                                 <div id="orderDetailsSection" style="display: none;">
-                                    <!-- Order Items -->
+                                    <!-- Set Order Total -->
+                                    <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #2196f3;">
+                                        <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: #1976d2;">💰 Set Order Total Amount</h4>
+                                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; align-items: end;">
+                                            <div class="form-group" style="margin: 0;">
+                                                <label class="form-label">Total Order Amount (₹)</label>
+                                                <input type="number" id="orderTotalAmount" class="form-input" min="0" step="0.01" placeholder="Enter total amount" style="width: 100%; padding: 0.75rem; font-size: 1.1rem; font-weight: bold;" oninput="OMS.updateOrderTotalFromInput()">
+                                                <small style="color: #666;">Set the total amount for this order</small>
+                                            </div>
+                                            <button type="button" class="btn btn-primary" onclick="OMS.saveOrderTotal()" style="height: fit-content;">💾 Save Total</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Order Items with Price Inputs -->
                                     <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
                                         <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">📋 Order Items</h3>
                                         <div style="max-height: 300px; overflow-y: auto; border: 2px solid #e0e0e0; border-radius: 8px; background: white;">
@@ -12523,12 +12540,18 @@ convertToQuotationDateFormat(dateStr) {
                                                     <tr style="border-bottom: 2px solid #ddd;">
                                                         <th style="text-align: left; padding: 8px;">Item</th>
                                                         <th style="text-align: center; padding: 8px;">Qty</th>
-                                                        <th style="text-align: right; padding: 8px;">Price</th>
+                                                        <th style="text-align: right; padding: 8px;">Price (₹)</th>
                                                         <th style="text-align: right; padding: 8px;">Total</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="paymentItemsBody">
                                                 </tbody>
+                                                <tfoot style="background: #e8f5e9; font-weight: bold;">
+                                                    <tr>
+                                                        <td colspan="3" style="text-align: right; padding: 12px; font-size: 1.1rem;">Grand Total from Items:</td>
+                                                        <td style="text-align: right; padding: 12px; font-size: 1.1rem; color: #667eea;">₹<span id="itemsGrandTotal">0</span></td>
+                                                    </tr>
+                                                </tfoot>
                                             </table>
                                         </div>
                                     </div>
@@ -12628,9 +12651,12 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
+                // Store current order for later use
+                window.currentPaymentOrder = order;
+
                 // Get all items from order
                 let allItems = [];
-                let orderTotal = 0;
+                let itemsTotal = 0;
 
                 if (order.isMultiDay && order.dayWiseData) {
                     // Multi-day order - collect items from all days
@@ -12645,7 +12671,7 @@ convertToQuotationDateFormat(dateStr) {
                                             price: item.price || 0,
                                             total: (item.price || 0) * (item.quantity || 0)
                                         });
-                                        orderTotal += (item.price || 0) * (item.quantity || 0);
+                                        itemsTotal += (item.price || 0) * (item.quantity || 0);
                                     });
                                 }
                             });
@@ -12653,31 +12679,46 @@ convertToQuotationDateFormat(dateStr) {
                     });
                 } else if (order.items && order.items.length > 0) {
                     // Single day order
-                    allItems = order.items.map(item => ({
+                    allItems = order.items.map((item, index) => ({
                         name: item.name,
                         quantity: item.quantity,
                         price: item.price || 0,
-                        total: (item.price || 0) * (item.quantity || 0)
+                        total: (item.price || 0) * (item.quantity || 0),
+                        index: index
                     }));
-                    orderTotal = allItems.reduce((sum, item) => sum + item.total, 0);
+                    itemsTotal = allItems.reduce((sum, item) => sum + item.total, 0);
                 }
 
                 // Use financials data if available, otherwise use calculated total
-                orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || orderTotal);
+                const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || itemsTotal);
                 const alreadyPaid = parseFloat(order.financials?.advancePaid || 0);
                 const balanceDue = parseFloat(order.financials?.balanceDue || orderTotal - alreadyPaid);
 
-                // Display items
-                const itemsHTML = allItems.length > 0 ? allItems.map(item => `
+                // Display total amount input
+                document.getElementById('orderTotalAmount').value = orderTotal;
+
+                // Display items with editable price inputs
+                const itemsHTML = allItems.length > 0 ? allItems.map((item, index) => `
                     <tr style="border-bottom: 1px solid #eee;">
                         <td style="padding: 8px;">${item.name}</td>
                         <td style="text-align: center; padding: 8px;">${item.quantity}</td>
-                        <td style="text-align: right; padding: 8px;">₹${item.price.toLocaleString('en-IN')}</td>
-                        <td style="text-align: right; padding: 8px; font-weight: bold;">₹${item.total.toLocaleString('en-IN')}</td>
+                        <td style="text-align: right; padding: 8px;">
+                            <input type="number"
+                                   class="form-input item-price-input"
+                                   data-item-index="${index}"
+                                   value="${item.price}"
+                                   min="0"
+                                   step="0.01"
+                                   placeholder="0.00"
+                                   style="width: 100px; padding: 0.5rem; text-align: right;"
+                                   oninput="OMS.calculateItemTotal(${index})">
+                        </td>
+                        <td style="text-align: right; padding: 8px; font-weight: bold;">₹<span id="itemTotal_${index}">${item.total.toLocaleString('en-IN')}</span></td>
                     </tr>
                 `).join('') : '<tr><td colspan="4" style="text-align: center; padding: 1rem; color: #999;">No items found</td></tr>';
 
                 document.getElementById('paymentItemsBody').innerHTML = itemsHTML;
+                document.getElementById('itemsGrandTotal').textContent = itemsTotal.toLocaleString('en-IN');
 
                 // Display summary
                 document.getElementById('displayOrderTotal').textContent = orderTotal.toLocaleString('en-IN');
@@ -12703,6 +12744,109 @@ convertToQuotationDateFormat(dateStr) {
 
                 document.getElementById('orderDetailsSection').style.display = 'block';
                 console.log('✅ Order loaded for payment');
+            },
+
+            calculateItemTotal(index) {
+                const priceInput = document.querySelector(`input[data-item-index="${index}"]`);
+                if (!priceInput) return;
+
+                const order = window.currentPaymentOrder;
+                if (!order || !order.items || !order.items[index]) return;
+
+                const price = parseFloat(priceInput.value) || 0;
+                const quantity = order.items[index].quantity || 0;
+                const total = price * quantity;
+
+                // Update item total display
+                const totalElement = document.getElementById(`itemTotal_${index}`);
+                if (totalElement) {
+                    totalElement.textContent = total.toLocaleString('en-IN');
+                }
+
+                // Recalculate grand total from all items
+                const allPriceInputs = document.querySelectorAll('.item-price-input');
+                let grandTotal = 0;
+                allPriceInputs.forEach((input, idx) => {
+                    const itemPrice = parseFloat(input.value) || 0;
+                    const itemQty = order.items[idx]?.quantity || 0;
+                    grandTotal += itemPrice * itemQty;
+                });
+
+                // Update grand total display
+                document.getElementById('itemsGrandTotal').textContent = grandTotal.toLocaleString('en-IN');
+
+                // Also update the order total input
+                document.getElementById('orderTotalAmount').value = grandTotal;
+
+                // Update payment summary
+                this.updateOrderTotalFromInput();
+            },
+
+            updateOrderTotalFromInput() {
+                const orderTotal = parseFloat(document.getElementById('orderTotalAmount')?.value) || 0;
+                const order = window.currentPaymentOrder;
+                if (!order) return;
+
+                const alreadyPaid = parseFloat(order.financials?.advancePaid || 0);
+                const balanceDue = orderTotal - alreadyPaid;
+
+                // Update payment summary
+                document.getElementById('displayOrderTotal').textContent = orderTotal.toLocaleString('en-IN');
+                document.getElementById('displayPendingAmount').textContent = Math.max(0, balanceDue).toLocaleString('en-IN');
+
+                // Store for use when calculating remaining after payment
+                window.currentOrderBalance = balanceDue;
+
+                // Update remaining after payment if payment amount is entered
+                this.updateRemainingAfterNewPayment();
+            },
+
+            async saveOrderTotal() {
+                const order = window.currentPaymentOrder;
+                if (!order) {
+                    this.showToast('No order selected', 'error');
+                    return;
+                }
+
+                const orderTotal = parseFloat(document.getElementById('orderTotalAmount')?.value);
+                if (!orderTotal || orderTotal <= 0) {
+                    this.showToast('Please enter a valid total amount', 'error');
+                    return;
+                }
+
+                try {
+                    // Update order in Firestore
+                    await db.collection('orders').doc(order.docId).update({
+                        totalAmount: orderTotal,
+                        'financials.grandTotal': orderTotal,
+                        'financials.balanceDue': orderTotal - (order.financials?.advancePaid || 0)
+                    });
+
+                    // Update item prices in Firestore if changed
+                    const allPriceInputs = document.querySelectorAll('.item-price-input');
+                    const updatedItems = order.items.map((item, index) => {
+                        const priceInput = allPriceInputs[index];
+                        return {
+                            ...item,
+                            price: parseFloat(priceInput?.value) || item.price || 0
+                        };
+                    });
+
+                    await db.collection('orders').doc(order.docId).update({
+                        items: updatedItems
+                    });
+
+                    this.showToast('✅ Order total and item prices saved!', 'success');
+
+                    // Reload data
+                    await this.loadOrdersFromFirestore();
+
+                    // Reload the order in the modal
+                    this.loadOrderForPayment();
+                } catch (error) {
+                    console.error('Error saving order total:', error);
+                    this.showToast('Error saving: ' + error.message, 'error');
+                }
             },
 
             updateRemainingAfterNewPayment() {
