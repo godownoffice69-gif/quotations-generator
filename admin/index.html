@@ -12731,7 +12731,11 @@ convertToQuotationDateFormat(dateStr) {
 
                 // Get and display previous payments
                 const previousPayments = this.data.payments.filter(p => p.orderDocId === order.docId || p.orderId === order.orderId);
+                console.log('🔍 Checking payments for order:', { orderDocId: order.docId, orderId: order.orderId });
+                console.log('🔍 Total payments in system:', this.data.payments.length);
+                console.log('🔍 Filtered payments for this order:', previousPayments.length);
                 if (previousPayments.length > 0) {
+                    console.log('🔍 Payment IDs:', previousPayments.map(p => ({ id: p.id, amount: p.amount, orderDocId: p.orderDocId })));
                     const paymentsHTML = previousPayments.map(p => `
                         <div style="padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
                             <div style="flex: 1;">
