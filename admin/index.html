@@ -9433,7 +9433,7 @@ convertToQuotationDateFormat(dateStr) {
                 this.showToast('Opening WhatsApp...', 'success');
             },
 
-            renderCustomers() {
+            renderCustomers(searchQuery = '') {
                 const container = document.getElementById('customers');
                 container.innerHTML = `
                     <div class="card">
@@ -9441,22 +9441,46 @@ convertToQuotationDateFormat(dateStr) {
                             <h2 class="card-title">${this.t('customers')}</h2>
                         </div>
                         <div class="form-row">
-                            <input type="text" id="customerSearch" class="form-input" placeholder="${this.t('searchPlaceholder')}">
+                            <input type="text" id="customerSearch" class="form-input" placeholder="${this.t('searchPlaceholder')}" value="${searchQuery}">
                             <button class="btn btn-primary" onclick="OMS.refreshCustomerDatabase()">🔄 ${this.t('reset')}</button>
                         </div>
                         <div id="customersContainer"></div>
                     </div>
                 `;
 
+                // Filter customers based on search query
+                let filteredCustomers = this.data.customers;
+                if (searchQuery.trim()) {
+                    const query = searchQuery.toLowerCase();
+                    filteredCustomers = this.data.customers.filter(customer => {
+                        return (
+                            (customer.name && customer.name.toLowerCase().includes(query)) ||
+                            (customer.contact && customer.contact.toLowerCase().includes(query)) ||
+                            (customer.email && customer.email.toLowerCase().includes(query))
+                        );
+                    });
+                }
+
                 this.renderTable('customersContainer', [
                     { key: 'name', label: this.t('customerName') },
                     { key: 'contact', label: this.t('contact') },
                     { key: 'totalOrders', label: this.t('totalOrdersCount') },
                     { key: 'lastOrderDate', label: this.t('lastOrder'), render: c => Utils.formatDate(c.lastOrderDate) }
-                ], this.data.customers, (row) => `
+                ], filteredCustomers, (row) => `
                     <button class="btn btn-secondary btn-small" onclick="OMS.viewCustomerOrders('${row.id}')">${this.t('viewOrders')}</button>
                     <button class="btn btn-primary btn-small" onclick="OMS.createOrderForCustomer('${row.id}')">${this.t('orders')}</button>
                 `);
+
+                // Add real-time search listener
+                setTimeout(() => {
+                    const searchInput = document.getElementById('customerSearch');
+                    if (searchInput) {
+                        searchInput.addEventListener('input', (e) => {
+                            this.renderCustomers(e.target.value);
+                        });
+                        searchInput.focus();
+                    }
+                }, 100);
             },
 
             refreshCustomerDatabase() {
@@ -11413,10 +11437,11 @@ convertToQuotationDateFormat(dateStr) {
 
         const totalCosts = directCosts + indirectCosts;
 
-        // Calculate profit
-        const grossProfit = totalRevenue - directCosts;
-        const netProfit = totalRevenue - totalCosts;
-        const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(2) : 0;
+        // Calculate profit (FIXED: Use actual payments received, not promised revenue)
+        // Profit = Cash Received - Costs (Cash accounting method)
+        const grossProfit = paymentsReceived - directCosts;
+        const netProfit = paymentsReceived - totalCosts;
+        const profitMargin = paymentsReceived > 0 ? ((netProfit / paymentsReceived) * 100).toFixed(2) : 0;
 
         return {
             totalRevenue,
