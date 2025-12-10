@@ -12730,9 +12730,16 @@ convertToQuotationDateFormat(dateStr) {
                 document.getElementById('displayPendingAmount').textContent = balanceDue.toLocaleString('en-IN');
 
                 // Get and display previous payments
-                const previousPayments = this.data.payments.filter(p => p.orderDocId === order.docId || p.orderId === order.orderId);
                 console.log('🔍 Checking payments for order:', { orderDocId: order.docId, orderId: order.orderId });
                 console.log('🔍 Total payments in system:', this.data.payments.length);
+                console.log('🔍 All payment records:', this.data.payments.map(p => ({
+                    id: p.id,
+                    amount: p.amount,
+                    paymentOrderDocId: p.orderDocId,
+                    paymentOrderId: p.orderId
+                })));
+
+                const previousPayments = this.data.payments.filter(p => p.orderDocId === order.docId || p.orderId === order.orderId);
                 console.log('🔍 Filtered payments for this order:', previousPayments.length);
                 if (previousPayments.length > 0) {
                     console.log('🔍 Payment IDs:', previousPayments.map(p => ({ id: p.id, amount: p.amount, orderDocId: p.orderDocId })));
