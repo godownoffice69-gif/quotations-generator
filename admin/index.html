@@ -10402,6 +10402,9 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             generateAndShowPDF(quotation) {
+                // Store quotation for download button
+                this.currentPDFQuotation = quotation;
+
                 // This will use jsPDF or html2pdf - for now, show preview in modal
                 const modalHTML = `
                     <div class="modal show" id="pdfPreviewModal" onclick="if(event.target === this) OMS.closeModal('pdfPreviewModal')" style="z-index: 10000;">
@@ -10412,7 +10415,7 @@ convertToQuotationDateFormat(dateStr) {
                             ${this.renderQuotationPDFContent(quotation)}
 
                             <div style="margin-top: 2rem; text-align: center;">
-                                <button class="btn btn-primary" onclick="OMS.downloadQuotationPDF('${quotation.id}')">📥 Download PDF</button>
+                                <button class="btn btn-primary" onclick="OMS.downloadQuotationPDF()">📥 Download PDF</button>
                                 <button class="btn btn-success" onclick="OMS.sendQuotationWhatsApp('${quotation.id}')">📱 Send WhatsApp</button>
                                 <button class="btn btn-secondary" onclick="OMS.closeModal('pdfPreviewModal')">Close</button>
                             </div>
@@ -10574,9 +10577,13 @@ convertToQuotationDateFormat(dateStr) {
                 `;
             },
 
-            async downloadQuotationPDF(quotationId) {
-                const quotation = this.data.quotations.find(q => q.id === quotationId);
-                if (!quotation) return;
+            async downloadQuotationPDF() {
+                // Use stored quotation from preview
+                const quotation = this.currentPDFQuotation;
+                if (!quotation) {
+                    this.showToast('Please open quotation preview first', 'error');
+                    return;
+                }
 
                 try {
                     // Access jsPDF from global window object
@@ -10585,8 +10592,8 @@ convertToQuotationDateFormat(dateStr) {
 
                     const pageWidth = doc.internal.pageSize.getWidth();
                     const pageHeight = doc.internal.pageSize.getHeight();
-                    const margin = 20;
-                    let yPos = 20;
+                    const margin = 15;
+                    let yPos = 15;
 
                     // Purple color theme
                     const primaryColor = [102, 126, 234]; // #667eea
@@ -10594,111 +10601,103 @@ convertToQuotationDateFormat(dateStr) {
                     const grayText = [107, 114, 128];
 
                     // === HEADER SECTION ===
-                    // Business Name (left)
-                    doc.setFontSize(20);
+                    // QUOTATION Title (centered)
+                    doc.setFontSize(32);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...primaryColor);
-                    doc.text('Business', margin, yPos);
-                    doc.setFontSize(16);
-                    doc.text('Name.', margin, yPos + 7);
+                    doc.text('QUOTATION', pageWidth / 2, yPos, { align: 'center' });
 
-                    // QUOTATION Title (right)
-                    doc.setFontSize(28);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(...primaryColor);
-                    doc.text('QUOTATION', pageWidth - margin, yPos, { align: 'right' });
-
-                    // Date info (right side)
-                    yPos += 10;
-                    doc.setFontSize(10);
+                    // Date info and contact (centered, compact)
+                    yPos += 8;
+                    doc.setFontSize(9);
                     doc.setFont('helvetica', 'normal');
                     doc.setTextColor(...grayText);
-                    doc.text(`Date: ${Utils.formatDate(quotation.quotationDate || new Date().toISOString().split('T')[0])}`, pageWidth - margin, yPos, { align: 'right' });
-                    yPos += 5;
-                    doc.text(`Valid Until: ${Utils.formatDate(quotation.validUntil || this.calculateValidUntil())}`, pageWidth - margin, yPos, { align: 'right' });
+                    const dateText = `Date: ${Utils.formatDate(quotation.quotationDate || new Date().toISOString().split('T')[0])} | Valid Until: ${Utils.formatDate(quotation.validUntil || this.calculateValidUntil())}`;
+                    doc.text(dateText, pageWidth / 2, yPos, { align: 'center' });
 
                     // Contact numbers (centered, prominent)
-                    yPos += 10;
+                    yPos += 5;
                     doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...primaryColor);
-                    doc.text('📱 98984 96111 / 76984 96111', pageWidth / 2, yPos, { align: 'center' });
+                    doc.text('Ph: 98984 96111 / 76984 96111', pageWidth / 2, yPos, { align: 'center' });
 
                     // Purple line separator
-                    yPos += 5;
+                    yPos += 4;
                     doc.setDrawColor(...primaryColor);
-                    doc.setLineWidth(2);
+                    doc.setLineWidth(1.5);
                     doc.line(margin, yPos, pageWidth - margin, yPos);
 
                     // === CUSTOMER DETAILS BOX ===
-                    yPos += 10;
-                    doc.setFillColor(249, 249, 249);
-                    doc.rect(margin, yPos, pageWidth - 2 * margin, 30, 'F');
-
-                    yPos += 7;
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(...primaryColor);
-                    doc.text('Customer Details', margin + 5, yPos);
-
                     yPos += 6;
+                    doc.setFillColor(249, 249, 249);
+                    const customerBoxHeight = quotation.customer.eventVenue ? 22 : 18;
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, customerBoxHeight, 'F');
+
+                    yPos += 5;
                     doc.setFontSize(10);
                     doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...primaryColor);
+                    doc.text('Customer Details', margin + 3, yPos);
+
+                    yPos += 4;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...darkText);
-                    doc.text('Name:', margin + 5, yPos);
+                    doc.text('Name:', margin + 3, yPos);
                     doc.setFont('helvetica', 'normal');
-                    doc.text(quotation.customer.name, margin + 25, yPos);
+                    doc.text(quotation.customer.name, margin + 20, yPos);
 
-                    yPos += 5;
+                    yPos += 4;
                     doc.setFont('helvetica', 'bold');
-                    doc.text('Contact:', margin + 5, yPos);
+                    doc.text('Contact:', margin + 3, yPos);
                     doc.setFont('helvetica', 'normal');
-                    doc.text(quotation.customer.contact, margin + 25, yPos);
+                    doc.text(quotation.customer.contact, margin + 20, yPos);
 
-                    yPos += 5;
+                    yPos += 4;
                     doc.setFont('helvetica', 'bold');
-                    doc.text('Event Date:', margin + 5, yPos);
+                    doc.text('Event Date:', margin + 3, yPos);
                     doc.setFont('helvetica', 'normal');
                     doc.text(Utils.formatDate(quotation.customer.eventDate), margin + 25, yPos);
 
                     if (quotation.customer.eventVenue) {
-                        yPos += 5;
+                        yPos += 4;
                         doc.setFont('helvetica', 'bold');
-                        doc.text('Venue:', margin + 5, yPos);
+                        doc.text('Venue:', margin + 3, yPos);
                         doc.setFont('helvetica', 'normal');
-                        const venueText = doc.splitTextToSize(quotation.customer.eventVenue, pageWidth - margin - 35);
-                        doc.text(venueText, margin + 25, yPos);
+                        const venueText = doc.splitTextToSize(quotation.customer.eventVenue, pageWidth - margin - 25);
+                        doc.text(venueText, margin + 20, yPos);
                     }
 
                     // === ITEMS TABLE ===
-                    yPos += 15;
-                    doc.setFontSize(12);
+                    yPos += 4;
+                    doc.setFontSize(10);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...primaryColor);
                     doc.text('Items', margin, yPos);
 
-                    yPos += 5;
+                    yPos += 3;
 
                     // Table header
                     doc.setFillColor(...primaryColor);
-                    doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, 6, 'F');
 
-                    doc.setFontSize(9);
+                    doc.setFontSize(8);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(255, 255, 255);
-                    doc.text('#', margin + 2, yPos + 5);
-                    doc.text('Item Description', margin + 10, yPos + 5);
-                    doc.text('Qty', margin + 100, yPos + 5);
-                    doc.text('Rate (₹)', margin + 120, yPos + 5);
-                    doc.text('Total (₹)', pageWidth - margin - 20, yPos + 5, { align: 'right' });
+                    doc.text('#', margin + 2, yPos + 4);
+                    doc.text('Item Description', margin + 10, yPos + 4);
+                    doc.text('Qty', margin + 100, yPos + 4);
+                    doc.text('Rate', margin + 118, yPos + 4);
+                    doc.text('Total', pageWidth - margin - 15, yPos + 4, { align: 'right' });
 
-                    yPos += 8;
+                    yPos += 6;
 
                     // Table rows
                     doc.setFont('helvetica', 'normal');
                     doc.setTextColor(...darkText);
                     quotation.items.forEach((item, index) => {
-                        if (yPos > pageHeight - 60) {
+                        if (yPos > pageHeight - 50) {
                             doc.addPage();
                             yPos = 20;
                         }
@@ -10706,176 +10705,169 @@ convertToQuotationDateFormat(dateStr) {
                         // Alternating row colors
                         if (index % 2 === 0) {
                             doc.setFillColor(248, 249, 250);
-                            doc.rect(margin, yPos, pageWidth - 2 * margin, 7, 'F');
+                            doc.rect(margin, yPos, pageWidth - 2 * margin, 5, 'F');
                         }
 
-                        doc.setFontSize(9);
-                        doc.text((index + 1).toString(), margin + 2, yPos + 5);
+                        doc.setFontSize(8);
+                        doc.text(String(index + 1), margin + 2, yPos + 3.5);
 
                         const itemName = doc.splitTextToSize(item.name, 85);
-                        doc.text(itemName, margin + 10, yPos + 5);
+                        doc.text(itemName, margin + 10, yPos + 3.5);
 
-                        doc.text(item.quantity.toString(), margin + 100, yPos + 5);
-                        doc.text(`₹${item.rate.toLocaleString('en-IN')}`, margin + 120, yPos + 5);
-                        doc.text(`₹${item.subtotal.toLocaleString('en-IN')}`, pageWidth - margin - 2, yPos + 5, { align: 'right' });
+                        doc.text(String(item.quantity), margin + 100, yPos + 3.5);
+                        // Format numbers without toLocaleString to avoid encoding issues
+                        const rateStr = String(Math.round(item.rate));
+                        const totalStr = String(Math.round(item.subtotal));
+                        doc.text(rateStr, margin + 118, yPos + 3.5);
+                        doc.text(totalStr, pageWidth - margin - 2, yPos + 3.5, { align: 'right' });
 
-                        yPos += 7;
+                        yPos += 5;
                     });
 
                     // Table bottom border
                     doc.setDrawColor(...primaryColor);
-                    doc.setLineWidth(1);
+                    doc.setLineWidth(0.5);
                     doc.line(margin, yPos, pageWidth - margin, yPos);
 
                     // === FINANCIAL SUMMARY BOX ===
-                    yPos += 10;
+                    yPos += 5;
 
-                    const summaryBoxX = pageWidth - margin - 70;
-                    const summaryBoxWidth = 70;
+                    const summaryBoxX = pageWidth - margin - 60;
 
                     // Subtotal
-                    doc.setFontSize(10);
+                    doc.setFontSize(9);
                     doc.setFont('helvetica', 'normal');
                     doc.setTextColor(...darkText);
                     doc.text('Subtotal:', summaryBoxX, yPos);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(`₹${quotation.financials.subtotal.toLocaleString('en-IN')}`, pageWidth - margin - 2, yPos, { align: 'right' });
+                    doc.text(String(Math.round(quotation.financials.subtotal)), pageWidth - margin - 2, yPos, { align: 'right' });
 
                     // Discount
                     if (quotation.financials.discountAmount > 0) {
-                        yPos += 6;
+                        yPos += 4;
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(239, 68, 68); // red
                         doc.text('Discount:', summaryBoxX, yPos);
                         doc.setFont('helvetica', 'bold');
-                        doc.text(`- ₹${quotation.financials.discountAmount.toLocaleString('en-IN')}`, pageWidth - margin - 2, yPos, { align: 'right' });
+                        doc.text('- ' + String(Math.round(quotation.financials.discountAmount)), pageWidth - margin - 2, yPos, { align: 'right' });
                     }
 
                     // Grand Total
-                    yPos += 8;
+                    yPos += 5;
                     doc.setDrawColor(...primaryColor);
-                    doc.setLineWidth(1.5);
-                    doc.line(summaryBoxX, yPos - 2, pageWidth - margin, yPos - 2);
+                    doc.setLineWidth(1);
+                    doc.line(summaryBoxX, yPos - 1, pageWidth - margin, yPos - 1);
 
-                    yPos += 4;
-                    doc.setFontSize(12);
+                    yPos += 3;
+                    doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...primaryColor);
                     doc.text('TOTAL:', summaryBoxX, yPos);
-                    doc.setFontSize(14);
-                    doc.text(`₹${quotation.financials.grandTotal.toLocaleString('en-IN')}`, pageWidth - margin - 2, yPos, { align: 'right' });
+                    doc.setFontSize(12);
+                    doc.text(String(Math.round(quotation.financials.grandTotal)), pageWidth - margin - 2, yPos, { align: 'right' });
 
                     // === PAYMENT SCHEDULE BOX ===
-                    yPos += 12;
+                    yPos += 6;
                     doc.setFillColor(232, 245, 233);
-                    doc.rect(margin, yPos, pageWidth - 2 * margin, 25, 'F');
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, 16, 'F');
 
-                    yPos += 7;
-                    doc.setFontSize(11);
+                    yPos += 4;
+                    doc.setFontSize(9);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(46, 125, 50);
-                    doc.text('Payment Schedule', margin + 5, yPos);
+                    doc.text('Payment Schedule', margin + 3, yPos);
 
-                    yPos += 6;
-                    doc.setFontSize(9);
+                    yPos += 4;
+                    doc.setFontSize(8);
                     doc.setFont('helvetica', 'normal');
                     doc.setTextColor(...darkText);
-                    doc.text('• Booking Amount (40%):', margin + 5, yPos);
+                    doc.text('Booking (40%):', margin + 3, yPos);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(`₹${parseFloat(quotation.financials.booking40).toLocaleString('en-IN')}`, pageWidth - margin - 5, yPos, { align: 'right' });
+                    doc.text(String(Math.round(parseFloat(quotation.financials.booking40))), pageWidth - margin - 3, yPos, { align: 'right' });
 
-                    yPos += 5;
+                    yPos += 4;
                     doc.setFont('helvetica', 'normal');
-                    doc.text('• Event Day Payment (40%):', margin + 5, yPos);
+                    doc.text('Event Day (40%):', margin + 3, yPos);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(`₹${parseFloat(quotation.financials.eventDay40).toLocaleString('en-IN')}`, pageWidth - margin - 5, yPos, { align: 'right' });
+                    doc.text(String(Math.round(parseFloat(quotation.financials.eventDay40))), pageWidth - margin - 3, yPos, { align: 'right' });
 
-                    yPos += 5;
+                    yPos += 4;
                     doc.setFont('helvetica', 'normal');
-                    doc.text('• Post-Event Payment (20%):', margin + 5, yPos);
+                    doc.text('Post-Event (20%):', margin + 3, yPos);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(`₹${parseFloat(quotation.financials.postEvent20).toLocaleString('en-IN')}`, pageWidth - margin - 5, yPos, { align: 'right' });
+                    doc.text(String(Math.round(parseFloat(quotation.financials.postEvent20))), pageWidth - margin - 3, yPos, { align: 'right' });
 
                     // === TERMS & CONDITIONS ===
-                    yPos += 12;
-                    if (yPos > pageHeight - 80) {
+                    yPos += 6;
+                    if (yPos > pageHeight - 65) {
                         doc.addPage();
-                        yPos = 20;
+                        yPos = 15;
                     }
 
                     doc.setFillColor(255, 243, 224);
-                    const termsHeight = 70;
+                    const termsHeight = 52;
                     doc.rect(margin, yPos, pageWidth - 2 * margin, termsHeight, 'F');
 
-                    yPos += 7;
-                    doc.setFontSize(11);
+                    yPos += 4;
+                    doc.setFontSize(9);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(230, 81, 0);
-                    doc.text('Terms & Conditions', margin + 5, yPos);
+                    doc.text('Terms & Conditions', margin + 3, yPos);
 
-                    yPos += 6;
-                    doc.setFontSize(8);
+                    yPos += 4;
+                    doc.setFontSize(7);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...darkText);
-                    doc.text('PAYMENT TERMS:', margin + 5, yPos);
+                    doc.text('PAYMENT:', margin + 3, yPos);
 
-                    yPos += 4;
+                    yPos += 3;
                     doc.setFont('helvetica', 'normal');
-                    doc.text('• 40% booking amount required to confirm order', margin + 7, yPos);
-                    yPos += 3.5;
-                    doc.text('• 40% payment on event day before event starts', margin + 7, yPos);
-                    yPos += 3.5;
-                    doc.text('• 20% payment after event completion on same day', margin + 7, yPos);
+                    doc.text('40% booking, 40% on event day, 20% post-event', margin + 5, yPos);
 
-                    yPos += 5;
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('INCLUSIONS:', margin + 5, yPos);
                     yPos += 4;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('INCLUSIONS:', margin + 3, yPos);
+                    yPos += 3;
                     doc.setFont('helvetica', 'normal');
-                    doc.text('• Generator for electricity provision', margin + 7, yPos);
+                    doc.text('Generator for electricity', margin + 5, yPos);
 
-                    yPos += 5;
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('CUSTOMER RESPONSIBILITIES:', margin + 5, yPos);
                     yPos += 4;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('CUSTOMER RESPONSIBILITIES:', margin + 3, yPos);
+                    yPos += 3;
                     doc.setFont('helvetica', 'normal');
                     const responsibilities = [
-                        '• Fire safety permissions and Fire NOC',
-                        '• Venue/ground permissions',
-                        '• AMC permissions',
-                        '• First aid provision',
-                        '• Resource/facility manager approval',
-                        '• Proof of contractor competence',
-                        '• Security clearance'
+                        'Fire safety & NOC, Venue permissions, AMC permissions,',
+                        'First aid, Manager approval, Contractor competence, Security clearance'
                     ];
                     responsibilities.forEach(resp => {
-                        doc.text(resp, margin + 7, yPos);
-                        yPos += 3.5;
+                        doc.text(resp, margin + 5, yPos);
+                        yPos += 3;
                     });
 
                     yPos += 3;
                     doc.setFont('helvetica', 'bold');
-                    doc.text('VALIDITY:', margin + 5, yPos);
+                    doc.text('VALIDITY:', margin + 3, yPos);
                     doc.setFont('helvetica', 'normal');
-                    doc.text(' 15 days from quotation date', margin + 21, yPos);
+                    doc.text(' 15 days from quotation date', margin + 18, yPos);
 
                     // === FOOTER ===
-                    yPos = pageHeight - 20;
+                    yPos = pageHeight - 12;
                     doc.setDrawColor(...primaryColor);
-                    doc.setLineWidth(2);
+                    doc.setLineWidth(1);
                     doc.line(margin, yPos, pageWidth - margin, yPos);
 
-                    yPos += 5;
-                    doc.setFontSize(9);
+                    yPos += 4;
+                    doc.setFontSize(8);
                     doc.setFont('helvetica', 'normal');
                     doc.setTextColor(...grayText);
-                    doc.text('For any queries, please contact:', pageWidth / 2, yPos, { align: 'center' });
+                    doc.text('For queries contact:', pageWidth / 2, yPos, { align: 'center' });
 
-                    yPos += 5;
-                    doc.setFontSize(11);
+                    yPos += 4;
+                    doc.setFontSize(10);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...primaryColor);
-                    doc.text('📱 98984 96111 / 76984 96111', pageWidth / 2, yPos, { align: 'center' });
+                    doc.text('Ph: 98984 96111 / 76984 96111', pageWidth / 2, yPos, { align: 'center' });
 
                     // Save PDF
                     const fileName = `Quotation_${quotation.customer.name.replace(/\s+/g, '_')}_${quotation.quotationDate || 'draft'}.pdf`;
