@@ -861,6 +861,19 @@
             overflow: hidden;
         }
 
+        /* Slideshow Image Styles */
+        .slideshow-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: opacity 1s ease-in-out;
+        }
+
         /* Fire Background Image Layer */
         #loginScreen::before {
             content: '';
@@ -1061,11 +1074,22 @@
 
 <body>
     <!-- Login Screen -->
-    <div id="loginScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: flex-end; justify-content: flex-end; padding: 2rem;">
-        <!-- Floating Particles Background -->
-        <canvas id="particles-canvas"></canvas>
+    <div id="loginScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: flex-end; justify-content: flex-end; padding: 2rem; overflow: hidden;">
+        <!-- Slideshow Background -->
+        <div id="loginSlideshow" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;">
+            <div class="slideshow-image" style="background-image: url('circle%20flame.jpg'); opacity: 1;"></div>
+            <div class="slideshow-image" style="background-image: url('bubble%20from%20Disney.png'); opacity: 0;"></div>
+            <div class="slideshow-image" style="background-image: url('firepowersfx.png'); opacity: 0;"></div>
+            <div class="slideshow-image" style="background-image: url('flame%20machine%201.jpg'); opacity: 0;"></div>
+            <div class="slideshow-image" style="background-image: url('flames%20machine.jpg'); opacity: 0;"></div>
+            <div class="slideshow-image" style="background-image: url('peper%20ribbon%20thrower.jpg'); opacity: 0;"></div>
+            <div class="slideshow-image" style="background-image: url('sparkle%20fountain%20image%201.jpg'); opacity: 0;"></div>
+        </div>
 
-        <div class="login-card" style="background: white; padding: 2rem; border-radius: 16px; max-width: 320px; width: auto;">
+        <!-- Dark overlay for better readability -->
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 2;"></div>
+
+        <div class="login-card" style="position: relative; z-index: 3; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 2rem; border-radius: 16px; max-width: 320px; width: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
             <h1 class="login-logo" style="text-align: center; color: #667eea; margin-bottom: 1.5rem; font-size: 1.75rem;">🔥 Firepower SFX</h1>
             
             <form id="loginForm">
@@ -16063,6 +16087,41 @@ setupAllRealtimeListeners() {
         this.saveToStorage();
     });
 
+    // Quotations real-time listener
+    this.quotationsUnsubscribe = db.collection('quotations').onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const quotation = { id: change.doc.id, ...change.doc.data() };
+
+            if (change.type === 'added' || change.type === 'modified') {
+                const index = this.data.quotations.findIndex(q => q.id === quotation.id);
+                if (index === -1) {
+                    this.data.quotations.push(quotation);
+                    console.log('📄 Quotation added:', quotation.customer?.name);
+                } else {
+                    this.data.quotations[index] = quotation;
+                    console.log('📄 Quotation updated:', quotation.customer?.name);
+                }
+                // Update UI in real-time if on quotations tab
+                if (this.currentTab === 'quotations') {
+                    this.renderQuotations();
+                }
+            } else if (change.type === 'removed') {
+                const index = this.data.quotations.findIndex(q => q.id === quotation.id);
+                if (index !== -1) {
+                    this.data.quotations.splice(index, 1);
+                    console.log('📄 Quotation removed:', quotation.customer?.name);
+                    // Update UI in real-time if on quotations tab
+                    if (this.currentTab === 'quotations') {
+                        this.renderQuotations();
+                    }
+                }
+            }
+        });
+
+        // Update localStorage backup
+        this.saveToStorage();
+    });
+
     console.log('✅ All real-time listeners active');
 },
 
@@ -17768,6 +17827,26 @@ updateAllDisplays() {
         // Make function globally accessible
         window.initGoogleMaps = initGoogleMaps;
 
+        // ============ LOGIN SLIDESHOW ============
+        function startLoginSlideshow() {
+            const images = document.querySelectorAll('.slideshow-image');
+            if (images.length === 0) return;
+
+            let currentIndex = 0;
+
+            // Change image every 1 second
+            setInterval(() => {
+                // Fade out current image
+                images[currentIndex].style.opacity = '0';
+
+                // Move to next image
+                currentIndex = (currentIndex + 1) % images.length;
+
+                // Fade in next image
+                images[currentIndex].style.opacity = '1';
+            }, 1000);
+        }
+
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
             // Check ML status on page load
@@ -18087,6 +18166,9 @@ if (diffDays > 30) {
                     console.log('❌ User not logged in');
                     document.getElementById('loginScreen').style.display = 'flex';
                     document.querySelector('.app-container').style.display = 'none';
+
+                    // Start the login slideshow animation
+                    startLoginSlideshow();
                 }
             });
 
