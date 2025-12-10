@@ -9433,7 +9433,7 @@ convertToQuotationDateFormat(dateStr) {
                 this.showToast('Opening WhatsApp...', 'success');
             },
 
-            renderCustomers(searchQuery = '') {
+            renderCustomers() {
                 const container = document.getElementById('customers');
                 container.innerHTML = `
                     <div class="card">
@@ -9441,13 +9441,28 @@ convertToQuotationDateFormat(dateStr) {
                             <h2 class="card-title">${this.t('customers')}</h2>
                         </div>
                         <div class="form-row">
-                            <input type="text" id="customerSearch" class="form-input" placeholder="${this.t('searchPlaceholder')}" value="${searchQuery}">
+                            <input type="text" id="customerSearch" class="form-input" placeholder="${this.t('searchPlaceholder')}">
                             <button class="btn btn-primary" onclick="OMS.refreshCustomerDatabase()">🔄 ${this.t('reset')}</button>
                         </div>
                         <div id="customersContainer"></div>
                     </div>
                 `;
 
+                // Initial render with all customers
+                this.filterAndDisplayCustomers('');
+
+                // Add real-time search listener (only once)
+                setTimeout(() => {
+                    const searchInput = document.getElementById('customerSearch');
+                    if (searchInput) {
+                        searchInput.addEventListener('input', (e) => {
+                            this.filterAndDisplayCustomers(e.target.value);
+                        });
+                    }
+                }, 100);
+            },
+
+            filterAndDisplayCustomers(searchQuery) {
                 // Filter customers based on search query
                 let filteredCustomers = this.data.customers;
                 if (searchQuery.trim()) {
@@ -9461,6 +9476,7 @@ convertToQuotationDateFormat(dateStr) {
                     });
                 }
 
+                // Only re-render the table, not the entire page
                 this.renderTable('customersContainer', [
                     { key: 'name', label: this.t('customerName') },
                     { key: 'contact', label: this.t('contact') },
@@ -9470,17 +9486,6 @@ convertToQuotationDateFormat(dateStr) {
                     <button class="btn btn-secondary btn-small" onclick="OMS.viewCustomerOrders('${row.id}')">${this.t('viewOrders')}</button>
                     <button class="btn btn-primary btn-small" onclick="OMS.createOrderForCustomer('${row.id}')">${this.t('orders')}</button>
                 `);
-
-                // Add real-time search listener
-                setTimeout(() => {
-                    const searchInput = document.getElementById('customerSearch');
-                    if (searchInput) {
-                        searchInput.addEventListener('input', (e) => {
-                            this.renderCustomers(e.target.value);
-                        });
-                        searchInput.focus();
-                    }
-                }, 100);
             },
 
             refreshCustomerDatabase() {
