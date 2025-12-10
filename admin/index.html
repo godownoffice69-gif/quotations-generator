@@ -1124,6 +1124,7 @@
                 <button class="nav-tab" data-tab="itemHistory">📜 Item History</button>
                 <button class="nav-tab" data-tab="preparation">📋 Preparation</button>
                 <button class="nav-tab" data-tab="customers">👥 Customers</button>
+                <button class="nav-tab" data-tab="quotations">📄 Quotations</button>
                 <button class="nav-tab" data-tab="team">👷 Team</button>
                 <button class="nav-tab" data-tab="calendar">🗓️ Calendar</button>
                 <button class="nav-tab" data-tab="history">📚 History</button>
@@ -1370,6 +1371,7 @@
             <div id="itemHistory" class="tab-content"></div>
             <div id="preparation" class="tab-content"></div>
             <div id="customers" class="tab-content"></div>
+            <div id="quotations" class="tab-content"></div>
             <div id="team" class="tab-content"></div>
             <div id="calendar" class="tab-content"></div>
             <div id="history" class="tab-content"></div>
@@ -8347,6 +8349,7 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'itemHistory') this.renderItemHistory();
                     else if (tabName === 'preparation') this.renderPreparation();
                     else if (tabName === 'customers') this.renderCustomers();
+                    else if (tabName === 'quotations') this.renderQuotations();
                     else if (tabName === 'team') this.renderTeam();
                     else if (tabName === 'calendar') this.renderCalendarTab();
                     else if (tabName === 'history') this.renderHistory();
@@ -9696,11 +9699,480 @@ convertToQuotationDateFormat(dateStr) {
             createOrderForCustomer(customerId) {
                 const customer = this.data.customers.find(c => c.id === customerId);
                 if (!customer) return;
-                
+
                 this.switchTab('orders');
                 Utils.set('clientName', customer.name);
                 Utils.set('contact', customer.contact);
                 if (customer.lastVenue) Utils.set('venue', customer.lastVenue);
+            },
+
+            // ============ QUOTATIONS MANAGEMENT ============
+
+            renderQuotations() {
+                const container = document.getElementById('quotations');
+
+                // Initialize quotations data if not exists
+                if (!this.data.quotations) {
+                    this.data.quotations = [];
+                }
+
+                const viewMode = this.quotationViewMode || 'list'; // 'list' or 'create'
+
+                if (viewMode === 'create' || viewMode === 'edit') {
+                    this.renderQuotationForm();
+                } else {
+                    this.renderQuotationsList();
+                }
+            },
+
+            renderQuotationsList() {
+                const container = document.getElementById('quotations');
+                const quotations = this.data.quotations || [];
+
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📄 Quotations</h2>
+                            <button class="btn btn-success" onclick="OMS.createNewQuotation()">➕ Create New Quotation</button>
+                        </div>
+
+                        <div class="form-row">
+                            <input type="text" id="quotationSearch" class="form-input" placeholder="Search quotations by customer, date...">
+                        </div>
+
+                        <div id="quotationsListContainer">
+                            ${quotations.length === 0 ? `
+                                <div style="text-align: center; padding: 3rem; color: #999;">
+                                    <h3>📄 No Quotations Yet</h3>
+                                    <p>Create your first quotation to get started</p>
+                                    <button class="btn btn-primary" onclick="OMS.createNewQuotation()">Create Quotation</button>
+                                </div>
+                            ` : this.renderQuotationsTable(quotations)}
+                        </div>
+                    </div>
+                `;
+
+                // Add search listener
+                setTimeout(() => {
+                    const searchInput = document.getElementById('quotationSearch');
+                    if (searchInput) {
+                        searchInput.addEventListener('input', (e) => {
+                            this.filterQuotations(e.target.value);
+                        });
+                    }
+                }, 100);
+            },
+
+            renderQuotationsTable(quotations) {
+                const sortedQuotations = quotations.sort((a, b) =>
+                    new Date(b.createdAt) - new Date(a.createdAt)
+                );
+
+                return `
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Event Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sortedQuotations.map(q => `
+                                    <tr>
+                                        <td>
+                                            <strong>${q.customer.name}</strong><br>
+                                            <small>${q.customer.contact}</small>
+                                        </td>
+                                        <td>${Utils.formatDate(q.customer.eventDate)}</td>
+                                        <td><strong>₹${q.financials.grandTotal.toLocaleString('en-IN')}</strong></td>
+                                        <td>
+                                            <span class="status-badge ${q.status === 'converted' ? 'success' : q.status === 'sent' ? 'info' : 'warning'}">
+                                                ${q.status === 'converted' ? '✓ Converted' : q.status === 'sent' ? '📤 Sent' : '📝 Draft'}
+                                            </span>
+                                        </td>
+                                        <td><small>${Utils.formatDate(q.createdAt)}</small></td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button class="btn btn-info btn-small" onclick="OMS.viewQuotationPDF('${q.id}')" title="View PDF">👁️</button>
+                                                <button class="btn btn-primary btn-small" onclick="OMS.editQuotation('${q.id}')" title="Edit">✏️</button>
+                                                <button class="btn btn-success btn-small" onclick="OMS.sendQuotationWhatsApp('${q.id}')" title="Send WhatsApp">📱</button>
+                                                ${q.status !== 'converted' ? `<button class="btn btn-warning btn-small" onclick="OMS.convertQuotationToOrder('${q.id}')" title="Convert to Order">🔄</button>` : ''}
+                                                <button class="btn btn-danger btn-small" onclick="OMS.deleteQuotation('${q.id}')" title="Delete">🗑️</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            },
+
+            filterQuotations(searchQuery) {
+                const quotations = this.data.quotations || [];
+                let filteredQuotations = quotations;
+
+                if (searchQuery.trim()) {
+                    const query = searchQuery.toLowerCase();
+                    filteredQuotations = quotations.filter(q => {
+                        return (
+                            (q.customer.name && q.customer.name.toLowerCase().includes(query)) ||
+                            (q.customer.contact && q.customer.contact.includes(query)) ||
+                            (q.customer.eventVenue && q.customer.eventVenue.toLowerCase().includes(query)) ||
+                            (q.quotationNumber && q.quotationNumber.toLowerCase().includes(query))
+                        );
+                    });
+                }
+
+                document.getElementById('quotationsListContainer').innerHTML = this.renderQuotationsTable(filteredQuotations);
+            },
+
+            createNewQuotation() {
+                this.editingQuotationId = null;
+                this.currentQuotation = {
+                    items: [],
+                    customer: {},
+                    discount: { type: 'percentage', value: 0, amount: 0 },
+                    financials: { subtotal: 0, discountAmount: 0, grandTotal: 0 }
+                };
+                this.quotationViewMode = 'create';
+                this.renderQuotations();
+            },
+
+            renderQuotationForm() {
+                const container = document.getElementById('quotations');
+                const q = this.currentQuotation || {
+                    items: [],
+                    customer: {},
+                    discount: { type: 'percentage', value: 0, amount: 0 },
+                    financials: { subtotal: 0, discountAmount: 0, grandTotal: 0 }
+                };
+                const isEditing = !!this.editingQuotationId;
+
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h2 class="card-title">📝 ${isEditing ? 'Edit' : 'Create'} Quotation</h2>
+                                <button class="btn btn-secondary" onclick="OMS.cancelQuotationEdit()">← Back to List</button>
+                            </div>
+                        </div>
+
+                        <div class="card" style="background: #f9f9f9;">
+                            <!-- Customer Details -->
+                            <h3 style="margin: 0 0 1rem 0;">👤 Customer Details</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label required">Customer Name</label>
+                                    <input type="text" id="quotCustomerName" class="form-input" value="${q.customer.name || ''}" required placeholder="Enter customer name" list="customerNamesList">
+                                    <datalist id="customerNamesList">
+                                        ${this.data.customers.map(c => `<option value="${c.name}">`).join('')}
+                                    </datalist>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label required">Contact Number</label>
+                                    <input type="tel" id="quotCustomerContact" class="form-input" value="${q.customer.contact || ''}" required placeholder="Enter contact number">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Email (Optional)</label>
+                                    <input type="email" id="quotCustomerEmail" class="form-input" value="${q.customer.email || ''}" placeholder="Enter email">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label required">Event Date</label>
+                                    <input type="date" id="quotEventDate" class="form-input" value="${q.customer.eventDate || ''}" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Event Venue</label>
+                                <textarea id="quotEventVenue" class="form-input" rows="2" placeholder="Enter event venue address">${q.customer.eventVenue || ''}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Items Section -->
+                        <div class="card">
+                            <h3 style="margin: 0 0 1rem 0;">📦 Items</h3>
+                            <div class="form-group">
+                                <input type="text" id="quotItemSearch" class="form-input" placeholder="🔍 Search items from inventory or add custom...">
+                            </div>
+
+                            <div id="quotationItemsContainer">
+                                ${q.items.length === 0 ? `
+                                    <div style="text-align: center; padding: 2rem; color: #999;">
+                                        <p>No items added yet. Search and add items above.</p>
+                                    </div>
+                                ` : this.renderQuotationItems(q.items)}
+                            </div>
+
+                            <button type="button" class="btn btn-primary" onclick="OMS.addCustomQuotationItem()">➕ Add Custom Item</button>
+                        </div>
+
+                        <!-- Discount Section -->
+                        <div class="card" style="background: #fff3cd;">
+                            <h3 style="margin: 0 0 1rem 0;">💰 Discount</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Discount Type</label>
+                                    <select id="quotDiscountType" class="form-select" onchange="OMS.updateQuotationDiscount()">
+                                        <option value="percentage" ${q.discount.type === 'percentage' ? 'selected' : ''}>Percentage (%)</option>
+                                        <option value="fixed" ${q.discount.type === 'fixed' ? 'selected' : ''}>Fixed Amount (₹)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Discount Value</label>
+                                    <input type="number" id="quotDiscountValue" class="form-input" value="${q.discount.value || 0}" min="0" step="0.01" oninput="OMS.updateQuotationDiscount()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Financial Summary -->
+                        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            <h3 style="color: white; margin: 0 0 1.5rem 0;">💵 Financial Summary</h3>
+
+                            <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
+                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                                    <span>Subtotal:</span>
+                                    <strong id="quotSubtotal">₹0</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                                    <span>Discount:</span>
+                                    <strong id="quotDiscountAmount">- ₹0</strong>
+                                </div>
+                                <hr style="border-color: rgba(255,255,255,0.3);">
+                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 1.25rem;">
+                                    <span><strong>Grand Total:</strong></span>
+                                    <strong id="quotGrandTotal">₹0</strong>
+                                </div>
+                            </div>
+
+                            <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px;">
+                                <h4 style="color: white; margin: 0 0 1rem 0; font-size: 1rem;">Payment Schedule:</h4>
+                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                                    <span>Booking Amount (40%):</span>
+                                    <strong id="quotBooking40">₹0</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                                    <span>Event Day Payment (40%):</span>
+                                    <strong id="quotEventDay40">₹0</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                                    <span>Post-Event Payment (20%):</span>
+                                    <strong id="quotPostEvent20">₹0</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="card">
+                            <div class="btn-group">
+                                <button class="btn btn-secondary" onclick="OMS.cancelQuotationEdit()">Cancel</button>
+                                <button class="btn btn-info" onclick="OMS.previewQuotationPDF()">👁️ Preview PDF</button>
+                                <button class="btn btn-primary" onclick="OMS.saveQuotation('draft')">💾 Save as Draft</button>
+                                <button class="btn btn-success" onclick="OMS.saveAndSendQuotation()">📱 Save & Send WhatsApp</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Initialize item search after render
+                setTimeout(() => {
+                    this.initQuotationItemSearch();
+                    this.recalculateQuotation();
+                }, 100);
+            },
+
+            renderQuotationItems(items) {
+                return `
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 35%;">Item Name</th>
+                                    <th style="width: 15%;">Quantity</th>
+                                    <th style="width: 20%;">Rate (₹)</th>
+                                    <th style="width: 20%;">Subtotal</th>
+                                    <th style="width: 5%;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.map((item, index) => `
+                                    <tr>
+                                        <td>${index + 1}</td>
+                                        <td>
+                                            <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationItem(${index}, 'name', this.value)" style="width: 100%;">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-input" value="${item.quantity}" min="1" onchange="OMS.updateQuotationItem(${index}, 'quantity', this.value)" style="width: 100%;">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-input" value="${item.rate}" min="0" step="0.01" onchange="OMS.updateQuotationItem(${index}, 'rate', this.value)" style="width: 100%;">
+                                        </td>
+                                        <td><strong>₹${item.subtotal.toLocaleString('en-IN')}</strong></td>
+                                        <td>
+                                            <button class="btn btn-danger btn-small" onclick="OMS.removeQuotationItem(${index})" title="Remove">×</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            },
+
+            initQuotationItemSearch() {
+                const searchInput = document.getElementById('quotItemSearch');
+                if (!searchInput) return;
+
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase();
+                    if (query.length < 2) return;
+
+                    // Search from inventory
+                    const items = this.data.inventory?.items || [];
+                    const matches = items.filter(item =>
+                        item.name.toLowerCase().includes(query)
+                    ).slice(0, 5);
+
+                    // Show suggestions (simple implementation for now)
+                    // You can enhance this with a dropdown
+                });
+
+                searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const itemName = e.target.value.trim();
+                        if (itemName) {
+                            this.addQuotationItemByName(itemName);
+                            e.target.value = '';
+                        }
+                    }
+                });
+            },
+
+            addQuotationItemByName(itemName) {
+                // Search in inventory first
+                const inventoryItem = this.data.inventory?.items?.find(i =>
+                    i.name.toLowerCase() === itemName.toLowerCase()
+                );
+
+                const newItem = {
+                    name: itemName,
+                    quantity: 1,
+                    rate: inventoryItem?.defaultPrice || 0,
+                    subtotal: inventoryItem?.defaultPrice || 0
+                };
+
+                this.currentQuotation.items.push(newItem);
+                this.updateQuotationDisplay();
+            },
+
+            addCustomQuotationItem() {
+                const itemName = prompt('Enter item name:');
+                if (!itemName) return;
+
+                const newItem = {
+                    name: itemName,
+                    quantity: 1,
+                    rate: 0,
+                    subtotal: 0
+                };
+
+                this.currentQuotation.items.push(newItem);
+                this.updateQuotationDisplay();
+            },
+
+            updateQuotationItem(index, field, value) {
+                if (!this.currentQuotation.items[index]) return;
+
+                this.currentQuotation.items[index][field] = field === 'name' ? value : parseFloat(value) || 0;
+
+                // Recalculate subtotal
+                const item = this.currentQuotation.items[index];
+                item.subtotal = item.quantity * item.rate;
+
+                this.recalculateQuotation();
+                this.updateQuotationDisplay();
+            },
+
+            removeQuotationItem(index) {
+                this.currentQuotation.items.splice(index, 1);
+                this.updateQuotationDisplay();
+            },
+
+            updateQuotationDiscount() {
+                const type = Utils.get('quotDiscountType');
+                const value = parseFloat(Utils.get('quotDiscountValue')) || 0;
+
+                this.currentQuotation.discount = { type, value, amount: 0 };
+                this.recalculateQuotation();
+            },
+
+            recalculateQuotation() {
+                const q = this.currentQuotation;
+                if (!q) return;
+
+                // Calculate subtotal
+                q.financials.subtotal = q.items.reduce((sum, item) => sum + item.subtotal, 0);
+
+                // Calculate discount
+                if (q.discount.type === 'percentage') {
+                    q.financials.discountAmount = (q.financials.subtotal * q.discount.value) / 100;
+                } else {
+                    q.financials.discountAmount = q.discount.value;
+                }
+
+                // Calculate grand total
+                q.financials.grandTotal = Math.max(0, q.financials.subtotal - q.financials.discountAmount);
+
+                // Calculate payment schedule
+                q.financials.booking40 = (q.financials.grandTotal * 0.4).toFixed(2);
+                q.financials.eventDay40 = (q.financials.grandTotal * 0.4).toFixed(2);
+                q.financials.postEvent20 = (q.financials.grandTotal * 0.2).toFixed(2);
+
+                // Update display
+                this.updateFinancialDisplay();
+            },
+
+            updateFinancialDisplay() {
+                const q = this.currentQuotation;
+                if (!q) return;
+
+                const subtotalEl = document.getElementById('quotSubtotal');
+                const discountEl = document.getElementById('quotDiscountAmount');
+                const grandTotalEl = document.getElementById('quotGrandTotal');
+                const booking40El = document.getElementById('quotBooking40');
+                const eventDay40El = document.getElementById('quotEventDay40');
+                const postEvent20El = document.getElementById('quotPostEvent20');
+
+                if (subtotalEl) subtotalEl.textContent = `₹${q.financials.subtotal.toLocaleString('en-IN')}`;
+                if (discountEl) discountEl.textContent = `- ₹${q.financials.discountAmount.toLocaleString('en-IN')}`;
+                if (grandTotalEl) grandTotalEl.textContent = `₹${q.financials.grandTotal.toLocaleString('en-IN')}`;
+                if (booking40El) booking40El.textContent = `₹${parseFloat(q.financials.booking40).toLocaleString('en-IN')}`;
+                if (eventDay40El) eventDay40El.textContent = `₹${parseFloat(q.financials.eventDay40).toLocaleString('en-IN')}`;
+                if (postEvent20El) postEvent20El.textContent = `₹${parseFloat(q.financials.postEvent20).toLocaleString('en-IN')}`;
+            },
+
+            updateQuotationDisplay() {
+                const container = document.getElementById('quotationItemsContainer');
+                if (container && this.currentQuotation) {
+                    container.innerHTML = this.currentQuotation.items.length === 0 ?
+                        `<div style="text-align: center; padding: 2rem; color: #999;"><p>No items added yet. Search and add items above.</p></div>` :
+                        this.renderQuotationItems(this.currentQuotation.items);
+                }
+                this.recalculateQuotation();
+            },
+
+            cancelQuotationEdit() {
+                this.quotationViewMode = 'list';
+                this.editingQuotationId = null;
+                this.currentQuotation = null;
+                this.renderQuotations();
             },
 
             // ============ TEAM MANAGEMENT ============
