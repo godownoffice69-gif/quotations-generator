@@ -9954,16 +9954,12 @@ convertToQuotationDateFormat(dateStr) {
                             <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px;">
                                 <h4 style="color: white; margin: 0 0 1rem 0; font-size: 1rem;">Payment Schedule:</h4>
                                 <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                    <span>Booking Amount (40%):</span>
-                                    <strong id="quotBooking40">₹0</strong>
+                                    <span>Advance Payment (50%):</span>
+                                    <strong id="quotBooking50">₹0</strong>
                                 </div>
                                 <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                    <span>Event Day Payment (40%):</span>
-                                    <strong id="quotEventDay40">₹0</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                    <span>Post-Event Payment (20%):</span>
-                                    <strong id="quotPostEvent20">₹0</strong>
+                                    <span>Event Day Payment (50%):</span>
+                                    <strong id="quotEventDay50">₹0</strong>
                                 </div>
                             </div>
                         </div>
@@ -10187,10 +10183,9 @@ convertToQuotationDateFormat(dateStr) {
                 // Calculate grand total
                 q.financials.grandTotal = Math.max(0, q.financials.subtotal - q.financials.discountAmount);
 
-                // Calculate payment schedule
-                q.financials.booking40 = (q.financials.grandTotal * 0.4).toFixed(2);
-                q.financials.eventDay40 = (q.financials.grandTotal * 0.4).toFixed(2);
-                q.financials.postEvent20 = (q.financials.grandTotal * 0.2).toFixed(2);
+                // Calculate payment schedule (50-50 split)
+                q.financials.booking50 = (q.financials.grandTotal * 0.5).toFixed(2);
+                q.financials.eventDay50 = (q.financials.grandTotal * 0.5).toFixed(2);
 
                 // Update display
                 this.updateFinancialDisplay();
@@ -10203,16 +10198,14 @@ convertToQuotationDateFormat(dateStr) {
                 const subtotalEl = document.getElementById('quotSubtotal');
                 const discountEl = document.getElementById('quotDiscountAmount');
                 const grandTotalEl = document.getElementById('quotGrandTotal');
-                const booking40El = document.getElementById('quotBooking40');
-                const eventDay40El = document.getElementById('quotEventDay40');
-                const postEvent20El = document.getElementById('quotPostEvent20');
+                const booking50El = document.getElementById('quotBooking50');
+                const eventDay50El = document.getElementById('quotEventDay50');
 
                 if (subtotalEl) subtotalEl.textContent = `₹${q.financials.subtotal.toLocaleString('en-IN')}`;
                 if (discountEl) discountEl.textContent = `- ₹${q.financials.discountAmount.toLocaleString('en-IN')}`;
                 if (grandTotalEl) grandTotalEl.textContent = `₹${q.financials.grandTotal.toLocaleString('en-IN')}`;
-                if (booking40El) booking40El.textContent = `₹${parseFloat(q.financials.booking40).toLocaleString('en-IN')}`;
-                if (eventDay40El) eventDay40El.textContent = `₹${parseFloat(q.financials.eventDay40).toLocaleString('en-IN')}`;
-                if (postEvent20El) postEvent20El.textContent = `₹${parseFloat(q.financials.postEvent20).toLocaleString('en-IN')}`;
+                if (booking50El) booking50El.textContent = `₹${parseFloat(q.financials.booking50).toLocaleString('en-IN')}`;
+                if (eventDay50El) eventDay50El.textContent = `₹${parseFloat(q.financials.eventDay50).toLocaleString('en-IN')}`;
             },
 
             updateQuotationDisplay() {
@@ -10435,9 +10428,6 @@ convertToQuotationDateFormat(dateStr) {
                             <div style="margin-top: 1rem; color: #666;">
                                 <div>Date: ${Utils.formatDate(q.quotationDate || new Date().toISOString().split('T')[0])}</div>
                                 <div>Valid Until: ${Utils.formatDate(q.validUntil || this.calculateValidUntil())}</div>
-                                <div style="margin-top: 0.5rem; font-weight: bold; font-size: 1.1rem;">
-                                    📱 98984 96111 / 76984 96111
-                                </div>
                             </div>
                         </div>
 
@@ -10524,16 +10514,12 @@ convertToQuotationDateFormat(dateStr) {
                             <h3 style="margin: 0 0 1rem 0; color: #2e7d32;">Payment Schedule</h3>
                             <ul style="list-style: none; padding: 0; margin: 0;">
                                 <li style="padding: 0.5rem 0; border-bottom: 1px solid #ddd;">
-                                    <strong>Booking Amount (40%):</strong>
-                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.booking40).toLocaleString('en-IN')}</span>
-                                </li>
-                                <li style="padding: 0.5rem 0; border-bottom: 1px solid #ddd;">
-                                    <strong>Event Day Payment (40%):</strong>
-                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.eventDay40).toLocaleString('en-IN')}</span>
+                                    <strong>Advance Payment (50%):</strong>
+                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.booking50).toLocaleString('en-IN')}</span>
                                 </li>
                                 <li style="padding: 0.5rem 0;">
-                                    <strong>Post-Event Payment (20%):</strong>
-                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.postEvent20).toLocaleString('en-IN')}</span>
+                                    <strong>Event Day Payment (50%):</strong>
+                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.eventDay50).toLocaleString('en-IN')}</span>
                                 </li>
                             </ul>
                         </div>
@@ -10544,9 +10530,8 @@ convertToQuotationDateFormat(dateStr) {
 
                             <p style="margin: 0 0 0.5rem 0;"><strong>PAYMENT TERMS:</strong></p>
                             <ul style="margin: 0 0 1rem 0; padding-left: 1.5rem;">
-                                <li>40% booking amount required to confirm order</li>
-                                <li>40% payment on event day before event starts</li>
-                                <li>20% payment after event completion on same day</li>
+                                <li>50% advance payment required to confirm order</li>
+                                <li>50% payment on event day before event starts</li>
                             </ul>
 
                             <p style="margin: 0 0 0.5rem 0;"><strong>INCLUSIONS:</strong></p>
@@ -10568,11 +10553,6 @@ convertToQuotationDateFormat(dateStr) {
                             <p style="margin: 0;"><strong>VALIDITY:</strong> 15 days from quotation date</p>
                         </div>
 
-                        <!-- Footer -->
-                        <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #ddd; color: #666;">
-                            <p style="margin: 0;">For any queries, please contact:</p>
-                            <p style="margin: 0.5rem 0; font-weight: bold; font-size: 1.1rem; color: #667eea;">📱 98984 96111 / 76984 96111</p>
-                        </div>
                     </div>
                 `;
             },
@@ -10615,15 +10595,8 @@ convertToQuotationDateFormat(dateStr) {
                     const dateText = `Date: ${Utils.formatDate(quotation.quotationDate || new Date().toISOString().split('T')[0])} | Valid Until: ${Utils.formatDate(quotation.validUntil || this.calculateValidUntil())}`;
                     doc.text(dateText, pageWidth / 2, yPos, { align: 'center' });
 
-                    // Contact numbers (centered, prominent)
-                    yPos += 5;
-                    doc.setFontSize(11);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(...primaryColor);
-                    doc.text('Ph: 98984 96111 / 76984 96111', pageWidth / 2, yPos, { align: 'center' });
-
                     // Purple line separator
-                    yPos += 4;
+                    yPos += 6;
                     doc.setDrawColor(...primaryColor);
                     doc.setLineWidth(1.5);
                     doc.line(margin, yPos, pageWidth - margin, yPos);
@@ -10769,7 +10742,7 @@ convertToQuotationDateFormat(dateStr) {
                     // === PAYMENT SCHEDULE BOX ===
                     yPos += 6;
                     doc.setFillColor(232, 245, 233);
-                    doc.rect(margin, yPos, pageWidth - 2 * margin, 16, 'F');
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, 12, 'F');
 
                     yPos += 4;
                     doc.setFontSize(9);
@@ -10781,21 +10754,15 @@ convertToQuotationDateFormat(dateStr) {
                     doc.setFontSize(8);
                     doc.setFont('helvetica', 'normal');
                     doc.setTextColor(...darkText);
-                    doc.text('Booking (40%):', margin + 3, yPos);
+                    doc.text('Advance Payment (50%):', margin + 3, yPos);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(String(Math.round(parseFloat(quotation.financials.booking40))), pageWidth - margin - 3, yPos, { align: 'right' });
+                    doc.text(String(Math.round(parseFloat(quotation.financials.booking50))), pageWidth - margin - 3, yPos, { align: 'right' });
 
                     yPos += 4;
                     doc.setFont('helvetica', 'normal');
-                    doc.text('Event Day (40%):', margin + 3, yPos);
+                    doc.text('Event Day Payment (50%):', margin + 3, yPos);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(String(Math.round(parseFloat(quotation.financials.eventDay40))), pageWidth - margin - 3, yPos, { align: 'right' });
-
-                    yPos += 4;
-                    doc.setFont('helvetica', 'normal');
-                    doc.text('Post-Event (20%):', margin + 3, yPos);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(String(Math.round(parseFloat(quotation.financials.postEvent20))), pageWidth - margin - 3, yPos, { align: 'right' });
+                    doc.text(String(Math.round(parseFloat(quotation.financials.eventDay50))), pageWidth - margin - 3, yPos, { align: 'right' });
 
                     // === TERMS & CONDITIONS ===
                     yPos += 6;
@@ -10822,7 +10789,7 @@ convertToQuotationDateFormat(dateStr) {
 
                     yPos += 3;
                     doc.setFont('helvetica', 'normal');
-                    doc.text('40% booking, 40% on event day, 20% post-event', margin + 5, yPos);
+                    doc.text('50% advance payment, 50% on event day', margin + 5, yPos);
 
                     yPos += 4;
                     doc.setFont('helvetica', 'bold');
@@ -10852,22 +10819,7 @@ convertToQuotationDateFormat(dateStr) {
                     doc.text(' 15 days from quotation date', margin + 18, yPos);
 
                     // === FOOTER ===
-                    yPos = pageHeight - 12;
-                    doc.setDrawColor(...primaryColor);
-                    doc.setLineWidth(1);
-                    doc.line(margin, yPos, pageWidth - margin, yPos);
-
-                    yPos += 4;
-                    doc.setFontSize(8);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(...grayText);
-                    doc.text('For queries contact:', pageWidth / 2, yPos, { align: 'center' });
-
-                    yPos += 4;
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(...primaryColor);
-                    doc.text('Ph: 98984 96111 / 76984 96111', pageWidth / 2, yPos, { align: 'center' });
+                    // (Footer removed as per user request)
 
                     // Save PDF
                     const fileName = `Quotation_${quotation.customer.name.replace(/\s+/g, '_')}_${quotation.quotationDate || 'draft'}.pdf`;
@@ -10892,13 +10844,10 @@ Thank you for your interest. Please find your quotation details:
 *Total Amount:* ₹${quotation.financials.grandTotal.toLocaleString('en-IN')}
 
 *Payment Schedule:*
-• Booking (40%): ₹${parseFloat(quotation.financials.booking40).toLocaleString('en-IN')}
-• Event Day (40%): ₹${parseFloat(quotation.financials.eventDay40).toLocaleString('en-IN')}
-• Post-Event (20%): ₹${parseFloat(quotation.financials.postEvent20).toLocaleString('en-IN')}
+• Advance Payment (50%): ₹${parseFloat(quotation.financials.booking50).toLocaleString('en-IN')}
+• Event Day Payment (50%): ₹${parseFloat(quotation.financials.eventDay50).toLocaleString('en-IN')}
 
-Valid until: ${Utils.formatDate(quotation.validUntil)}
-
-Contact: 📱 98984 96111 / 76984 96111`;
+Valid until: ${Utils.formatDate(quotation.validUntil)}`;
 
                 const whatsappURL = `https://wa.me/91${quotation.customer.contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
                 window.open(whatsappURL, '_blank');
