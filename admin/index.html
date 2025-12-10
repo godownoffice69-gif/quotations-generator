@@ -10175,6 +10175,430 @@ convertToQuotationDateFormat(dateStr) {
                 this.renderQuotations();
             },
 
+            async saveQuotation(status = 'draft') {
+                const q = this.currentQuotation;
+                if (!q) return;
+
+                // Validate
+                const customerName = Utils.get('quotCustomerName');
+                const customerContact = Utils.get('quotCustomerContact');
+                const eventDate = Utils.get('quotEventDate');
+
+                if (!customerName || !customerContact || !eventDate) {
+                    this.showToast('Please fill customer name, contact, and event date', 'error');
+                    return;
+                }
+
+                if (q.items.length === 0) {
+                    this.showToast('Please add at least one item', 'error');
+                    return;
+                }
+
+                // Gather data
+                q.customer = {
+                    name: customerName,
+                    contact: customerContact,
+                    email: Utils.get('quotCustomerEmail'),
+                    eventDate: eventDate,
+                    eventVenue: Utils.get('quotEventVenue')
+                };
+
+                const quotationData = {
+                    ...q,
+                    status: status,
+                    updatedAt: new Date().toISOString()
+                };
+
+                try {
+                    if (this.editingQuotationId) {
+                        // Update existing
+                        quotationData.id = this.editingQuotationId;
+                        quotationData.quotationNumber = q.quotationNumber;
+                        quotationData.createdAt = q.createdAt;
+
+                        await db.collection('quotations').doc(this.editingQuotationId).update(quotationData);
+                        this.showToast('✅ Quotation updated!', 'success');
+                    } else {
+                        // Create new
+                        quotationData.quotationNumber = await this.generateQuotationNumber();
+                        quotationData.createdAt = new Date().toISOString();
+                        quotationData.quotationDate = new Date().toISOString().split('T')[0];
+                        quotationData.validUntil = this.calculateValidUntil();
+
+                        const docRef = await db.collection('quotations').add(quotationData);
+                        quotationData.id = docRef.id;
+
+                        this.showToast('✅ Quotation saved!', 'success');
+                    }
+
+                    // Reload quotations
+                    await this.loadQuotationsFromFirestore();
+
+                    // Return to list
+                    this.quotationViewMode = 'list';
+                    this.renderQuotations();
+
+                    return quotationData;
+                } catch (error) {
+                    console.error('Error saving quotation:', error);
+                    this.showToast('Error: ' + error.message, 'error');
+                }
+            },
+
+            async generateQuotationNumber() {
+                const year = new Date().getFullYear();
+                const quotations = this.data.quotations || [];
+                const thisYearQuotations = quotations.filter(q =>
+                    q.quotationNumber && q.quotationNumber.startsWith(`QT-${year}`)
+                );
+
+                const nextNumber = thisYearQuotations.length + 1;
+                return `QT-${year}-${String(nextNumber).padStart(3, '0')}`;
+            },
+
+            calculateValidUntil() {
+                const date = new Date();
+                date.setDate(date.getDate() + 15); // Valid for 15 days
+                return date.toISOString().split('T')[0];
+            },
+
+            async saveAndSendQuotation() {
+                const quotation = await this.saveQuotation('sent');
+                if (quotation) {
+                    await this.sendQuotationWhatsApp(quotation.id);
+                }
+            },
+
+            async editQuotation(quotationId) {
+                const quotation = this.data.quotations.find(q => q.id === quotationId);
+                if (!quotation) {
+                    this.showToast('Quotation not found', 'error');
+                    return;
+                }
+
+                this.editingQuotationId = quotationId;
+                this.currentQuotation = JSON.parse(JSON.stringify(quotation)); // Deep copy
+                this.quotationViewMode = 'edit';
+                this.renderQuotations();
+            },
+
+            async deleteQuotation(quotationId) {
+                if (!confirm('Delete this quotation?')) return;
+
+                try {
+                    await db.collection('quotations').doc(quotationId).delete();
+                    this.showToast('✅ Quotation deleted', 'success');
+
+                    await this.loadQuotationsFromFirestore();
+                    this.renderQuotations();
+                } catch (error) {
+                    console.error('Error deleting quotation:', error);
+                    this.showToast('Error: ' + error.message, 'error');
+                }
+            },
+
+            async loadQuotationsFromFirestore() {
+                try {
+                    const snapshot = await db.collection('quotations').orderBy('createdAt', 'desc').get();
+                    const quotations = [];
+
+                    snapshot.forEach(doc => {
+                        quotations.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    this.data.quotations = quotations;
+                    console.log(`✅ Loaded ${quotations.length} quotations`);
+                } catch (error) {
+                    console.error('Error loading quotations:', error);
+                }
+            },
+
+            async viewQuotationPDF(quotationId) {
+                const quotation = this.data.quotations.find(q => q.id === quotationId);
+                if (!quotation) return;
+
+                this.generateAndShowPDF(quotation);
+            },
+
+            async previewQuotationPDF() {
+                const q = this.currentQuotation;
+                if (!q || q.items.length === 0) {
+                    this.showToast('Add items first to preview', 'error');
+                    return;
+                }
+
+                // Create temporary quotation object for preview
+                const tempQuotation = {
+                    ...q,
+                    customer: {
+                        name: Utils.get('quotCustomerName') || 'Customer Name',
+                        contact: Utils.get('quotCustomerContact') || '0000000000',
+                        email: Utils.get('quotCustomerEmail') || '',
+                        eventDate: Utils.get('quotEventDate') || '',
+                        eventVenue: Utils.get('quotEventVenue') || ''
+                    },
+                    quotationDate: new Date().toISOString().split('T')[0],
+                    validUntil: this.calculateValidUntil()
+                };
+
+                this.generateAndShowPDF(tempQuotation);
+            },
+
+            generateAndShowPDF(quotation) {
+                // This will use jsPDF or html2pdf - for now, show preview in modal
+                const modalHTML = `
+                    <div class="modal show" id="pdfPreviewModal" onclick="if(event.target === this) OMS.closeModal('pdfPreviewModal')" style="z-index: 10000;">
+                        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                            <button class="modal-close" onclick="OMS.closeModal('pdfPreviewModal')">×</button>
+                            <h2>📄 Quotation Preview</h2>
+
+                            ${this.renderQuotationPDFContent(quotation)}
+
+                            <div style="margin-top: 2rem; text-align: center;">
+                                <button class="btn btn-primary" onclick="OMS.downloadQuotationPDF('${quotation.id}')">📥 Download PDF</button>
+                                <button class="btn btn-success" onclick="OMS.sendQuotationWhatsApp('${quotation.id}')">📱 Send WhatsApp</button>
+                                <button class="btn btn-secondary" onclick="OMS.closeModal('pdfPreviewModal')">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalsContainer').innerHTML = modalHTML;
+            },
+
+            renderQuotationPDFContent(q) {
+                return `
+                    <div id="quotationPDFContent" style="background: white; padding: 3rem; font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; border: 2px solid #ddd;">
+                        <!-- Header -->
+                        <div style="text-align: center; margin-bottom: 2rem; border-bottom: 3px solid #667eea; padding-bottom: 1.5rem;">
+                            <h1 style="margin: 0; font-size: 2.5rem; color: #667eea;">QUOTATION</h1>
+                            <div style="margin-top: 1rem; color: #666;">
+                                <div>Date: ${Utils.formatDate(q.quotationDate || new Date().toISOString().split('T')[0])}</div>
+                                <div>Valid Until: ${Utils.formatDate(q.validUntil || this.calculateValidUntil())}</div>
+                                <div style="margin-top: 0.5rem; font-weight: bold; font-size: 1.1rem;">
+                                    📱 98984 96111 / 76984 96111
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Details -->
+                        <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                            <h3 style="margin: 0 0 1rem 0; color: #667eea;">Customer Details</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 0.5rem 0; font-weight: bold; width: 150px;">Name:</td>
+                                    <td style="padding: 0.5rem 0;">${q.customer.name}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.5rem 0; font-weight: bold;">Contact:</td>
+                                    <td style="padding: 0.5rem 0;">${q.customer.contact}</td>
+                                </tr>
+                                ${q.customer.email ? `
+                                <tr>
+                                    <td style="padding: 0.5rem 0; font-weight: bold;">Email:</td>
+                                    <td style="padding: 0.5rem 0;">${q.customer.email}</td>
+                                </tr>
+                                ` : ''}
+                                <tr>
+                                    <td style="padding: 0.5rem 0; font-weight: bold;">Event Date:</td>
+                                    <td style="padding: 0.5rem 0;">${Utils.formatDate(q.customer.eventDate)}</td>
+                                </tr>
+                                ${q.customer.eventVenue ? `
+                                <tr>
+                                    <td style="padding: 0.5rem 0; font-weight: bold; vertical-align: top;">Venue:</td>
+                                    <td style="padding: 0.5rem 0;">${q.customer.eventVenue}</td>
+                                </tr>
+                                ` : ''}
+                            </table>
+                        </div>
+
+                        <!-- Items Table -->
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="margin: 0 0 1rem 0; color: #667eea;">Items</h3>
+                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                                <thead style="background: #667eea; color: white;">
+                                    <tr>
+                                        <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">#</th>
+                                        <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Item Name</th>
+                                        <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Qty</th>
+                                        <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Rate (₹)</th>
+                                        <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Amount (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${q.items.map((item, index) => `
+                                        <tr>
+                                            <td style="padding: 0.75rem; border: 1px solid #ddd;">${index + 1}</td>
+                                            <td style="padding: 0.75rem; border: 1px solid #ddd;">${item.name}</td>
+                                            <td style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+                                            <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${item.rate.toLocaleString('en-IN')}</td>
+                                            <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${item.subtotal.toLocaleString('en-IN')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Financial Summary -->
+                        <div style="margin-bottom: 2rem; border: 2px solid #667eea; border-radius: 8px; padding: 1.5rem; background: #f9f9ff;">
+                            <table style="width: 100%; max-width: 400px; margin-left: auto;">
+                                <tr>
+                                    <td style="padding: 0.5rem; text-align: right;">Subtotal:</td>
+                                    <td style="padding: 0.5rem; text-align: right; font-weight: bold;">₹${q.financials.subtotal.toLocaleString('en-IN')}</td>
+                                </tr>
+                                ${q.financials.discountAmount > 0 ? `
+                                <tr>
+                                    <td style="padding: 0.5rem; text-align: right;">Discount:</td>
+                                    <td style="padding: 0.5rem; text-align: right; color: #f44336; font-weight: bold;">- ₹${q.financials.discountAmount.toLocaleString('en-IN')}</td>
+                                </tr>
+                                ` : ''}
+                                <tr style="border-top: 2px solid #667eea;">
+                                    <td style="padding: 0.75rem; text-align: right; font-size: 1.25rem; font-weight: bold;">Grand Total:</td>
+                                    <td style="padding: 0.75rem; text-align: right; font-size: 1.25rem; font-weight: bold; color: #667eea;">₹${q.financials.grandTotal.toLocaleString('en-IN')}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Payment Schedule -->
+                        <div style="background: #e8f5e9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                            <h3 style="margin: 0 0 1rem 0; color: #2e7d32;">Payment Schedule</h3>
+                            <ul style="list-style: none; padding: 0; margin: 0;">
+                                <li style="padding: 0.5rem 0; border-bottom: 1px solid #ddd;">
+                                    <strong>Booking Amount (40%):</strong>
+                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.booking40).toLocaleString('en-IN')}</span>
+                                </li>
+                                <li style="padding: 0.5rem 0; border-bottom: 1px solid #ddd;">
+                                    <strong>Event Day Payment (40%):</strong>
+                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.eventDay40).toLocaleString('en-IN')}</span>
+                                </li>
+                                <li style="padding: 0.5rem 0;">
+                                    <strong>Post-Event Payment (20%):</strong>
+                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.postEvent20).toLocaleString('en-IN')}</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Terms & Conditions -->
+                        <div style="background: #fff3e0; padding: 1.5rem; border-radius: 8px; font-size: 0.9rem; line-height: 1.6;">
+                            <h3 style="margin: 0 0 1rem 0; color: #e65100;">Terms & Conditions</h3>
+
+                            <p style="margin: 0 0 0.5rem 0;"><strong>PAYMENT TERMS:</strong></p>
+                            <ul style="margin: 0 0 1rem 0; padding-left: 1.5rem;">
+                                <li>40% booking amount required to confirm order</li>
+                                <li>40% payment on event day before event starts</li>
+                                <li>20% payment after event completion on same day</li>
+                            </ul>
+
+                            <p style="margin: 0 0 0.5rem 0;"><strong>INCLUSIONS:</strong></p>
+                            <ul style="margin: 0 0 1rem 0; padding-left: 1.5rem;">
+                                <li>Generator for electricity provision</li>
+                            </ul>
+
+                            <p style="margin: 0 0 0.5rem 0;"><strong>CUSTOMER RESPONSIBILITIES:</strong></p>
+                            <ul style="margin: 0 0 1rem 0; padding-left: 1.5rem;">
+                                <li>Fire safety permissions and Fire NOC</li>
+                                <li>Venue/ground permissions</li>
+                                <li>AMC (Amusement Park) permissions</li>
+                                <li>First aid provision arrangements</li>
+                                <li>Resource/facility manager approval</li>
+                                <li>Proof of contractor competence</li>
+                                <li>Security clearance for restricted materials</li>
+                            </ul>
+
+                            <p style="margin: 0;"><strong>VALIDITY:</strong> 15 days from quotation date</p>
+                        </div>
+
+                        <!-- Footer -->
+                        <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #ddd; color: #666;">
+                            <p style="margin: 0;">For any queries, please contact:</p>
+                            <p style="margin: 0.5rem 0; font-weight: bold; font-size: 1.1rem; color: #667eea;">📱 98984 96111 / 76984 96111</p>
+                        </div>
+                    </div>
+                `;
+            },
+
+            async downloadQuotationPDF(quotationId) {
+                this.showToast('PDF download feature - integration with jsPDF needed', 'info');
+                // TODO: Integrate jsPDF or html2pdf library for actual PDF generation
+            },
+
+            async sendQuotationWhatsApp(quotationId) {
+                const quotation = this.data.quotations.find(q => q.id === quotationId);
+                if (!quotation) return;
+
+                const message = `Hi ${quotation.customer.name}!
+
+Thank you for your interest. Please find your quotation details:
+
+*Event Date:* ${Utils.formatDate(quotation.customer.eventDate)}
+*Total Amount:* ₹${quotation.financials.grandTotal.toLocaleString('en-IN')}
+
+*Payment Schedule:*
+• Booking (40%): ₹${parseFloat(quotation.financials.booking40).toLocaleString('en-IN')}
+• Event Day (40%): ₹${parseFloat(quotation.financials.eventDay40).toLocaleString('en-IN')}
+• Post-Event (20%): ₹${parseFloat(quotation.financials.postEvent20).toLocaleString('en-IN')}
+
+Valid until: ${Utils.formatDate(quotation.validUntil)}
+
+Contact: 📱 98984 96111 / 76984 96111`;
+
+                const whatsappURL = `https://wa.me/91${quotation.customer.contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                window.open(whatsappURL, '_blank');
+
+                // Update status to sent
+                if (quotation.status === 'draft') {
+                    await db.collection('quotations').doc(quotationId).update({
+                        status: 'sent',
+                        sentAt: new Date().toISOString()
+                    });
+
+                    await this.loadQuotationsFromFirestore();
+                    if (this.quotationViewMode === 'list') {
+                        this.renderQuotations();
+                    }
+                }
+
+                this.showToast('✅ Opening WhatsApp...', 'success');
+            },
+
+            async convertQuotationToOrder(quotationId) {
+                const quotation = this.data.quotations.find(q => q.id === quotationId);
+                if (!quotation) return;
+
+                if (!confirm(`Convert quotation to order for ${quotation.customer.name}?`)) return;
+
+                // Switch to orders tab and prefill with quotation data
+                this.switchTab('orders');
+
+                setTimeout(() => {
+                    // Fill customer details
+                    Utils.set('clientName', quotation.customer.name);
+                    Utils.set('contact', quotation.customer.contact);
+                    if (quotation.customer.eventVenue) Utils.set('venue', quotation.customer.eventVenue);
+                    if (quotation.customer.eventDate) {
+                        Utils.set('date', quotation.customer.eventDate);
+                        Utils.set('startDate', quotation.customer.eventDate);
+                    }
+
+                    // TODO: Add items to order (requires integration with order form)
+                    // For now, just navigate to orders tab with customer info prefilled
+
+                    this.showToast('✅ Order form prefilled with quotation data', 'success');
+                }, 200);
+
+                // Mark quotation as converted
+                try {
+                    await db.collection('quotations').doc(quotationId).update({
+                        status: 'converted',
+                        convertedAt: new Date().toISOString()
+                    });
+
+                    await this.loadQuotationsFromFirestore();
+                } catch (error) {
+                    console.error('Error updating quotation status:', error);
+                }
+            },
+
             // ============ TEAM MANAGEMENT ============
 
             renderTeam() {
@@ -14511,7 +14935,8 @@ convertToQuotationDateFormat(dateStr) {
             this.loadInventoryFromFirestore(),
             this.loadItemHistoryFromFirestore(),
             this.loadNotificationsFromFirestore(),
-            this.loadSettingsFromFirestore()
+            this.loadSettingsFromFirestore(),
+            this.loadQuotationsFromFirestore()
         ];
 
         // Only load financial data if user has permission
