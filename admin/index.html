@@ -12558,6 +12558,12 @@ convertToQuotationDateFormat(dateStr) {
 
                                     <!-- Payment Summary -->
                                     <div style="background: #e8f5e9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                            <h4 style="margin: 0; font-size: 1rem; color: #2e7d32;">💰 Payment Summary</h4>
+                                            <button type="button" class="btn btn-warning btn-small" onclick="OMS.recalculateOrderFinancials(Utils.get('paymentOrderId'))" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="Recalculate financial data from actual payment records">
+                                                🔄 Fix Financials
+                                            </button>
+                                        </div>
                                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
                                             <div style="text-align: center;">
                                                 <div style="color: #666; font-size: 0.9rem;">Order Total</div>
@@ -12571,6 +12577,9 @@ convertToQuotationDateFormat(dateStr) {
                                                 <div style="color: #666; font-size: 0.9rem;">Balance Remaining</div>
                                                 <div style="font-size: 1.5rem; font-weight: bold; color: #f44336;">₹<span id="displayPendingAmount">0</span></div>
                                             </div>
+                                        </div>
+                                        <div style="margin-top: 0.75rem; padding: 0.75rem; background: #fff3cd; border-radius: 4px; font-size: 0.85rem; color: #856404;">
+                                            💡 <strong>Tip:</strong> If the "Already Received" amount doesn't match the actual payments below, click "Fix Financials" to recalculate from payment records.
                                         </div>
                                     </div>
 
@@ -13251,6 +13260,99 @@ convertToQuotationDateFormat(dateStr) {
                 } catch (error) {
                     console.error('Error updating payment:', error);
                     this.showToast('Error updating payment: ' + error.message, 'error');
+                }
+            },
+
+            async recalculateOrderFinancials(orderDocId) {
+                if (!orderDocId) {
+                    this.showToast('Order ID is required', 'error');
+                    return;
+                }
+
+                try {
+                    console.log('🔄 Recalculating financials for order:', orderDocId);
+
+                    // Get all payments for this order from Firestore
+                    const paymentsSnapshot = await db.collection('payments')
+                        .where('orderDocId', '==', orderDocId)
+                        .get();
+
+                    const orderPayments = [];
+                    paymentsSnapshot.forEach(doc => {
+                        orderPayments.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    console.log(`📊 Found ${orderPayments.length} payment records for this order`);
+
+                    // Calculate total paid from actual payment records
+                    const totalPaid = orderPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+                    // Get order data
+                    const order = this.data.orders.find(o => o.docId === orderDocId);
+                    if (!order) {
+                        this.showToast('Order not found', 'error');
+                        return;
+                    }
+
+                    const orderTotal = parseFloat(order.financials?.grandTotal || order.totalAmount || 0);
+                    const newBalance = orderTotal - totalPaid;
+
+                    // Calculate credit due date if balance remains
+                    let creditDueDate = null;
+                    if (newBalance > 0) {
+                        const eventDate = new Date(order.isMultiDay ? order.endDate : order.date);
+                        creditDueDate = new Date(eventDate);
+                        creditDueDate.setMonth(creditDueDate.getMonth() + 1);
+                        creditDueDate = Utils.toDateString(creditDueDate);
+                    }
+
+                    // Update order financials in Firestore
+                    const updateData = {
+                        'financials.advancePaid': totalPaid,
+                        'financials.balanceDue': newBalance,
+                        'financials.paymentStatus': newBalance <= 0 ? 'paid' : newBalance < orderTotal ? 'partial' : 'pending'
+                    };
+
+                    if (creditDueDate) {
+                        updateData['financials.creditDueDate'] = creditDueDate;
+                    } else {
+                        updateData['financials.creditDueDate'] = firebase.firestore.FieldValue.delete();
+                    }
+
+                    // Update last payment date if there are payments
+                    if (orderPayments.length > 0) {
+                        const lastPayment = orderPayments.reduce((latest, p) =>
+                            new Date(p.paymentDate) > new Date(latest.paymentDate) ? p : latest
+                        );
+                        updateData['financials.lastPaymentDate'] = lastPayment.paymentDate;
+                    } else {
+                        updateData['financials.lastPaymentDate'] = firebase.firestore.FieldValue.delete();
+                    }
+
+                    await db.collection('orders').doc(orderDocId).update(updateData);
+
+                    console.log('✅ Order financials recalculated successfully');
+                    console.log(`   Total Paid: ₹${totalPaid.toLocaleString('en-IN')}`);
+                    console.log(`   Balance Due: ₹${newBalance.toLocaleString('en-IN')}`);
+
+                    this.showToast(`✅ Financials updated! Total Paid: ₹${totalPaid.toLocaleString('en-IN')}, Balance: ₹${newBalance.toLocaleString('en-IN')}`, 'success');
+
+                    // Reload data
+                    await this.loadOrdersFromFirestore();
+
+                    // Refresh the payment modal if open
+                    if (window.currentPaymentOrder) {
+                        await this.loadOrderForPayment();
+                    }
+
+                    // Update all displays
+                    this.renderFinancials();
+                    if (this.currentTab === 'history') {
+                        this.renderHistory();
+                    }
+                } catch (error) {
+                    console.error('Error recalculating order financials:', error);
+                    this.showToast('Error: ' + error.message, 'error');
                 }
             },
 
