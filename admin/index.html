@@ -10897,16 +10897,21 @@ convertToQuotationDateFormat(dateStr) {
 
                 console.log('Final phone for WhatsApp:', customerPhone);
 
+                // Calculate payment amounts (50-50 split)
+                const grandTotal = parseFloat(quotation.financials.grandTotal) || 0;
+                const advance50 = Math.round(grandTotal * 0.5);
+                const eventDay50 = Math.round(grandTotal * 0.5);
+
                 const message = `Hi ${quotation.customer.name}!
 
 Thank you for your interest. Please find your quotation details:
 
 *Event Date:* ${Utils.formatDate(quotation.customer.eventDate)}
-*Total Amount:* ₹${quotation.financials.grandTotal.toLocaleString('en-IN')}
+*Total Amount:* ₹${Math.round(grandTotal).toLocaleString('en-IN')}
 
 *Payment Schedule:*
-• Advance Payment (50%): ₹${parseFloat(quotation.financials.booking50).toLocaleString('en-IN')}
-• Event Day Payment (50%): ₹${parseFloat(quotation.financials.eventDay50).toLocaleString('en-IN')}
+• Advance Payment (50%): ₹${advance50.toLocaleString('en-IN')}
+• Event Day Payment (50%): ₹${eventDay50.toLocaleString('en-IN')}
 
 Valid until: ${Utils.formatDate(quotation.validUntil)}`;
 
