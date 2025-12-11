@@ -309,6 +309,91 @@ export const Utils = {
     },
 
     /**
+     * Get weather forecast for a specific date
+     * @param {string} city - City name
+     * @param {string} targetDate - Target date (YYYY-MM-DD)
+     * @param {string} apiKey - OpenWeatherMap API key
+     * @returns {Promise<object>} Weather forecast data
+     */
+    getWeatherForecast: async (city = 'Delhi', targetDate, apiKey = '') => {
+        try {
+            if (!apiKey || apiKey === 'demo' || apiKey.trim() === '') {
+                console.warn('⚠️ Weather API key not configured.');
+                return {
+                    temp: 'N/A',
+                    humidity: 'N/A',
+                    condition: 'N/A',
+                    description: 'Configure API key in Settings'
+                };
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const target = new Date(targetDate);
+            target.setHours(0, 0, 0, 0);
+
+            if (target.getTime() === today.getTime()) {
+                return await Utils.getWeather(city, apiKey);
+            }
+
+            const response = await fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`);
+
+            if (!response.ok) {
+                console.error(`Weather forecast API error: ${response.status} ${response.statusText}`);
+                return {
+                    temp: 'N/A',
+                    humidity: 'N/A',
+                    condition: 'N/A',
+                    description: response.status === 401 ? 'Invalid API key' : 'Weather forecast unavailable'
+                };
+            }
+
+            const data = await response.json();
+            const targetTime = new Date(target);
+            targetTime.setHours(12, 0, 0, 0);
+
+            let closestForecast = null;
+            let minDiff = Infinity;
+
+            data.list.forEach(forecast => {
+                const forecastTime = new Date(forecast.dt * 1000);
+                const diff = Math.abs(forecastTime - targetTime);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestForecast = forecast;
+                }
+            });
+
+            if (!closestForecast) {
+                return {
+                    temp: 'N/A',
+                    humidity: 'N/A',
+                    condition: 'N/A',
+                    description: 'Forecast not available for this date'
+                };
+            }
+
+            return {
+                temp: Math.round(closestForecast.main.temp),
+                tempMin: Math.round(closestForecast.main.temp_min),
+                tempMax: Math.round(closestForecast.main.temp_max),
+                humidity: closestForecast.main.humidity,
+                condition: closestForecast.weather[0].main,
+                description: closestForecast.weather[0].description,
+                icon: closestForecast.weather[0].icon
+            };
+        } catch (error) {
+            console.error('Weather forecast error:', error);
+            return {
+                temp: 'N/A',
+                humidity: 'N/A',
+                condition: 'N/A',
+                description: 'Weather forecast unavailable'
+            };
+        }
+    },
+
+    /**
      * Get weather emoji icon based on condition
      * @param {string} condition - Weather condition string
      * @returns {string} Weather emoji
