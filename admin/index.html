@@ -10784,13 +10784,13 @@ convertToQuotationDateFormat(dateStr) {
                     doc.setTextColor(...darkText);
                     doc.text('Advance Payment (50%):', margin + 3, yPos);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(String(Math.round(parseFloat(quotation.financials.booking50))), pageWidth - margin - 3, yPos, { align: 'right' });
+                    doc.text(String(Math.round(quotation.financials.grandTotal * 0.5)), pageWidth - margin - 3, yPos, { align: 'right' });
 
                     yPos += 4;
                     doc.setFont('helvetica', 'normal');
                     doc.text('Event Day Payment (50%):', margin + 3, yPos);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(String(Math.round(parseFloat(quotation.financials.eventDay50))), pageWidth - margin - 3, yPos, { align: 'right' });
+                    doc.text(String(Math.round(quotation.financials.grandTotal * 0.5)), pageWidth - margin - 3, yPos, { align: 'right' });
 
                     // === TERMS & CONDITIONS ===
                     yPos += 6;
@@ -10993,7 +10993,7 @@ convertToQuotationDateFormat(dateStr) {
 
                     yPos += 4;
                     doc.text('Discount:', summaryBoxX, yPos);
-                    doc.text(String(Math.round(quotation.financials.discount || 0)), pageWidth - margin - 2, yPos, { align: 'right' });
+                    doc.text(String(Math.round(quotation.financials.discountAmount || 0)), pageWidth - margin - 2, yPos, { align: 'right' });
 
                     yPos += 5;
                     doc.setDrawColor(...primaryColor);
@@ -11094,9 +11094,9 @@ convertToQuotationDateFormat(dateStr) {
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
 
-                    // Open WhatsApp Web
+                    // Open WhatsApp desktop app
                     setTimeout(() => {
-                        window.open('https://web.whatsapp.com/', '_blank');
+                        window.open('whatsapp://', '_blank');
                         this.showToast('📥 PDF downloaded! Now attach it in WhatsApp', 'success');
                     }, 500);
 
