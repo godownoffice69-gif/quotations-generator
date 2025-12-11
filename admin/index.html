@@ -10873,7 +10873,8 @@ Thank you for your interest. Please find your quotation details:
 
 Valid until: ${Utils.formatDate(quotation.validUntil)}`;
 
-                const whatsappURL = `https://wa.me/91${quotation.customer.contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                // Send to business WhatsApp number
+                const whatsappURL = `https://wa.me/919898496111?text=${encodeURIComponent(message)}`;
                 window.open(whatsappURL, '_blank');
 
                 // Update status to sent
