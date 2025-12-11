@@ -10860,6 +10860,23 @@ convertToQuotationDateFormat(dateStr) {
                 const quotation = this.data.quotations.find(q => q.id === quotationId);
                 if (!quotation) return;
 
+                // Clean customer contact number
+                let customerPhone = quotation.customer.contact.replace(/\D/g, ''); // Remove all non-digits
+
+                // If number starts with 91 and is 12 digits, it already has country code
+                if (customerPhone.startsWith('91') && customerPhone.length === 12) {
+                    // Already has country code, use as is
+                } else if (customerPhone.length === 10) {
+                    // Indian mobile number without country code, add 91
+                    customerPhone = '91' + customerPhone;
+                } else if (customerPhone.length === 12 && !customerPhone.startsWith('91')) {
+                    // Has country code but not 91, use as is
+                } else {
+                    // Invalid format, show error
+                    this.showToast('Invalid customer contact number format', 'error');
+                    return;
+                }
+
                 const message = `Hi ${quotation.customer.name}!
 
 Thank you for your interest. Please find your quotation details:
@@ -10873,7 +10890,8 @@ Thank you for your interest. Please find your quotation details:
 
 Valid until: ${Utils.formatDate(quotation.validUntil)}`;
 
-                const whatsappURL = `https://wa.me/91${quotation.customer.contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                // Send to customer's WhatsApp number
+                const whatsappURL = `https://wa.me/${customerPhone}?text=${encodeURIComponent(message)}`;
                 window.open(whatsappURL, '_blank');
 
                 // Update status to sent
