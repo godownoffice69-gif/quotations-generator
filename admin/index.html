@@ -10860,42 +10860,291 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
-                // Calculate payment amounts (50-50 split)
-                const grandTotal = parseFloat(quotation.financials.grandTotal) || 0;
-                const advance50 = Math.round(grandTotal * 0.5);
-                const eventDay50 = Math.round(grandTotal * 0.5);
+                try {
+                    this.showToast('Generating PDF...', 'info');
 
-                const message = `Hi ${quotation.customer.name}!
+                    // Generate PDF
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
 
-Thank you for your interest. Please find your quotation details:
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    const pageHeight = doc.internal.pageSize.getHeight();
+                    const margin = 15;
+                    let yPos = 15;
 
-*Event Date:* ${Utils.formatDate(quotation.customer.eventDate)}
-*Total Amount:* ₹${Math.round(grandTotal).toLocaleString('en-IN')}
+                    const primaryColor = [102, 126, 234];
+                    const darkText = [31, 41, 55];
+                    const grayText = [107, 114, 128];
 
-*Payment Schedule:*
-• Advance Payment (50%): ₹${advance50.toLocaleString('en-IN')}
-• Event Day Payment (50%): ₹${eventDay50.toLocaleString('en-IN')}
+                    // Header
+                    doc.setFontSize(32);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...primaryColor);
+                    doc.text('QUOTATION', pageWidth / 2, yPos, { align: 'center' });
 
-Valid until: ${Utils.formatDate(quotation.validUntil)}`;
+                    yPos += 8;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(...grayText);
+                    const dateText = `Date: ${Utils.formatDate(quotation.quotationDate || new Date().toISOString().split('T')[0])} | Valid Until: ${Utils.formatDate(quotation.validUntil || this.calculateValidUntil())}`;
+                    doc.text(dateText, pageWidth / 2, yPos, { align: 'center' });
 
-                // Open WhatsApp without phone number - lets user choose contact
-                const encodedMessage = encodeURIComponent(message);
-                window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+                    yPos += 6;
+                    doc.setDrawColor(...primaryColor);
+                    doc.setLineWidth(1.5);
+                    doc.line(margin, yPos, pageWidth - margin, yPos);
 
-                // Update status to sent
-                if (quotation.status === 'draft') {
-                    await db.collection('quotations').doc(quotationId).update({
-                        status: 'sent',
-                        sentAt: new Date().toISOString()
+                    // Customer Details
+                    yPos += 6;
+                    doc.setFillColor(249, 249, 249);
+                    const customerBoxHeight = quotation.customer.eventVenue ? 22 : 18;
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, customerBoxHeight, 'F');
+
+                    yPos += 5;
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...primaryColor);
+                    doc.text('Customer Details', margin + 3, yPos);
+
+                    yPos += 4;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...darkText);
+                    doc.text('Name:', margin + 3, yPos);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(quotation.customer.name, margin + 20, yPos);
+
+                    yPos += 4;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Contact:', margin + 3, yPos);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(quotation.customer.contact, margin + 20, yPos);
+
+                    yPos += 4;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Event Date:', margin + 3, yPos);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(Utils.formatDate(quotation.customer.eventDate), margin + 25, yPos);
+
+                    if (quotation.customer.eventVenue) {
+                        yPos += 4;
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('Venue:', margin + 3, yPos);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(quotation.customer.eventVenue, margin + 20, yPos);
+                    }
+
+                    // Items Table
+                    yPos += customerBoxHeight - 16;
+                    doc.setFillColor(...primaryColor);
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, 5, 'F');
+
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(255, 255, 255);
+                    doc.text('#', margin + 2, yPos + 3.5);
+                    doc.text('Item Name', margin + 10, yPos + 3.5);
+                    doc.text('Qty', margin + 100, yPos + 3.5);
+                    doc.text('Rate', margin + 118, yPos + 3.5);
+                    doc.text('Total', pageWidth - margin - 2, yPos + 3.5, { align: 'right' });
+
+                    yPos += 5;
+                    doc.setTextColor(...darkText);
+                    doc.setFont('helvetica', 'normal');
+
+                    quotation.items.forEach((item, index) => {
+                        if (yPos > pageHeight - 80) {
+                            doc.addPage();
+                            yPos = 15;
+                        }
+
+                        if (index % 2 === 0) {
+                            doc.setFillColor(249, 249, 249);
+                            doc.rect(margin, yPos, pageWidth - 2 * margin, 5, 'F');
+                        }
+
+                        doc.text(String(index + 1), margin + 2, yPos + 3.5);
+                        const itemName = doc.splitTextToSize(item.name, 85);
+                        doc.text(itemName, margin + 10, yPos + 3.5);
+                        doc.text(String(item.quantity), margin + 100, yPos + 3.5);
+                        const rateStr = String(Math.round(item.rate));
+                        const totalStr = String(Math.round(item.subtotal));
+                        doc.text(rateStr, margin + 118, yPos + 3.5);
+                        doc.text(totalStr, pageWidth - margin - 2, yPos + 3.5, { align: 'right' });
+
+                        yPos += 5;
                     });
 
-                    await this.loadQuotationsFromFirestore();
-                    if (this.quotationViewMode === 'list') {
-                        this.renderQuotations();
-                    }
-                }
+                    // Totals
+                    const summaryBoxX = pageWidth - margin - 50;
+                    yPos += 3;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(...darkText);
+                    doc.text('Subtotal:', summaryBoxX, yPos);
+                    doc.text(String(Math.round(quotation.financials.subtotal)), pageWidth - margin - 2, yPos, { align: 'right' });
 
-                this.showToast('✅ Opening WhatsApp...', 'success');
+                    yPos += 4;
+                    doc.text('Discount:', summaryBoxX, yPos);
+                    doc.text(String(Math.round(quotation.financials.discount || 0)), pageWidth - margin - 2, yPos, { align: 'right' });
+
+                    yPos += 4;
+                    doc.text(`Tax (${quotation.financials.taxRate || 0}%):`, summaryBoxX, yPos);
+                    doc.text(String(Math.round(quotation.financials.tax)), pageWidth - margin - 2, yPos, { align: 'right' });
+
+                    yPos += 5;
+                    doc.setDrawColor(...primaryColor);
+                    doc.setLineWidth(1);
+                    doc.line(summaryBoxX, yPos - 1, pageWidth - margin, yPos - 1);
+
+                    yPos += 3;
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...primaryColor);
+                    doc.text('TOTAL:', summaryBoxX, yPos);
+                    doc.setFontSize(12);
+                    doc.text(String(Math.round(quotation.financials.grandTotal)), pageWidth - margin - 2, yPos, { align: 'right' });
+
+                    // Payment Schedule
+                    yPos += 6;
+                    doc.setFillColor(232, 245, 233);
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, 12, 'F');
+
+                    yPos += 4;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(46, 125, 50);
+                    doc.text('Payment Schedule', margin + 3, yPos);
+
+                    yPos += 4;
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(...darkText);
+                    doc.text('Advance Payment (50%):', margin + 3, yPos);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(String(Math.round(quotation.financials.grandTotal * 0.5)), pageWidth - margin - 3, yPos, { align: 'right' });
+
+                    yPos += 4;
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Event Day Payment (50%):', margin + 3, yPos);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(String(Math.round(quotation.financials.grandTotal * 0.5)), pageWidth - margin - 3, yPos, { align: 'right' });
+
+                    // Terms & Conditions
+                    yPos += 6;
+                    if (yPos > pageHeight - 65) {
+                        doc.addPage();
+                        yPos = 15;
+                    }
+
+                    doc.setFillColor(255, 243, 224);
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, 52, 'F');
+
+                    yPos += 4;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(230, 81, 0);
+                    doc.text('Terms & Conditions', margin + 3, yPos);
+
+                    yPos += 4;
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...darkText);
+                    doc.text('PAYMENT:', margin + 3, yPos);
+                    yPos += 3;
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('50% advance payment, 50% on event day', margin + 5, yPos);
+
+                    yPos += 4;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('INCLUSIONS:', margin + 3, yPos);
+                    yPos += 3;
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Generator for electricity', margin + 5, yPos);
+
+                    yPos += 4;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('CUSTOMER RESPONSIBILITIES:', margin + 3, yPos);
+                    yPos += 3;
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Fire safety & NOC, Venue permissions, AMC permissions,', margin + 5, yPos);
+                    yPos += 3;
+                    doc.text('First aid, Manager approval, Contractor competence, Security clearance', margin + 5, yPos);
+
+                    yPos += 6;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('VALIDITY:', margin + 3, yPos);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(' 15 days from quotation date', margin + 18, yPos);
+
+                    // Convert PDF to Blob
+                    const pdfBlob = doc.output('blob');
+                    const fileName = `Quotation_${quotation.customer.name.replace(/\s+/g, '_')}.pdf`;
+
+                    // Try Web Share API first (for mobile)
+                    if (navigator.share && navigator.canShare) {
+                        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                        if (navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'Quotation',
+                                    text: `Quotation for ${quotation.customer.name}`
+                                });
+                                this.showToast('✅ PDF shared successfully!', 'success');
+
+                                // Update status to sent
+                                if (quotation.status === 'draft') {
+                                    await db.collection('quotations').doc(quotationId).update({
+                                        status: 'sent',
+                                        sentAt: new Date().toISOString()
+                                    });
+                                    await this.loadQuotationsFromFirestore();
+                                    if (this.quotationViewMode === 'list') {
+                                        this.renderQuotations();
+                                    }
+                                }
+                                return;
+                            } catch (err) {
+                                console.log('Share cancelled or failed:', err);
+                            }
+                        }
+                    }
+
+                    // Fallback: Download PDF and open WhatsApp
+                    const url = URL.createObjectURL(pdfBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    // Open WhatsApp
+                    setTimeout(() => {
+                        window.open('https://wa.me/', '_blank');
+                        this.showToast('📥 PDF downloaded! Please attach it in WhatsApp', 'success');
+                    }, 500);
+
+                    // Update status to sent
+                    if (quotation.status === 'draft') {
+                        await db.collection('quotations').doc(quotationId).update({
+                            status: 'sent',
+                            sentAt: new Date().toISOString()
+                        });
+
+                        await this.loadQuotationsFromFirestore();
+                        if (this.quotationViewMode === 'list') {
+                            this.renderQuotations();
+                        }
+                    }
+
+                } catch (error) {
+                    console.error('Error generating PDF for WhatsApp:', error);
+                    this.showToast('Error generating PDF: ' + error.message, 'error');
+                }
             },
 
             async convertQuotationToOrder(quotationId) {
