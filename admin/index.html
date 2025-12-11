@@ -1086,9 +1086,6 @@
             <div class="slideshow-image" style="background-image: url('sparkle%20fountain%20image%201.jpg'); opacity: 0;"></div>
         </div>
 
-        <!-- Dark overlay for better readability -->
-        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 2;"></div>
-
         <div class="login-card" style="position: relative; z-index: 3; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 2rem; border-radius: 16px; max-width: 320px; width: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
             <h1 class="login-logo" style="text-align: center; color: #667eea; margin-bottom: 1.5rem; font-size: 1.75rem;">🔥 Firepower SFX</h1>
             
@@ -10858,24 +10855,47 @@ convertToQuotationDateFormat(dateStr) {
 
             async sendQuotationWhatsApp(quotationId) {
                 const quotation = this.data.quotations.find(q => q.id === quotationId);
-                if (!quotation) return;
+                if (!quotation) {
+                    this.showToast('Quotation not found', 'error');
+                    return;
+                }
+
+                // Check if customer contact exists
+                if (!quotation.customer || !quotation.customer.contact) {
+                    this.showToast('Customer contact number not found', 'error');
+                    return;
+                }
 
                 // Clean customer contact number
-                let customerPhone = quotation.customer.contact.replace(/\D/g, ''); // Remove all non-digits
+                let customerPhone = quotation.customer.contact.toString().replace(/\D/g, ''); // Remove all non-digits
+
+                console.log('Original contact:', quotation.customer.contact);
+                console.log('Cleaned phone:', customerPhone);
 
                 // If number starts with 91 and is 12 digits, it already has country code
                 if (customerPhone.startsWith('91') && customerPhone.length === 12) {
                     // Already has country code, use as is
+                    customerPhone = customerPhone;
                 } else if (customerPhone.length === 10) {
                     // Indian mobile number without country code, add 91
                     customerPhone = '91' + customerPhone;
-                } else if (customerPhone.length === 12 && !customerPhone.startsWith('91')) {
-                    // Has country code but not 91, use as is
+                } else if (customerPhone.length === 11 && customerPhone.startsWith('0')) {
+                    // Number starts with 0, remove it and add 91
+                    customerPhone = '91' + customerPhone.substring(1);
+                } else if (customerPhone.length > 10 && customerPhone.length < 15) {
+                    // Might have country code, use as is
+                    customerPhone = customerPhone;
+                } else if (customerPhone.length < 10) {
+                    // Too short
+                    this.showToast('Customer contact number is too short: ' + customerPhone, 'error');
+                    return;
                 } else {
-                    // Invalid format, show error
-                    this.showToast('Invalid customer contact number format', 'error');
+                    // Too long or invalid
+                    this.showToast('Invalid customer contact number format: ' + customerPhone, 'error');
                     return;
                 }
+
+                console.log('Final phone for WhatsApp:', customerPhone);
 
                 const message = `Hi ${quotation.customer.name}!
 
@@ -10892,6 +10912,8 @@ Valid until: ${Utils.formatDate(quotation.validUntil)}`;
 
                 // Send to customer's WhatsApp number
                 const whatsappURL = `https://wa.me/${customerPhone}?text=${encodeURIComponent(message)}`;
+                console.log('WhatsApp URL:', whatsappURL);
+
                 window.open(whatsappURL, '_blank');
 
                 // Update status to sent
@@ -17852,7 +17874,7 @@ updateAllDisplays() {
 
             let currentIndex = 0;
 
-            // Change image every 1 second
+            // Change image every 3 seconds
             setInterval(() => {
                 // Fade out current image
                 images[currentIndex].style.opacity = '0';
@@ -17862,7 +17884,7 @@ updateAllDisplays() {
 
                 // Fade in next image
                 images[currentIndex].style.opacity = '1';
-            }, 1000);
+            }, 3000);
         }
 
         // ============ INITIALIZATION ============
