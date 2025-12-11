@@ -3849,7 +3849,11 @@ async refreshOrderId() {
             venueLocation = this.extractLocationFromMapsLink(mapLink);
             console.log('✅ Using location extracted from Maps link:', venueLocation);
         } else {
-            console.warn('⚠️ No venue location data available - neither autocomplete nor map link provided');
+            // Only log once to avoid console spam
+            if (!window._venueLocationWarned) {
+                console.warn('⚠️ No venue location data available');
+                window._venueLocationWarned = true;
+            }
         }
 
         return {
