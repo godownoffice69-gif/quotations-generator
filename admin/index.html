@@ -10860,43 +10860,6 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
-                // Check if customer contact exists
-                if (!quotation.customer || !quotation.customer.contact) {
-                    this.showToast('Customer contact number not found', 'error');
-                    return;
-                }
-
-                // Clean customer contact number
-                let customerPhone = quotation.customer.contact.toString().replace(/\D/g, ''); // Remove all non-digits
-
-                console.log('Original contact:', quotation.customer.contact);
-                console.log('Cleaned phone:', customerPhone);
-
-                // If number starts with 91 and is 12 digits, it already has country code
-                if (customerPhone.startsWith('91') && customerPhone.length === 12) {
-                    // Already has country code, use as is
-                    customerPhone = customerPhone;
-                } else if (customerPhone.length === 10) {
-                    // Indian mobile number without country code, add 91
-                    customerPhone = '91' + customerPhone;
-                } else if (customerPhone.length === 11 && customerPhone.startsWith('0')) {
-                    // Number starts with 0, remove it and add 91
-                    customerPhone = '91' + customerPhone.substring(1);
-                } else if (customerPhone.length > 10 && customerPhone.length < 15) {
-                    // Might have country code, use as is
-                    customerPhone = customerPhone;
-                } else if (customerPhone.length < 10) {
-                    // Too short
-                    this.showToast('Customer contact number is too short: ' + customerPhone, 'error');
-                    return;
-                } else {
-                    // Too long or invalid
-                    this.showToast('Invalid customer contact number format: ' + customerPhone, 'error');
-                    return;
-                }
-
-                console.log('Final phone for WhatsApp:', customerPhone);
-
                 // Calculate payment amounts (50-50 split)
                 const grandTotal = parseFloat(quotation.financials.grandTotal) || 0;
                 const advance50 = Math.round(grandTotal * 0.5);
@@ -10915,11 +10878,9 @@ Thank you for your interest. Please find your quotation details:
 
 Valid until: ${Utils.formatDate(quotation.validUntil)}`;
 
-                // Send to customer's WhatsApp number
-                const whatsappURL = `https://wa.me/${customerPhone}?text=${encodeURIComponent(message)}`;
-                console.log('WhatsApp URL:', whatsappURL);
-
-                window.open(whatsappURL, '_blank');
+                // Open WhatsApp without phone number - lets user choose contact
+                const encodedMessage = encodeURIComponent(message);
+                window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
 
                 // Update status to sent
                 if (quotation.status === 'draft') {
