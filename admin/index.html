@@ -1354,6 +1354,7 @@
 
                         <div class="btn-group">
                             <button type="submit" class="btn btn-primary">💾 Save Order (Ctrl+S)</button>
+                            <button type="button" class="btn btn-danger" onclick="OMS.clearOrderForm()">🗑️ Clear Form</button>
                             <button type="button" class="btn btn-success" onclick="OMS.quickAddPayment()">💵 Quick Payment</button>
                             <button type="button" class="btn btn-secondary" data-action="preview">👁️ Preview</button>
                             <button type="button" class="btn btn-info" data-action="duplicate">📋 Duplicate Last</button>
@@ -12226,8 +12227,10 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
                         <div class="btn-group">
                             <button class="btn btn-success" data-action="exportData">${this.t('export')}</button>
-                            <button class="btn btn-primary" id="mergeSelectedBtn" style="display: none;" onclick="OMS.showMergeModal()">🔗 Merge Selected Orders</button>
                         </div>
+                        <!-- Floating Merge Button -->
+                        <button class="btn btn-primary" id="mergeSelectedBtn" style="display: none; position: fixed; bottom: 30px; right: 30px; z-index: 1000; padding: 1rem 1.5rem; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="OMS.showMergeModal()">🔗 Merge Selected Orders</button>
+
                         <div class="form-group" style="margin: 20px 0;">
                             <label class="form-label">🔍 Search Orders</label>
                             <input type="text" id="historySearch" class="form-input" placeholder="Search by client name, order ID, date, or venue...">
@@ -12582,6 +12585,9 @@ convertToQuotationDateFormat(dateStr) {
                     // Refresh history view
                     this.renderHistory();
 
+                    // Update dashboard to reflect merged order count
+                    this.renderDashboard();
+
                     alert(`✅ Successfully merged ${ordersToMerge.length} orders into ${newOrderId}`);
 
                 } catch (error) {
@@ -12621,6 +12627,9 @@ convertToQuotationDateFormat(dateStr) {
 
                     // Refresh history view
                     this.renderHistory();
+
+                    // Update dashboard to reflect unmerged order count
+                    this.renderDashboard();
 
                     alert(`✅ Successfully unmerged order. ${mergedOrder.mergedFrom.length} original orders restored.`);
 
@@ -14962,6 +14971,44 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            clearOrderForm() {
+                if (!confirm('Are you sure you want to clear the entire form? This will remove all entered data.')) {
+                    return;
+                }
+
+                // Clear all form fields
+                document.getElementById('orderForm').reset();
+
+                // Clear order items
+                this.currentOrderItems = [];
+                this.updateOrderItemsTable();
+
+                // Clear multi-day data if exists
+                if (window.dayFunctionsData) {
+                    window.dayFunctionsData = {};
+                }
+                const multiDayContainer = document.getElementById('multiDayContainer');
+                if (multiDayContainer) {
+                    multiDayContainer.innerHTML = '';
+                }
+
+                // Reset to single day mode
+                const eventTypeSelect = document.getElementById('eventTypeSelect');
+                if (eventTypeSelect) {
+                    eventTypeSelect.value = 'single';
+                    eventTypeSelect.dispatchEvent(new Event('change'));
+                }
+
+                // Clear venue selection
+                if (window.selectedPlaceData) {
+                    window.selectedPlaceData = null;
+                }
+
+                // Update displays
+                this.updateAllDisplays();
+
+                this.showToast('✅ Form cleared successfully', 'success');
+            },
 
             quickAddPayment() {
                 // Check if there's a current order being edited or if we need to save first
