@@ -419,6 +419,13 @@
         .status-completed { background: rgba(102, 126, 234, 0.1); color: var(--primary); }
         .status-cancelled { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
 
+        /* Larger checkboxes for order selection */
+        .order-select-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
         /* Modal */
         .modal {
             display: none;
@@ -8390,13 +8397,16 @@ convertToQuotationDateFormat(dateStr) {
 
             // ============ TAB RENDERERS ============
             renderDashboard() {
+                // Filter out merged orders for accurate counts
+                const visibleOrders = this.data.orders.filter(o => !o.isMerged);
+
                 const stats = [
-                    { label: this.t('totalOrders'), value: this.data.orders.length, class: '' },
-                    { label: this.t('confirmedOrders'), value: this.data.orders.filter(o => o.status && o.status.toLowerCase() === 'confirmed').length, class: 'success' },
-                    { label: this.t('completedOrders'), value: this.data.orders.filter(o => o.status && o.status.toLowerCase() === 'completed').length, class: 'info' },
+                    { label: this.t('totalOrders'), value: visibleOrders.length, class: '' },
+                    { label: this.t('confirmedOrders'), value: visibleOrders.filter(o => o.status && o.status.toLowerCase() === 'confirmed').length, class: 'success' },
+                    { label: this.t('completedOrders'), value: visibleOrders.filter(o => o.status && o.status.toLowerCase() === 'completed').length, class: 'info' },
                     { label: this.t('customers'), value: this.data.customers.length, class: '' },
                     { label: this.t('lowStock'), value: this.data.inventory.items.filter(i => i.quantity <= this.data.settings.lowStockThreshold).length, class: 'warning' },
-                    { label: this.t('today'), value: this.data.orders.filter(o => o.date === Utils.toDateString(new Date())).length, class: 'danger' }
+                    { label: this.t('today'), value: visibleOrders.filter(o => o.date === Utils.toDateString(new Date())).length, class: 'danger' }
                 ];
 
                 document.getElementById('dashboardStats').innerHTML = stats.map(s => `
@@ -8406,7 +8416,7 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
                 `).join('');
 
-                const recentOrders = this.data.orders.slice(-5).reverse();
+                const recentOrders = visibleOrders.slice(-5).reverse();
                 this.renderTable('recentOrdersContainer', [
                     { key: 'orderId', label: this.t('orderId'), render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
                     { key: 'clientName', label: this.t('client') },
