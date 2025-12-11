@@ -11077,42 +11077,11 @@ convertToQuotationDateFormat(dateStr) {
                     doc.setFont('helvetica', 'normal');
                     doc.text(' 15 days from quotation date', margin + 18, yPos);
 
-                    // Convert PDF to Blob
+                    // Convert PDF to Blob and download
                     const pdfBlob = doc.output('blob');
                     const fileName = `Quotation_${quotation.customer.name.replace(/\s+/g, '_')}.pdf`;
 
-                    // Try Web Share API first (for mobile)
-                    if (navigator.share && navigator.canShare) {
-                        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-                        if (navigator.canShare({ files: [file] })) {
-                            try {
-                                await navigator.share({
-                                    files: [file],
-                                    title: 'Quotation',
-                                    text: `Quotation for ${quotation.customer.name}`
-                                });
-                                this.showToast('✅ PDF shared successfully!', 'success');
-
-                                // Update status to sent
-                                if (quotation.status === 'draft') {
-                                    await db.collection('quotations').doc(quotationId).update({
-                                        status: 'sent',
-                                        sentAt: new Date().toISOString()
-                                    });
-                                    await this.loadQuotationsFromFirestore();
-                                    if (this.quotationViewMode === 'list') {
-                                        this.renderQuotations();
-                                    }
-                                }
-                                return;
-                            } catch (err) {
-                                console.log('Share cancelled or failed:', err);
-                            }
-                        }
-                    }
-
-                    // Fallback: Download PDF and open WhatsApp
+                    // Download PDF
                     const url = URL.createObjectURL(pdfBlob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -11122,10 +11091,10 @@ convertToQuotationDateFormat(dateStr) {
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
 
-                    // Open WhatsApp
+                    // Open WhatsApp Web
                     setTimeout(() => {
-                        window.open('https://wa.me/', '_blank');
-                        this.showToast('📥 PDF downloaded! Please attach it in WhatsApp', 'success');
+                        window.open('https://web.whatsapp.com/', '_blank');
+                        this.showToast('📥 PDF downloaded! Now attach it in WhatsApp', 'success');
                     }, 500);
 
                     // Update status to sent
