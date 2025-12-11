@@ -10349,6 +10349,13 @@ convertToQuotationDateFormat(dateStr) {
 
                 this.editingQuotationId = quotationId;
                 this.currentQuotation = JSON.parse(JSON.stringify(quotation)); // Deep copy
+
+                // Clean up old tax fields if they exist
+                if (this.currentQuotation.financials) {
+                    delete this.currentQuotation.financials.tax;
+                    delete this.currentQuotation.financials.taxRate;
+                }
+
                 this.quotationViewMode = 'edit';
                 this.renderQuotations();
             },
@@ -10987,10 +10994,6 @@ convertToQuotationDateFormat(dateStr) {
                     yPos += 4;
                     doc.text('Discount:', summaryBoxX, yPos);
                     doc.text(String(Math.round(quotation.financials.discount || 0)), pageWidth - margin - 2, yPos, { align: 'right' });
-
-                    yPos += 4;
-                    doc.text(`Tax (${quotation.financials.taxRate || 0}%):`, summaryBoxX, yPos);
-                    doc.text(String(Math.round(quotation.financials.tax)), pageWidth - margin - 2, yPos, { align: 'right' });
 
                     yPos += 5;
                     doc.setDrawColor(...primaryColor);
