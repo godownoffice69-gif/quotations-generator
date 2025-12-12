@@ -24,7 +24,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <!-- Modular JavaScript - Import Firebase Config, Utilities, Translations, and Features -->
+    <!-- Modular JavaScript - Import Firebase Config, Utilities, Translations, Features, and Services -->
     <script type="module">
         // Import Firebase configuration and instances
         import { auth, db } from './js/config/firebase.js';
@@ -42,6 +42,11 @@
         import { Inventory } from './js/features/inventory.js';
         import { Customers } from './js/features/customers.js';
 
+        // Import order service modules
+        import { OrderForm } from './js/services/order-form.js';
+        import { OrderUtils } from './js/services/order-utils.js';
+        import { OrderFirestore } from './js/services/order-firestore.js';
+
         // Make globally available for backward compatibility with inline scripts
         window.auth = auth;
         window.db = db;
@@ -52,6 +57,9 @@
         window.Dashboard = Dashboard;
         window.Inventory = Inventory;
         window.Customers = Customers;
+        window.OrderForm = OrderForm;
+        window.OrderUtils = OrderUtils;
+        window.OrderFirestore = OrderFirestore;
 
         console.log('✅ All modules loaded successfully!');
     </script>
@@ -3051,181 +3059,24 @@ async refreshOrderId() {
                 }
             },
 
+            // ========== ORDER UTILITIES (Delegated to OrderUtils service) ==========
             getNextOrderId() {
-                const prefix = this.data.settings.invoicePrefix || 'FP';
-                const counter = this.data.settings.orderIdCounter || 1;
-                return `${prefix}${String(counter).padStart(3, '0')}`;
+                return OrderUtils.getNextOrderId(this.data.settings);
             },
 
             incrementOrderCounter() {
-                this.data.settings.orderIdCounter = (this.data.settings.orderIdCounter || 1) + 1;
+                const newId = OrderUtils.incrementOrderCounter(this.data.settings);
                 this.refreshOrderId();
+                return newId;
             },
 
+   // ========== ORDER FORM (Delegated to OrderForm service) ==========
    collectFormData() {
-
-        const transport = Utils.get('transport');
-        const eventType = Utils.get('eventTypeSelect');
-        const isMultiDay = eventType === 'multi';
-
-        // Get helper names from text input
-        const helperInput = document.getElementById('helper');
-        const selectedHelpers = helperInput ? helperInput.value.trim() : '';
-
-        // Collect day-wise data for multi-day events
-        let dayWiseData = [];
-        if (isMultiDay) {
-            const startDate = Utils.get('startDate');
-            const endDate = Utils.get('endDate');
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
-
-            for (let i = 0; i < diffDays; i++) {
-                const currentDate = new Date(start);
-                currentDate.setDate(start.getDate() + i);
-
-                // Get functions for this day
-                const dayFunctions = window.dayFunctionsData?.[i] || [];
-
-                dayWiseData.push({
-                    dayNumber: i + 1,
-                    date: Utils.toDateString(currentDate),
-                    functions: dayFunctions.map(func => ({
-                        functionType: func.functionType || '',
-                        timeSlot: func.timeSlot || '',
-                        driver: func.driver || '',
-                        operator: func.operator || '',
-                        helper: func.helper || '',
-                        notes: func.notes || '',
-                        items: func.items || []
-                    }))
-                });
-            }
-        }
-
-        const transport2 = Utils.get('transport2');
-
-        // Get location data - prioritize autocomplete selection, then fall back to manual Maps link
-        let venueLocation = null;
-        const mapLink = Utils.get('venueMapLink');
-
-        // Check if user selected place from autocomplete
-        if (window.selectedPlaceData) {
-            venueLocation = {
-                lat: window.selectedPlaceData.lat,
-                lng: window.selectedPlaceData.lng,
-                source: 'google_autocomplete',
-                place_id: window.selectedPlaceData.place_id,
-                formatted_address: window.selectedPlaceData.formatted_address
-            };
-            console.log('✅ Using location from autocomplete:', venueLocation);
-            console.log('📍 Will save to Firestore:', {
-                venue: Utils.get('venue'),
-                venueLocation: venueLocation,
-                venueMapLink: mapLink
-            });
-        }
-        // Otherwise, try to extract from manually pasted Maps link
-        else if (mapLink && mapLink.trim()) {
-            venueLocation = this.extractLocationFromMapsLink(mapLink);
-            console.log('✅ Using location extracted from Maps link:', venueLocation);
-        } else {
-            // Only log once to avoid console spam
-            if (!window._venueLocationWarned) {
-                console.warn('⚠️ No venue location data available');
-                window._venueLocationWarned = true;
-            }
-        }
-
-        return {
-            orderId: Utils.get('orderId'),
-            isMultiDay: isMultiDay,
-            date: isMultiDay ? null : Utils.get('orderDate'),
-            startDate: isMultiDay ? Utils.get('startDate') : null,
-            endDate: isMultiDay ? Utils.get('endDate') : null,
-            dayWiseData: dayWiseData,
-            lastEventDate: isMultiDay ? Utils.get('endDate') : Utils.get('orderDate'),
-            readyTime: Utils.get('readyTime'),
-            clientName: Utils.get('clientName'),
-            contact: Utils.get('contact'),
-            venue: Utils.get('venue'),
-            venueMapLink: mapLink || null, // Store the Google Maps link
-            venueLocation: venueLocation, // Extracted coordinates from Maps link
-            eventType: Utils.get('eventType'),
-            transport: transport === 'Other' ? Utils.get('customTransport') : transport,
-            driverName: Utils.get('driverName'),
-            transport2: transport2 === 'Other' ? Utils.get('customTransport2') : transport2,
-            driverName2: Utils.get('driverName2'),
-            operator: Utils.get('operator'),
-            helper: selectedHelpers,
-            status: Utils.get('orderStatus'),
-            notes: Utils.get('orderNotes'),
-            items: isMultiDay ? [] : [...this.currentOrderItems],
-            createdAt: new Date().toISOString()
-        };
+        return OrderForm.collectFormData(this);
     },
 
-    // Extract latitude and longitude from Google Maps link
     extractLocationFromMapsLink(link) {
-        if (!link) return null;
-
-        try {
-            // Google Maps link formats:
-            // https://maps.app.goo.gl/... (short link - can't extract directly)
-            // https://www.google.com/maps/place/.../@LAT,LNG,ZOOMz/...
-            // https://www.google.com/maps/@LAT,LNG,ZOOMz
-            // https://maps.google.com/?q=LAT,LNG
-            // https://www.google.com/maps/search/?api=1&query=LAT,LNG
-            // https://goo.gl/maps/... (short link)
-
-            // Try to find coordinates in various formats
-            let lat = null, lng = null;
-
-            // Format 1: query=LAT,LNG (from API links)
-            const queryMatch = link.match(/[?&]query=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-            if (queryMatch) {
-                lat = parseFloat(queryMatch[1]);
-                lng = parseFloat(queryMatch[2]);
-            }
-
-            // Format 2: @LAT,LNG or ?q=LAT,LNG
-            if (!lat) {
-                const coordMatch = link.match(/[@?]q?=?(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-                if (coordMatch) {
-                    lat = parseFloat(coordMatch[1]);
-                    lng = parseFloat(coordMatch[2]);
-                }
-            }
-
-            // Format 3: /maps/place/NAME/@LAT,LNG
-            if (!lat) {
-                const placeMatch = link.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-                if (placeMatch) {
-                    lat = parseFloat(placeMatch[1]);
-                    lng = parseFloat(placeMatch[2]);
-                }
-            }
-
-            if (lat && lng) {
-                return {
-                    lat: lat,
-                    lng: lng,
-                    source: 'google_maps_link'
-                };
-            }
-
-            // Only warn once per unique link to avoid console spam
-            if (!this._warnedLinks) this._warnedLinks = new Set();
-            if (!this._warnedLinks.has(link)) {
-                console.warn('Could not extract coordinates from Maps link:', link);
-                this._warnedLinks.add(link);
-            }
-            return null;
-        } catch (error) {
-            console.error('Error extracting location from Maps link:', error);
-            return null;
-        }
+        return OrderForm.extractLocationFromMapsLink(link);
     },
 
 async saveOrder() {
