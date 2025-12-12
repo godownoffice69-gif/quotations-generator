@@ -24,7 +24,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <!-- Modular JavaScript - Import Firebase Config, Utilities, and Translations -->
+    <!-- Modular JavaScript - Import Firebase Config, Utilities, Translations, and Features -->
     <script type="module">
         // Import Firebase configuration and instances
         import { auth, db } from './js/config/firebase.js';
@@ -35,11 +35,23 @@
         // Import translations
         import { translations } from './js/core/translations.js';
 
+        // Import feature modules
+        import { GlobalSearch } from './js/features/search.js';
+        import { Calendar } from './js/features/calendar.js';
+        import { Dashboard } from './js/features/dashboard.js';
+        import { Inventory } from './js/features/inventory.js';
+        import { Customers } from './js/features/customers.js';
+
         // Make globally available for backward compatibility with inline scripts
         window.auth = auth;
         window.db = db;
         window.Utils = Utils;
         window.translations = translations;
+        window.GlobalSearch = GlobalSearch;
+        window.Calendar = Calendar;
+        window.Dashboard = Dashboard;
+        window.Inventory = Inventory;
+        window.Customers = Customers;
 
         console.log('✅ All modules loaded successfully!');
     </script>
@@ -2690,82 +2702,21 @@ const OMS = {
             },
 
             // ============ GLOBAL SEARCH ============
+            // ========== GLOBAL SEARCH (Delegated to GlobalSearch module) ==========
             initGlobalSearch() {
-                const input = document.getElementById('globalSearch');
-                const results = document.getElementById('globalSearchResults');
-
-                input.addEventListener('input', Utils.debounce((e) => {
-                    const query = e.target.value.toLowerCase().trim();
-                    if (query.length < 2) {
-                        results.classList.remove('show');
-                        return;
-                    }
-
-                    const searchResults = this.performGlobalSearch(query);
-                    this.displayGlobalSearchResults(searchResults);
-                }, 300));
-
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        results.classList.remove('show');
-                        input.value = '';
-                    }
-                });
+                GlobalSearch.init(this);
             },
 
             performGlobalSearch(query) {
-                const results = [];
-
-                // Search orders
-                this.data.orders.forEach(order => {
-                    if (order.orderId.toLowerCase().includes(query) ||
-                        order.clientName.toLowerCase().includes(query) ||
-                        order.venue.toLowerCase().includes(query)) {
-                        results.push({ type: 'order', data: order });
-                    }
-                });
-
-                // Search customers
-                this.data.customers.forEach(customer => {
-                    if (customer.name.toLowerCase().includes(query) ||
-                        customer.contact.includes(query)) {
-                        results.push({ type: 'customer', data: customer });
-                    }
-                });
-
-                // Search inventory
-                this.data.inventory.items.forEach(item => {
-                    if (item.name.toLowerCase().includes(query)) {
-                        results.push({ type: 'item', data: item });
-                    }
-                });
-
-                return results.slice(0, 10);
+                return GlobalSearch.performSearch(query, this.data);
             },
 
             displayGlobalSearchResults(results) {
-                const container = document.getElementById('globalSearchResults');
-                if (results.length === 0) {
-                    container.innerHTML = '<div class="search-result-item">No results found</div>';
-                } else {
-                    container.innerHTML = results.map(r => `
-                        <div class="search-result-item" onclick="OMS.navigateToResult('${r.type}', '${r.data.id || r.data.orderId}')">
-                            <div>
-                                <div class="search-result-type">${r.type}</div>
-                                <div>${r.type === 'order' ? r.data.orderId + ' - ' + r.data.clientName : 
-                                       r.type === 'customer' ? r.data.name : r.data.name}</div>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-                container.classList.add('show');
+                GlobalSearch.displayResults(results, this);
             },
 
             navigateToResult(type, id) {
-                const tabMap = { order: 'history', customer: 'customers', item: 'inventory' };
-                this.switchTab(tabMap[type]);
-                document.getElementById('globalSearchResults').classList.remove('show');
-                document.getElementById('globalSearch').value = '';
+                GlobalSearch.navigateToResult(type, id, this);
             },
 
             // ============ CRUD OPERATIONS ============
@@ -5948,91 +5899,9 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             // ============ CALENDAR & TASKS ============
+            // ========== CALENDAR (Delegated to Calendar module) ==========
             renderCalendar(date = new Date()) {
-                const year = date.getFullYear();
-                const month = date.getMonth();
-
-                const firstDay = new Date(year, month, 1).getDay();
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                                   'July', 'August', 'September', 'October', 'November', 'December'];
-
-                let html = `
-                    <div class="calendar-container">
-                        <div class="calendar-header">
-                            <div class="calendar-nav">
-                                <button class="btn btn-primary btn-small" onclick="OMS.changeMonth(-1)">${this.t('previousMonth')}</button>
-                                <h3>${monthNames[month]} ${year}</h3>
-                                <button class="btn btn-primary btn-small" onclick="OMS.changeMonth(1)">${this.t('nextMonth')}</button>
-                            </div>
-                            <button class="btn btn-secondary btn-small" onclick="OMS.showToday()">${this.t('today')}</button>
-                        </div>
-                        <div class="calendar-grid">
-                            ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day =>
-                                `<div class="calendar-day-header">${day}</div>`
-                            ).join('')}
-                            ${Array(firstDay).fill('').map(() => '<div class="calendar-day"></div>').join('')}
-                            ${Array.from({length: daysInMonth}, (_, i) => {
-                                const day = i + 1;
-                                const dateStr = Utils.toDateString(new Date(year, month, day));
-                                const today = Utils.toDateString(new Date());
-
-                                // ENHANCED CALENDAR FILTERING with fuzzy date matching
-                                const orders = this.data.orders.filter(o => {
-                                    if (o.isMultiDay) {
-                                        // Use fuzzy date matcher for multi-day range check
-                                        if (o.startDate && o.endDate) {
-                                            return fuzzyDateMatcher.isInRange(dateStr, o.startDate, o.endDate);
-                                        }
-                                    }
-                                    // Use fuzzy date matcher for single-day check
-                                    return o.date && fuzzyDateMatcher.matches(o.date, dateStr);
-                                });
-                                const tasks = this.data.tasks.filter(t => t.date === dateStr);
-                                const festival = this.festivals[dateStr];
-
-                                let classes = 'calendar-day';
-                                if (dateStr === today) classes += ' today';
-                                if (orders.length) classes += ' has-orders';
-                                if (tasks.length) classes += ' has-tasks';
-                                if (festival) classes += ' has-festival';
-
-                                // Get color indicators for this day's orders
-                                const orderColorDots = orders.slice(0, 3).map(o => {
-                                    const color = this.getOrderColor(o);
-                                    return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin:0 2px;"></span>`;
-                                }).join('');
-
-                                return `
-                                    <div class="${classes}" onclick="OMS.showDayDetails('${dateStr}')">
-                                        <div class="calendar-day-number">${day}</div>
-                                        ${festival ? `<div class="festival-text">${festival[1]}</div>` : ''}
-                                        ${orders.length ? `<div class="order-count" title="${orders.length} ${this.t('ordersText')}">${orderColorDots}${orders.length > 3 ? '+' : ''}</div>` : ''}
-                                        ${tasks.length ? `<div class="calendar-day-content">${tasks.length} ${tasks.length > 1 ? this.t('ordersText') : this.t('order')}</div>` : ''}
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h3 class="card-title">${this.t('calendar')}</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <input type="date" id="taskDate" class="form-input" value="${Utils.toDateString(new Date())}">
-                            </div>
-                            <div class="form-group">
-                                <input type="text" id="taskDescription" class="form-input" placeholder="${this.t('enterNotes')}">
-                            </div>
-                            <div class="form-group">
-                                <button class="btn btn-primary" onclick="OMS.addTask()">${this.t('add')}</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                return html;
+                return Calendar.render(date, this);
             },
 
             changeMonth(delta) {
@@ -6048,111 +5917,8 @@ convertToQuotationDateFormat(dateStr) {
 
             // Fixed: Use local date without timezone issues
             showDayDetails(dateStr) {
-                const date = Utils.getLocalDate(dateStr);
-
-                // ============ ENHANCED FILTERING WITH LOGGING ============
-                const startTime = performance.now();
-                const normalizedDate = fuzzyDateMatcher.normalize(dateStr);
-
-                filterLogger.log('showDayDetails_started', {
-                    operation: 'showDayDetails',
-                    filterDate: dateStr,
-                    normalizedDate,
-                    totalOrdersAvailable: this.data.orders.length
-                });
-
-                const matchedOrders = [];
-                const orders = this.data.orders.filter(o => {
-                    if (o.isMultiDay) {
-                        // Use fuzzy date matcher for multi-day range check
-                        if (o.startDate && o.endDate && fuzzyDateMatcher.isInRange(dateStr, o.startDate, o.endDate)) {
-                            matchedOrders.push(o);
-                            return true;
-                        }
-                    }
-                    // Use fuzzy date matcher for single-day check
-                    if (o.date && fuzzyDateMatcher.matches(o.date, dateStr)) {
-                        matchedOrders.push(o);
-                        return true;
-                    }
-                    return false;
-                });
-
-                const filterTime = (performance.now() - startTime).toFixed(2);
-
-                // Log and learn from this filter
-                filterLogger.log('showDayDetails_completed', {
-                    operation: 'showDayDetails',
-                    filterDate: dateStr,
-                    matchedCount: orders.length,
-                    filterTimeMs: filterTime
-                });
-
-                patternLearner.recordFilterResult(normalizedDate, orders.length, this.data.orders.length, 'showDayDetails');
-
-                // Validate and alert if needed
-                const validationResult = orderValidator.validate({
-                    date: normalizedDate,
-                    orderCount: orders.length,
-                    totalAvailable: this.data.orders.length,
-                    matchedOrders,
-                    allOrders: this.data.orders
-                });
-
-                if (validationResult.some(a => a.level === 'error' || a.level === 'warning')) {
-                    orderValidator.showAlerts(validationResult, dateStr);
-                }
-                // ============ END ENHANCED FILTERING ============
-
-                const tasks = this.data.tasks.filter(t => t.date === dateStr);
-                const festival = this.festivals[dateStr];
-
-                let content = `<h3>${this.t('details')} ${this.t('for')} ${Utils.formatDate(dateStr)}</h3>`;
-
-                if (festival) {
-                    content += `<div class="festival-text" style="font-size: 1.2rem; margin: 1rem 0;">🎉 ${festival[1]} (${festival[0]})</div>`;
-                }
-
-                if (orders.length > 0) {
-                    content += `<h4>${this.t('orders')} (${orders.length})</h4>`;
-                    orders.forEach(o => {
-                        const color = this.getOrderColor(o);
-                        let dateInfo = '';
-                        if (o.isMultiDay) {
-                            dateInfo = `<br><small style="color:#666;">${this.t('multiDayOrder')}: ${Utils.formatDate(o.startDate)} ${this.t('to')} ${Utils.formatDate(o.endDate)}</small>`;
-                        }
-                        content += `
-                            <div style="padding:10px;margin:8px 0;border-left:4px solid ${color};background:#f9f9f9;border-radius:4px;">
-                                <strong>${o.orderId || '[No ID]'}</strong> - ${o.clientName}
-                                <br>
-                                <span style="color:${color};font-weight:bold;">${o.eventType || this.t('event')}</span> |
-                                <span style="background:${color};color:white;padding:2px 6px;border-radius:3px;font-size:12px;">${this.t(o.status.toLowerCase())}</span>
-                                ${dateInfo}
-                            </div>
-                        `;
-                    });
-                }
-
-                if (tasks.length > 0) {
-                    content += `<h4>${this.t('calendar')} (${tasks.length})</h4><ul>`;
-                    tasks.forEach(t => {
-                        content += `<li>
-                            ${t.description}
-                            <button class="btn btn-secondary btn-small" data-action="edit" data-type="task" data-id="${t.id}">${this.t('edit')}</button>
-                            <button class="btn btn-danger btn-small" data-action="delete" data-type="task" data-id="${t.id}">${this.t('delete')}</button>
-                        </li>`;
-                    });
-                    content += '</ul>';
-                }
-
-                content += `
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="OMS.addTaskForDate('${dateStr}')">${this.t('add')}</button>
-                        <button class="btn btn-secondary" onclick="OMS.createOrderForDate('${dateStr}')">${this.t('orders')}</button>
-                    </div>
-                `;
-
-                this.showModal(this.t('details'), content);
+                const dayDetails = Calendar.getDayDetailsHTML(dateStr, this);
+                this.showModal(dayDetails.title, dayDetails.content);
             },
 
             addTask() {
@@ -6589,57 +6355,9 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             // ============ TAB RENDERERS ============
+            // ========== DASHBOARD (Delegated to Dashboard module) ==========
             renderDashboard() {
-                // Filter out merged orders for accurate counts
-                const visibleOrders = this.data.orders.filter(o => !o.isMerged);
-
-                const stats = [
-                    { label: this.t('totalOrders'), value: visibleOrders.length, class: '' },
-                    { label: this.t('confirmedOrders'), value: visibleOrders.filter(o => o.status && o.status.toLowerCase() === 'confirmed').length, class: 'success' },
-                    { label: this.t('completedOrders'), value: visibleOrders.filter(o => o.status && o.status.toLowerCase() === 'completed').length, class: 'info' },
-                    { label: this.t('customers'), value: this.data.customers.length, class: '' },
-                    { label: this.t('lowStock'), value: this.data.inventory.items.filter(i => i.quantity <= this.data.settings.lowStockThreshold).length, class: 'warning' },
-                    { label: this.t('today'), value: visibleOrders.filter(o => o.date === Utils.toDateString(new Date())).length, class: 'danger' }
-                ];
-
-                document.getElementById('dashboardStats').innerHTML = stats.map(s => `
-                    <div class="stat-card ${s.class}">
-                        <div class="stat-value">${s.value}</div>
-                        <div class="stat-label">${s.label}</div>
-                    </div>
-                `).join('');
-
-                const recentOrders = visibleOrders.slice(-5).reverse();
-                this.renderTable('recentOrdersContainer', [
-                    { key: 'orderId', label: this.t('orderId'), render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
-                    { key: 'clientName', label: this.t('client') },
-                    { key: 'eventType', label: this.t('event'), render: o => o.eventType || this.t('na') },
-                    { key: 'date', label: this.t('date'), render: o => {
-                        if (o.isMultiDay) {
-                            return `${Utils.formatDate(o.startDate)} ${this.t('to')} ${Utils.formatDate(o.endDate)}`;
-                        }
-                        return Utils.formatDate(o.date);
-                    }},
-                    { key: 'status', label: this.t('status'), render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span>` }
-                ], recentOrders, (row) => `
-                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.docId || row.orderId}">${this.t('view')}</button>
-                    <button class="btn btn-info btn-small" onclick="OMS.duplicateOrder('${row.docId || row.orderId}')">📋 ${this.t('duplicate')}</button>
-                    <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
-                `);
-
-                // Top customer
-                if (this.data.customers.length > 0) {
-                    const top = this.data.customers.reduce((prev, curr) =>
-                        (prev.totalOrders > curr.totalOrders) ? prev : curr
-                    );
-                    document.getElementById('topCustomerInfo').innerHTML = `
-                        <div style="background: var(--light); padding: 1rem; border-radius: var(--radius);">
-                            <strong>${top.name}</strong><br>
-                            ${top.contact}<br>
-                            <strong>${top.totalOrders} ${this.t('ordersText')}</strong>
-                        </div>
-                    `;
-                }
+                Dashboard.render(this);
             },
 
             renderInventory() {
@@ -6742,33 +6460,9 @@ convertToQuotationDateFormat(dateStr) {
                 ], filteredHistory, (row) => ``);
             },
 
+            // ========== INVENTORY (Delegated to Inventory module) ==========
             updateInventoryDisplay() {
-                // Populate category dropdown
-                const select = document.getElementById('itemCategory');
-                if (select) {
-                    select.innerHTML = `<option value="">${this.t('selectCategory')}</option>` +
-                        this.data.inventory.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-                }
-
-                // Render categories table
-                this.renderTable('categoriesContainer', [
-                    { key: 'name', label: this.t('category') },
-                    { key: 'id', label: this.t('items'), render: c => this.data.inventory.items.filter(i => i.categoryId === c.id).length }
-                ], this.data.inventory.categories, (row) => `
-                    <button class="btn btn-danger btn-small" data-action="delete" data-type="category" data-id="${row.id}">${this.t('delete')}</button>
-                `);
-
-                // Render items table
-                this.renderTable('itemsContainer', [
-                    { key: 'name', label: this.t('item') },
-                    { key: 'categoryId', label: this.t('category'), render: i => this.data.inventory.categories.find(c => c.id === i.categoryId)?.name || this.t('na') },
-                    { key: 'quantity', label: this.t('stock') }
-                ], this.data.inventory.items, (row) => `
-                    <button class="btn btn-success btn-small" onclick="OMS.increaseItemQuantity('${row.id}')">+</button>
-                    <button class="btn btn-warning btn-small" onclick="OMS.decreaseItemQuantity('${row.id}')">-</button>
-                    <button class="btn btn-primary btn-small" onclick="OMS.editInventoryItem('${row.id}')">✏️ ${this.t('edit')}</button>
-                    <button class="btn btn-danger btn-small" data-action="delete" data-type="item" data-id="${row.id}">🗑️ ${this.t('delete')}</button>
-                `);
+                Inventory.updateDisplay(this);
             },
 
             addCategory() {
@@ -7661,59 +7355,13 @@ convertToQuotationDateFormat(dateStr) {
                 this.showToast('Opening WhatsApp...', 'success');
             },
 
+            // ========== CUSTOMERS (Delegated to Customers module) ==========
             renderCustomers() {
-                const container = document.getElementById('customers');
-                container.innerHTML = `
-                    <div class="card">
-                        <div class="card-header">
-                            <h2 class="card-title">${this.t('customers')}</h2>
-                        </div>
-                        <div class="form-row">
-                            <input type="text" id="customerSearch" class="form-input" placeholder="${this.t('searchPlaceholder')}">
-                            <button class="btn btn-primary" onclick="OMS.refreshCustomerDatabase()">🔄 ${this.t('reset')}</button>
-                        </div>
-                        <div id="customersContainer"></div>
-                    </div>
-                `;
-
-                // Initial render with all customers
-                this.filterAndDisplayCustomers('');
-
-                // Add real-time search listener (only once)
-                setTimeout(() => {
-                    const searchInput = document.getElementById('customerSearch');
-                    if (searchInput) {
-                        searchInput.addEventListener('input', (e) => {
-                            this.filterAndDisplayCustomers(e.target.value);
-                        });
-                    }
-                }, 100);
+                Customers.render(this);
             },
 
             filterAndDisplayCustomers(searchQuery) {
-                // Filter customers based on search query
-                let filteredCustomers = this.data.customers;
-                if (searchQuery.trim()) {
-                    const query = searchQuery.toLowerCase();
-                    filteredCustomers = this.data.customers.filter(customer => {
-                        return (
-                            (customer.name && customer.name.toLowerCase().includes(query)) ||
-                            (customer.contact && customer.contact.toLowerCase().includes(query)) ||
-                            (customer.email && customer.email.toLowerCase().includes(query))
-                        );
-                    });
-                }
-
-                // Only re-render the table, not the entire page
-                this.renderTable('customersContainer', [
-                    { key: 'name', label: this.t('customerName') },
-                    { key: 'contact', label: this.t('contact') },
-                    { key: 'totalOrders', label: this.t('totalOrdersCount') },
-                    { key: 'lastOrderDate', label: this.t('lastOrder'), render: c => Utils.formatDate(c.lastOrderDate) }
-                ], filteredCustomers, (row) => `
-                    <button class="btn btn-secondary btn-small" onclick="OMS.viewCustomerOrders('${row.id}')">${this.t('viewOrders')}</button>
-                    <button class="btn btn-primary btn-small" onclick="OMS.createOrderForCustomer('${row.id}')">${this.t('orders')}</button>
-                `);
+                Customers.filterAndDisplay(searchQuery, this);
             },
 
             refreshCustomerDatabase() {
