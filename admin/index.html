@@ -5482,6 +5482,34 @@ convertToQuotationDateFormat(dateStr) {
                 // Replace orders with finalOrders for rest of the function
                 orders = finalOrders;
 
+                // ⚠️ DEDUPLICATE: Remove duplicate orders (same docId or orderId)
+                const seenDocIds = new Set();
+                const seenOrderIds = new Set();
+                const deduplicatedOrders = [];
+
+                orders.forEach(order => {
+                    const docId = order.docId;
+                    const orderId = order.orderId;
+
+                    // Skip if we've already seen this docId or orderId
+                    if ((docId && seenDocIds.has(docId)) || (orderId && seenOrderIds.has(orderId))) {
+                        console.warn(`⚠️ Skipping duplicate order: ${orderId || docId}`);
+                        return;
+                    }
+
+                    // Mark as seen
+                    if (docId) seenDocIds.add(docId);
+                    if (orderId) seenOrderIds.add(orderId);
+
+                    deduplicatedOrders.push(order);
+                });
+
+                if (deduplicatedOrders.length < orders.length) {
+                    console.log(`🧹 Removed ${orders.length - deduplicatedOrders.length} duplicate(s)`);
+                }
+
+                orders = deduplicatedOrders;
+
                 // FILTER MULTIDAY ORDERS TO ONLY INCLUDE SELECTED DATE'S DATA
                 const filteredOrders = orders.map(order => {
                     // For single-day orders, return as is
