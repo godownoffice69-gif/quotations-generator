@@ -2495,7 +2495,7 @@ const OMS = {
                     const form = document.getElementById('orderForm');
                     if (form && this.hasUnsavedChanges()) {
                         localStorage.setItem('oms_draft', JSON.stringify(this.collectFormData()));
-                        console.log('📝 Draft auto-saved');
+                        // Silent auto-save (no console spam)
                     }
                 }, 2000); // Auto-save every 2 seconds
             },
