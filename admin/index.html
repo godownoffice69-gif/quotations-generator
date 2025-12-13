@@ -10296,7 +10296,8 @@ convertToQuotationDateFormat(dateStr) {
             this.loadItemHistoryFromFirestore(),
             this.loadNotificationsFromFirestore(),
             this.loadSettingsFromFirestore(),
-            this.loadQuotationsFromFirestore()
+            this.loadQuotationsFromFirestore(),
+            this.loadVideosFromFirestore()
         ];
 
         // Only load financial data if user has permission
@@ -10750,6 +10751,100 @@ async loadNotificationsFromFirestore() {
         return true;
     } catch (error) {
         console.error('❌ Error loading notifications from Firestore:', error);
+        return false;
+    }
+},
+
+// ============ SETTINGS FIRESTORE SYNC ============
+
+async saveSettingsToFirestore() {
+    try {
+        const user = auth.currentUser;
+        if (!user) return false;
+
+        await db.collection('settings').doc('app_settings').set({
+            ...this.data.settings,
+            updatedBy: user.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log('✅ Settings saved to Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving settings to Firestore:', error);
+        return false;
+    }
+},
+
+async loadSettingsFromFirestore() {
+    try {
+        console.log('⚙️ Loading settings from Firestore...');
+
+        const settingsDoc = await db.collection('settings').doc('app_settings').get();
+
+        if (settingsDoc.exists) {
+            const firestoreSettings = settingsDoc.data();
+            // Merge with default settings
+            this.data.settings = {
+                ...this.data.settings,
+                ...firestoreSettings
+            };
+            console.log('✅ Settings loaded from Firestore');
+            return true;
+        } else {
+            console.log('📝 No settings in Firestore, using defaults');
+            // Save default settings to Firestore
+            await this.saveSettingsToFirestore();
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error loading settings from Firestore:', error);
+        return false;
+    }
+},
+
+async saveVideosToFirestore() {
+    try {
+        const user = auth.currentUser;
+        if (!user) {
+            console.error('❌ No user logged in');
+            return false;
+        }
+
+        // Save videos to admin/data document
+        await db.collection('admin').doc('data').set({
+            videos: this.data.videos || [],
+            updatedBy: user.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        console.log('✅ Videos saved to Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving videos to Firestore:', error);
+        return false;
+    }
+},
+
+async loadVideosFromFirestore() {
+    try {
+        console.log('🎥 Loading videos from Firestore...');
+
+        const dataDoc = await db.collection('admin').doc('data').get();
+
+        if (dataDoc.exists) {
+            const data = dataDoc.data();
+            this.data.videos = data.videos || [];
+            console.log(`✅ Loaded ${this.data.videos.length} videos from Firestore`);
+            return true;
+        } else {
+            console.log('📝 No videos in Firestore, initializing empty array');
+            this.data.videos = [];
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error loading videos from Firestore:', error);
+        this.data.videos = [];
         return false;
     }
 },

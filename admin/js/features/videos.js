@@ -523,7 +523,7 @@ export const Videos = {
 
         // Save to Firestore
         try {
-            await oms.saveDataToFirestore();
+            await oms.saveVideosToFirestore();
             this.closeVideoModal();
             this.renderVideos(oms);
             alert('✅ Video added successfully!');
@@ -556,7 +556,7 @@ export const Videos = {
         };
 
         try {
-            await oms.saveDataToFirestore();
+            await oms.saveVideosToFirestore();
             this.closeVideoModal();
             this.renderVideos(oms);
             alert('✅ Video updated successfully!');
@@ -579,7 +579,7 @@ export const Videos = {
         oms.data.videos.splice(index, 1);
 
         try {
-            await oms.saveDataToFirestore();
+            await oms.saveVideosToFirestore();
             this.renderVideos(oms);
             alert('✅ Video deleted successfully!');
         } catch (error) {
