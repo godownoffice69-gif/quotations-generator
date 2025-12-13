@@ -47,6 +47,7 @@
         import { Financials } from './js/features/financials.js';
         import { Print } from './js/features/print.js';
         import { Preparation } from './js/features/preparation.js';
+        import { Videos } from './js/features/videos.js';
 
         // Import order service modules
         import { OrderForm } from './js/services/order-form.js';
@@ -69,6 +70,7 @@
         window.Financials = Financials;
         window.Print = Print;
         window.Preparation = Preparation;
+        window.Videos = Videos;
         window.OrderForm = OrderForm;
         window.OrderUtils = OrderUtils;
         window.OrderFirestore = OrderFirestore;
@@ -382,6 +384,7 @@
                 <button class="nav-tab" data-tab="calendar">🗓️ Calendar</button>
                 <button class="nav-tab" data-tab="history">📚 History</button>
                 <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
+                <button class="nav-tab" data-tab="videos">🎥 Videos</button>
                 <button class="nav-tab" data-tab="financials">💰 Financials</button>
                 <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
             </div>
@@ -630,6 +633,7 @@
             <div id="calendar" class="tab-content"></div>
             <div id="history" class="tab-content"></div>
             <div id="analytics" class="tab-content"></div>
+            <div id="videos" class="tab-content"></div>
             <div id="financials" class="tab-content"></div>
             <div id="settings" class="tab-content"></div>
         </main>
@@ -6205,6 +6209,7 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'calendar') this.renderCalendarTab();
                     else if (tabName === 'history') this.renderHistory();
                     else if (tabName === 'analytics') this.renderAnalytics();
+                    else if (tabName === 'videos') this.renderVideos();
                     else if (tabName === 'financials') this.renderFinancials();
                     else if (tabName === 'settings') this.renderSettings();
                     else if (tabName === 'orders') {
@@ -9082,6 +9087,36 @@ convertToQuotationDateFormat(dateStr) {
 
             getOrdersInDateRange(startDate, endDate) {
                 return Preparation.getOrdersInDateRange(this, startDate, endDate);
+            },
+
+            // ========== VIDEOS (Delegated to Videos module) ==========
+
+            renderVideos() {
+                return Videos.renderVideos(this);
+            },
+
+            showAddVideoModal() {
+                return Videos.showAddVideoModal(this);
+            },
+
+            closeVideoModal() {
+                return Videos.closeVideoModal();
+            },
+
+            async saveVideo() {
+                return await Videos.saveVideo(this);
+            },
+
+            editVideo(index) {
+                return Videos.editVideo(this, index);
+            },
+
+            async updateVideo(index) {
+                return await Videos.updateVideo(this, index);
+            },
+
+            async deleteVideo(index) {
+                return await Videos.deleteVideo(this, index);
             },
 
             // ============ TEAM NOTIFICATIONS (Kept in main file) ============
