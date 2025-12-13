@@ -45,6 +45,8 @@
         import { Analytics } from './js/features/analytics.js';
         import { Settings } from './js/features/settings.js';
         import { Financials } from './js/features/financials.js';
+        import { Print } from './js/features/print.js';
+        import { Preparation } from './js/features/preparation.js';
 
         // Import order service modules
         import { OrderForm } from './js/services/order-form.js';
@@ -65,6 +67,8 @@
         window.Analytics = Analytics;
         window.Settings = Settings;
         window.Financials = Financials;
+        window.Print = Print;
+        window.Preparation = Preparation;
         window.OrderForm = OrderForm;
         window.OrderUtils = OrderUtils;
         window.OrderFirestore = OrderFirestore;
@@ -9038,6 +9042,46 @@ convertToQuotationDateFormat(dateStr) {
 
             showMonthlyComparison() {
                 return Financials.showMonthlyComparison(this);
+            },
+
+            // ========== PRINT/PDF (Delegated to Print module) ==========
+
+            downloadOrderImage(orderId) {
+                return Print.downloadOrderImage(this, orderId);
+            },
+
+            async generateSingleOrderImage(order) {
+                return await Print.generateSingleOrderImage(this, order);
+            },
+
+            async generateMultiOrderImage(orders, date) {
+                return await Print.generateMultiOrderImage(this, orders, date);
+            },
+
+            getPaperDimensions() {
+                return Print.getPaperDimensions(this);
+            },
+
+            updateLoadingMessage(loading, message) {
+                return Print.updateLoadingMessage(loading, message);
+            },
+
+            // ========== PREPARATION (Delegated to Preparation module) ==========
+
+            renderPreparation() {
+                return Preparation.renderPreparation(this);
+            },
+
+            quickForecast(period) {
+                return Preparation.quickForecast(this, period);
+            },
+
+            async generateForecast() {
+                return await Preparation.generateForecast(this);
+            },
+
+            getOrdersInDateRange(startDate, endDate) {
+                return Preparation.getOrdersInDateRange(this, startDate, endDate);
             },
 
             // ============ TEAM NOTIFICATIONS (Kept in main file) ============
