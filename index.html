@@ -286,27 +286,18 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
-<!-- SECTION 4: VIDEO SHOWCASE -->
+<!-- SECTION 4: VIDEO SHOWCASE (Dynamic from Firestore) -->
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 <section class="video-showcase" id="video">
   <div class="container">
     <h2 class="section-title">See What We Create</h2>
     <p class="section-subtitle">Watch our recent work in action</p>
 
-    <div class="video-container">
-      <div class="video-wrapper">
-        <!-- Replace with your actual video URL -->
-        <iframe
-          src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&loop=1&playlist=dQw4w9WgXcQ"
-          title="FirepowerSFX Showcase Video"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen>
-        </iframe>
-      </div>
-      <div class="video-caption">
-        <strong>Recent Wedding in Ahmedabad</strong> - December 2024<br>
-        Grand entrance with cold sparklers and special effects
+    <div id="videos-grid" class="videos-grid">
+      <!-- Videos will be loaded dynamically from Firestore -->
+      <div class="loading-videos">
+        <div class="spinner"></div>
+        <p>Loading videos...</p>
       </div>
     </div>
 
@@ -855,6 +846,135 @@
     <path d="M16 0C7.164 0 0 7.163 0 16c0 2.816.736 5.464 2.014 7.762L0 32l8.399-2.002A15.918 15.918 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm8.248 22.863c-.344.969-1.713 1.777-2.798 2.014-1.086.237-2.174-.03-4.396-1.01-3.547-1.565-5.836-5.172-6.012-5.41-.176-.237-1.444-1.922-1.444-3.67 0-1.747.915-2.606 1.24-2.96.326-.355.713-.444 1.048-.444.335 0 .67.002.959.016.306.015.715-.117 1.118.854.418 1.007 1.429 3.485 1.555 3.74.126.254.21.55.042.887-.168.338-.251.548-.497.846-.247.297-.519.664-.741.891-.246.251-.502.522-.216.948.287.427 1.275 2.103 2.738 3.407 1.881 1.676 3.465 2.197 3.954 2.443.489.247.775.206 1.061-.124.287-.33 1.23-1.435 1.56-1.928.33-.493.66-.411 1.112-.247.452.164 2.871 1.356 3.363 1.603.492.247.82.371 1.008.571.189.2.189 1.008-.155 1.977z"/>
   </svg>
 </a>
+
+<!-- Firebase & Video Loading -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
+    authDomain: "firepowersfx-2558.firebaseapp.com",
+    projectId: "firepowersfx-2558",
+    storageBucket: "firepowersfx-2558.firebasestorage.app",
+    messagingSenderId: "723483292867",
+    appId: "1:723483292867:web:d6d83a79ba87cd2dee5e76"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Convert YouTube/Instagram URL to embed URL
+  function getEmbedUrl(url) {
+    // YouTube
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      let videoId = '';
+      if (url.includes('youtube.com/watch?v=')) {
+        videoId = url.split('v=')[1]?.split('&')[0];
+      } else if (url.includes('youtu.be/')) {
+        videoId = url.split('youtu.be/')[1]?.split('?')[0];
+      }
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    }
+
+    // Instagram
+    if (url.includes('instagram.com')) {
+      const cleanUrl = url.replace(/\/$/, '');
+      return `${cleanUrl}/embed/`;
+    }
+
+    return url;
+  }
+
+  // Get platform name from URL
+  function getPlatform(url) {
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      return '📺 YouTube';
+    }
+    if (url.includes('instagram.com')) {
+      return '📷 Instagram';
+    }
+    return '🎬 Video';
+  }
+
+  // Load and display videos
+  async function loadVideos() {
+    const videosGrid = document.getElementById('videos-grid');
+
+    try {
+      // Fetch data from Firestore
+      const dataDoc = await getDoc(doc(db, 'admin', 'data'));
+
+      if (!dataDoc.exists()) {
+        videosGrid.innerHTML = `
+          <div class="empty-videos">
+            <div class="empty-videos-icon">🎬</div>
+            <p>No videos available yet. Check back soon!</p>
+          </div>
+        `;
+        return;
+      }
+
+      const data = dataDoc.data();
+      const videos = data.videos || [];
+
+      // Filter only visible videos
+      const visibleVideos = videos.filter(video => video.visible !== false);
+
+      if (visibleVideos.length === 0) {
+        videosGrid.innerHTML = `
+          <div class="empty-videos">
+            <div class="empty-videos-icon">🎥</div>
+            <p>Videos coming soon! Stay tuned for our latest work.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Render videos
+      videosGrid.innerHTML = visibleVideos.map(video => {
+        const embedUrl = getEmbedUrl(video.url);
+        const platform = getPlatform(video.url);
+
+        return `
+          <div class="video-card-item">
+            <div class="video-card-preview">
+              <iframe
+                src="${embedUrl}"
+                title="${video.title || 'FirepowerSFX Video'}"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen>
+              </iframe>
+              <div class="video-card-platform">${platform}</div>
+            </div>
+            <div class="video-card-info">
+              <div class="video-card-title">${video.title || 'Untitled Video'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+    } catch (error) {
+      console.error('Error loading videos:', error);
+      videosGrid.innerHTML = `
+        <div class="empty-videos">
+          <div class="empty-videos-icon">⚠️</div>
+          <p>Unable to load videos at this time. Please try again later.</p>
+        </div>
+      `;
+    }
+  }
+
+  // Load videos when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadVideos);
+  } else {
+    loadVideos();
+  }
+</script>
 
 <script src="assets/js/main.js"></script>
 </body>
