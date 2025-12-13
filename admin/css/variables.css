@@ -1,0 +1,50 @@
+/* ============================================
+   CSS VARIABLES - Color Scheme & Theme
+   ============================================ */
+
+:root {
+    /* Primary Colors */
+    --primary: #667eea;
+    --secondary: #764ba2;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --light: #f8fafc;
+    --white: #ffffff;
+
+    /* Text Colors */
+    --text-dark: #1f2937;
+    --text-gray: #6b7280;
+
+    /* UI Elements */
+    --border: #e5e7eb;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+    --radius: 8px;
+    --transition: all 0.3s ease;
+}
+
+/* Light Theme Variables */
+:root {
+    --bg-body: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-hover: rgba(102, 126, 234, 0.05);
+    --bg-input: #ffffff;
+    --table-header-bg: #f8f9fa;
+    --modal-backdrop: rgba(0, 0, 0, 0.5);
+}
+
+/* Global Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Noto Sans Gujarati', sans-serif;
+    background: var(--bg-body);
+    color: var(--text-dark);
+    line-height: 1.6;
+}
