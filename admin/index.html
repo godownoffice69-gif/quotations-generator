@@ -43,6 +43,8 @@
         import { Customers } from './js/features/customers.js';
         import { Team } from './js/features/team.js';
         import { Analytics } from './js/features/analytics.js';
+        import { Settings } from './js/features/settings.js';
+        import { Financials } from './js/features/financials.js';
 
         // Import order service modules
         import { OrderForm } from './js/services/order-form.js';
@@ -61,6 +63,8 @@
         window.Customers = Customers;
         window.Team = Team;
         window.Analytics = Analytics;
+        window.Settings = Settings;
+        window.Financials = Financials;
         window.OrderForm = OrderForm;
         window.OrderUtils = OrderUtils;
         window.OrderFirestore = OrderFirestore;
@@ -8926,6 +8930,114 @@ convertToQuotationDateFormat(dateStr) {
 
             renderAnalytics() {
                 return Analytics.renderAnalytics(this);
+            },
+
+            // ========== SETTINGS (Delegated to Settings module) ==========
+
+            renderSettings() {
+                return Settings.renderSettings(this);
+            },
+
+            async saveSettings() {
+                return await Settings.saveSettings(this);
+            },
+
+            resetAllData() {
+                return Settings.resetAllData(this);
+            },
+
+            resetSettings() {
+                return Settings.resetSettings(this);
+            },
+
+            async saveSettingsToFirestore() {
+                return await Settings.saveSettingsToFirestore(this);
+            },
+
+            async loadSettingsFromFirestore() {
+                return await Settings.loadSettingsFromFirestore(this);
+            },
+
+            // ========== FINANCIALS (Delegated to Financials module) ==========
+
+            async renderFinancials() {
+                return await Financials.renderFinancials(this);
+            },
+
+            setFinancialRange(range) {
+                return Financials.setFinancialRange(this, range);
+            },
+
+            applyFinancialRange() {
+                return Financials.applyFinancialRange(this);
+            },
+
+            async showAddPaymentModal() {
+                return await Financials.showAddPaymentModal(this);
+            },
+
+            async loadOrderForPayment() {
+                return await Financials.loadOrderForPayment(this);
+            },
+
+            updateRemainingAfterNewPayment() {
+                return Financials.updateRemainingAfterNewPayment(this);
+            },
+
+            async savePayment(event) {
+                return await Financials.savePayment(this, event);
+            },
+
+            togglePaymentBreakdown(paymentId) {
+                return Financials.togglePaymentBreakdown(this, paymentId);
+            },
+
+            async deletePayment(paymentId) {
+                return await Financials.deletePayment(this, paymentId);
+            },
+
+            editPayment(paymentId) {
+                return Financials.editPayment(this, paymentId);
+            },
+
+            async saveEditedPayment(event, paymentId) {
+                return await Financials.saveEditedPayment(this, event, paymentId);
+            },
+
+            async recalculateOrderFinancials(orderDocId) {
+                return await Financials.recalculateOrderFinancials(this, orderDocId);
+            },
+
+            async addPaymentForOrder(orderId) {
+                return await Financials.addPaymentForOrder(this, orderId);
+            },
+
+            async showAddExpenseModal() {
+                return await Financials.showAddExpenseModal(this);
+            },
+
+            async saveExpense(event) {
+                return await Financials.saveExpense(this, event);
+            },
+
+            async deleteExpense(expenseId) {
+                return await Financials.deleteExpense(this, expenseId);
+            },
+
+            editExpense(expenseId) {
+                return Financials.editExpense(this, expenseId);
+            },
+
+            async updateExpense(event, expenseId) {
+                return await Financials.updateExpense(this, event, expenseId);
+            },
+
+            exportFinancialReport() {
+                return Financials.exportFinancialReport(this);
+            },
+
+            showMonthlyComparison() {
+                return Financials.showMonthlyComparison(this);
             },
 
             // ============ TEAM NOTIFICATIONS (Kept in main file) ============
