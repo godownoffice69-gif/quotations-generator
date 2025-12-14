@@ -868,6 +868,8 @@
 
   // Convert YouTube/Instagram URL to embed URL
   function getEmbedUrl(url) {
+    if (!url) return null;
+
     // YouTube
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       let videoId = '';
@@ -879,15 +881,26 @@
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
 
-    // Instagram - Use embed endpoint
+    // Instagram - IMPROVED VALIDATION
     if (url.includes('instagram.com')) {
-      let postUrl = url.replace(/\/$/, '');
-      if (postUrl.includes('/reel/') || postUrl.includes('/p/')) {
-        if (!postUrl.includes('/embed')) {
-          return `${postUrl}/embed/`;
-        }
-        return postUrl;
+      // Remove trailing slash
+      let cleanUrl = url.replace(/\/$/, '');
+
+      // Extract post/reel ID using regex
+      // Matches: /p/ABC123 or /reel/ABC123 or /tv/ABC123
+      const match = cleanUrl.match(/\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+
+      if (match) {
+        const type = match[1]; // 'p', 'reel', or 'tv'
+        const id = match[2];   // post/reel ID
+
+        // Return proper embed URL
+        return `https://www.instagram.com/${type}/${id}/embed/`;
       }
+
+      // If no valid post/reel found, return null
+      console.warn('⚠️ Invalid Instagram URL format:', url);
+      return null;
     }
 
     return url;
@@ -938,8 +951,23 @@
         return;
       }
 
-      // Render videos
-      videosGrid.innerHTML = visibleVideos.map(video => {
+      // Render videos - filter out invalid URLs
+      const validVideos = visibleVideos.filter(video => {
+        const embedUrl = getEmbedUrl(video.url);
+        return embedUrl !== null; // Skip videos with invalid URLs
+      });
+
+      if (validVideos.length === 0) {
+        videosGrid.innerHTML = `
+          <div class="empty-videos">
+            <div class="empty-videos-icon">🎥</div>
+            <p>Videos coming soon! Stay tuned for our latest work.</p>
+          </div>
+        `;
+        return;
+      }
+
+      videosGrid.innerHTML = validVideos.map(video => {
         const embedUrl = getEmbedUrl(video.url);
         const platform = getPlatform(video.url);
 
