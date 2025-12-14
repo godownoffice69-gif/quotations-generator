@@ -142,6 +142,16 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // ========================================
+    // ADMIN COLLECTION
+    // ========================================
+    // Admin collection - stores admin panel data like videos
+    // Authenticated users can write, public can read (for website)
+    match /admin/{document=**} {
+      allow read: if true;  // Allow public read access for website
+      allow write: if isAuthenticated();  // Authenticated users can write
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
