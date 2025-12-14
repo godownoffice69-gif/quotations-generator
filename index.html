@@ -971,9 +971,25 @@
         const embedUrl = getEmbedUrl(video.url);
         const platform = getPlatform(video.url);
 
+        // Determine aspect ratio based on platform type
+        const isYouTube = video.url.includes('youtube.com') || video.url.includes('youtu.be');
+        const isInstagramReel = video.url.includes('/reel/') || video.url.includes('/tv/');
+        const isInstagramPost = video.url.includes('/p/');
+
+        let aspectRatio;
+        if (isYouTube) {
+          aspectRatio = '56.25%'; // 16:9 for YouTube
+        } else if (isInstagramReel) {
+          aspectRatio = '177.78%'; // 9:16 vertical for Instagram Reels
+        } else if (isInstagramPost) {
+          aspectRatio = '100%'; // 1:1 square for Instagram Posts
+        } else {
+          aspectRatio = '56.25%'; // Default to 16:9
+        }
+
         return `
           <div class="video-card-item">
-            <div class="video-card-preview">
+            <div class="video-card-preview" style="padding-bottom: ${aspectRatio};">
               <iframe
                 src="${embedUrl}"
                 title="${video.title || 'FirepowerSFX Video'}"
