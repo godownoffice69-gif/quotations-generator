@@ -1129,6 +1129,7 @@
                 <button class="nav-tab" data-tab="calendar">🗓️ Calendar</button>
                 <button class="nav-tab" data-tab="history">📚 History</button>
                 <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
+                <button class="nav-tab" data-tab="videos">🎥 Videos</button>
                 <button class="nav-tab" data-tab="financials">💰 Financials</button>
                 <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
             </div>
@@ -1376,6 +1377,7 @@
             <div id="calendar" class="tab-content"></div>
             <div id="history" class="tab-content"></div>
             <div id="analytics" class="tab-content"></div>
+            <div id="videos" class="tab-content"></div>
             <div id="financials" class="tab-content"></div>
             <div id="settings" class="tab-content"></div>
         </main>
@@ -8354,6 +8356,7 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'calendar') this.renderCalendarTab();
                     else if (tabName === 'history') this.renderHistory();
                     else if (tabName === 'analytics') this.renderAnalytics();
+                    else if (tabName === 'videos') this.renderVideos();
                     else if (tabName === 'financials') this.renderFinancials();
                     else if (tabName === 'settings') this.renderSettings();
                     else if (tabName === 'orders') {
@@ -13215,6 +13218,227 @@ Contact: 📱 98984 96111 / 76984 96111`;
         }
     }, 100);
 },
+
+            // ========== VIDEOS MODULE ==========
+            renderVideos() {
+                const container = document.getElementById('videos');
+                const videos = this.data.videos || [];
+
+                const html = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">🎥 Video Management</h2>
+                            <p style="color: var(--text-gray); margin-top: 0.5rem;">Manage videos displayed on your quotation website</p>
+                            <button class="btn btn-primary" onclick="OMS.showAddVideoModal()">➕ Add New Video</button>
+                        </div>
+
+                        <div id="videos-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 24px; margin-top: 24px;">
+                            ${videos.length === 0 ? `
+                                <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                                    <div style="font-size: 80px; margin-bottom: 20px;">🎬</div>
+                                    <h3 style="font-size: 24px; color: #333; margin-bottom: 8px;">No Videos Yet</h3>
+                                    <p style="font-size: 16px; color: #6c757d; margin-bottom: 24px;">Add YouTube or Instagram videos to showcase on your website</p>
+                                    <button class="btn btn-primary" onclick="OMS.showAddVideoModal()">Add First Video</button>
+                                </div>
+                            ` : videos.map((video, index) => {
+                                const embedUrl = this.getVideoEmbedUrl(video.url);
+                                const platform = video.url.includes('youtube.com') || video.url.includes('youtu.be') ? '📺 YouTube' : '📷 Instagram';
+                                const createdDate = new Date(video.createdAt).toLocaleDateString();
+
+                                return `
+                                    <div class="video-card" style="background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); transition: all 0.3s ease; border: 1px solid #e9ecef;">
+                                        <div style="position: relative; width: 100%; height: 200px; background: #000; overflow: hidden;">
+                                            <iframe
+                                                src="${embedUrl}"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowfullscreen
+                                                style="width: 100%; height: 100%; border: none;">
+                                            </iframe>
+                                            <div style="position: absolute; top: 12px; right: 12px; background: rgba(0, 0, 0, 0.7); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">${platform}</div>
+                                        </div>
+                                        <div style="padding: 20px;">
+                                            <div style="font-size: 18px; font-weight: 600; color: #333; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${video.title || 'Untitled Video'}</div>
+                                            <div style="font-size: 14px; color: #6c757d; margin-bottom: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${video.url}</div>
+                                            <div style="display: flex; gap: 12px; margin-bottom: 16px; font-size: 13px; color: #6c757d;">
+                                                <span>📅 ${createdDate}</span>
+                                                <span>👁️ Visible: ${video.visible ? 'Yes' : 'No'}</span>
+                                            </div>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-primary" onclick="OMS.editVideo(${index})" style="flex: 1;">✏️ Edit</button>
+                                                <button class="btn btn-danger" onclick="OMS.deleteVideo(${index})" style="flex: 1;">🗑️ Delete</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+            },
+
+            getVideoEmbedUrl(url) {
+                // YouTube
+                if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                    let videoId = '';
+                    if (url.includes('youtube.com/watch?v=')) {
+                        videoId = url.split('v=')[1]?.split('&')[0];
+                    } else if (url.includes('youtu.be/')) {
+                        videoId = url.split('youtu.be/')[1]?.split('?')[0];
+                    } else if (url.includes('youtube.com/embed/')) {
+                        return url;
+                    }
+                    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+                }
+
+                // Instagram - Use embed endpoint
+                if (url.includes('instagram.com')) {
+                    let postUrl = url.replace(/\/$/, '');
+                    if (postUrl.includes('/reel/') || postUrl.includes('/p/')) {
+                        if (!postUrl.includes('/embed')) {
+                            return `${postUrl}/embed/`;
+                        }
+                        return postUrl;
+                    }
+                }
+
+                return url;
+            },
+
+            showAddVideoModal() {
+                const modalHtml = `
+                    <div class="modal show" id="videoModal" onclick="if(event.target === this) OMS.closeVideoModal()" style="z-index: 10000;">
+                        <div class="modal-content" style="max-width: 500px;">
+                            <button class="modal-close" onclick="OMS.closeVideoModal()">×</button>
+                            <h2>➕ Add New Video</h2>
+
+                            <div class="form-group" style="margin-top: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Video Title</label>
+                                <input type="text" id="videoTitle" class="form-input" placeholder="e.g., Wedding Sparklers Showcase">
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Video URL *</label>
+                                <input type="url" id="videoUrl" class="form-input" placeholder="Paste YouTube or Instagram link">
+                                <small style="display: block; margin-top: 0.25rem; color: var(--text-gray); font-size: 0.875rem;">Supports YouTube and Instagram videos/reels</small>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="videoVisible" checked>
+                                    <span>Show on website</span>
+                                </label>
+                            </div>
+
+                            <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                                <button class="btn btn-secondary" onclick="OMS.closeVideoModal()">Cancel</button>
+                                <button class="btn btn-primary" onclick="OMS.saveVideo()">Save Video</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalsContainer').innerHTML = modalHtml;
+            },
+
+            closeVideoModal() {
+                document.getElementById('modalsContainer').innerHTML = '';
+            },
+
+            async saveVideo() {
+                const title = Utils.get('videoTitle');
+                const url = Utils.get('videoUrl');
+                const visible = document.getElementById('videoVisible').checked;
+
+                if (!url) {
+                    this.showToast('Please enter a video URL', 'error');
+                    return;
+                }
+
+                const video = {
+                    title: title || 'Untitled Video',
+                    url,
+                    visible,
+                    createdAt: new Date().toISOString()
+                };
+
+                if (!this.data.videos) {
+                    this.data.videos = [];
+                }
+
+                this.data.videos.push(video);
+
+                try {
+                    await this.saveVideosToFirestore();
+                    this.closeVideoModal();
+                    this.renderVideos();
+                    this.showToast('✅ Video added successfully!');
+                } catch (error) {
+                    console.error('Error saving video:', error);
+                    this.showToast('❌ Error saving video. Please try again.', 'error');
+                }
+            },
+
+            editVideo(index) {
+                const video = this.data.videos[index];
+                this.showAddVideoModal();
+
+                setTimeout(() => {
+                    Utils.set('videoTitle', video.title || '');
+                    Utils.set('videoUrl', video.url || '');
+                    document.getElementById('videoVisible').checked = video.visible !== false;
+
+                    const saveBtn = document.querySelector('.modal-content .btn-primary');
+                    saveBtn.textContent = 'Update Video';
+                    saveBtn.onclick = () => this.updateVideo(index);
+                }, 100);
+            },
+
+            async updateVideo(index) {
+                const title = Utils.get('videoTitle');
+                const url = Utils.get('videoUrl');
+                const visible = document.getElementById('videoVisible').checked;
+
+                if (!url) {
+                    this.showToast('Please enter a video URL', 'error');
+                    return;
+                }
+
+                this.data.videos[index] = {
+                    ...this.data.videos[index],
+                    title: title || 'Untitled Video',
+                    url,
+                    visible
+                };
+
+                try {
+                    await this.saveVideosToFirestore();
+                    this.closeVideoModal();
+                    this.renderVideos();
+                    this.showToast('✅ Video updated successfully!');
+                } catch (error) {
+                    console.error('Error updating video:', error);
+                    this.showToast('❌ Error updating video. Please try again.', 'error');
+                }
+            },
+
+            async deleteVideo(index) {
+                if (!confirm('Are you sure you want to delete this video?')) {
+                    return;
+                }
+
+                this.data.videos.splice(index, 1);
+
+                try {
+                    await this.saveVideosToFirestore();
+                    this.renderVideos();
+                    this.showToast('✅ Video deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting video:', error);
+                    this.showToast('❌ Error deleting video. Please try again.', 'error');
+                }
+            },
 
             renderSettings() {
                 const container = document.getElementById('settings');
