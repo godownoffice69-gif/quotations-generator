@@ -879,10 +879,15 @@
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
 
-    // Instagram
+    // Instagram - Use embed endpoint
     if (url.includes('instagram.com')) {
-      const cleanUrl = url.replace(/\/$/, '');
-      return `${cleanUrl}/embed/`;
+      let postUrl = url.replace(/\/$/, '');
+      if (postUrl.includes('/reel/') || postUrl.includes('/p/')) {
+        if (!postUrl.includes('/embed')) {
+          return `${postUrl}/embed/`;
+        }
+        return postUrl;
+      }
     }
 
     return url;

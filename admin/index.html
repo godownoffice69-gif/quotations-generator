@@ -1338,6 +1338,7 @@
                             <button type="button" class="btn btn-secondary" data-action="preview">👁️ Preview</button>
                             <button type="button" class="btn btn-info" data-action="duplicate">📋 Duplicate Last</button>
                             <button type="button" class="btn btn-warning" data-action="sameDay">📅 Same Day</button>
+                            <button type="button" class="btn btn-danger" data-action="clear">🗑️ Clear (Ctrl+D)</button>
                         </div>
                     </form>
                 </div>
@@ -3555,6 +3556,7 @@ const OMS = {
     await this.loadEventsListFromFirestore();
     this.populateEventsDatalist(); // Populate events dropdown immediately
     await this.loadTrackingFromFirestore();
+    await this.loadVideosFromFirestore(); // Load videos from Firestore
     this.setupRealtimeListeners();
     this.setupEventDelegation();
                 this.setupKeyboardShortcuts();
@@ -15808,6 +15810,54 @@ async deleteTeamMemberFromFirestore(teamMemberId) {
         return true;
     } catch (error) {
         console.error('❌ Error deleting team member from Firestore:', error);
+        return false;
+    }
+},
+
+// ============ VIDEOS FIRESTORE SYNC ============
+
+async saveVideosToFirestore() {
+    try {
+        const user = auth.currentUser;
+        if (!user) {
+            console.error('❌ No user logged in');
+            return false;
+        }
+
+        // Save videos to admin/data document
+        await db.collection('admin').doc('data').set({
+            videos: this.data.videos || [],
+            updatedBy: user.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        console.log('✅ Videos saved to Firestore');
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving videos to Firestore:', error);
+        return false;
+    }
+},
+
+async loadVideosFromFirestore() {
+    try {
+        console.log('🎥 Loading videos from Firestore...');
+
+        const dataDoc = await db.collection('admin').doc('data').get();
+
+        if (dataDoc.exists) {
+            const data = dataDoc.data();
+            this.data.videos = data.videos || [];
+            console.log(`✅ Loaded ${this.data.videos.length} videos from Firestore`);
+        } else {
+            this.data.videos = [];
+            console.log('📝 No videos found in Firestore - initialized empty array');
+        }
+
+        return true;
+    } catch (error) {
+        console.error('❌ Error loading videos from Firestore:', error);
+        this.data.videos = [];
         return false;
     }
 },
