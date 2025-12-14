@@ -13244,6 +13244,21 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                 </div>
                             ` : videos.map((video, index) => {
                                 const embedUrl = this.getVideoEmbedUrl(video.url);
+
+                                // Skip invalid Instagram URLs
+                                if (!embedUrl) {
+                                    console.warn('⚠️ Skipping invalid video URL:', video.url);
+                                    return `
+                                        <div class="video-card" style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 16px; padding: 20px;">
+                                            <div style="color: #856404;">
+                                                <strong>⚠️ Invalid URL</strong><br>
+                                                <small>${video.url}</small><br>
+                                                <button class="btn btn-danger" onclick="OMS.deleteVideo(${index})" style="margin-top: 10px;">Delete</button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+
                                 const platform = video.url.includes('youtube.com') || video.url.includes('youtu.be') ? '📺 YouTube' : '📷 Instagram';
                                 const createdDate = new Date(video.createdAt).toLocaleDateString();
 
@@ -13281,6 +13296,8 @@ Contact: 📱 98984 96111 / 76984 96111`;
             },
 
             getVideoEmbedUrl(url) {
+                if (!url) return '';
+
                 // YouTube
                 if (url.includes('youtube.com') || url.includes('youtu.be')) {
                     let videoId = '';
@@ -13294,15 +13311,26 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
                 }
 
-                // Instagram - Use embed endpoint
+                // Instagram - IMPROVED VALIDATION
                 if (url.includes('instagram.com')) {
-                    let postUrl = url.replace(/\/$/, '');
-                    if (postUrl.includes('/reel/') || postUrl.includes('/p/')) {
-                        if (!postUrl.includes('/embed')) {
-                            return `${postUrl}/embed/`;
-                        }
-                        return postUrl;
+                    // Remove trailing slash
+                    let cleanUrl = url.replace(/\/$/, '');
+
+                    // Extract post/reel ID using regex
+                    // Matches: /p/ABC123 or /reel/ABC123 or /tv/ABC123
+                    const match = cleanUrl.match(/\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+
+                    if (match) {
+                        const type = match[1]; // 'p', 'reel', or 'tv'
+                        const id = match[2];   // post/reel ID
+
+                        // Return proper embed URL
+                        return `https://www.instagram.com/${type}/${id}/embed/`;
                     }
+
+                    // If no valid post/reel found, return error indicator
+                    console.warn('⚠️ Invalid Instagram URL format:', url);
+                    return null; // Signal that this is invalid
                 }
 
                 return url;
@@ -13322,8 +13350,13 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
                             <div class="form-group" style="margin-top: 1rem;">
                                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Video URL *</label>
-                                <input type="url" id="videoUrl" class="form-input" placeholder="Paste YouTube or Instagram link">
-                                <small style="display: block; margin-top: 0.25rem; color: var(--text-gray); font-size: 0.875rem;">Supports YouTube and Instagram videos/reels</small>
+                                <input type="url" id="videoUrl" class="form-input" placeholder="https://www.instagram.com/reel/ABC123/">
+                                <small style="display: block; margin-top: 0.25rem; color: var(--text-gray); font-size: 0.875rem;">
+                                    <strong>Supported URLs:</strong><br>
+                                    • YouTube: youtube.com/watch?v=...<br>
+                                    • Instagram Post: instagram.com/p/ABC123/<br>
+                                    • Instagram Reel: instagram.com/reel/ABC123/
+                                </small>
                             </div>
 
                             <div class="form-group" style="margin-top: 1rem;">
@@ -13356,6 +13389,23 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 if (!url) {
                     this.showToast('Please enter a video URL', 'error');
                     return;
+                }
+
+                // VALIDATE URL BEFORE SAVING
+                const embedUrl = this.getVideoEmbedUrl(url);
+
+                if (url.includes('instagram.com') && !embedUrl) {
+                    this.showToast('❌ Invalid Instagram URL! Use format: instagram.com/p/ABC123/ or instagram.com/reel/ABC123/', 'error');
+                    return;
+                }
+
+                if (!embedUrl || embedUrl === url) {
+                    // For non-Instagram URLs that don't convert, that's OK
+                    // But for Instagram, we need a proper embed URL
+                    if (url.includes('instagram.com')) {
+                        this.showToast('❌ Invalid Instagram URL! Please copy the link from a specific post or reel.', 'error');
+                        return;
+                    }
                 }
 
                 const video = {
