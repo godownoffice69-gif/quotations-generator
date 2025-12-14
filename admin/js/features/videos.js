@@ -260,15 +260,29 @@ export const Videos = {
                 videoId = url.split('v=')[1]?.split('&')[0];
             } else if (url.includes('youtu.be/')) {
                 videoId = url.split('youtu.be/')[1]?.split('?')[0];
+            } else if (url.includes('youtube.com/embed/')) {
+                // Already an embed URL
+                return url;
             }
             return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
         }
 
-        // Instagram
+        // Instagram - Use embed endpoint
         if (url.includes('instagram.com')) {
+            // Extract the post ID from various Instagram URL formats
+            let postUrl = url;
+
             // Remove trailing slash if exists
-            const cleanUrl = url.replace(/\/$/, '');
-            return `${cleanUrl}/embed/`;
+            postUrl = postUrl.replace(/\/$/, '');
+
+            // If it's a reel or post, extract the proper URL
+            if (postUrl.includes('/reel/') || postUrl.includes('/p/')) {
+                // Already a valid post/reel URL, just add /embed
+                if (!postUrl.includes('/embed')) {
+                    return `${postUrl}/embed/`;
+                }
+                return postUrl;
+            }
         }
 
         return url;
@@ -295,8 +309,8 @@ export const Videos = {
      */
     showAddVideoModal(oms) {
         const modalHtml = `
-            <div class="modal-overlay" onclick="OMS.closeVideoModal()"></div>
-            <div class="modal-content video-modal">
+            <div class="modal-overlay" id="videoModalOverlay" onclick="OMS.closeVideoModal()"></div>
+            <div class="modal-content video-modal" id="videoModal">
                 <div class="modal-header">
                     <h3>➕ Add New Video</h3>
                     <button class="modal-close" onclick="OMS.closeVideoModal()">✕</button>
@@ -309,7 +323,7 @@ export const Videos = {
                     <div class="form-group">
                         <label>Video URL *</label>
                         <input type="url" id="videoUrl" class="form-control" placeholder="Paste YouTube or Instagram link">
-                        <small>Supports YouTube and Instagram videos</small>
+                        <small>Supports YouTube and Instagram videos/reels</small>
                     </div>
                     <div class="form-group">
                         <label>
@@ -457,6 +471,8 @@ export const Videos = {
         // Remove existing modal if any
         const existing = document.querySelector('.modal-overlay');
         if (existing) existing.remove();
+        const existingModal = document.querySelector('.video-modal');
+        if (existingModal) existingModal.remove();
 
         document.body.insertAdjacentHTML('beforeend', modalHtml);
     },
@@ -487,10 +503,10 @@ export const Videos = {
      * Close video modal
      */
     closeVideoModal() {
-        const overlay = document.querySelector('.modal-overlay');
+        const overlay = document.getElementById('videoModalOverlay');
         if (overlay) overlay.remove();
 
-        const modal = document.querySelector('.video-modal');
+        const modal = document.getElementById('videoModal');
         if (modal) modal.remove();
     },
 
@@ -526,10 +542,10 @@ export const Videos = {
             await oms.saveVideosToFirestore();
             this.closeVideoModal();
             this.renderVideos(oms);
-            alert('✅ Video added successfully!');
+            oms.showToast('✅ Video added successfully!');
         } catch (error) {
             console.error('Error saving video:', error);
-            alert('❌ Error saving video. Please try again.');
+            oms.showToast('❌ Error saving video. Please try again.', 'error');
         }
     },
 
@@ -559,10 +575,10 @@ export const Videos = {
             await oms.saveVideosToFirestore();
             this.closeVideoModal();
             this.renderVideos(oms);
-            alert('✅ Video updated successfully!');
+            oms.showToast('✅ Video updated successfully!');
         } catch (error) {
             console.error('Error updating video:', error);
-            alert('❌ Error updating video. Please try again.');
+            oms.showToast('❌ Error updating video. Please try again.', 'error');
         }
     },
 
@@ -581,10 +597,10 @@ export const Videos = {
         try {
             await oms.saveVideosToFirestore();
             this.renderVideos(oms);
-            alert('✅ Video deleted successfully!');
+            oms.showToast('✅ Video deleted successfully!');
         } catch (error) {
             console.error('Error deleting video:', error);
-            alert('❌ Error deleting video. Please try again.');
+            oms.showToast('❌ Error deleting video. Please try again.', 'error');
         }
     }
 };
