@@ -164,7 +164,7 @@ export const Preparation = {
         // Fetch weather
         const weatherApiKey = oms.data.settings.weatherApiKey || '';
         const defaultCity = oms.data.settings.defaultCity || 'Delhi';
-        const weatherData = await Utils.getWeatherForecast(defaultCity, startDate, weatherApiKey);
+        const weatherData = await Utils.getWeather(defaultCity, weatherApiKey);
 
         // Render results (delegate to OMS for now due to complex HTML generation)
         if (typeof oms.renderForecastResults === 'function') {
