@@ -1832,7 +1832,7 @@ const OMS = {
 
                 // Update tabs
                 const tabs = document.querySelectorAll('.nav-tab');
-                const tabKeys = ['dashboard', 'orders', 'inventory', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'financials', 'settings'];
+                const tabKeys = ['dashboard', 'orders', 'inventory', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'videos', 'financials', 'settings'];
                 tabs.forEach((tab, index) => {
                     if (tabKeys[index] && t[tabKeys[index]]) {
                         tab.textContent = t[tabKeys[index]];
@@ -6062,6 +6062,22 @@ convertToQuotationDateFormat(dateStr) {
                 modal._escapeHandler = escapeHandler;
             },
 
+            closeModal(modalId = null) {
+                // Close specific modal by ID, or close dynamicModal by default
+                const targetId = modalId || 'dynamicModal';
+                const modal = document.getElementById(targetId);
+
+                if (modal) {
+                    // Remove escape key handler if it exists
+                    if (modal._escapeHandler) {
+                        document.removeEventListener('keydown', modal._escapeHandler);
+                    }
+
+                    // Remove the modal
+                    modal.remove();
+                }
+            },
+
             showToast(message, type = 'success', actions = []) {
                 // Calculate position based on existing toasts
                 const existingToasts = document.querySelectorAll('.toast');
@@ -6621,7 +6637,7 @@ convertToQuotationDateFormat(dateStr) {
                 // Fetch weather for the start date
                 const weatherApiKey = this.data.settings.weatherApiKey || '';
                 const defaultCity = this.data.settings.defaultCity || 'Delhi';
-                const weatherData = await Utils.getWeatherForecast(defaultCity, startDate, weatherApiKey);
+                const weatherData = await Utils.getWeather(defaultCity, weatherApiKey);
 
                 // Render forecast results
                 this.renderForecastResults(ordersInRange, aggregatedItems, startDate, endDate, weatherData);
@@ -6993,7 +7009,7 @@ convertToQuotationDateFormat(dateStr) {
                 try {
                     const weatherApiKey = this.data.settings.weatherApiKey || '';
                     const defaultCity = this.data.settings.defaultCity || 'Delhi';
-                    const weatherData = await Utils.getWeatherForecast(defaultCity, this.currentForecastData.startDate, weatherApiKey);
+                    const weatherData = await Utils.getWeather(defaultCity, weatherApiKey);
 
                     // Update the stored weather data
                     this.currentForecastData.weatherData = weatherData;
