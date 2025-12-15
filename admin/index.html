@@ -1130,6 +1130,7 @@
                 <button class="nav-tab" data-tab="history">📚 History</button>
                 <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
                 <button class="nav-tab" data-tab="videos">🎥 Videos</button>
+                <button class="nav-tab" data-tab="advertisements">📢 Ads</button>
                 <button class="nav-tab" data-tab="financials">💰 Financials</button>
                 <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
             </div>
@@ -1379,6 +1380,7 @@
             <div id="history" class="tab-content"></div>
             <div id="analytics" class="tab-content"></div>
             <div id="videos" class="tab-content"></div>
+            <div id="advertisements" class="tab-content"></div>
             <div id="financials" class="tab-content"></div>
             <div id="settings" class="tab-content"></div>
         </main>
@@ -3557,6 +3559,7 @@ const OMS = {
     this.populateEventsDatalist(); // Populate events dropdown immediately
     await this.loadTrackingFromFirestore();
     await this.loadVideosFromFirestore(); // Load videos from Firestore
+    await this.loadAdsFromFirestore(); // Load advertisements from Firestore
     this.setupRealtimeListeners();
     this.setupEventDelegation();
                 this.setupKeyboardShortcuts();
@@ -8359,6 +8362,7 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'history') this.renderHistory();
                     else if (tabName === 'analytics') this.renderAnalytics();
                     else if (tabName === 'videos') this.renderVideos();
+                    else if (tabName === 'advertisements') this.renderAdvertisements();
                     else if (tabName === 'financials') this.renderFinancials();
                     else if (tabName === 'settings') this.renderSettings();
                     else if (tabName === 'orders') {
@@ -13508,6 +13512,573 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 } catch (error) {
                     console.error('Error deleting video:', error);
                     this.showToast('❌ Error deleting video. Please try again.', 'error');
+                }
+            },
+
+            // ========== ADVERTISEMENTS MODULE ==========
+            renderAdvertisements() {
+                const container = document.getElementById('advertisements');
+                const ads = this.data.advertisements || [];
+
+                // Filter stats
+                const activeAds = ads.filter(ad => ad.status === 'active').length;
+                const scheduledAds = ads.filter(ad => ad.status === 'scheduled').length;
+                const inactiveAds = ads.filter(ad => ad.status === 'inactive').length;
+
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📢 Ad Manager</h2>
+                            <p style="color: var(--text-gray); margin-top: 0.5rem;">Manage advertisements displayed on your quotation website</p>
+                            <button class="btn btn-primary" onclick="OMS.showCreateAdModal()">➕ Create New Ad</button>
+                        </div>
+
+                        <!-- Stats Cards -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0;">
+                            <div class="stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1.5rem; border-radius: 12px;">
+                                <div style="font-size: 2rem; font-weight: bold;">${activeAds}</div>
+                                <div style="opacity: 0.9;">Active Ads</div>
+                            </div>
+                            <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 1.5rem; border-radius: 12px;">
+                                <div style="font-size: 2rem; font-weight: bold;">${scheduledAds}</div>
+                                <div style="opacity: 0.9;">Scheduled</div>
+                            </div>
+                            <div class="stat-card" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; padding: 1.5rem; border-radius: 12px;">
+                                <div style="font-size: 2rem; font-weight: bold;">${inactiveAds}</div>
+                                <div style="opacity: 0.9;">Inactive</div>
+                            </div>
+                            <div class="stat-card" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 1.5rem; border-radius: 12px;">
+                                <div style="font-size: 2rem; font-weight: bold;">${ads.length}</div>
+                                <div style="opacity: 0.9;">Total Ads</div>
+                            </div>
+                        </div>
+
+                        <!-- Ads List -->
+                        <div class="table-container">
+                            ${ads.length === 0 ? `
+                                <div style="text-align: center; padding: 3rem;">
+                                    <div style="font-size: 4rem; margin-bottom: 1rem;">📢</div>
+                                    <h3>No Advertisements Yet</h3>
+                                    <p style="color: var(--text-gray); margin-bottom: 1.5rem;">Create your first ad to display on your quotation website</p>
+                                    <button class="btn btn-primary" onclick="OMS.showCreateAdModal()">Create First Ad</button>
+                                </div>
+                            ` : `
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Type</th>
+                                            <th>Position</th>
+                                            <th>Status</th>
+                                            <th>Views</th>
+                                            <th>Clicks</th>
+                                            <th>CTR</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${ads.map((ad, index) => {
+                                            const views = ad.analytics?.views || 0;
+                                            const clicks = ad.analytics?.clicks || 0;
+                                            const ctr = views > 0 ? ((clicks / views) * 100).toFixed(1) : 0;
+                                            const statusColors = {
+                                                active: '#10b981',
+                                                scheduled: '#f59e0b',
+                                                inactive: '#6b7280'
+                                            };
+                                            const typeIcons = {
+                                                image: '🖼️',
+                                                text: '📝',
+                                                video: '🎥'
+                                            };
+
+                                            return `
+                                                <tr>
+                                                    <td><strong>${ad.title}</strong></td>
+                                                    <td>${typeIcons[ad.type]} ${ad.type.charAt(0).toUpperCase() + ad.type.slice(1)}</td>
+                                                    <td>${ad.placement?.position || 'header'}</td>
+                                                    <td>
+                                                        <span style="background: ${statusColors[ad.status]}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">
+                                                            ${ad.status.charAt(0).toUpperCase() + ad.status.slice(1)}
+                                                        </span>
+                                                    </td>
+                                                    <td>${views}</td>
+                                                    <td>${clicks}</td>
+                                                    <td>${ctr}%</td>
+                                                    <td>
+                                                        <button class="btn btn-sm" onclick="OMS.toggleAdStatus('${ad.id}', ${index})" style="background: ${ad.status === 'active' ? '#f59e0b' : '#10b981'}; color: white; margin-right: 0.5rem;">
+                                                            ${ad.status === 'active' ? '⏸️' : '▶️'}
+                                                        </button>
+                                                        <button class="btn btn-sm btn-secondary" onclick="OMS.editAd(${index})" style="margin-right: 0.5rem;">✏️</button>
+                                                        <button class="btn btn-sm" onclick="OMS.deleteAd('${ad.id}', ${index})" style="background: var(--danger); color: white;">🗑️</button>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            `}
+                        </div>
+                    </div>
+                `;
+            },
+
+            showCreateAdModal() {
+                const modalHtml = `
+                    <div class="modal-overlay" onclick="OMS.closeAdModal()"></div>
+                    <div class="modal-dialog" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                        <div class="modal-header">
+                            <h3>➕ Create New Advertisement</h3>
+                            <button class="modal-close" onclick="OMS.closeAdModal()">✕</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>Ad Type *</label>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem;">
+                                    <button type="button" class="type-btn active" data-type="image" onclick="OMS.selectAdType('image')" style="padding: 1rem; border: 2px solid var(--primary); background: var(--primary); color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                        🖼️ Image
+                                    </button>
+                                    <button type="button" class="type-btn" data-type="text" onclick="OMS.selectAdType('text')" style="padding: 1rem; border: 2px solid var(--border); background: white; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                        📝 Text
+                                    </button>
+                                    <button type="button" class="type-btn" data-type="video" onclick="OMS.selectAdType('video')" style="padding: 1rem; border: 2px solid var(--border); background: white; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                        🎥 Video
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Ad Title *</label>
+                                <input type="text" id="adTitle" class="form-control" placeholder="e.g., Summer Special Offer">
+                            </div>
+
+                            <!-- Image Ad Fields -->
+                            <div id="imageAdFields" class="ad-type-fields">
+                                <div class="form-group">
+                                    <label>Image URL *</label>
+                                    <input type="url" id="adImageUrl" class="form-control" placeholder="https://example.com/image.jpg">
+                                    <small style="color: var(--text-gray);">Enter the full URL of your image (must be publicly accessible)</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Link URL</label>
+                                    <input type="url" id="adImageLink" class="form-control" placeholder="https://example.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text</label>
+                                    <input type="text" id="adImageAlt" class="form-control" placeholder="Promotional banner">
+                                </div>
+                            </div>
+
+                            <!-- Text Ad Fields -->
+                            <div id="textAdFields" class="ad-type-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label>Headline *</label>
+                                    <input type="text" id="adTextHeadline" class="form-control" placeholder="Get 20% Off!">
+                                </div>
+                                <div class="form-group">
+                                    <label>Description</label>
+                                    <textarea id="adTextDescription" class="form-control" rows="3" placeholder="Limited time offer..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Button Text</label>
+                                    <input type="text" id="adTextButton" class="form-control" placeholder="Learn More">
+                                </div>
+                                <div class="form-group">
+                                    <label>Button Link</label>
+                                    <input type="url" id="adTextLink" class="form-control" placeholder="https://example.com">
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="form-group">
+                                        <label>Background Color</label>
+                                        <input type="color" id="adTextBgColor" class="form-control" value="#8b5cf6">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Text Color</label>
+                                        <input type="color" id="adTextColor" class="form-control" value="#ffffff">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Video Ad Fields -->
+                            <div id="videoAdFields" class="ad-type-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label>Video URL *</label>
+                                    <input type="url" id="adVideoUrl" class="form-control" placeholder="YouTube or Instagram URL">
+                                    <small style="color: var(--text-gray);">Paste a YouTube or Instagram video URL</small>
+                                </div>
+                                <div class="form-group">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" id="adVideoAutoplay" checked>
+                                        Autoplay video
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                                        <input type="checkbox" id="adVideoMuted" checked>
+                                        Muted by default
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Placement -->
+                            <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem;">
+                                <h4 style="margin-bottom: 1rem;">📍 Placement Settings</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="form-group">
+                                        <label>Position *</label>
+                                        <select id="adPosition" class="form-control">
+                                            <option value="header">Header Banner</option>
+                                            <option value="sidebar">Sidebar</option>
+                                            <option value="footer">Footer</option>
+                                            <option value="popup">Popup/Modal</option>
+                                            <option value="between-sections">Between Sections</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Display On *</label>
+                                        <select id="adPage" class="form-control">
+                                            <option value="all">All Pages</option>
+                                            <option value="home">Home Page Only</option>
+                                            <option value="quotation">Quotation Page Only</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Schedule -->
+                            <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                                <h4 style="margin-bottom: 1rem;">⏰ Schedule Settings</h4>
+                                <div class="form-group">
+                                    <label>Status *</label>
+                                    <select id="adStatus" class="form-control" onchange="OMS.toggleScheduleFields()">
+                                        <option value="active">Active Now</option>
+                                        <option value="scheduled">Schedule for Later</option>
+                                        <option value="inactive">Inactive (Draft)</option>
+                                    </select>
+                                </div>
+                                <div id="scheduleFields" style="display: none;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Start Date</label>
+                                            <input type="datetime-local" id="adStartDate" class="form-control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>End Date</label>
+                                            <input type="datetime-local" id="adEndDate" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="adVisible" checked>
+                                    Show ad on website
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="OMS.closeAdModal()">Cancel</button>
+                            <button class="btn btn-primary" onclick="OMS.saveAd()" id="saveAdBtn">Create Ad</button>
+                        </div>
+                    </div>
+                `;
+
+                const existing = document.querySelector('.modal-overlay');
+                if (existing) existing.remove();
+
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            },
+
+            selectAdType(type) {
+                document.querySelectorAll('.type-btn').forEach(btn => {
+                    if (btn.dataset.type === type) {
+                        btn.style.background = 'var(--primary)';
+                        btn.style.borderColor = 'var(--primary)';
+                        btn.style.color = 'white';
+                    } else {
+                        btn.style.background = 'white';
+                        btn.style.borderColor = 'var(--border)';
+                        btn.style.color = 'var(--text-dark)';
+                    }
+                });
+
+                document.getElementById('imageAdFields').style.display = type === 'image' ? 'block' : 'none';
+                document.getElementById('textAdFields').style.display = type === 'text' ? 'block' : 'none';
+                document.getElementById('videoAdFields').style.display = type === 'video' ? 'block' : 'none';
+            },
+
+            toggleScheduleFields() {
+                const status = document.getElementById('adStatus').value;
+                document.getElementById('scheduleFields').style.display = status === 'scheduled' ? 'block' : 'none';
+            },
+
+            closeAdModal() {
+                const overlay = document.querySelector('.modal-overlay');
+                if (overlay) overlay.remove();
+            },
+
+            async saveAd() {
+                try {
+                    const activeTypeBtn = document.querySelector('.type-btn[style*="rgb(102, 126, 234)"], .type-btn[style*="#667eea"]') ||
+                                        document.querySelector('.type-btn[style*="--primary"]') ||
+                                        document.querySelector('.type-btn');
+                    const adType = activeTypeBtn?.dataset.type || 'image';
+
+                    const title = document.getElementById('adTitle').value.trim();
+                    if (!title) {
+                        alert('Please enter an ad title');
+                        return;
+                    }
+
+                    let content = {};
+
+                    if (adType === 'image') {
+                        const imageUrl = document.getElementById('adImageUrl').value.trim();
+                        if (!imageUrl) {
+                            alert('Please enter an image URL');
+                            return;
+                        }
+                        content = {
+                            imageUrl,
+                            link: document.getElementById('adImageLink').value.trim(),
+                            altText: document.getElementById('adImageAlt').value.trim()
+                        };
+                    } else if (adType === 'text') {
+                        const headline = document.getElementById('adTextHeadline').value.trim();
+                        if (!headline) {
+                            alert('Please enter a headline');
+                            return;
+                        }
+                        content = {
+                            headline,
+                            description: document.getElementById('adTextDescription').value.trim(),
+                            buttonText: document.getElementById('adTextButton').value.trim(),
+                            buttonLink: document.getElementById('adTextLink').value.trim(),
+                            backgroundColor: document.getElementById('adTextBgColor').value,
+                            textColor: document.getElementById('adTextColor').value
+                        };
+                    } else if (adType === 'video') {
+                        const videoUrl = document.getElementById('adVideoUrl').value.trim();
+                        if (!videoUrl) {
+                            alert('Please enter a video URL');
+                            return;
+                        }
+                        content = {
+                            videoUrl,
+                            platform: videoUrl.includes('youtube') ? 'youtube' : 'instagram',
+                            autoplay: document.getElementById('adVideoAutoplay').checked,
+                            muted: document.getElementById('adVideoMuted').checked
+                        };
+                    }
+
+                    const status = document.getElementById('adStatus').value;
+                    const schedule = {};
+                    if (status === 'scheduled') {
+                        schedule.startDate = document.getElementById('adStartDate').value;
+                        schedule.endDate = document.getElementById('adEndDate').value;
+                    }
+
+                    const ad = {
+                        id: 'ad_' + Date.now(),
+                        type: adType,
+                        title,
+                        status,
+                        content,
+                        placement: {
+                            position: document.getElementById('adPosition').value,
+                            page: document.getElementById('adPage').value,
+                            displayOrder: 1
+                        },
+                        schedule,
+                        analytics: {
+                            views: 0,
+                            clicks: 0,
+                            impressions: 0
+                        },
+                        isVisible: document.getElementById('adVisible').checked,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        createdBy: this.currentUser?.email || 'admin'
+                    };
+
+                    if (!this.data.advertisements) {
+                        this.data.advertisements = [];
+                    }
+                    this.data.advertisements.push(ad);
+
+                    await this.saveAdsToFirestore();
+                    this.closeAdModal();
+                    this.renderAdvertisements();
+                    this.showToast('✅ Advertisement created successfully!');
+                } catch (error) {
+                    console.error('Error saving ad:', error);
+                    this.showToast('❌ Error creating advertisement. Please try again.', 'error');
+                }
+            },
+
+            async editAd(index) {
+                const ad = this.data.advertisements[index];
+                this.showCreateAdModal();
+
+                setTimeout(() => {
+                    document.getElementById('adTitle').value = ad.title || '';
+                    document.getElementById('adStatus').value = ad.status || 'active';
+                    document.getElementById('adPosition').value = ad.placement?.position || 'header';
+                    document.getElementById('adPage').value = ad.placement?.page || 'all';
+                    document.getElementById('adVisible').checked = ad.isVisible !== false;
+
+                    this.selectAdType(ad.type);
+
+                    if (ad.type === 'image') {
+                        document.getElementById('adImageUrl').value = ad.content.imageUrl || '';
+                        document.getElementById('adImageLink').value = ad.content.link || '';
+                        document.getElementById('adImageAlt').value = ad.content.altText || '';
+                    } else if (ad.type === 'text') {
+                        document.getElementById('adTextHeadline').value = ad.content.headline || '';
+                        document.getElementById('adTextDescription').value = ad.content.description || '';
+                        document.getElementById('adTextButton').value = ad.content.buttonText || '';
+                        document.getElementById('adTextLink').value = ad.content.buttonLink || '';
+                        document.getElementById('adTextBgColor').value = ad.content.backgroundColor || '#8b5cf6';
+                        document.getElementById('adTextColor').value = ad.content.textColor || '#ffffff';
+                    } else if (ad.type === 'video') {
+                        document.getElementById('adVideoUrl').value = ad.content.videoUrl || '';
+                        document.getElementById('adVideoAutoplay').checked = ad.content.autoplay !== false;
+                        document.getElementById('adVideoMuted').checked = ad.content.muted !== false;
+                    }
+
+                    if (ad.schedule?.startDate) {
+                        document.getElementById('adStartDate').value = ad.schedule.startDate;
+                    }
+                    if (ad.schedule?.endDate) {
+                        document.getElementById('adEndDate').value = ad.schedule.endDate;
+                    }
+
+                    this.toggleScheduleFields();
+
+                    const saveBtn = document.getElementById('saveAdBtn');
+                    saveBtn.textContent = 'Update Ad';
+                    saveBtn.onclick = () => this.updateAd(index);
+                }, 100);
+            },
+
+            async updateAd(index) {
+                try {
+                    const ad = this.data.advertisements[index];
+                    const activeTypeBtn = document.querySelector('.type-btn[style*="rgb(102, 126, 234)"], .type-btn[style*="#667eea"]') ||
+                                        document.querySelector('.type-btn[style*="--primary"]') ||
+                                        document.querySelector('.type-btn');
+                    const adType = activeTypeBtn?.dataset.type || ad.type;
+
+                    ad.title = document.getElementById('adTitle').value.trim();
+                    ad.status = document.getElementById('adStatus').value;
+                    ad.placement.position = document.getElementById('adPosition').value;
+                    ad.placement.page = document.getElementById('adPage').value;
+                    ad.isVisible = document.getElementById('adVisible').checked;
+                    ad.updatedAt = new Date().toISOString();
+
+                    if (ad.type === 'image') {
+                        ad.content.imageUrl = document.getElementById('adImageUrl').value.trim();
+                        ad.content.link = document.getElementById('adImageLink').value.trim();
+                        ad.content.altText = document.getElementById('adImageAlt').value.trim();
+                    } else if (ad.type === 'text') {
+                        ad.content.headline = document.getElementById('adTextHeadline').value.trim();
+                        ad.content.description = document.getElementById('adTextDescription').value.trim();
+                        ad.content.buttonText = document.getElementById('adTextButton').value.trim();
+                        ad.content.buttonLink = document.getElementById('adTextLink').value.trim();
+                        ad.content.backgroundColor = document.getElementById('adTextBgColor').value;
+                        ad.content.textColor = document.getElementById('adTextColor').value;
+                    } else if (ad.type === 'video') {
+                        ad.content.videoUrl = document.getElementById('adVideoUrl').value.trim();
+                        ad.content.autoplay = document.getElementById('adVideoAutoplay').checked;
+                        ad.content.muted = document.getElementById('adVideoMuted').checked;
+                    }
+
+                    if (ad.status === 'scheduled') {
+                        ad.schedule = {
+                            startDate: document.getElementById('adStartDate').value,
+                            endDate: document.getElementById('adEndDate').value
+                        };
+                    }
+
+                    await this.saveAdsToFirestore();
+                    this.closeAdModal();
+                    this.renderAdvertisements();
+                    this.showToast('✅ Advertisement updated successfully!');
+                } catch (error) {
+                    console.error('Error updating ad:', error);
+                    this.showToast('❌ Error updating advertisement. Please try again.', 'error');
+                }
+            },
+
+            async toggleAdStatus(adId, index) {
+                try {
+                    const ad = this.data.advertisements[index];
+                    ad.status = ad.status === 'active' ? 'inactive' : 'active';
+                    ad.updatedAt = new Date().toISOString();
+
+                    await this.saveAdsToFirestore();
+                    this.renderAdvertisements();
+
+                    const statusText = ad.status === 'active' ? 'activated' : 'paused';
+                    this.showToast(`✅ Ad ${statusText} successfully!`);
+                } catch (error) {
+                    console.error('Error toggling ad status:', error);
+                    this.showToast('❌ Error updating ad status. Please try again.', 'error');
+                }
+            },
+
+            async deleteAd(adId, index) {
+                if (!confirm('Are you sure you want to delete this advertisement? This action cannot be undone.')) {
+                    return;
+                }
+
+                try {
+                    this.data.advertisements.splice(index, 1);
+                    await this.saveAdsToFirestore();
+                    this.renderAdvertisements();
+                    this.showToast('✅ Advertisement deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting ad:', error);
+                    this.showToast('❌ Error deleting advertisement. Please try again.', 'error');
+                }
+            },
+
+            async saveAdsToFirestore() {
+                if (!this.db) return;
+
+                try {
+                    const adsRef = this.db.collection('advertisements');
+
+                    // Delete all existing ads
+                    const snapshot = await adsRef.get();
+                    const batch = this.db.batch();
+                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+
+                    // Add all current ads
+                    const newBatch = this.db.batch();
+                    this.data.advertisements.forEach(ad => {
+                        const docRef = adsRef.doc(ad.id);
+                        newBatch.set(docRef, ad);
+                    });
+                    await newBatch.commit();
+
+                    console.log('✅ Advertisements saved to Firestore');
+                } catch (error) {
+                    console.error('Error saving ads to Firestore:', error);
+                    throw error;
+                }
+            },
+
+            async loadAdsFromFirestore() {
+                if (!this.db) return;
+
+                try {
+                    const snapshot = await this.db.collection('advertisements').get();
+                    this.data.advertisements = snapshot.docs.map(doc => doc.data());
+                    console.log('✅ Advertisements loaded from Firestore:', this.data.advertisements.length);
+                } catch (error) {
+                    console.error('Error loading ads from Firestore:', error);
+                    this.data.advertisements = [];
                 }
             },
 

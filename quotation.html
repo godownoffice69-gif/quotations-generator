@@ -1700,9 +1700,74 @@
       from { transform: translateX(400px); }
       to { transform: translateX(0); }
     }
+
+    /* Ad Container Styles */
+    .ad-container {
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .ad-header {
+      margin-bottom: 0;
+    }
+
+    .ad-between-sections {
+      margin: 2rem 0;
+      padding: 0 1rem;
+    }
+
+    .ad-footer {
+      margin: 2rem 0;
+      padding: 0 1rem;
+    }
+
+    .ad-wrapper {
+      width: 100%;
+      max-width: 1200px;
+      margin: 1rem auto;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .ad-wrapper:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .ad-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .ad-text {
+      text-align: center;
+    }
+
+    .ad-video iframe {
+      width: 100%;
+      height: auto;
+      min-height: 300px;
+    }
+
+    @media (max-width: 768px) {
+      .ad-container {
+        padding: 0 0.5rem;
+      }
+
+      .ad-video iframe {
+        min-height: 250px;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- Ad Container: Header -->
+  <div id="ad-header" class="ad-container ad-header"></div>
   <!-- ROTATING BACKGROUND ANIMATIONS -->
   <div id="animationContainer"></div>
 
@@ -1713,6 +1778,9 @@
   <div id="draftNotification" class="draft-notification">
     💾 Draft saved automatically
   </div>
+
+  <!-- Ad Container: Between Sections -->
+  <div id="ad-between-sections" class="ad-container ad-between-sections"></div>
 
   <!-- Sticky WhatsApp -->
   <div class="sticky-whatsapp no-print">
@@ -4964,5 +5032,29 @@
     startSparks();
     initializeBuilder();
   </script>
+
+  <!-- Ad Container: Footer -->
+  <div id="ad-footer" class="ad-container ad-footer"></div>
+
+  <!-- Firebase Compat SDK for Ads -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script>
+    // Initialize Firebase compat (for ads only)
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
+        authDomain: "firepowersfx-2558.firebaseapp.com",
+        projectId: "firepowersfx-2558",
+        storageBucket: "firepowersfx-2558.firebasestorage.app",
+        messagingSenderId: "723483292867",
+        appId: "1:723483292867:web:d6d83a79ba87cd2dee5e76"
+      });
+    }
+  </script>
+
+  <!-- Ad Display Script -->
+  <script src="assets/js/ad-display.js"></script>
+
 </body>
 </html>
