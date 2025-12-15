@@ -14061,30 +14061,34 @@ Contact: 📱 98984 96111 / 76984 96111`;
             },
 
             async saveAdsToFirestore() {
-                if (!this.db) {
+                const database = window.db || this.db;
+                if (!database) {
                     console.error('❌ Database not initialized');
+                    console.error('window.db:', window.db);
+                    console.error('this.db:', this.db);
                     return;
                 }
 
                 try {
                     console.log('💾 Starting to save ads to Firestore...');
+                    console.log('✅ Using database:', database ? 'Connected' : 'Not connected');
                     console.log('📊 Ads to save:', this.data.advertisements);
 
-                    const adsRef = this.db.collection('advertisements');
+                    const adsRef = database.collection('advertisements');
 
                     // Delete all existing ads
                     console.log('🗑️ Deleting existing ads...');
                     const snapshot = await adsRef.get();
                     console.log('📦 Found', snapshot.size, 'existing ads to delete');
 
-                    const batch = this.db.batch();
+                    const batch = database.batch();
                     snapshot.docs.forEach(doc => batch.delete(doc.ref));
                     await batch.commit();
                     console.log('✅ Existing ads deleted');
 
                     // Add all current ads
                     console.log('💾 Adding', this.data.advertisements.length, 'new ads...');
-                    const newBatch = this.db.batch();
+                    const newBatch = database.batch();
                     this.data.advertisements.forEach(ad => {
                         console.log('📝 Adding ad:', ad.id, ad.title);
                         const docRef = adsRef.doc(ad.id);
@@ -14101,14 +14105,15 @@ Contact: 📱 98984 96111 / 76984 96111`;
             },
 
             async loadAdsFromFirestore() {
-                if (!this.db) {
+                const database = window.db || this.db;
+                if (!database) {
                     console.error('❌ Database not initialized for loading ads');
                     return;
                 }
 
                 try {
                     console.log('📥 Loading advertisements from Firestore...');
-                    const snapshot = await this.db.collection('advertisements').get();
+                    const snapshot = await database.collection('advertisements').get();
                     this.data.advertisements = snapshot.docs.map(doc => doc.data());
                     console.log('✅ Advertisements loaded from Firestore:', this.data.advertisements.length);
                     console.log('📋 Loaded ads:', this.data.advertisements);
