@@ -10,6 +10,7 @@ class AdDisplayManager {
         this.currentPage = this.detectCurrentPage();
         this.db = null;
         this.analytics = {};
+        console.log('🎯 AdDisplayManager initialized for page:', this.currentPage);
     }
 
     /**
@@ -18,8 +19,9 @@ class AdDisplayManager {
      */
     detectCurrentPage() {
         const path = window.location.pathname;
+        console.log('📍 Current path:', path);
         if (path.includes('quotation.html')) return 'quotation';
-        if (path.includes('index.html') || path === '/') return 'home';
+        if (path.includes('index.html') || path === '/' || path === '') return 'home';
         return 'other';
     }
 
@@ -28,17 +30,34 @@ class AdDisplayManager {
      */
     async init() {
         try {
-            // Initialize Firebase (using existing global Firebase instance)
+            console.log('🚀 Initializing ad display system...');
+
+            // Wait for Firebase to be ready
+            let attempts = 0;
+            while (typeof firebase === 'undefined' && attempts < 50) {
+                console.log('⏳ Waiting for Firebase... attempt', attempts + 1);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+
             if (typeof firebase === 'undefined') {
-                console.warn('Firebase not loaded, ads will not be displayed');
+                console.error('❌ Firebase not loaded after waiting, ads will not be displayed');
                 return;
             }
 
+            console.log('✅ Firebase detected, initializing Firestore...');
             this.db = firebase.firestore();
+
+            console.log('📥 Loading ads from Firestore...');
             await this.loadAds();
+
+            console.log('🎨 Displaying ads...');
             this.displayAds();
+
+            console.log('✅ Ad display system ready!');
         } catch (error) {
-            console.error('Error initializing ad display:', error);
+            console.error('❌ Error initializing ad display:', error);
+            console.error('Error details:', error.message, error.stack);
         }
     }
 
@@ -47,40 +66,69 @@ class AdDisplayManager {
      */
     async loadAds() {
         try {
+            console.log('📡 Fetching from Firestore collection: advertisements');
             const snapshot = await this.db.collection('advertisements').get();
-            const allAds = snapshot.docs.map(doc => doc.data());
+            console.log('📦 Raw snapshot size:', snapshot.size);
+
+            const allAds = snapshot.docs.map(doc => {
+                console.log('📄 Ad document:', doc.id, doc.data());
+                return doc.data();
+            });
+            console.log('📊 Total ads fetched:', allAds.length);
 
             // Filter ads based on:
             // 1. Status (active or scheduled within date range)
             // 2. Page (all or current page)
             // 3. Visibility
             this.ads = allAds.filter(ad => {
+                console.log('🔍 Filtering ad:', ad.title);
+
                 // Check visibility
-                if (!ad.isVisible) return false;
+                if (!ad.isVisible) {
+                    console.log('  ❌ Not visible');
+                    return false;
+                }
 
                 // Check page
-                if (ad.placement?.page !== 'all' && ad.placement?.page !== this.currentPage) {
+                const adPage = ad.placement?.page || 'all';
+                console.log('  📍 Ad page:', adPage, '| Current page:', this.currentPage);
+                if (adPage !== 'all' && adPage !== this.currentPage) {
+                    console.log('  ❌ Page mismatch');
                     return false;
                 }
 
                 // Check status and schedule
-                if (ad.status === 'inactive') return false;
+                console.log('  📊 Status:', ad.status);
+                if (ad.status === 'inactive') {
+                    console.log('  ❌ Inactive');
+                    return false;
+                }
 
                 if (ad.status === 'scheduled') {
                     const now = new Date();
                     const startDate = ad.schedule?.startDate ? new Date(ad.schedule.startDate) : null;
                     const endDate = ad.schedule?.endDate ? new Date(ad.schedule.endDate) : null;
 
-                    if (startDate && now < startDate) return false;
-                    if (endDate && now > endDate) return false;
+                    console.log('  ⏰ Schedule check:', { now, startDate, endDate });
+                    if (startDate && now < startDate) {
+                        console.log('  ❌ Not started yet');
+                        return false;
+                    }
+                    if (endDate && now > endDate) {
+                        console.log('  ❌ Already ended');
+                        return false;
+                    }
                 }
 
+                console.log('  ✅ Ad passed all filters');
                 return true;
             });
 
             console.log(`✅ Loaded ${this.ads.length} active ads for ${this.currentPage} page`);
+            console.log('📋 Filtered ads:', this.ads);
         } catch (error) {
-            console.error('Error loading ads from Firestore:', error);
+            console.error('❌ Error loading ads from Firestore:', error);
+            console.error('Error details:', error.message, error.stack);
             this.ads = [];
         }
     }
@@ -89,18 +137,29 @@ class AdDisplayManager {
      * Display ads in their designated positions
      */
     displayAds() {
+        console.log('🎨 Starting to display ads...');
+
+        if (this.ads.length === 0) {
+            console.log('⚠️ No ads to display');
+            return;
+        }
+
         // Group ads by position
         const adsByPosition = {};
         this.ads.forEach(ad => {
             const position = ad.placement?.position || 'header';
+            console.log('📍 Ad position:', position, '| Ad:', ad.title);
             if (!adsByPosition[position]) {
                 adsByPosition[position] = [];
             }
             adsByPosition[position].push(ad);
         });
 
+        console.log('📊 Ads grouped by position:', Object.keys(adsByPosition));
+
         // Render ads for each position
         Object.keys(adsByPosition).forEach(position => {
+            console.log('🎨 Rendering ads for position:', position);
             this.renderAdsForPosition(position, adsByPosition[position]);
         });
     }
@@ -111,23 +170,34 @@ class AdDisplayManager {
      * @param {Array} ads - Ads to render
      */
     renderAdsForPosition(position, ads) {
-        const container = document.getElementById(`ad-${position}`);
+        const containerId = `ad-${position}`;
+        console.log('🎨 Looking for container:', containerId);
+
+        const container = document.getElementById(containerId);
         if (!container) {
-            console.warn(`Ad container #ad-${position} not found`);
+            console.error(`❌ Ad container #${containerId} not found in DOM`);
+            console.log('Available containers:',
+                Array.from(document.querySelectorAll('[id^="ad-"]')).map(el => el.id));
             return;
         }
+
+        console.log('✅ Container found:', containerId);
 
         // Sort by displayOrder
         ads.sort((a, b) => (a.placement?.displayOrder || 0) - (b.placement?.displayOrder || 0));
 
         // Render each ad
         ads.forEach(ad => {
+            console.log('🎨 Creating ad element for:', ad.title);
             const adElement = this.createAdElement(ad);
             container.appendChild(adElement);
+            console.log('✅ Ad element appended to container');
 
             // Track view
             this.trackView(ad.id);
         });
+
+        console.log(`✅ Rendered ${ads.length} ads in ${containerId}`);
     }
 
     /**
@@ -313,12 +383,19 @@ class AdDisplayManager {
 }
 
 // Initialize ad display when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        const adManager = new AdDisplayManager();
-        adManager.init();
-    });
-} else {
+console.log('📜 Ad display script loaded');
+
+function initializeAdManager() {
+    console.log('🎬 Initializing AdDisplayManager...');
     const adManager = new AdDisplayManager();
     adManager.init();
+}
+
+if (document.readyState === 'loading') {
+    console.log('⏳ DOM still loading, waiting...');
+    document.addEventListener('DOMContentLoaded', initializeAdManager);
+} else {
+    console.log('✅ DOM already loaded, initializing now');
+    // Wait a bit for Firebase compat to load
+    setTimeout(initializeAdManager, 500);
 }
