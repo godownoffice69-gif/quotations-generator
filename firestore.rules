@@ -152,6 +152,16 @@ service cloud.firestore {
       allow write: if isAuthenticated();  // Authenticated users can write
     }
 
+    // ========================================
+    // ADVERTISEMENTS COLLECTION
+    // ========================================
+    // Advertisements collection - stores ads displayed on website
+    // Authenticated users can write, public can read (for website display)
+    match /advertisements/{adId} {
+      allow read: if true;  // Allow public read access for website
+      allow write: if isAuthenticated();  // Authenticated users can write
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
