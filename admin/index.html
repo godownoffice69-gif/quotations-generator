@@ -13672,29 +13672,102 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             <!-- Text Ad Fields -->
                             <div id="textAdFields" class="ad-type-fields" style="display: none;">
                                 <div class="form-group">
-                                    <label>Headline *</label>
-                                    <input type="text" id="adTextHeadline" class="form-control" placeholder="Get 20% Off!">
+                                    <label>🎨 Ad Style *</label>
+                                    <select id="adTextStyle" class="form-control" onchange="OMS.updateTextAdPreview()">
+                                        <option value="minimal">✨ Minimal - Just text, no background</option>
+                                        <option value="banner">📢 Banner - Full width box</option>
+                                        <option value="badge">🏷️ Badge - Compact pill shape</option>
+                                        <option value="neon">💡 Neon - Glowing text effect</option>
+                                        <option value="gradient">🌈 Gradient - Animated gradient text</option>
+                                        <option value="typewriter">⌨️ Typewriter - Typing animation</option>
+                                        <option value="pulse">💓 Pulse - Pulsing text</option>
+                                        <option value="slide">➡️ Slide - Sliding text</option>
+                                        <option value="bounce">🎪 Bounce - Bouncing text</option>
+                                        <option value="fade">✨ Fade - Fade in/out effect</option>
+                                    </select>
+                                    <small style="color: var(--text-gray);">Choose how your text ad will look</small>
                                 </div>
+
                                 <div class="form-group">
-                                    <label>Description</label>
-                                    <textarea id="adTextDescription" class="form-control" rows="3" placeholder="Limited time offer..."></textarea>
+                                    <label>Headline/Text *</label>
+                                    <input type="text" id="adTextHeadline" class="form-control" placeholder="🔥 Special Offer - 20% Off!" oninput="OMS.updateTextAdPreview()">
+                                    <small style="color: var(--text-gray);">Use emojis for extra impact!</small>
                                 </div>
+
                                 <div class="form-group">
-                                    <label>Button Text</label>
-                                    <input type="text" id="adTextButton" class="form-control" placeholder="Learn More">
+                                    <label>Subtext (Optional)</label>
+                                    <input type="text" id="adTextSubtext" class="form-control" placeholder="Limited time only!">
                                 </div>
+
                                 <div class="form-group">
-                                    <label>Button Link</label>
-                                    <input type="url" id="adTextLink" class="form-control" placeholder="https://example.com">
+                                    <label>Description (Optional)</label>
+                                    <textarea id="adTextDescription" class="form-control" rows="2" placeholder="Book now and save big on all wedding packages"></textarea>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+
+                                <div class="form-group">
+                                    <label>📏 Text Size</label>
+                                    <select id="adTextSize" class="form-control" onchange="OMS.updateTextAdPreview()">
+                                        <option value="small">Small (16px)</option>
+                                        <option value="medium" selected>Medium (24px)</option>
+                                        <option value="large">Large (32px)</option>
+                                        <option value="xlarge">Extra Large (48px)</option>
+                                        <option value="huge">Huge (64px)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>✏️ Font Style</label>
+                                    <select id="adTextFont" class="form-control" onchange="OMS.updateTextAdPreview()">
+                                        <option value="inter">Inter (Modern)</option>
+                                        <option value="playfair">Playfair Display (Elegant)</option>
+                                        <option value="poppins">Poppins (Friendly)</option>
+                                        <option value="roboto">Roboto (Clean)</option>
+                                        <option value="montserrat">Montserrat (Bold)</option>
+                                        <option value="cursive">Cursive (Handwritten)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>⚡ Animation Speed</label>
+                                    <select id="adTextSpeed" class="form-control">
+                                        <option value="slow">Slow (3s)</option>
+                                        <option value="normal" selected>Normal (2s)</option>
+                                        <option value="fast">Fast (1s)</option>
+                                    </select>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
                                     <div class="form-group">
-                                        <label>Background Color</label>
-                                        <input type="color" id="adTextBgColor" class="form-control" value="#8b5cf6">
+                                        <label>🎨 Text Color</label>
+                                        <input type="color" id="adTextColor" class="form-control" value="#8b5cf6" onchange="OMS.updateTextAdPreview()">
                                     </div>
                                     <div class="form-group">
-                                        <label>Text Color</label>
-                                        <input type="color" id="adTextColor" class="form-control" value="#ffffff">
+                                        <label>🌟 Accent Color</label>
+                                        <input type="color" id="adTextAccent" class="form-control" value="#f59e0b">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>📦 Background</label>
+                                        <input type="color" id="adTextBgColor" class="form-control" value="#ffffff">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>🔗 Click Link (Optional)</label>
+                                    <input type="url" id="adTextLink" class="form-control" placeholder="https://firepowersfx.com/quotation">
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" id="adTextTransparent">
+                                        Transparent background (recommended for minimal styles)
+                                    </label>
+                                </div>
+
+                                <!-- Live Preview -->
+                                <div class="form-group">
+                                    <label>👁️ Live Preview</label>
+                                    <div id="textAdPreview" style="padding: 2rem; border: 2px dashed #e5e7eb; border-radius: 12px; background: #f8f9fa; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                                        <span style="color: #666;">Preview will appear here...</span>
                                     </div>
                                 </div>
                             </div>
@@ -13804,6 +13877,52 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 document.getElementById('imageAdFields').style.display = type === 'image' ? 'block' : 'none';
                 document.getElementById('textAdFields').style.display = type === 'text' ? 'block' : 'none';
                 document.getElementById('videoAdFields').style.display = type === 'video' ? 'block' : 'none';
+
+                if (type === 'text') {
+                    setTimeout(() => this.updateTextAdPreview(), 100);
+                }
+            },
+
+            updateTextAdPreview() {
+                const preview = document.getElementById('textAdPreview');
+                if (!preview) return;
+
+                const headline = document.getElementById('adTextHeadline')?.value || 'Your text here...';
+                const style = document.getElementById('adTextStyle')?.value || 'minimal';
+                const size = document.getElementById('adTextSize')?.value || 'medium';
+                const font = document.getElementById('adTextFont')?.value || 'inter';
+                const textColor = document.getElementById('adTextColor')?.value || '#8b5cf6';
+                const bgColor = document.getElementById('adTextBgColor')?.value || '#ffffff';
+
+                const sizes = { small: '16px', medium: '24px', large: '32px', xlarge: '48px', huge: '64px' };
+                const fonts = {
+                    inter: "'Inter', sans-serif",
+                    playfair: "'Playfair Display', serif",
+                    poppins: "'Poppins', sans-serif",
+                    roboto: "'Roboto', sans-serif",
+                    montserrat: "'Montserrat', sans-serif",
+                    cursive: "'Brush Script MT', cursive"
+                };
+
+                let previewHtml = '';
+                const fontSize = sizes[size];
+                const fontFamily = fonts[font];
+
+                if (style === 'minimal') {
+                    previewHtml = `<div style="font-size: ${fontSize}; color: ${textColor}; font-family: ${fontFamily}; font-weight: 600;">${headline}</div>`;
+                } else if (style === 'banner') {
+                    previewHtml = `<div style="width: 100%; padding: 1.5rem; background: ${bgColor}; color: ${textColor}; font-size: ${fontSize}; font-family: ${fontFamily}; font-weight: 600; text-align: center; border-radius: 8px;">${headline}</div>`;
+                } else if (style === 'badge') {
+                    previewHtml = `<div style="padding: 0.75rem 1.5rem; background: ${textColor}; color: white; font-size: ${fontSize}; font-family: ${fontFamily}; font-weight: 600; border-radius: 999px; display: inline-block;">${headline}</div>`;
+                } else if (style === 'neon') {
+                    previewHtml = `<div style="font-size: ${fontSize}; color: ${textColor}; font-family: ${fontFamily}; font-weight: 700; text-shadow: 0 0 10px ${textColor}, 0 0 20px ${textColor}, 0 0 30px ${textColor};">${headline}</div>`;
+                } else if (style === 'gradient') {
+                    previewHtml = `<div style="font-size: ${fontSize}; background: linear-gradient(90deg, ${textColor}, ${bgColor}, ${textColor}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: ${fontFamily}; font-weight: 700;">${headline}</div>`;
+                } else {
+                    previewHtml = `<div style="font-size: ${fontSize}; color: ${textColor}; font-family: ${fontFamily}; font-weight: 600;">${headline}</div>`;
+                }
+
+                preview.innerHTML = previewHtml;
             },
 
             toggleScheduleFields() {
@@ -13812,8 +13931,17 @@ Contact: 📱 98984 96111 / 76984 96111`;
             },
 
             closeAdModal() {
+                console.log('🚪 Closing ad modal...');
                 const overlay = document.querySelector('.modal-overlay');
-                if (overlay) overlay.remove();
+                if (overlay) {
+                    overlay.remove();
+                    console.log('✅ Overlay removed');
+                }
+                const modal = document.querySelector('.modal-dialog');
+                if (modal) {
+                    modal.remove();
+                    console.log('✅ Modal removed');
+                }
             },
 
             async saveAd() {
