@@ -267,11 +267,20 @@ class AdDisplayManager {
         const animation = ad.content.animation || 'none';
         const animationClass = animation !== 'none' ? `ad-animation-${animation}` : '';
 
+        // Typography settings
+        const headlineSize = ad.content.headlineSize || '2';
+        const descSize = ad.content.descSize || '1.1';
+        const fontWeight = ad.content.fontWeight || '700';
+        const textAlign = ad.content.textAlign || 'center';
+        const letterSpacing = ad.content.letterSpacing || '0';
+        const lineHeight = ad.content.lineHeight || '1.5';
+        const textShadow = ad.content.textShadow ? '2px 2px 4px rgba(0,0,0,0.8)' : 'none';
+
         return `
-            <div class="ad-text" style="text-align: center; background: transparent; padding: 0;">
-                ${headline ? `<h3 class="${animationClass}" style="font-size: 2rem; margin-bottom: 1rem; color: ${textColor}; display: inline-block;">${headline}</h3>` : ''}
-                ${description ? `<p class="${animationClass}" style="font-size: 1.1rem; margin-bottom: 1.5rem; color: ${textColor}; display: inline-block;">${description}</p>` : ''}
-                ${buttonText ? `<a href="${buttonLink}" class="${animationClass}" style="display: inline-block; color: ${textColor}; padding: 0.75rem 2rem; border: 2px solid ${textColor}; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer;">${buttonText}</a>` : ''}
+            <div class="ad-text" style="text-align: ${textAlign}; background: transparent; padding: 0;">
+                ${headline ? `<h3 class="${animationClass}" style="font-size: ${headlineSize}rem; margin-bottom: 1rem; color: ${textColor}; display: inline-block; font-weight: ${fontWeight}; letter-spacing: ${letterSpacing}px; line-height: ${lineHeight}; text-shadow: ${textShadow};">${headline}</h3>` : ''}
+                ${description ? `<p class="${animationClass}" style="font-size: ${descSize}rem; margin-bottom: 1.5rem; color: ${textColor}; display: inline-block; font-weight: ${fontWeight}; letter-spacing: ${letterSpacing}px; line-height: ${lineHeight}; text-shadow: ${textShadow};">${description}</p>` : ''}
+                ${buttonText ? `<a href="${buttonLink}" class="${animationClass}" style="display: inline-block; color: ${textColor}; padding: 0.75rem 2rem; border: 2px solid ${textColor}; border-radius: 8px; font-size: 1rem; font-weight: ${fontWeight}; text-decoration: none; cursor: pointer; letter-spacing: ${letterSpacing}px; text-shadow: ${textShadow};">${buttonText}</a>` : ''}
             </div>
         `;
     }
