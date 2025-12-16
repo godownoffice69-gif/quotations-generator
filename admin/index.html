@@ -10496,7 +10496,10 @@ convertToQuotationDateFormat(dateStr) {
             createNewQuotation() {
                 this.editingQuotationId = null;
                 this.currentQuotation = {
+                    orderType: 'single', // 'single', 'multifunction', 'multiday'
                     items: [],
+                    functions: [], // For multifunction single day
+                    days: [], // For multiday orders
                     customer: {},
                     discount: { type: 'percentage', value: 0, amount: 0 },
                     financials: { subtotal: 0, discountAmount: 0, grandTotal: 0 }

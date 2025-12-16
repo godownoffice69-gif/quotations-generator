@@ -1172,26 +1172,26 @@
     return '🎬 Video';
   }
 
-  // Load and display videos
-  async function loadVideos() {
+  // Load and display videos with real-time updates
+  function loadVideos() {
     const videosGrid = document.getElementById('videos-grid');
 
     try {
-      // Fetch data from Firestore
-      const dataDoc = await getDoc(doc(db, 'admin', 'data'));
+      // Set up real-time listener for video updates
+      onSnapshot(doc(db, 'admin', 'data'), (dataDoc) => {
+        if (!dataDoc.exists()) {
+          videosGrid.innerHTML = `
+            <div class="empty-videos">
+              <div class="empty-videos-icon">🎬</div>
+              <p>No videos available yet. Check back soon!</p>
+            </div>
+          `;
+          return;
+        }
 
-      if (!dataDoc.exists()) {
-        videosGrid.innerHTML = `
-          <div class="empty-videos">
-            <div class="empty-videos-icon">🎬</div>
-            <p>No videos available yet. Check back soon!</p>
-          </div>
-        `;
-        return;
-      }
-
-      const data = dataDoc.data();
-      const videos = data.videos || [];
+        const data = dataDoc.data();
+        const videos = data.videos || [];
+        console.log('✅ Videos updated in real-time:', videos.length);
 
       // Filter only visible videos
       const visibleVideos = videos.filter(video => video.visible !== false);
@@ -1260,9 +1260,18 @@
           </div>
         `;
       }).join('');
+      }, (error) => {
+        console.error('Error in video listener:', error);
+        videosGrid.innerHTML = `
+          <div class="empty-videos">
+            <div class="empty-videos-icon">⚠️</div>
+            <p>Unable to load videos at this time. Please try again later.</p>
+          </div>
+        `;
+      });
 
     } catch (error) {
-      console.error('Error loading videos:', error);
+      console.error('Error setting up video listener:', error);
       videosGrid.innerHTML = `
         <div class="empty-videos">
           <div class="empty-videos-icon">⚠️</div>
