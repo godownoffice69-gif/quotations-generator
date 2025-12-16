@@ -14673,16 +14673,22 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
             async saveAd() {
                 try {
+                    console.log('💾 saveAd() called');
+
                     const activeTypeBtn = document.querySelector('.type-btn[style*="rgb(102, 126, 234)"], .type-btn[style*="#667eea"]') ||
                                         document.querySelector('.type-btn[style*="--primary"]') ||
                                         document.querySelector('.type-btn');
                     const adType = activeTypeBtn?.dataset.type || 'image';
+
+                    console.log('📝 Ad type:', adType);
 
                     const title = document.getElementById('adTitle').value.trim();
                     if (!title) {
                         alert('Please enter an ad title');
                         return;
                     }
+
+                    console.log('📝 Ad title:', title);
 
                     let content = {};
 
@@ -14743,6 +14749,8 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         };
                     }
 
+                    console.log('📝 Ad content:', content);
+
                     const status = document.getElementById('adStatus').value;
                     const schedule = {};
                     if (status === 'scheduled') {
@@ -14773,18 +14781,28 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         createdBy: this.currentUser?.email || 'admin'
                     };
 
+                    console.log('📦 Complete ad object:', ad);
+
                     if (!this.data.advertisements) {
+                        console.log('⚠️ Initializing advertisements array');
                         this.data.advertisements = [];
                     }
-                    this.data.advertisements.push(ad);
 
+                    console.log('📊 Current advertisements count:', this.data.advertisements.length);
+                    this.data.advertisements.push(ad);
+                    console.log('📊 New advertisements count:', this.data.advertisements.length);
+
+                    console.log('💾 Calling saveAdsToFirestore...');
                     await this.saveAdsToFirestore();
+                    console.log('✅ Save completed successfully');
+
                     this.closeAdModal();
                     this.renderAdvertisements();
                     this.showToast('✅ Advertisement created successfully!');
                 } catch (error) {
-                    console.error('Error saving ad:', error);
-                    this.showToast('❌ Error creating advertisement. Please try again.', 'error');
+                    console.error('❌ Error in saveAd():', error);
+                    console.error('Error stack:', error.stack);
+                    this.showToast('❌ Error creating advertisement. Check console for details.', 'error');
                 }
             },
 
@@ -14963,41 +14981,65 @@ Contact: 📱 98984 96111 / 76984 96111`;
             },
 
             async saveAdsToFirestore() {
-                if (!this.db) return;
+                const database = window.db || this.db;
+                if (!database) {
+                    console.error('❌ Database not initialized');
+                    console.error('window.db:', window.db);
+                    console.error('this.db:', this.db);
+                    return;
+                }
 
                 try {
-                    const adsRef = this.db.collection('advertisements');
+                    console.log('💾 Starting to save ads to Firestore...');
+                    console.log('✅ Using database:', database ? 'Connected' : 'Not connected');
+                    console.log('📊 Ads to save:', this.data.advertisements);
+
+                    const adsRef = database.collection('advertisements');
 
                     // Delete all existing ads
+                    console.log('🗑️ Deleting existing ads...');
                     const snapshot = await adsRef.get();
-                    const batch = this.db.batch();
+                    console.log('📦 Found', snapshot.size, 'existing ads to delete');
+
+                    const batch = database.batch();
                     snapshot.docs.forEach(doc => batch.delete(doc.ref));
                     await batch.commit();
+                    console.log('✅ Existing ads deleted');
 
                     // Add all current ads
-                    const newBatch = this.db.batch();
+                    console.log('💾 Adding', this.data.advertisements.length, 'new ads...');
+                    const newBatch = database.batch();
                     this.data.advertisements.forEach(ad => {
+                        console.log('📝 Adding ad:', ad.id, ad.title);
                         const docRef = adsRef.doc(ad.id);
                         newBatch.set(docRef, ad);
                     });
                     await newBatch.commit();
 
-                    console.log('✅ Advertisements saved to Firestore');
+                    console.log('✅ Advertisements saved to Firestore successfully!');
                 } catch (error) {
-                    console.error('Error saving ads to Firestore:', error);
+                    console.error('❌ Error saving ads to Firestore:', error);
+                    console.error('Error details:', error.message, error.code);
                     throw error;
                 }
             },
 
             async loadAdsFromFirestore() {
-                if (!this.db) return;
+                const database = window.db || this.db;
+                if (!database) {
+                    console.error('❌ Database not initialized for loading ads');
+                    return;
+                }
 
                 try {
-                    const snapshot = await this.db.collection('advertisements').get();
+                    console.log('📥 Loading advertisements from Firestore...');
+                    const snapshot = await database.collection('advertisements').get();
                     this.data.advertisements = snapshot.docs.map(doc => doc.data());
                     console.log('✅ Advertisements loaded from Firestore:', this.data.advertisements.length);
+                    console.log('📋 Loaded ads:', this.data.advertisements);
                 } catch (error) {
-                    console.error('Error loading ads from Firestore:', error);
+                    console.error('❌ Error loading ads from Firestore:', error);
+                    console.error('Error details:', error.message, error.code);
                     this.data.advertisements = [];
                 }
             },

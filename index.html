@@ -1293,16 +1293,26 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
+  console.log('🔥 Initializing Firebase Compat for ads...');
+
   // Initialize Firebase compat (for ads only)
-  if (!firebase.apps.length) {
-    firebase.initializeApp({
-      apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
-      authDomain: "firepowersfx-2558.firebaseapp.com",
-      projectId: "firepowersfx-2558",
-      storageBucket: "firepowersfx-2558.firebasestorage.app",
-      messagingSenderId: "723483292867",
-      appId: "1:723483292867:web:d6d83a79ba87cd2dee5e76"
-    });
+  try {
+    if (!firebase.apps || firebase.apps.length === 0) {
+      console.log('🔥 Creating new Firebase app instance...');
+      firebase.initializeApp({
+        apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
+        authDomain: "firepowersfx-2558.firebaseapp.com",
+        projectId: "firepowersfx-2558",
+        storageBucket: "firepowersfx-2558.firebasestorage.app",
+        messagingSenderId: "723483292867",
+        appId: "1:723483292867:web:d6d83a79ba87cd2dee5e76"
+      });
+      console.log('✅ Firebase Compat initialized successfully');
+    } else {
+      console.log('✅ Firebase already initialized');
+    }
+  } catch (error) {
+    console.error('❌ Error initializing Firebase:', error);
   }
 </script>
 
