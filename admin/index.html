@@ -14380,6 +14380,74 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                     </select>
                                     <small style="color: var(--text-gray); margin-top: 0.5rem; display: block;">Choose an animation effect for your text ad</small>
                                 </div>
+
+                                <!-- Typography Settings -->
+                                <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                                    <h4 style="margin-bottom: 1rem;">🔤 Typography Settings</h4>
+
+                                    <div class="form-group">
+                                        <label>Headline Font Size: <span id="headlineSizeValue">2</span>rem</label>
+                                        <input type="range" id="adTextHeadlineSize" class="form-control" min="1" max="6" step="0.1" value="2"
+                                               oninput="document.getElementById('headlineSizeValue').textContent = this.value"
+                                               style="width: 100%;">
+                                        <small style="color: var(--text-gray);">Adjust headline text size</small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Description Font Size: <span id="descSizeValue">1.1</span>rem</label>
+                                        <input type="range" id="adTextDescSize" class="form-control" min="0.5" max="3" step="0.1" value="1.1"
+                                               oninput="document.getElementById('descSizeValue').textContent = this.value"
+                                               style="width: 100%;">
+                                        <small style="color: var(--text-gray);">Adjust description text size</small>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Font Weight</label>
+                                            <select id="adTextFontWeight" class="form-control">
+                                                <option value="300">Light (300)</option>
+                                                <option value="400">Normal (400)</option>
+                                                <option value="500">Medium (500)</option>
+                                                <option value="600">Semi-Bold (600)</option>
+                                                <option value="700" selected>Bold (700)</option>
+                                                <option value="800">Extra-Bold (800)</option>
+                                                <option value="900">Black (900)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Text Alignment</label>
+                                            <select id="adTextAlign" class="form-control">
+                                                <option value="left">Left</option>
+                                                <option value="center" selected>Center</option>
+                                                <option value="right">Right</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Letter Spacing: <span id="letterSpaceValue">0</span>px</label>
+                                            <input type="range" id="adTextLetterSpacing" class="form-control" min="-2" max="10" step="0.5" value="0"
+                                                   oninput="document.getElementById('letterSpaceValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Line Height: <span id="lineHeightValue">1.5</span></label>
+                                            <input type="range" id="adTextLineHeight" class="form-control" min="1" max="3" step="0.1" value="1.5"
+                                                   oninput="document.getElementById('lineHeightValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <input type="checkbox" id="adTextShadow">
+                                            Add Text Shadow (improves readability)
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Video Ad Fields -->
@@ -14496,7 +14564,9 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
             closeAdModal() {
                 const overlay = document.querySelector('.modal-overlay');
+                const dialog = document.querySelector('.modal-dialog');
                 if (overlay) overlay.remove();
+                if (dialog) dialog.remove();
             },
 
             async saveAd() {
@@ -14538,7 +14608,14 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             buttonLink: document.getElementById('adTextLink').value.trim(),
                             backgroundColor: 'transparent',
                             textColor: document.getElementById('adTextColor').value,
-                            animation: document.getElementById('adTextAnimation').value || 'none'
+                            animation: document.getElementById('adTextAnimation').value || 'none',
+                            headlineSize: document.getElementById('adTextHeadlineSize').value,
+                            descSize: document.getElementById('adTextDescSize').value,
+                            fontWeight: document.getElementById('adTextFontWeight').value,
+                            textAlign: document.getElementById('adTextAlign').value,
+                            letterSpacing: document.getElementById('adTextLetterSpacing').value,
+                            lineHeight: document.getElementById('adTextLineHeight').value,
+                            textShadow: document.getElementById('adTextShadow').checked
                         };
                     } else if (adType === 'video') {
                         const videoUrl = document.getElementById('adVideoUrl').value.trim();
@@ -14623,6 +14700,18 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         document.getElementById('adTextLink').value = ad.content.buttonLink || '';
                         document.getElementById('adTextColor').value = ad.content.textColor || '#ffffff';
                         document.getElementById('adTextAnimation').value = ad.content.animation || 'none';
+                        document.getElementById('adTextHeadlineSize').value = ad.content.headlineSize || '2';
+                        document.getElementById('adTextDescSize').value = ad.content.descSize || '1.1';
+                        document.getElementById('adTextFontWeight').value = ad.content.fontWeight || '700';
+                        document.getElementById('adTextAlign').value = ad.content.textAlign || 'center';
+                        document.getElementById('adTextLetterSpacing').value = ad.content.letterSpacing || '0';
+                        document.getElementById('adTextLineHeight').value = ad.content.lineHeight || '1.5';
+                        document.getElementById('adTextShadow').checked = ad.content.textShadow || false;
+                        // Update display values
+                        document.getElementById('headlineSizeValue').textContent = ad.content.headlineSize || '2';
+                        document.getElementById('descSizeValue').textContent = ad.content.descSize || '1.1';
+                        document.getElementById('letterSpaceValue').textContent = ad.content.letterSpacing || '0';
+                        document.getElementById('lineHeightValue').textContent = ad.content.lineHeight || '1.5';
                     } else if (ad.type === 'video') {
                         document.getElementById('adVideoUrl').value = ad.content.videoUrl || '';
                         document.getElementById('adVideoAutoplay').checked = ad.content.autoplay !== false;
@@ -14671,6 +14760,13 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         ad.content.backgroundColor = 'transparent';
                         ad.content.textColor = document.getElementById('adTextColor').value;
                         ad.content.animation = document.getElementById('adTextAnimation').value || 'none';
+                        ad.content.headlineSize = document.getElementById('adTextHeadlineSize').value;
+                        ad.content.descSize = document.getElementById('adTextDescSize').value;
+                        ad.content.fontWeight = document.getElementById('adTextFontWeight').value;
+                        ad.content.textAlign = document.getElementById('adTextAlign').value;
+                        ad.content.letterSpacing = document.getElementById('adTextLetterSpacing').value;
+                        ad.content.lineHeight = document.getElementById('adTextLineHeight').value;
+                        ad.content.textShadow = document.getElementById('adTextShadow').checked;
                     } else if (ad.type === 'video') {
                         ad.content.videoUrl = document.getElementById('adVideoUrl').value.trim();
                         ad.content.autoplay = document.getElementById('adVideoAutoplay').checked;
