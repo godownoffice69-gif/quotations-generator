@@ -14338,15 +14338,9 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                     <label>Button Link</label>
                                     <input type="url" id="adTextLink" class="form-control" placeholder="https://example.com">
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                    <div class="form-group">
-                                        <label>Background Color</label>
-                                        <input type="color" id="adTextBgColor" class="form-control" value="#8b5cf6">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Text Color</label>
-                                        <input type="color" id="adTextColor" class="form-control" value="#ffffff">
-                                    </div>
+                                <div class="form-group">
+                                    <label>🎨 Text Color (for all text elements)</label>
+                                    <input type="color" id="adTextColor" class="form-control" value="#ffffff">
                                 </div>
                                 <div class="form-group">
                                     <label>✨ Animation Effect</label>
@@ -14542,7 +14536,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             description: document.getElementById('adTextDescription').value.trim(),
                             buttonText: document.getElementById('adTextButton').value.trim(),
                             buttonLink: document.getElementById('adTextLink').value.trim(),
-                            backgroundColor: document.getElementById('adTextBgColor').value,
+                            backgroundColor: 'transparent',
                             textColor: document.getElementById('adTextColor').value,
                             animation: document.getElementById('adTextAnimation').value || 'none'
                         };
@@ -14627,7 +14621,6 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         document.getElementById('adTextDescription').value = ad.content.description || '';
                         document.getElementById('adTextButton').value = ad.content.buttonText || '';
                         document.getElementById('adTextLink').value = ad.content.buttonLink || '';
-                        document.getElementById('adTextBgColor').value = ad.content.backgroundColor || '#8b5cf6';
                         document.getElementById('adTextColor').value = ad.content.textColor || '#ffffff';
                         document.getElementById('adTextAnimation').value = ad.content.animation || 'none';
                     } else if (ad.type === 'video') {
@@ -14675,7 +14668,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         ad.content.description = document.getElementById('adTextDescription').value.trim();
                         ad.content.buttonText = document.getElementById('adTextButton').value.trim();
                         ad.content.buttonLink = document.getElementById('adTextLink').value.trim();
-                        ad.content.backgroundColor = document.getElementById('adTextBgColor').value;
+                        ad.content.backgroundColor = 'transparent';
                         ad.content.textColor = document.getElementById('adTextColor').value;
                         ad.content.animation = document.getElementById('adTextAnimation').value || 'none';
                     } else if (ad.type === 'video') {

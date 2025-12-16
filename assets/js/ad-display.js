@@ -192,16 +192,16 @@ class AdDisplayManager {
         const headline = ad.content.headline || '';
         const description = ad.content.description || '';
         const buttonText = ad.content.buttonText || '';
-        const bgColor = ad.content.backgroundColor || '#8b5cf6';
+        const buttonLink = ad.content.buttonLink || '#';
         const textColor = ad.content.textColor || '#ffffff';
         const animation = ad.content.animation || 'none';
         const animationClass = animation !== 'none' ? `ad-animation-${animation}` : '';
 
         return `
-            <div class="ad-text ${animationClass}" style="background: ${bgColor}; color: ${textColor}; padding: 2rem; border-radius: 12px; text-align: center;">
-                <h3 style="font-size: 2rem; margin-bottom: 1rem; color: ${textColor};">${headline}</h3>
-                ${description ? `<p style="font-size: 1.1rem; margin-bottom: 1.5rem; opacity: 0.9;">${description}</p>` : ''}
-                ${buttonText ? `<button style="background: ${textColor}; color: ${bgColor}; padding: 0.75rem 2rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">${buttonText}</button>` : ''}
+            <div class="ad-text" style="text-align: center; background: transparent; padding: 0;">
+                ${headline ? `<h3 class="${animationClass}" style="font-size: 2rem; margin-bottom: 1rem; color: ${textColor}; display: inline-block;">${headline}</h3>` : ''}
+                ${description ? `<p class="${animationClass}" style="font-size: 1.1rem; margin-bottom: 1.5rem; color: ${textColor}; display: inline-block;">${description}</p>` : ''}
+                ${buttonText ? `<a href="${buttonLink}" class="${animationClass}" style="display: inline-block; color: ${textColor}; padding: 0.75rem 2rem; border: 2px solid ${textColor}; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer;">${buttonText}</a>` : ''}
             </div>
         `;
     }
