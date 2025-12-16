@@ -194,9 +194,11 @@ class AdDisplayManager {
         const buttonText = ad.content.buttonText || '';
         const bgColor = ad.content.backgroundColor || '#8b5cf6';
         const textColor = ad.content.textColor || '#ffffff';
+        const animation = ad.content.animation || 'none';
+        const animationClass = animation !== 'none' ? `ad-animation-${animation}` : '';
 
         return `
-            <div class="ad-text" style="background: ${bgColor}; color: ${textColor}; padding: 2rem; border-radius: 12px; text-align: center;">
+            <div class="ad-text ${animationClass}" style="background: ${bgColor}; color: ${textColor}; padding: 2rem; border-radius: 12px; text-align: center;">
                 <h3 style="font-size: 2rem; margin-bottom: 1rem; color: ${textColor};">${headline}</h3>
                 ${description ? `<p style="font-size: 1.1rem; margin-bottom: 1.5rem; opacity: 0.9;">${description}</p>` : ''}
                 ${buttonText ? `<button style="background: ${textColor}; color: ${bgColor}; padding: 0.75rem 2rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">${buttonText}</button>` : ''}

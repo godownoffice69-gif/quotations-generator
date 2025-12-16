@@ -243,6 +243,168 @@
         min-height: 250px;
       }
     }
+
+    /* ============ AD ANIMATION EFFECTS ============ */
+
+    /* Fade In/Out */
+    @keyframes adFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes adFadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    /* Slide In Effects */
+    @keyframes adSlideInLeft {
+      from { transform: translateX(-100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes adSlideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes adSlideInTop {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes adSlideInBottom {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Bounce */
+    @keyframes adBounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-30px); }
+      60% { transform: translateY(-15px); }
+    }
+
+    /* Zoom In/Out */
+    @keyframes adZoomIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes adZoomOut {
+      from { transform: scale(1.5); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* Rotate */
+    @keyframes adRotateIn {
+      from { transform: rotate(-360deg) scale(0); opacity: 0; }
+      to { transform: rotate(0deg) scale(1); opacity: 1; }
+    }
+
+    /* Pulse/Glow */
+    @keyframes adPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+    }
+
+    @keyframes adGlow {
+      0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); }
+      50% { box-shadow: 0 0 20px rgba(139, 92, 246, 1), 0 0 30px rgba(139, 92, 246, 0.8); }
+    }
+
+    /* Flip */
+    @keyframes adFlipIn {
+      from { transform: perspective(400px) rotateY(90deg); opacity: 0; }
+      to { transform: perspective(400px) rotateY(0deg); opacity: 1; }
+    }
+
+    @keyframes adFlipX {
+      0% { transform: perspective(400px) rotateX(0deg); }
+      50% { transform: perspective(400px) rotateX(180deg); }
+      100% { transform: perspective(400px) rotateX(360deg); }
+    }
+
+    /* Wave */
+    @keyframes adWave {
+      0%, 100% { transform: translateY(0px); }
+      25% { transform: translateY(-10px); }
+      50% { transform: translateY(0px); }
+      75% { transform: translateY(10px); }
+    }
+
+    /* Sparkle */
+    @keyframes adSparkle {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+        filter: brightness(1);
+      }
+      25% {
+        opacity: 0.7;
+        transform: scale(1.1) rotate(5deg);
+        filter: brightness(1.3);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.2) rotate(-5deg);
+        filter: brightness(1.5);
+      }
+      75% {
+        opacity: 0.8;
+        transform: scale(1.1) rotate(3deg);
+        filter: brightness(1.2);
+      }
+    }
+
+    /* Shake */
+    @keyframes adShake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+
+    /* Swing */
+    @keyframes adSwing {
+      20% { transform: rotate(15deg); }
+      40% { transform: rotate(-10deg); }
+      60% { transform: rotate(5deg); }
+      80% { transform: rotate(-5deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    /* Rubber Band */
+    @keyframes adRubberBand {
+      0% { transform: scale(1); }
+      30% { transform: scaleX(1.25) scaleY(0.75); }
+      40% { transform: scaleX(0.75) scaleY(1.25); }
+      50% { transform: scaleX(1.15) scaleY(0.85); }
+      65% { transform: scaleX(0.95) scaleY(1.05); }
+      75% { transform: scaleX(1.05) scaleY(0.95); }
+      100% { transform: scale(1); }
+    }
+
+    /* Animation Classes */
+    .ad-animation-fadeIn { animation: adFadeIn 1s ease-in-out infinite; }
+    .ad-animation-fadeOut { animation: adFadeOut 1s ease-in-out infinite alternate; }
+    .ad-animation-slideInLeft { animation: adSlideInLeft 1s ease-out infinite; }
+    .ad-animation-slideInRight { animation: adSlideInRight 1s ease-out infinite; }
+    .ad-animation-slideInTop { animation: adSlideInTop 1s ease-out infinite; }
+    .ad-animation-slideInBottom { animation: adSlideInBottom 1s ease-out infinite; }
+    .ad-animation-bounce { animation: adBounce 2s ease infinite; }
+    .ad-animation-zoomIn { animation: adZoomIn 1s ease-in-out infinite; }
+    .ad-animation-zoomOut { animation: adZoomOut 1s ease-in-out infinite; }
+    .ad-animation-rotateIn { animation: adRotateIn 1s ease-in-out infinite; }
+    .ad-animation-pulse { animation: adPulse 1.5s ease-in-out infinite; }
+    .ad-animation-glow { animation: adGlow 2s ease-in-out infinite; }
+    .ad-animation-flipIn { animation: adFlipIn 1s ease-in-out infinite; }
+    .ad-animation-flipX { animation: adFlipX 2s ease-in-out infinite; }
+    .ad-animation-wave { animation: adWave 2s ease-in-out infinite; }
+    .ad-animation-sparkle { animation: adSparkle 2s ease-in-out infinite; }
+    .ad-animation-shake { animation: adShake 0.5s ease infinite; }
+    .ad-animation-swing { animation: adSwing 1s ease infinite; }
+    .ad-animation-rubberBand { animation: adRubberBand 1s ease infinite; }
+    .ad-animation-none { animation: none; }
   </style>
 </head>
 <body>
