@@ -35,52 +35,59 @@ class AdDisplayManager {
             }
 
             this.db = firebase.firestore();
-            await this.loadAds();
-            this.displayAds();
+            this.loadAds(); // Set up real-time listener (no need to await)
         } catch (error) {
             console.error('Error initializing ad display:', error);
         }
     }
 
     /**
-     * Load ads from Firestore
+     * Load ads from Firestore with real-time updates
      */
-    async loadAds() {
+    loadAds() {
         try {
-            const snapshot = await this.db.collection('advertisements').get();
-            const allAds = snapshot.docs.map(doc => doc.data());
+            // Set up real-time listener for advertisements
+            this.db.collection('advertisements').onSnapshot(snapshot => {
+                const allAds = snapshot.docs.map(doc => doc.data());
 
-            // Filter ads based on:
-            // 1. Status (active or scheduled within date range)
-            // 2. Page (all or current page)
-            // 3. Visibility
-            this.ads = allAds.filter(ad => {
-                // Check visibility
-                if (!ad.isVisible) return false;
+                // Filter ads based on:
+                // 1. Status (active or scheduled within date range)
+                // 2. Page (all or current page)
+                // 3. Visibility
+                this.ads = allAds.filter(ad => {
+                    // Check visibility
+                    if (!ad.isVisible) return false;
 
-                // Check page
-                if (ad.placement?.page !== 'all' && ad.placement?.page !== this.currentPage) {
-                    return false;
-                }
+                    // Check page
+                    if (ad.placement?.page !== 'all' && ad.placement?.page !== this.currentPage) {
+                        return false;
+                    }
 
-                // Check status and schedule
-                if (ad.status === 'inactive') return false;
+                    // Check status and schedule
+                    if (ad.status === 'inactive') return false;
 
-                if (ad.status === 'scheduled') {
-                    const now = new Date();
-                    const startDate = ad.schedule?.startDate ? new Date(ad.schedule.startDate) : null;
-                    const endDate = ad.schedule?.endDate ? new Date(ad.schedule.endDate) : null;
+                    if (ad.status === 'scheduled') {
+                        const now = new Date();
+                        const startDate = ad.schedule?.startDate ? new Date(ad.schedule.startDate) : null;
+                        const endDate = ad.schedule?.endDate ? new Date(ad.schedule.endDate) : null;
 
-                    if (startDate && now < startDate) return false;
-                    if (endDate && now > endDate) return false;
-                }
+                        if (startDate && now < startDate) return false;
+                        if (endDate && now > endDate) return false;
+                    }
 
-                return true;
+                    return true;
+                });
+
+                console.log(`✅ Loaded ${this.ads.length} active ads for ${this.currentPage} page (real-time)`);
+
+                // Re-display ads when they change
+                this.displayAds();
+            }, error => {
+                console.error('Error loading ads from Firestore:', error);
+                this.ads = [];
             });
-
-            console.log(`✅ Loaded ${this.ads.length} active ads for ${this.currentPage} page`);
         } catch (error) {
-            console.error('Error loading ads from Firestore:', error);
+            console.error('Error setting up ad listener:', error);
             this.ads = [];
         }
     }
