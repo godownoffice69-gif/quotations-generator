@@ -187,11 +187,24 @@
       width: 100%;
       max-width: 100%;
       margin: 0 auto;
-      overflow: hidden;
+      overflow: visible;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .ad-container * {
+      pointer-events: auto;
     }
 
     .ad-header {
-      margin-bottom: 0;
+      position: fixed;
+      top: 80px;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      margin: 0;
+      padding: 1rem;
+      background: transparent;
     }
 
     .ad-between-sections {
@@ -207,15 +220,16 @@
     .ad-wrapper {
       width: 100%;
       margin: 1rem auto;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease;
+      border-radius: 0;
+      overflow: visible;
+      box-shadow: none;
+      transition: none;
+      background: transparent;
     }
 
     .ad-wrapper:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      transform: none;
+      box-shadow: none;
     }
 
     .ad-image img {
@@ -226,6 +240,14 @@
 
     .ad-text {
       text-align: center;
+      background: transparent !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+
+    .ad-text * {
+      background: transparent !important;
     }
 
     .ad-video iframe {

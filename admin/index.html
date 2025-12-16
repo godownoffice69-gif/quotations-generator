@@ -5932,6 +5932,9 @@ if (localIndex !== -1) {
 }
 
         this.showToast(`Order upgraded: ${oldOrderId || '[No ID]'} → ${finalOrderId} ✅`);
+
+        // Auto-clear form after upgrade
+        this.clearForm(true);
     } else {
         // Same status - just update existing doc
         await db.collection('orders').doc(docId).update(firestoreData);
@@ -13080,7 +13083,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     }
 
                     // Delete the merged order
-                    await this.deleteOrder(mergedOrder.docId || mergedOrder.orderId);
+                    await this.deleteOrderByDocId(mergedOrder.docId || mergedOrder.orderId);
 
                     // Reload data
                     await this.loadOrdersFromFirestore();
@@ -14318,6 +14321,54 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                     <label>Alt Text</label>
                                     <input type="text" id="adImageAlt" class="form-control" placeholder="Promotional banner">
                                 </div>
+
+                                <!-- Image Style Settings -->
+                                <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                                    <h4 style="margin-bottom: 1rem;">🎨 Image Style Settings</h4>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Max Width: <span id="imageWidthValue">100</span>%</label>
+                                            <input type="range" id="adImageWidth" class="form-control" min="50" max="100" step="5" value="100"
+                                                   oninput="document.getElementById('imageWidthValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Border Radius: <span id="imageBorderRadiusValue">12</span>px</label>
+                                            <input type="range" id="adImageBorderRadius" class="form-control" min="0" max="50" step="2" value="12"
+                                                   oninput="document.getElementById('imageBorderRadiusValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Opacity: <span id="imageOpacityValue">100</span>%</label>
+                                            <input type="range" id="adImageOpacity" class="form-control" min="50" max="100" step="5" value="100"
+                                                   oninput="document.getElementById('imageOpacityValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Shadow Intensity</label>
+                                            <select id="adImageShadow" class="form-control">
+                                                <option value="none">None</option>
+                                                <option value="sm">Small</option>
+                                                <option value="md" selected>Medium</option>
+                                                <option value="lg">Large</option>
+                                                <option value="xl">Extra Large</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <input type="checkbox" id="adImageHoverEffect" checked>
+                                            Enable Hover Effect (scale on hover)
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Text Ad Fields -->
@@ -14466,6 +14517,54 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                         <input type="checkbox" id="adVideoMuted" checked>
                                         Muted by default
                                     </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                                        <input type="checkbox" id="adVideoLoop">
+                                        Loop video continuously
+                                    </label>
+                                </div>
+
+                                <!-- Video Style Settings -->
+                                <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                                    <h4 style="margin-bottom: 1rem;">🎬 Video Style Settings</h4>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Max Width: <span id="videoWidthValue">100</span>%</label>
+                                            <input type="range" id="adVideoWidth" class="form-control" min="50" max="100" step="5" value="100"
+                                                   oninput="document.getElementById('videoWidthValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Border Radius: <span id="videoBorderRadiusValue">12</span>px</label>
+                                            <input type="range" id="adVideoBorderRadius" class="form-control" min="0" max="50" step="2" value="12"
+                                                   oninput="document.getElementById('videoBorderRadiusValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Aspect Ratio</label>
+                                            <select id="adVideoAspectRatio" class="form-control">
+                                                <option value="16/9" selected>16:9 (Widescreen)</option>
+                                                <option value="9/16">9:16 (Vertical)</option>
+                                                <option value="4/3">4:3 (Standard)</option>
+                                                <option value="1/1">1:1 (Square)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Shadow Intensity</label>
+                                            <select id="adVideoShadow" class="form-control">
+                                                <option value="none">None</option>
+                                                <option value="sm">Small</option>
+                                                <option value="md" selected>Medium</option>
+                                                <option value="lg">Large</option>
+                                                <option value="xl">Extra Large</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -14593,7 +14692,12 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         content = {
                             imageUrl,
                             link: document.getElementById('adImageLink').value.trim(),
-                            altText: document.getElementById('adImageAlt').value.trim()
+                            altText: document.getElementById('adImageAlt').value.trim(),
+                            width: document.getElementById('adImageWidth').value,
+                            borderRadius: document.getElementById('adImageBorderRadius').value,
+                            opacity: document.getElementById('adImageOpacity').value,
+                            shadow: document.getElementById('adImageShadow').value,
+                            hoverEffect: document.getElementById('adImageHoverEffect').checked
                         };
                     } else if (adType === 'text') {
                         const headline = document.getElementById('adTextHeadline').value.trim();
@@ -14627,7 +14731,12 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             videoUrl,
                             platform: videoUrl.includes('youtube') ? 'youtube' : 'instagram',
                             autoplay: document.getElementById('adVideoAutoplay').checked,
-                            muted: document.getElementById('adVideoMuted').checked
+                            muted: document.getElementById('adVideoMuted').checked,
+                            loop: document.getElementById('adVideoLoop').checked,
+                            width: document.getElementById('adVideoWidth').value,
+                            borderRadius: document.getElementById('adVideoBorderRadius').value,
+                            aspectRatio: document.getElementById('adVideoAspectRatio').value,
+                            shadow: document.getElementById('adVideoShadow').value
                         };
                     }
 
@@ -14693,6 +14802,15 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         document.getElementById('adImageUrl').value = ad.content.imageUrl || '';
                         document.getElementById('adImageLink').value = ad.content.link || '';
                         document.getElementById('adImageAlt').value = ad.content.altText || '';
+                        document.getElementById('adImageWidth').value = ad.content.width || '100';
+                        document.getElementById('adImageBorderRadius').value = ad.content.borderRadius || '12';
+                        document.getElementById('adImageOpacity').value = ad.content.opacity || '100';
+                        document.getElementById('adImageShadow').value = ad.content.shadow || 'md';
+                        document.getElementById('adImageHoverEffect').checked = ad.content.hoverEffect !== false;
+                        // Update display values
+                        document.getElementById('imageWidthValue').textContent = ad.content.width || '100';
+                        document.getElementById('imageBorderRadiusValue').textContent = ad.content.borderRadius || '12';
+                        document.getElementById('imageOpacityValue').textContent = ad.content.opacity || '100';
                     } else if (ad.type === 'text') {
                         document.getElementById('adTextHeadline').value = ad.content.headline || '';
                         document.getElementById('adTextDescription').value = ad.content.description || '';
@@ -14716,6 +14834,14 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         document.getElementById('adVideoUrl').value = ad.content.videoUrl || '';
                         document.getElementById('adVideoAutoplay').checked = ad.content.autoplay !== false;
                         document.getElementById('adVideoMuted').checked = ad.content.muted !== false;
+                        document.getElementById('adVideoLoop').checked = ad.content.loop || false;
+                        document.getElementById('adVideoWidth').value = ad.content.width || '100';
+                        document.getElementById('adVideoBorderRadius').value = ad.content.borderRadius || '12';
+                        document.getElementById('adVideoAspectRatio').value = ad.content.aspectRatio || '16/9';
+                        document.getElementById('adVideoShadow').value = ad.content.shadow || 'md';
+                        // Update display values
+                        document.getElementById('videoWidthValue').textContent = ad.content.width || '100';
+                        document.getElementById('videoBorderRadiusValue').textContent = ad.content.borderRadius || '12';
                     }
 
                     if (ad.schedule?.startDate) {
@@ -14752,6 +14878,11 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         ad.content.imageUrl = document.getElementById('adImageUrl').value.trim();
                         ad.content.link = document.getElementById('adImageLink').value.trim();
                         ad.content.altText = document.getElementById('adImageAlt').value.trim();
+                        ad.content.width = document.getElementById('adImageWidth').value;
+                        ad.content.borderRadius = document.getElementById('adImageBorderRadius').value;
+                        ad.content.opacity = document.getElementById('adImageOpacity').value;
+                        ad.content.shadow = document.getElementById('adImageShadow').value;
+                        ad.content.hoverEffect = document.getElementById('adImageHoverEffect').checked;
                     } else if (ad.type === 'text') {
                         ad.content.headline = document.getElementById('adTextHeadline').value.trim();
                         ad.content.description = document.getElementById('adTextDescription').value.trim();
@@ -14771,6 +14902,11 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         ad.content.videoUrl = document.getElementById('adVideoUrl').value.trim();
                         ad.content.autoplay = document.getElementById('adVideoAutoplay').checked;
                         ad.content.muted = document.getElementById('adVideoMuted').checked;
+                        ad.content.loop = document.getElementById('adVideoLoop').checked;
+                        ad.content.width = document.getElementById('adVideoWidth').value;
+                        ad.content.borderRadius = document.getElementById('adVideoBorderRadius').value;
+                        ad.content.aspectRatio = document.getElementById('adVideoAspectRatio').value;
+                        ad.content.shadow = document.getElementById('adVideoShadow').value;
                     }
 
                     if (ad.status === 'scheduled') {
