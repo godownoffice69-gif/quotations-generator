@@ -10527,15 +10527,38 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                         </div>
 
+                        <!-- Order Type Selection -->
+                        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            <h3 style="color: white; margin: 0 0 1rem 0;">📋 Order Type</h3>
+                            <p style="color: rgba(255,255,255,0.9); margin-bottom: 1rem; font-size: 0.9rem;">Select the type of quotation you want to create</p>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                                <button type="button" class="order-type-btn ${!q.orderType || q.orderType === 'single' ? 'active' : ''}" onclick="OMS.setQuotationOrderType('single')" style="padding: 1.5rem; background: ${!q.orderType || q.orderType === 'single' ? 'white' : 'rgba(255,255,255,0.2)'}; color: ${!q.orderType || q.orderType === 'single' ? '#667eea' : 'white'}; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                                    <div>Single Function</div>
+                                    <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem;">One event, one day</div>
+                                </button>
+                                <button type="button" class="order-type-btn ${q.orderType === 'multifunction' ? 'active' : ''}" onclick="OMS.setQuotationOrderType('multifunction')" style="padding: 1.5rem; background: ${q.orderType === 'multifunction' ? 'white' : 'rgba(255,255,255,0.2)'}; color: ${q.orderType === 'multifunction' ? '#667eea' : 'white'}; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+                                    <div>Multiple Functions</div>
+                                    <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem;">Same day, different events</div>
+                                </button>
+                                <button type="button" class="order-type-btn ${q.orderType === 'multiday' ? 'active' : ''}" onclick="OMS.setQuotationOrderType('multiday')" style="padding: 1.5rem; background: ${q.orderType === 'multiday' ? 'white' : 'rgba(255,255,255,0.2)'}; color: ${q.orderType === 'multiday' ? '#667eea' : 'white'}; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📅</div>
+                                    <div>Multiple Days</div>
+                                    <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem;">Multiple days & functions</div>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="card" style="background: #f9f9f9;">
                             <!-- Customer Details -->
                             <h3 style="margin: 0 0 1rem 0;">👤 Customer Details</h3>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label required">Customer Name</label>
-                                    <input type="text" id="quotCustomerName" class="form-input" value="${q.customer.name || ''}" required placeholder="Enter customer name" list="customerNamesList">
+                                    <input type="text" id="quotCustomerName" class="form-input" value="${q.customer.name || ''}" required placeholder="Enter customer name" list="customerNamesList" oninput="OMS.autoFillQuotationCustomer(this.value)">
                                     <datalist id="customerNamesList">
-                                        ${this.data.customers.map(c => `<option value="${c.name}">`).join('')}
+                                        ${this.data.customers.map(c => `<option value="${c.name}" data-contact="${c.contact}">`).join('')}
                                     </datalist>
                                 </div>
                                 <div class="form-group">
@@ -10887,6 +10910,33 @@ convertToQuotationDateFormat(dateStr) {
                         this.renderQuotationItems(this.currentQuotation.items);
                 }
                 this.recalculateQuotation();
+            },
+
+            autoFillQuotationCustomer(customerName) {
+                // Find customer by name and auto-fill contact
+                const customer = this.data.customers.find(c => c.name === customerName);
+                if (customer) {
+                    document.getElementById('quotCustomerContact').value = customer.contact || '';
+                    if (customer.email) {
+                        document.getElementById('quotCustomerEmail').value = customer.email;
+                    }
+                }
+            },
+
+            setQuotationOrderType(type) {
+                if (!this.currentQuotation) return;
+                this.currentQuotation.orderType = type;
+
+                // Initialize appropriate data structures
+                if (type === 'single') {
+                    if (!this.currentQuotation.items) this.currentQuotation.items = [];
+                } else if (type === 'multifunction') {
+                    if (!this.currentQuotation.functions) this.currentQuotation.functions = [];
+                } else if (type === 'multiday') {
+                    if (!this.currentQuotation.days) this.currentQuotation.days = [];
+                }
+
+                this.renderQuotations();
             },
 
             cancelQuotationEdit() {
@@ -12700,7 +12750,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             <button class="btn btn-success" data-action="exportData">${this.t('export')}</button>
                             <button class="btn btn-primary" id="mergeSelectedBtn" style="display: none;" onclick="OMS.showMergeModal()">🔗 Merge Selected Orders</button>
                         </div>
-                        <div class="form-group" style="margin: 20px 0;">
+                        <div class="form-group" style="margin: 20px 0; position: relative;">
                             <label class="form-label">🔍 Search Orders</label>
                             <input type="text" id="historySearch" class="form-input" placeholder="Search by client name, order ID, date, or venue...">
                             <div id="historySearchResults" class="search-dropdown"></div>
