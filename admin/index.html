@@ -11516,8 +11516,33 @@ convertToQuotationDateFormat(dateStr) {
 
             async previewQuotationPDF() {
                 const q = this.currentQuotation;
-                if (!q || q.items.length === 0) {
-                    this.showToast('Add items first to preview', 'error');
+
+                // Validate that quotation has items based on order type
+                if (!q) {
+                    this.showToast('No quotation found', 'error');
+                    return;
+                }
+
+                let hasItems = false;
+
+                if (!q.orderType || q.orderType === 'single') {
+                    // Single function - check q.items
+                    hasItems = q.items && q.items.length > 0;
+                } else if (q.orderType === 'multifunction') {
+                    // Multifunction - check if any function has items
+                    hasItems = q.functions && q.functions.length > 0 &&
+                               q.functions.some(func => func.items && func.items.length > 0);
+                } else if (q.orderType === 'multiday') {
+                    // Multiday - check if any day has functions with items
+                    hasItems = q.days && q.days.length > 0 &&
+                               q.days.some(day =>
+                                   day.functions && day.functions.length > 0 &&
+                                   day.functions.some(func => func.items && func.items.length > 0)
+                               );
+                }
+
+                if (!hasItems) {
+                    this.showToast('Add items first to preview quotation', 'error');
                     return;
                 }
 
@@ -13662,8 +13687,8 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         await this.updateOrderInFirebase(restoredOrder, originalData.docId);
                     }
 
-                    // Delete the merged order
-                    await this.deleteOrderByDocId(mergedOrder.docId || mergedOrder.orderId);
+                    // Delete the merged order from Firestore
+                    await AdminUtils.deleteOrderByDocId(mergedOrder.docId || mergedOrder.orderId);
 
                     // Reload data
                     await this.loadOrdersFromFirestore();
