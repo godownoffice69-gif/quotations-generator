@@ -10715,16 +10715,12 @@ convertToQuotationDateFormat(dateStr) {
                             <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px;">
                                 <h4 style="color: white; margin: 0 0 1rem 0; font-size: 1rem;">Payment Schedule:</h4>
                                 <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                    <span>Booking Amount (40%):</span>
-                                    <strong id="quotBooking40">₹0</strong>
+                                    <span>Booking Amount (50%):</span>
+                                    <strong id="quotBooking50">₹0</strong>
                                 </div>
                                 <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                    <span>Event Day Payment (40%):</span>
-                                    <strong id="quotEventDay40">₹0</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                    <span>Post-Event Payment (20%):</span>
-                                    <strong id="quotPostEvent20">₹0</strong>
+                                    <span>Before Event (50%):</span>
+                                    <strong id="quotBeforeEvent50">₹0</strong>
                                 </div>
                             </div>
                         </div>
@@ -10943,7 +10939,28 @@ convertToQuotationDateFormat(dateStr) {
             updateQuotationItem(index, field, value) {
                 if (!this.currentQuotation.items[index]) return;
 
-                this.currentQuotation.items[index][field] = field === 'name' ? value : parseFloat(value) || 0;
+                // Validation for price and quantity fields
+                if (field === 'quantity' || field === 'rate') {
+                    const numValue = parseFloat(value) || 0;
+
+                    // Prevent negative values
+                    if (numValue < 0) {
+                        this.showToast(`${field === 'quantity' ? 'Quantity' : 'Price'} cannot be negative`, 'error');
+                        return;
+                    }
+
+                    // Warn about very large values
+                    if (numValue > 10000000) { // 1 crore
+                        if (!confirm(`${field === 'quantity' ? 'Quantity' : 'Price'} is very large (${numValue.toLocaleString('en-IN')}). Continue?`)) {
+                            return;
+                        }
+                    }
+
+                    this.currentQuotation.items[index][field] = numValue;
+                } else {
+                    // Name field - trim whitespace
+                    this.currentQuotation.items[index][field] = value.trim();
+                }
 
                 // Recalculate subtotal
                 const item = this.currentQuotation.items[index];
@@ -10960,7 +10977,26 @@ convertToQuotationDateFormat(dateStr) {
 
             updateQuotationDiscount() {
                 const type = Utils.get('quotDiscountType');
-                const value = parseFloat(Utils.get('quotDiscountValue')) || 0;
+                let value = parseFloat(Utils.get('quotDiscountValue')) || 0;
+
+                // Validate discount value
+                if (value < 0) {
+                    this.showToast('Discount cannot be negative', 'error');
+                    Utils.set('quotDiscountValue', 0);
+                    return;
+                }
+
+                // Prevent percentage discount > 100%
+                if (type === 'percentage' && value > 100) {
+                    this.showToast('Discount percentage cannot exceed 100%', 'error');
+                    Utils.set('quotDiscountValue', 100);
+                    value = 100;
+                }
+
+                // Warn if fixed discount exceeds subtotal (will be checked during recalculation)
+                if (type === 'fixed' && value > this.currentQuotation.financials.subtotal) {
+                    this.showToast('Warning: Discount exceeds subtotal. Grand total will be ₹0.', 'warning');
+                }
 
                 this.currentQuotation.discount = { type, value, amount: 0 };
                 this.recalculateQuotation();
@@ -10970,23 +11006,79 @@ convertToQuotationDateFormat(dateStr) {
                 const q = this.currentQuotation;
                 if (!q) return;
 
-                // Calculate subtotal
-                q.financials.subtotal = q.items.reduce((sum, item) => sum + item.subtotal, 0);
+                let totalSubtotal = 0;
+
+                // Calculate based on order type
+                if (!q.orderType || q.orderType === 'single') {
+                    // Single function order - calculate from q.items
+                    // Note: Single function uses 'rate' field, not 'price'
+                    if (q.items && q.items.length > 0) {
+                        q.items.forEach(item => {
+                            const price = parseFloat(item.rate || item.price) || 0;
+                            const quantity = parseFloat(item.quantity) || 0;
+                            item.subtotal = price * quantity;
+                            totalSubtotal += item.subtotal;
+                        });
+                    }
+                } else if (q.orderType === 'multifunction') {
+                    // Multifunction order - calculate from q.functions
+                    if (q.functions && q.functions.length > 0) {
+                        q.functions.forEach(func => {
+                            let functionSubtotal = 0;
+                            if (func.items && func.items.length > 0) {
+                                func.items.forEach(item => {
+                                    const price = parseFloat(item.price) || 0;
+                                    const quantity = parseFloat(item.quantity) || 0;
+                                    item.subtotal = price * quantity;
+                                    functionSubtotal += item.subtotal;
+                                });
+                            }
+                            func.subtotal = functionSubtotal;
+                            totalSubtotal += functionSubtotal;
+                        });
+                    }
+                } else if (q.orderType === 'multiday') {
+                    // Multiday order - calculate from q.days
+                    if (q.days && q.days.length > 0) {
+                        q.days.forEach(day => {
+                            let daySubtotal = 0;
+                            if (day.functions && day.functions.length > 0) {
+                                day.functions.forEach(func => {
+                                    let functionSubtotal = 0;
+                                    if (func.items && func.items.length > 0) {
+                                        func.items.forEach(item => {
+                                            const price = parseFloat(item.price) || 0;
+                                            const quantity = parseFloat(item.quantity) || 0;
+                                            item.subtotal = price * quantity;
+                                            functionSubtotal += item.subtotal;
+                                        });
+                                    }
+                                    func.subtotal = functionSubtotal;
+                                    daySubtotal += functionSubtotal;
+                                });
+                            }
+                            day.subtotal = daySubtotal;
+                            totalSubtotal += daySubtotal;
+                        });
+                    }
+                }
+
+                // Update quotation financials
+                q.financials.subtotal = totalSubtotal;
 
                 // Calculate discount
                 if (q.discount.type === 'percentage') {
                     q.financials.discountAmount = (q.financials.subtotal * q.discount.value) / 100;
                 } else {
-                    q.financials.discountAmount = q.discount.value;
+                    q.financials.discountAmount = parseFloat(q.discount.value) || 0;
                 }
 
                 // Calculate grand total
                 q.financials.grandTotal = Math.max(0, q.financials.subtotal - q.financials.discountAmount);
 
-                // Calculate payment schedule
-                q.financials.booking40 = (q.financials.grandTotal * 0.4).toFixed(2);
-                q.financials.eventDay40 = (q.financials.grandTotal * 0.4).toFixed(2);
-                q.financials.postEvent20 = (q.financials.grandTotal * 0.2).toFixed(2);
+                // Calculate payment schedule (50/50 split)
+                q.financials.booking50 = (q.financials.grandTotal * 0.5).toFixed(2);
+                q.financials.beforeEvent50 = (q.financials.grandTotal * 0.5).toFixed(2);
 
                 // Update display
                 this.updateFinancialDisplay();
@@ -10999,16 +11091,14 @@ convertToQuotationDateFormat(dateStr) {
                 const subtotalEl = document.getElementById('quotSubtotal');
                 const discountEl = document.getElementById('quotDiscountAmount');
                 const grandTotalEl = document.getElementById('quotGrandTotal');
-                const booking40El = document.getElementById('quotBooking40');
-                const eventDay40El = document.getElementById('quotEventDay40');
-                const postEvent20El = document.getElementById('quotPostEvent20');
+                const booking50El = document.getElementById('quotBooking50');
+                const beforeEvent50El = document.getElementById('quotBeforeEvent50');
 
                 if (subtotalEl) subtotalEl.textContent = `₹${q.financials.subtotal.toLocaleString('en-IN')}`;
                 if (discountEl) discountEl.textContent = `- ₹${q.financials.discountAmount.toLocaleString('en-IN')}`;
                 if (grandTotalEl) grandTotalEl.textContent = `₹${q.financials.grandTotal.toLocaleString('en-IN')}`;
-                if (booking40El) booking40El.textContent = `₹${parseFloat(q.financials.booking40).toLocaleString('en-IN')}`;
-                if (eventDay40El) eventDay40El.textContent = `₹${parseFloat(q.financials.eventDay40).toLocaleString('en-IN')}`;
-                if (postEvent20El) postEvent20El.textContent = `₹${parseFloat(q.financials.postEvent20).toLocaleString('en-IN')}`;
+                if (booking50El) booking50El.textContent = `₹${parseFloat(q.financials.booking50).toLocaleString('en-IN')}`;
+                if (beforeEvent50El) beforeEvent50El.textContent = `₹${parseFloat(q.financials.beforeEvent50).toLocaleString('en-IN')}`;
             },
 
             updateQuotationDisplay() {
@@ -11069,15 +11159,19 @@ convertToQuotationDateFormat(dateStr) {
                             <label class="form-label">Items</label>
                             <input type="text" class="form-input quotItemSearch" data-func-index="${index}" data-context="multifunction" placeholder="🔍 Search items from inventory..." style="margin-bottom: 0.5rem;">
                             <div id="quotFunctionItems_${index}">
-                                ${items.map((item, itemIdx) => `
-                                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                ${items.map((item, itemIdx) => {
+                                    const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
+                                    return `
+                                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
                                         <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'name', this.value)" placeholder="Item name">
                                         <input type="number" class="form-input" value="${item.quantity}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
                                         <input type="number" class="form-input" value="${item.price}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'price', this.value)" placeholder="Price">
+                                        <div style="font-weight: 600; color: #2196F3;">₹${subtotal.toLocaleString('en-IN')}</div>
                                         <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationFunctionItem(${index}, ${itemIdx})">×</button>
                                     </div>
-                                `).join('')}
+                                `;}).join('')}
                             </div>
+                            ${items.length > 0 ? `<div style="text-align: right; font-weight: 700; color: #2196F3; margin-top: 0.5rem; padding: 0.5rem; background: #e3f2fd; border-radius: 4px;">Function Total: ₹${(func.subtotal || 0).toLocaleString('en-IN')}</div>` : ''}
                             <button type="button" class="btn btn-secondary btn-small" onclick="OMS.addQuotationFunctionItem(${index})">+ Add Item</button>
                         </div>
                     </div>
@@ -11111,19 +11205,24 @@ convertToQuotationDateFormat(dateStr) {
                                     </div>
                                     <input type="text" class="form-input quotItemSearch" data-day-index="${dayIndex}" data-func-index="${funcIdx}" data-context="multiday" placeholder="🔍 Search items..." style="margin-bottom: 0.5rem;">
                                     <div id="quotDayFunctionItems_${dayIndex}_${funcIdx}">
-                                        ${(func.items || []).map((item, itemIdx) => `
-                                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        ${(func.items || []).map((item, itemIdx) => {
+                                            const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
+                                            return `
+                                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
                                                 <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'name', this.value)" placeholder="Item">
                                                 <input type="number" class="form-input" value="${item.quantity}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
                                                 <input type="number" class="form-input" value="${item.price}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'price', this.value)" placeholder="Price">
+                                                <div style="font-weight: 600; color: #2196F3;">₹${subtotal.toLocaleString('en-IN')}</div>
                                                 <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx})">×</button>
                                             </div>
-                                        `).join('')}
+                                        `;}).join('')}
                                     </div>
+                                    ${(func.items || []).length > 0 ? `<div style="text-align: right; font-weight: 700; color: #2196F3; margin-top: 0.5rem; padding: 0.5rem; background: #e3f2fd; border-radius: 4px;">Function Total: ₹${(func.subtotal || 0).toLocaleString('en-IN')}</div>` : ''}
                                     <button type="button" class="btn btn-secondary btn-small" onclick="OMS.addQuotationDayFunctionItem(${dayIndex}, ${funcIdx})">+ Add Item</button>
                                 </div>
                             `).join('')}
                         </div>
+                        ${functions.length > 0 ? `<div style="text-align: right; font-weight: 700; color: #1976D2; margin-top: 1rem; padding: 0.75rem; background: #bbdefb; border-radius: 4px; font-size: 1.1rem;">Day Total: ₹${(day.subtotal || 0).toLocaleString('en-IN')}</div>` : ''}
                         <button type="button" class="btn btn-primary btn-small" onclick="OMS.addQuotationDayFunction(${dayIndex})">+ Add Function</button>
                     </div>
                 `;
@@ -11174,8 +11273,31 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             updateQuotationFunctionItem(funcIndex, itemIndex, field, value) {
-                this.currentQuotation.functions[funcIndex].items[itemIndex][field] = field === 'name' ? value : parseFloat(value) || 0;
+                // Validation for price and quantity fields
+                if (field === 'quantity' || field === 'price') {
+                    const numValue = parseFloat(value) || 0;
+
+                    // Prevent negative values
+                    if (numValue < 0) {
+                        this.showToast(`${field === 'quantity' ? 'Quantity' : 'Price'} cannot be negative`, 'error');
+                        return;
+                    }
+
+                    // Warn about very large values
+                    if (numValue > 10000000) { // 1 crore
+                        if (!confirm(`${field === 'quantity' ? 'Quantity' : 'Price'} is very large (${numValue.toLocaleString('en-IN')}). Continue?`)) {
+                            return;
+                        }
+                    }
+
+                    this.currentQuotation.functions[funcIndex].items[itemIndex][field] = numValue;
+                } else {
+                    // Name field - trim whitespace
+                    this.currentQuotation.functions[funcIndex].items[itemIndex][field] = value.trim();
+                }
+
                 this.recalculateQuotation();
+                this.renderQuotations(); // Re-render to show updated subtotals
             },
 
             updateQuotationDayDate(dayIndex, value) {
@@ -11213,8 +11335,31 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             updateQuotationDayFunctionItem(dayIndex, funcIndex, itemIndex, field, value) {
-                this.currentQuotation.days[dayIndex].functions[funcIndex].items[itemIndex][field] = field === 'name' ? value : parseFloat(value) || 0;
+                // Validation for price and quantity fields
+                if (field === 'quantity' || field === 'price') {
+                    const numValue = parseFloat(value) || 0;
+
+                    // Prevent negative values
+                    if (numValue < 0) {
+                        this.showToast(`${field === 'quantity' ? 'Quantity' : 'Price'} cannot be negative`, 'error');
+                        return;
+                    }
+
+                    // Warn about very large values
+                    if (numValue > 10000000) { // 1 crore
+                        if (!confirm(`${field === 'quantity' ? 'Quantity' : 'Price'} is very large (${numValue.toLocaleString('en-IN')}). Continue?`)) {
+                            return;
+                        }
+                    }
+
+                    this.currentQuotation.days[dayIndex].functions[funcIndex].items[itemIndex][field] = numValue;
+                } else {
+                    // Name field - trim whitespace
+                    this.currentQuotation.days[dayIndex].functions[funcIndex].items[itemIndex][field] = value.trim();
+                }
+
                 this.recalculateQuotation();
+                this.renderQuotations(); // Re-render to show updated subtotals
             },
 
             cancelQuotationEdit() {
@@ -11461,31 +11606,116 @@ convertToQuotationDateFormat(dateStr) {
                             </table>
                         </div>
 
-                        <!-- Items Table -->
+                        <!-- Items Section - Conditional Rendering Based on Order Type -->
                         <div style="margin-bottom: 2rem;">
-                            <h3 style="margin: 0 0 1rem 0; color: #667eea;">Items</h3>
-                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
-                                <thead style="background: #667eea; color: white;">
-                                    <tr>
-                                        <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">#</th>
-                                        <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Item Name</th>
-                                        <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Qty</th>
-                                        <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Rate (₹)</th>
-                                        <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Amount (₹)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${q.items.map((item, index) => `
+                            ${!q.orderType || q.orderType === 'single' ? `
+                                <!-- Single Function Order -->
+                                <h3 style="margin: 0 0 1rem 0; color: #667eea;">Items</h3>
+                                <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                                    <thead style="background: #667eea; color: white;">
                                         <tr>
-                                            <td style="padding: 0.75rem; border: 1px solid #ddd;">${index + 1}</td>
-                                            <td style="padding: 0.75rem; border: 1px solid #ddd;">${item.name}</td>
-                                            <td style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
-                                            <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${item.rate.toLocaleString('en-IN')}</td>
-                                            <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${item.subtotal.toLocaleString('en-IN')}</td>
+                                            <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">#</th>
+                                            <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Item Name</th>
+                                            <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Qty</th>
+                                            <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Rate (₹)</th>
+                                            <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Amount (₹)</th>
                                         </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        ${(q.items || []).map((item, index) => `
+                                            <tr>
+                                                <td style="padding: 0.75rem; border: 1px solid #ddd;">${index + 1}</td>
+                                                <td style="padding: 0.75rem; border: 1px solid #ddd;">${item.name}</td>
+                                                <td style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+                                                <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${(item.rate || item.price || 0).toLocaleString('en-IN')}</td>
+                                                <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            ` : ''}
+
+                            ${q.orderType === 'multifunction' ? `
+                                <!-- Multifunction Order -->
+                                <h3 style="margin: 0 0 1rem 0; color: #667eea;">Functions & Items</h3>
+                                ${(q.functions || []).map((func, funcIdx) => `
+                                    <div style="margin-bottom: 2rem; border: 2px solid #2196F3; border-radius: 8px; padding: 1rem; background: #e3f2fd;">
+                                        <h4 style="margin: 0 0 1rem 0; color: #1976D2;">📋 Function ${funcIdx + 1}: ${func.name || 'Unnamed'}</h4>
+                                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; background: white;">
+                                            <thead style="background: #2196F3; color: white;">
+                                                <tr>
+                                                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">#</th>
+                                                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Item Name</th>
+                                                    <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Qty</th>
+                                                    <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Price (₹)</th>
+                                                    <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Amount (₹)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${(func.items || []).map((item, itemIdx) => `
+                                                    <tr>
+                                                        <td style="padding: 0.75rem; border: 1px solid #ddd;">${itemIdx + 1}</td>
+                                                        <td style="padding: 0.75rem; border: 1px solid #ddd;">${item.name}</td>
+                                                        <td style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+                                                        <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
+                                                        <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                                    </tr>
+                                                `).join('')}
+                                                <tr style="background: #e3f2fd; font-weight: bold;">
+                                                    <td colspan="4" style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Function Total:</td>
+                                                    <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd; color: #1976D2;">₹${(func.subtotal || 0).toLocaleString('en-IN')}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                `).join('')}
+                            ` : ''}
+
+                            ${q.orderType === 'multiday' ? `
+                                <!-- Multiday Order -->
+                                <h3 style="margin: 0 0 1rem 0; color: #667eea;">Days, Functions & Items</h3>
+                                ${(q.days || []).map((day, dayIdx) => `
+                                    <div style="margin-bottom: 2rem; border: 3px solid #1976D2; border-radius: 8px; padding: 1rem; background: #bbdefb;">
+                                        <h4 style="margin: 0 0 1rem 0; color: #0d47a1;">📅 Day ${dayIdx + 1}: ${day.date ? Utils.formatDate(day.date) : 'No date set'}</h4>
+
+                                        ${(day.functions || []).map((func, funcIdx) => `
+                                            <div style="margin-bottom: 1.5rem; border: 2px solid #2196F3; border-radius: 8px; padding: 1rem; background: #e3f2fd;">
+                                                <h5 style="margin: 0 0 1rem 0; color: #1976D2;">📋 Function: ${func.name || 'Unnamed'}</h5>
+                                                <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; background: white;">
+                                                    <thead style="background: #2196F3; color: white;">
+                                                        <tr>
+                                                            <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">#</th>
+                                                            <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Item Name</th>
+                                                            <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Qty</th>
+                                                            <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Price (₹)</th>
+                                                            <th style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Amount (₹)</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        ${(func.items || []).map((item, itemIdx) => `
+                                                            <tr>
+                                                                <td style="padding: 0.75rem; border: 1px solid #ddd;">${itemIdx + 1}</td>
+                                                                <td style="padding: 0.75rem; border: 1px solid #ddd;">${item.name}</td>
+                                                                <td style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+                                                                <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
+                                                                <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                                            </tr>
+                                                        `).join('')}
+                                                        <tr style="background: #e3f2fd; font-weight: bold;">
+                                                            <td colspan="4" style="padding: 0.75rem; text-align: right; border: 1px solid #ddd;">Function Total:</td>
+                                                            <td style="padding: 0.75rem; text-align: right; border: 1px solid #ddd; color: #1976D2;">₹${(func.subtotal || 0).toLocaleString('en-IN')}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        `).join('')}
+
+                                        <div style="text-align: right; padding: 1rem; background: #90caf9; border-radius: 8px; margin-top: 1rem;">
+                                            <strong style="font-size: 1.1rem; color: #0d47a1;">Day ${dayIdx + 1} Total: ₹${(day.subtotal || 0).toLocaleString('en-IN')}</strong>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            ` : ''}
                         </div>
 
                         <!-- Financial Summary -->
@@ -11879,19 +12109,43 @@ convertToQuotationDateFormat(dateStr) {
                 const quotation = this.data.quotations.find(q => q.id === quotationId);
                 if (!quotation) return;
 
+                // Build order type specific details
+                let orderTypeInfo = '';
+                if (!quotation.orderType || quotation.orderType === 'single') {
+                    const itemCount = (quotation.items || []).length;
+                    orderTypeInfo = `*Items:* ${itemCount} item${itemCount !== 1 ? 's' : ''}`;
+                } else if (quotation.orderType === 'multifunction') {
+                    const funcCount = (quotation.functions || []).length;
+                    orderTypeInfo = `*Order Type:* Multifunction (${funcCount} function${funcCount !== 1 ? 's' : ''})`;
+                } else if (quotation.orderType === 'multiday') {
+                    const dayCount = (quotation.days || []).length;
+                    orderTypeInfo = `*Order Type:* Multiday Event (${dayCount} day${dayCount !== 1 ? 's' : ''})`;
+                }
+
+                // Build financial summary
+                let financialDetails = `*Subtotal:* ₹${quotation.financials.subtotal.toLocaleString('en-IN')}`;
+                if (quotation.financials.discountAmount > 0) {
+                    financialDetails += `\n*Discount:* -₹${quotation.financials.discountAmount.toLocaleString('en-IN')}`;
+                }
+                financialDetails += `\n*Grand Total:* ₹${quotation.financials.grandTotal.toLocaleString('en-IN')}`;
+
                 const message = `Hi ${quotation.customer.name}!
 
 Thank you for your interest. Please find your quotation details:
 
 *Event Date:* ${Utils.formatDate(quotation.customer.eventDate)}
-*Total Amount:* ₹${quotation.financials.grandTotal.toLocaleString('en-IN')}
+${quotation.customer.eventVenue ? `*Venue:* ${quotation.customer.eventVenue}\n` : ''}${orderTypeInfo}
 
-*Payment Schedule:*
-• Booking (40%): ₹${parseFloat(quotation.financials.booking40).toLocaleString('en-IN')}
-• Event Day (40%): ₹${parseFloat(quotation.financials.eventDay40).toLocaleString('en-IN')}
-• Post-Event (20%): ₹${parseFloat(quotation.financials.postEvent20).toLocaleString('en-IN')}
+*FINANCIAL SUMMARY:*
+${financialDetails}
 
-Valid until: ${Utils.formatDate(quotation.validUntil)}
+*PAYMENT SCHEDULE:*
+• Booking Amount (50%): ₹${(quotation.financials.grandTotal * 0.5).toLocaleString('en-IN')}
+• Before Event (50%): ₹${(quotation.financials.grandTotal * 0.5).toLocaleString('en-IN')}
+
+Valid until: ${Utils.formatDate(quotation.validUntil || this.calculateValidUntil())}
+
+For detailed quotation, please visit our office or request PDF.
 
 Contact: 📱 98984 96111 / 76984 96111`;
 
