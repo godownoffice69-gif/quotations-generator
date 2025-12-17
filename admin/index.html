@@ -10587,8 +10587,9 @@ convertToQuotationDateFormat(dateStr) {
                         <!-- Single Function Items -->
                         <div class="card">
                             <h3 style="margin: 0 0 1rem 0;">📦 Items</h3>
-                            <div class="form-group">
-                                <input type="text" id="quotItemSearch" class="form-input" placeholder="🔍 Search items from inventory or add custom...">
+                            <div class="form-group" style="position: relative;">
+                                <input type="text" id="quotItemSearch" class="form-input quotItemSearch" data-context="single" placeholder="🔍 Search items from inventory or add custom...">
+                                <div id="quotItemSearchResults" class="search-dropdown" style="display: none;"></div>
                             </div>
 
                             <div id="quotationItemsContainer">
@@ -10755,21 +10756,36 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             initQuotationItemSearch() {
-                const searchInput = document.getElementById('quotItemSearch');
-                if (!searchInput) return;
+                // Setup search for all quotItemSearch inputs using event delegation
+                const container = document.getElementById('quotations');
+                if (!container) return;
 
-                // Create dropdown container
-                let dropdown = document.getElementById('quotItemSearchDropdown');
-                if (!dropdown) {
-                    dropdown = document.createElement('div');
-                    dropdown.id = 'quotItemSearchDropdown';
-                    dropdown.style.cssText = 'position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-height: 250px; overflow-y: auto; display: none;';
-                    searchInput.parentElement.style.position = 'relative';
-                    searchInput.parentElement.appendChild(dropdown);
-                }
+                // Remove old listeners
+                const oldSearchInputs = container.querySelectorAll('.quotItemSearch');
+                oldSearchInputs.forEach(input => {
+                    const clone = input.cloneNode(true);
+                    input.parentNode.replaceChild(clone, input);
+                });
 
-                searchInput.addEventListener('input', (e) => {
-                    const query = e.target.value.toLowerCase().trim();
+                // Add listeners to all search inputs
+                container.addEventListener('input', (e) => {
+                    if (!e.target.classList.contains('quotItemSearch')) return;
+
+                    const searchInput = e.target;
+                    const query = searchInput.value.toLowerCase().trim();
+                    const context = searchInput.dataset.context;
+                    const funcIndex = searchInput.dataset.funcIndex;
+                    const dayIndex = searchInput.dataset.dayIndex;
+
+                    // Create or get dropdown
+                    let dropdown = searchInput.parentElement.querySelector('.search-dropdown');
+                    if (!dropdown) {
+                        dropdown = document.createElement('div');
+                        dropdown.className = 'search-dropdown';
+                        dropdown.style.cssText = 'position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-height: 250px; overflow-y: auto; display: none;';
+                        searchInput.parentElement.style.position = 'relative';
+                        searchInput.parentElement.appendChild(dropdown);
+                    }
 
                     if (query.length < 2) {
                         dropdown.style.display = 'none';
@@ -10782,43 +10798,63 @@ convertToQuotationDateFormat(dateStr) {
                         item.name.toLowerCase().includes(query)
                     ).slice(0, 10);
 
-                    // Show dropdown with results
                     if (matches.length > 0) {
-                        dropdown.innerHTML = matches.map(item => `
-                            <div onclick="OMS.selectQuotationItem('${item.name.replace(/'/g, "\\'")}', ${item.defaultPrice || 0})"
-                                 style="padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"
-                                 onmouseover="this.style.background='#f5f5f5'"
-                                 onmouseout="this.style.background='white'">
-                                <div style="font-weight: 500;">${item.name}</div>
-                                <div style="font-size: 0.85rem; color: #666;">
-                                    ${item.category ? `Category: ${item.category} • ` : ''}
-                                    Price: ₹${(item.defaultPrice || 0).toLocaleString('en-IN')}
+                        dropdown.innerHTML = matches.map(item => {
+                            const onclickHandler = context === 'single'
+                                ? `OMS.selectQuotationItem('${item.name.replace(/'/g, "\\'")}', ${item.defaultPrice || 0})`
+                                : context === 'multifunction'
+                                ? `OMS.selectQuotationFunctionItem(${funcIndex}, '${item.name.replace(/'/g, "\\'")}', ${item.defaultPrice || 0})`
+                                : `OMS.selectQuotationDayFunctionItem(${dayIndex}, ${funcIndex}, '${item.name.replace(/'/g, "\\'")}', ${item.defaultPrice || 0})`;
+
+                            return `
+                                <div onclick="${onclickHandler}"
+                                     style="padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"
+                                     onmouseover="this.style.background='#f5f5f5'"
+                                     onmouseout="this.style.background='white'">
+                                    <div style="font-weight: 500;">${item.name}</div>
+                                    <div style="font-size: 0.85rem; color: #666;">
+                                        ${item.category ? `Category: ${item.category} • ` : ''}
+                                        Price: ₹${(item.defaultPrice || 0).toLocaleString('en-IN')}
+                                    </div>
                                 </div>
-                            </div>
-                        `).join('');
+                            `;
+                        }).join('');
                         dropdown.style.display = 'block';
                     } else {
                         dropdown.style.display = 'none';
                     }
                 });
 
-                // Close dropdown when clicking outside
+                // Close all dropdowns when clicking outside
                 document.addEventListener('click', (e) => {
-                    if (e.target !== searchInput && !dropdown.contains(e.target)) {
-                        dropdown.style.display = 'none';
+                    if (!e.target.classList.contains('quotItemSearch')) {
+                        container.querySelectorAll('.search-dropdown').forEach(d => d.style.display = 'none');
                     }
                 });
+            },
 
-                searchInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        dropdown.style.display = 'none';
-                        const itemName = e.target.value.trim();
-                        if (itemName) {
-                            this.addQuotationItemByName(itemName);
-                            e.target.value = '';
-                        }
-                    }
+            selectQuotationFunctionItem(funcIndex, itemName, price) {
+                if (!this.currentQuotation.functions[funcIndex].items) {
+                    this.currentQuotation.functions[funcIndex].items = [];
+                }
+                this.currentQuotation.functions[funcIndex].items.push({
+                    name: itemName,
+                    quantity: 1,
+                    price: price || 0
                 });
+                this.renderQuotations();
+            },
+
+            selectQuotationDayFunctionItem(dayIndex, funcIndex, itemName, price) {
+                if (!this.currentQuotation.days[dayIndex].functions[funcIndex].items) {
+                    this.currentQuotation.days[dayIndex].functions[funcIndex].items = [];
+                }
+                this.currentQuotation.days[dayIndex].functions[funcIndex].items.push({
+                    name: itemName,
+                    quantity: 1,
+                    price: price || 0
+                });
+                this.renderQuotations();
             },
 
             selectQuotationItem(itemName, price) {
@@ -10990,12 +11026,16 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
                         <div class="form-group">
                             <label class="form-label">Function Type</label>
-                            <input type="text" class="form-input" value="${func.name || ''}"
+                            <input type="text" class="form-input" value="${func.name || ''}" list="quotFunctionsList"
                                    onchange="OMS.updateQuotationFunctionName(${index}, this.value)"
                                    placeholder="e.g., Sangeet, Reception, Haldi">
+                            <datalist id="quotFunctionsList">
+                                ${this.data.eventsList.map(event => `<option value="${event}">`).join('')}
+                            </datalist>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Items</label>
+                            <input type="text" class="form-input quotItemSearch" data-func-index="${index}" data-context="multifunction" placeholder="🔍 Search items from inventory..." style="margin-bottom: 0.5rem;">
                             <div id="quotFunctionItems_${index}">
                                 ${items.map((item, itemIdx) => `
                                     <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
@@ -11029,11 +11069,12 @@ convertToQuotationDateFormat(dateStr) {
                             ${functions.map((func, funcIdx) => `
                                 <div class="card" style="background: white; margin-bottom: 0.5rem;">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                        <input type="text" class="form-input" style="flex: 1; margin-right: 0.5rem;" value="${func.name || ''}"
+                                        <input type="text" class="form-input" style="flex: 1; margin-right: 0.5rem;" value="${func.name || ''}" list="quotFunctionsList"
                                                onchange="OMS.updateQuotationDayFunctionName(${dayIndex}, ${funcIdx}, this.value)"
                                                placeholder="Function type">
                                         <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationDayFunction(${dayIndex}, ${funcIdx})">×</button>
                                     </div>
+                                    <input type="text" class="form-input quotItemSearch" data-day-index="${dayIndex}" data-func-index="${funcIdx}" data-context="multiday" placeholder="🔍 Search items..." style="margin-bottom: 0.5rem;">
                                     <div id="quotDayFunctionItems_${dayIndex}_${funcIdx}">
                                         ${(func.items || []).map((item, itemIdx) => `
                                             <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
@@ -11437,16 +11478,12 @@ convertToQuotationDateFormat(dateStr) {
                             <h3 style="margin: 0 0 1rem 0; color: #2e7d32;">Payment Schedule</h3>
                             <ul style="list-style: none; padding: 0; margin: 0;">
                                 <li style="padding: 0.5rem 0; border-bottom: 1px solid #ddd;">
-                                    <strong>Booking Amount (40%):</strong>
-                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.booking40).toLocaleString('en-IN')}</span>
-                                </li>
-                                <li style="padding: 0.5rem 0; border-bottom: 1px solid #ddd;">
-                                    <strong>Event Day Payment (40%):</strong>
-                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.eventDay40).toLocaleString('en-IN')}</span>
+                                    <strong>Booking Amount (50%):</strong>
+                                    <span style="float: right; font-weight: bold;">₹${(q.financials.grandTotal * 0.5).toLocaleString('en-IN')}</span>
                                 </li>
                                 <li style="padding: 0.5rem 0;">
-                                    <strong>Post-Event Payment (20%):</strong>
-                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.postEvent20).toLocaleString('en-IN')}</span>
+                                    <strong>Remaining Amount Before Event (50%):</strong>
+                                    <span style="float: right; font-weight: bold;">₹${(q.financials.grandTotal * 0.5).toLocaleString('en-IN')}</span>
                                 </li>
                             </ul>
                         </div>
@@ -11457,9 +11494,8 @@ convertToQuotationDateFormat(dateStr) {
 
                             <p style="margin: 0 0 0.5rem 0;"><strong>PAYMENT TERMS:</strong></p>
                             <ul style="margin: 0 0 1rem 0; padding-left: 1.5rem;">
-                                <li>40% booking amount required to confirm order</li>
-                                <li>40% payment on event day before event starts</li>
-                                <li>20% payment after event completion on same day</li>
+                                <li>50% booking amount required to confirm order</li>
+                                <li>Remaining 50% payment before event starts</li>
                             </ul>
 
                             <p style="margin: 0 0 0.5rem 0;"><strong>INCLUSIONS:</strong></p>
