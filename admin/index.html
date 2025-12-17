@@ -10582,7 +10582,9 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
                         </div>
 
-                        <!-- Items Section -->
+                        <!-- Items/Functions Section - Conditional based on order type -->
+                        ${!q.orderType || q.orderType === 'single' ? `
+                        <!-- Single Function Items -->
                         <div class="card">
                             <h3 style="margin: 0 0 1rem 0;">📦 Items</h3>
                             <div class="form-group">
@@ -10590,15 +10592,54 @@ convertToQuotationDateFormat(dateStr) {
                             </div>
 
                             <div id="quotationItemsContainer">
-                                ${q.items.length === 0 ? `
+                                ${q.items && q.items.length === 0 ? `
                                     <div style="text-align: center; padding: 2rem; color: #999;">
                                         <p>No items added yet. Search and add items above.</p>
                                     </div>
-                                ` : this.renderQuotationItems(q.items)}
+                                ` : this.renderQuotationItems(q.items || [])}
                             </div>
 
                             <button type="button" class="btn btn-primary" onclick="OMS.addCustomQuotationItem()">➕ Add Custom Item</button>
                         </div>
+                        ` : ''}
+
+                        ${q.orderType === 'multifunction' ? `
+                        <!-- Multiple Functions - Same Day -->
+                        <div class="card">
+                            <h3 style="margin: 0 0 1rem 0;">📋 Functions</h3>
+                            <p style="color: var(--text-gray); margin-bottom: 1rem;">Add multiple functions for the same day event</p>
+
+                            <div id="quotMultiFunctionsContainer">
+                                ${(q.functions || []).map((func, idx) => this.renderQuotationFunction(func, idx)).join('')}
+                                ${(!q.functions || q.functions.length === 0) ? `
+                                    <div style="text-align: center; padding: 2rem; color: #999;">
+                                        <p>No functions added yet. Click below to add your first function.</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <button type="button" class="btn btn-primary" onclick="OMS.addQuotationFunction()">➕ Add Function</button>
+                        </div>
+                        ` : ''}
+
+                        ${q.orderType === 'multiday' ? `
+                        <!-- Multiple Days -->
+                        <div class="card">
+                            <h3 style="margin: 0 0 1rem 0;">📅 Days & Functions</h3>
+                            <p style="color: var(--text-gray); margin-bottom: 1rem;">Add days with functions and items for each day</p>
+
+                            <div id="quotMultiDaysContainer">
+                                ${(q.days || []).map((day, idx) => this.renderQuotationDay(day, idx)).join('')}
+                                ${(!q.days || q.days.length === 0) ? `
+                                    <div style="text-align: center; padding: 2rem; color: #999;">
+                                        <p>No days added yet. Click below to add your first day.</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <button type="button" class="btn btn-primary" onclick="OMS.addQuotationDay()">➕ Add Day</button>
+                        </div>
+                        ` : ''}
 
                         <!-- Discount Section -->
                         <div class="card" style="background: #fff3cd;">
@@ -10937,6 +10978,167 @@ convertToQuotationDateFormat(dateStr) {
                 }
 
                 this.renderQuotations();
+            },
+
+            renderQuotationFunction(func, index) {
+                const items = func.items || [];
+                return `
+                    <div class="card" style="background: #f9f9f9; margin-bottom: 1rem; border-left: 4px solid var(--primary);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h4 style="margin: 0;">Function ${index + 1}: ${func.name || 'Unnamed Function'}</h4>
+                            <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationFunction(${index})">🗑️ Remove</button>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Function Type</label>
+                            <input type="text" class="form-input" value="${func.name || ''}"
+                                   onchange="OMS.updateQuotationFunctionName(${index}, this.value)"
+                                   placeholder="e.g., Sangeet, Reception, Haldi">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Items</label>
+                            <div id="quotFunctionItems_${index}">
+                                ${items.map((item, itemIdx) => `
+                                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'name', this.value)" placeholder="Item name">
+                                        <input type="number" class="form-input" value="${item.quantity}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
+                                        <input type="number" class="form-input" value="${item.price}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'price', this.value)" placeholder="Price">
+                                        <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationFunctionItem(${index}, ${itemIdx})">×</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-small" onclick="OMS.addQuotationFunctionItem(${index})">+ Add Item</button>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderQuotationDay(day, dayIndex) {
+                const functions = day.functions || [];
+                return `
+                    <div class="card" style="background: #e8f4f8; margin-bottom: 1rem; border-left: 4px solid #2196F3;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h4 style="margin: 0;">📅 Day ${dayIndex + 1}: ${day.date || 'No date set'}</h4>
+                            <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationDay(${dayIndex})">🗑️ Remove Day</button>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Date</label>
+                            <input type="date" class="form-input" value="${day.date || ''}" onchange="OMS.updateQuotationDayDate(${dayIndex}, this.value)">
+                        </div>
+                        <h5 style="margin: 1rem 0;">Functions for this day:</h5>
+                        <div id="quotDayFunctions_${dayIndex}">
+                            ${functions.map((func, funcIdx) => `
+                                <div class="card" style="background: white; margin-bottom: 0.5rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                        <input type="text" class="form-input" style="flex: 1; margin-right: 0.5rem;" value="${func.name || ''}"
+                                               onchange="OMS.updateQuotationDayFunctionName(${dayIndex}, ${funcIdx}, this.value)"
+                                               placeholder="Function type">
+                                        <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationDayFunction(${dayIndex}, ${funcIdx})">×</button>
+                                    </div>
+                                    <div id="quotDayFunctionItems_${dayIndex}_${funcIdx}">
+                                        ${(func.items || []).map((item, itemIdx) => `
+                                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                                <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'name', this.value)" placeholder="Item">
+                                                <input type="number" class="form-input" value="${item.quantity}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
+                                                <input type="number" class="form-input" value="${item.price}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'price', this.value)" placeholder="Price">
+                                                <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx})">×</button>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="OMS.addQuotationDayFunctionItem(${dayIndex}, ${funcIdx})">+ Add Item</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" class="btn btn-primary btn-small" onclick="OMS.addQuotationDayFunction(${dayIndex})">+ Add Function</button>
+                    </div>
+                `;
+            },
+
+            addQuotationFunction() {
+                if (!this.currentQuotation.functions) this.currentQuotation.functions = [];
+                this.currentQuotation.functions.push({ name: '', items: [] });
+                this.renderQuotations();
+            },
+
+            addQuotationDay() {
+                if (!this.currentQuotation.days) this.currentQuotation.days = [];
+                this.currentQuotation.days.push({ date: '', functions: [] });
+                this.renderQuotations();
+            },
+
+            removeQuotationFunction(index) {
+                if (confirm('Remove this function?')) {
+                    this.currentQuotation.functions.splice(index, 1);
+                    this.renderQuotations();
+                }
+            },
+
+            removeQuotationDay(index) {
+                if (confirm('Remove this day?')) {
+                    this.currentQuotation.days.splice(index, 1);
+                    this.renderQuotations();
+                }
+            },
+
+            updateQuotationFunctionName(funcIndex, value) {
+                this.currentQuotation.functions[funcIndex].name = value;
+                this.recalculateQuotation();
+            },
+
+            addQuotationFunctionItem(funcIndex) {
+                if (!this.currentQuotation.functions[funcIndex].items) {
+                    this.currentQuotation.functions[funcIndex].items = [];
+                }
+                this.currentQuotation.functions[funcIndex].items.push({ name: '', quantity: 1, price: 0 });
+                this.renderQuotations();
+            },
+
+            removeQuotationFunctionItem(funcIndex, itemIndex) {
+                this.currentQuotation.functions[funcIndex].items.splice(itemIndex, 1);
+                this.renderQuotations();
+            },
+
+            updateQuotationFunctionItem(funcIndex, itemIndex, field, value) {
+                this.currentQuotation.functions[funcIndex].items[itemIndex][field] = field === 'name' ? value : parseFloat(value) || 0;
+                this.recalculateQuotation();
+            },
+
+            updateQuotationDayDate(dayIndex, value) {
+                this.currentQuotation.days[dayIndex].date = value;
+            },
+
+            addQuotationDayFunction(dayIndex) {
+                if (!this.currentQuotation.days[dayIndex].functions) {
+                    this.currentQuotation.days[dayIndex].functions = [];
+                }
+                this.currentQuotation.days[dayIndex].functions.push({ name: '', items: [] });
+                this.renderQuotations();
+            },
+
+            removeQuotationDayFunction(dayIndex, funcIndex) {
+                this.currentQuotation.days[dayIndex].functions.splice(funcIndex, 1);
+                this.renderQuotations();
+            },
+
+            updateQuotationDayFunctionName(dayIndex, funcIndex, value) {
+                this.currentQuotation.days[dayIndex].functions[funcIndex].name = value;
+            },
+
+            addQuotationDayFunctionItem(dayIndex, funcIndex) {
+                if (!this.currentQuotation.days[dayIndex].functions[funcIndex].items) {
+                    this.currentQuotation.days[dayIndex].functions[funcIndex].items = [];
+                }
+                this.currentQuotation.days[dayIndex].functions[funcIndex].items.push({ name: '', quantity: 1, price: 0 });
+                this.renderQuotations();
+            },
+
+            removeQuotationDayFunctionItem(dayIndex, funcIndex, itemIndex) {
+                this.currentQuotation.days[dayIndex].functions[funcIndex].items.splice(itemIndex, 1);
+                this.renderQuotations();
+            },
+
+            updateQuotationDayFunctionItem(dayIndex, funcIndex, itemIndex, field, value) {
+                this.currentQuotation.days[dayIndex].functions[funcIndex].items[itemIndex][field] = field === 'name' ? value : parseFloat(value) || 0;
+                this.recalculateQuotation();
             },
 
             cancelQuotationEdit() {
