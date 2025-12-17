@@ -1506,19 +1506,30 @@
             overflow: hidden;
         }
 
-        /* Fire Background Image Layer */
-        #loginScreen::before {
-            content: '';
+        /* Login Slideshow Container */
+        .login-slideshow {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('https://raw.githubusercontent.com/godownoffice69-gif/quotations-generator/main/assets/fire-background.jpg') center/cover no-repeat;
-            background-blend-mode: screen;
-            opacity: 0.85;
-            animation: flame-flicker 3s ease-in-out infinite;
             z-index: 0;
+        }
+
+        .login-slideshow-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .login-slideshow-slide.active {
+            opacity: 0.85;
         }
 
         /* Realistic Flame Flicker Animation */
@@ -1707,6 +1718,14 @@
 <body>
     <!-- Login Screen -->
     <div id="loginScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: flex-end; justify-content: flex-end; padding: 2rem;">
+        <!-- Login Background Slideshow -->
+        <div class="login-slideshow">
+            <div class="login-slideshow-slide active" style="background-image: url('https://raw.githubusercontent.com/godownoffice69-gif/quotations-generator/main/assets/fire-background.jpg');"></div>
+            <div class="login-slideshow-slide" style="background-image: url('https://raw.githubusercontent.com/godownoffice69-gif/quotations-generator/main/assets/slideshow-1.jpg');"></div>
+            <div class="login-slideshow-slide" style="background-image: url('https://raw.githubusercontent.com/godownoffice69-gif/quotations-generator/main/assets/slideshow-2.jpg');"></div>
+            <div class="login-slideshow-slide" style="background-image: url('https://raw.githubusercontent.com/godownoffice69-gif/quotations-generator/main/assets/slideshow-3.jpg');"></div>
+        </div>
+
         <!-- Floating Particles Background -->
         <canvas id="particles-canvas"></canvas>
 
@@ -9029,13 +9048,25 @@ convertToQuotationDateFormat(dateStr) {
 
             // ============ TAB RENDERERS ============
             renderDashboard() {
+                // Filter out merged orders (original orders that were merged into another order)
+                const activeOrders = this.data.orders.filter(o => !o.isMerged);
+                const todayDate = Utils.toDateString(new Date());
+
                 const stats = [
-                    { label: this.t('totalOrders'), value: this.data.orders.length, class: '' },
-                    { label: this.t('confirmedOrders'), value: this.data.orders.filter(o => o.status && o.status.toLowerCase() === 'confirmed').length, class: 'success' },
-                    { label: this.t('completedOrders'), value: this.data.orders.filter(o => o.status && o.status.toLowerCase() === 'completed').length, class: 'info' },
+                    { label: this.t('totalOrders'), value: activeOrders.length, class: '' },
+                    { label: this.t('confirmedOrders'), value: activeOrders.filter(o => o.status && o.status.toLowerCase() === 'confirmed').length, class: 'success' },
+                    { label: this.t('completedOrders'), value: activeOrders.filter(o => o.status && o.status.toLowerCase() === 'completed').length, class: 'info' },
                     { label: this.t('customers'), value: this.data.customers.length, class: '' },
                     { label: this.t('lowStock'), value: this.data.inventory.items.filter(i => i.quantity <= this.data.settings.lowStockThreshold).length, class: 'warning' },
-                    { label: this.t('today'), value: this.data.orders.filter(o => o.date === Utils.toDateString(new Date())).length, class: 'danger' }
+                    { label: this.t('today'), value: activeOrders.filter(o => {
+                        // For single day orders, check date field
+                        if (!o.isMultiDay && o.date === todayDate) return true;
+                        // For multiday orders, check if today falls within the date range
+                        if (o.isMultiDay && o.startDate && o.endDate) {
+                            return todayDate >= o.startDate && todayDate <= o.endDate;
+                        }
+                        return false;
+                    }).length, class: 'danger' }
                 ];
 
                 document.getElementById('dashboardStats').innerHTML = stats.map(s => `
@@ -9045,7 +9076,8 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
                 `).join('');
 
-                const recentOrders = this.data.orders.slice(-5).reverse();
+                // Show recent orders (excluding merged orders)
+                const recentOrders = activeOrders.slice(-5).reverse();
                 this.renderTable('recentOrdersContainer', [
                     { key: 'orderId', label: this.t('orderId'), render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
                     { key: 'clientName', label: this.t('client') },
@@ -11069,9 +11101,12 @@ convertToQuotationDateFormat(dateStr) {
                             ${functions.map((func, funcIdx) => `
                                 <div class="card" style="background: white; margin-bottom: 0.5rem;">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                        <input type="text" class="form-input" style="flex: 1; margin-right: 0.5rem;" value="${func.name || ''}" list="quotFunctionsList"
+                                        <input type="text" class="form-input" style="flex: 1; margin-right: 0.5rem;" value="${func.name || ''}" list="quotFunctionsList_${dayIndex}_${funcIdx}"
                                                onchange="OMS.updateQuotationDayFunctionName(${dayIndex}, ${funcIdx}, this.value)"
                                                placeholder="Function type">
+                                        <datalist id="quotFunctionsList_${dayIndex}_${funcIdx}">
+                                            ${this.data.eventsList.map(event => `<option value="${event}">`).join('')}
+                                        </datalist>
                                         <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationDayFunction(${dayIndex}, ${funcIdx})">×</button>
                                     </div>
                                     <input type="text" class="form-input quotItemSearch" data-day-index="${dayIndex}" data-func-index="${funcIdx}" data-context="multiday" placeholder="🔍 Search items..." style="margin-bottom: 0.5rem;">
@@ -18203,6 +18238,9 @@ setupAllRealtimeListeners() {
             console.log(`📦 Total items after update: ${this.data.inventory.items.length}`);
             if (this.currentTab === 'inventory') {
                 this.updateInventoryDisplay();
+            } else if (this.currentTab === 'dashboard') {
+                // Update dashboard in real-time when inventory changes (for low stock count)
+                this.renderDashboard();
             }
             this.saveToStorage();
         });
@@ -18473,6 +18511,12 @@ if (change.type === 'modified') {
                 if (index !== -1) {
                     const deleted = this.data.orders.splice(index, 1)[0];
                     this.updateAllDisplays();
+
+                    // Update dashboard in real-time when order is deleted
+                    if (this.currentTab === 'dashboard') {
+                        this.renderDashboard();
+                    }
+
                     this.showToast(`🗑️ Order deleted: ${deleted.orderId}`, 'success');
                 }
             }
@@ -20500,6 +20544,40 @@ if (diffDays > 30) {
 
         particleObserver.observe(loginScreen, { attributes: true, attributeFilter: ['style'] });
     }
+
+    // Login Background Slideshow with 3-second timing
+    const slides = document.querySelectorAll('.login-slideshow-slide');
+    let currentSlide = 0;
+    let slideshowInterval;
+
+    function showNextSlide() {
+        // Remove active class from current slide
+        slides[currentSlide].classList.remove('active');
+
+        // Move to next slide
+        currentSlide = (currentSlide + 1) % slides.length;
+
+        // Add active class to next slide
+        slides[currentSlide].classList.add('active');
+    }
+
+    // Start slideshow when login screen is visible
+    const slideshowObserver = new MutationObserver(() => {
+        if (loginScreen.style.display === 'flex') {
+            // Start slideshow
+            if (!slideshowInterval) {
+                slideshowInterval = setInterval(showNextSlide, 3000); // 3 seconds
+            }
+        } else {
+            // Stop slideshow when login screen is hidden
+            if (slideshowInterval) {
+                clearInterval(slideshowInterval);
+                slideshowInterval = null;
+            }
+        }
+    });
+
+    slideshowObserver.observe(loginScreen, { attributes: true, attributeFilter: ['style'] });
 
     console.log('🎆 Firepower SFX Login Theme Activated!');
 
