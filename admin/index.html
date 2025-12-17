@@ -10971,9 +10971,10 @@ convertToQuotationDateFormat(dateStr) {
                 // Calculate based on order type
                 if (!q.orderType || q.orderType === 'single') {
                     // Single function order - calculate from q.items
+                    // Note: Single function uses 'rate' field, not 'price'
                     if (q.items && q.items.length > 0) {
                         q.items.forEach(item => {
-                            const price = parseFloat(item.price) || 0;
+                            const price = parseFloat(item.rate || item.price) || 0;
                             const quantity = parseFloat(item.quantity) || 0;
                             item.subtotal = price * quantity;
                             totalSubtotal += item.subtotal;
