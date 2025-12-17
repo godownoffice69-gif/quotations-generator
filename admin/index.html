@@ -11478,16 +11478,12 @@ convertToQuotationDateFormat(dateStr) {
                             <h3 style="margin: 0 0 1rem 0; color: #2e7d32;">Payment Schedule</h3>
                             <ul style="list-style: none; padding: 0; margin: 0;">
                                 <li style="padding: 0.5rem 0; border-bottom: 1px solid #ddd;">
-                                    <strong>Booking Amount (40%):</strong>
-                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.booking40).toLocaleString('en-IN')}</span>
-                                </li>
-                                <li style="padding: 0.5rem 0; border-bottom: 1px solid #ddd;">
-                                    <strong>Event Day Payment (40%):</strong>
-                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.eventDay40).toLocaleString('en-IN')}</span>
+                                    <strong>Booking Amount (50%):</strong>
+                                    <span style="float: right; font-weight: bold;">₹${(q.financials.grandTotal * 0.5).toLocaleString('en-IN')}</span>
                                 </li>
                                 <li style="padding: 0.5rem 0;">
-                                    <strong>Post-Event Payment (20%):</strong>
-                                    <span style="float: right; font-weight: bold;">₹${parseFloat(q.financials.postEvent20).toLocaleString('en-IN')}</span>
+                                    <strong>Remaining Amount Before Event (50%):</strong>
+                                    <span style="float: right; font-weight: bold;">₹${(q.financials.grandTotal * 0.5).toLocaleString('en-IN')}</span>
                                 </li>
                             </ul>
                         </div>
@@ -11498,9 +11494,8 @@ convertToQuotationDateFormat(dateStr) {
 
                             <p style="margin: 0 0 0.5rem 0;"><strong>PAYMENT TERMS:</strong></p>
                             <ul style="margin: 0 0 1rem 0; padding-left: 1.5rem;">
-                                <li>40% booking amount required to confirm order</li>
-                                <li>40% payment on event day before event starts</li>
-                                <li>20% payment after event completion on same day</li>
+                                <li>50% booking amount required to confirm order</li>
+                                <li>Remaining 50% payment before event starts</li>
                             </ul>
 
                             <p style="margin: 0 0 0.5rem 0;"><strong>INCLUSIONS:</strong></p>
