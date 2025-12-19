@@ -10,6 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -1825,6 +1826,38 @@
             <!-- Dashboard Tab -->
             <div id="dashboard" class="tab-content active">
                 <div class="stats-grid" id="dashboardStats"></div>
+
+                <!-- Analytics Charts Section -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <h2 class="card-title">📊 Advanced Analytics</h2>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+                        <!-- Revenue Trend Chart -->
+                        <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border);">
+                            <h4 style="margin: 0 0 1rem 0; color: var(--primary);">Revenue Trend (Last 6 Months)</h4>
+                            <canvas id="revenueTrendChart" style="max-height: 300px;"></canvas>
+                        </div>
+
+                        <!-- Orders by Status Chart -->
+                        <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border);">
+                            <h4 style="margin: 0 0 1rem 0; color: var(--primary);">Orders by Status</h4>
+                            <canvas id="ordersByStatusChart" style="max-height: 300px;"></canvas>
+                        </div>
+
+                        <!-- Monthly Orders Chart -->
+                        <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border);">
+                            <h4 style="margin: 0 0 1rem 0; color: var(--primary);">Orders per Month (Last 6 Months)</h4>
+                            <canvas id="monthlyOrdersChart" style="max-height: 300px;"></canvas>
+                        </div>
+
+                        <!-- Top Items Chart -->
+                        <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border);">
+                            <h4 style="margin: 0 0 1rem 0; color: var(--primary);">Top 10 Popular Items</h4>
+                            <canvas id="topItemsChart" style="max-height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Smart Notifications Panel -->
                 <div id="notificationsPanel" class="card" style="display:none; border-left: 4px solid var(--warning);">
@@ -8765,13 +8798,78 @@ convertToQuotationDateFormat(dateStr) {
                         filename = `oms_backup_${Utils.toDateString(new Date())}.json`;
                         mimeType = 'application/json';
                     } else if (format === 'csv') {
-                        // Export orders as CSV
-                        const headers = ['Order ID', 'Date', 'Client', 'Contact', 'Venue', 'Status', 'Total Items'];
-                        const rows = this.data.orders.map(o => [
-                            o.orderId, o.date, o.clientName, o.contact, o.venue, o.status, o.items.length
-                        ]);
+                        // Export orders with ALL items and quantities as CSV
+                        const headers = ['Order ID', 'Order Date', 'Client Name', 'Contact', 'Venue', 'Status', 'Order Type', 'Event Day', 'Function Name', 'Item Name', 'Item Quantity', 'Item Category', 'Total Amount'];
+                        const rows = [];
+
+                        this.data.orders.forEach(order => {
+                            const baseInfo = [
+                                order.orderId || '',
+                                order.date || order.startDate || '',
+                                (order.clientName || '').replace(/,/g, ' '),
+                                order.contact || '',
+                                (order.venue || '').replace(/,/g, ' '),
+                                order.status || 'pending',
+                                order.totalAmount || '0'
+                            ];
+
+                            // Handle single-day orders
+                            if (order.items && order.items.length > 0) {
+                                order.items.forEach(item => {
+                                    rows.push([
+                                        ...baseInfo.slice(0, 6),
+                                        'Single Day',
+                                        order.date || '',
+                                        'Main Event',
+                                        (item.name || 'Unknown Item').replace(/,/g, ' '),
+                                        item.quantity || 0,
+                                        item.category || 'other',
+                                        baseInfo[6]
+                                    ]);
+                                });
+                            }
+
+                            // Handle multi-day orders
+                            if (order.dayWiseData && order.dayWiseData.length > 0) {
+                                order.dayWiseData.forEach(day => {
+                                    if (day.functions && day.functions.length > 0) {
+                                        day.functions.forEach(func => {
+                                            if (func.items && func.items.length > 0) {
+                                                func.items.forEach(item => {
+                                                    rows.push([
+                                                        ...baseInfo.slice(0, 6),
+                                                        'Multi-Day',
+                                                        day.date || '',
+                                                        (func.name || 'Unnamed Function').replace(/,/g, ' '),
+                                                        (item.name || 'Unknown Item').replace(/,/g, ' '),
+                                                        item.quantity || 0,
+                                                        item.category || 'other',
+                                                        baseInfo[6]
+                                                    ]);
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+
+                            // If order has no items at all, add a single row with order info
+                            if ((!order.items || order.items.length === 0) && (!order.dayWiseData || order.dayWiseData.length === 0)) {
+                                rows.push([
+                                    ...baseInfo.slice(0, 6),
+                                    'No Items',
+                                    '',
+                                    '',
+                                    'No items',
+                                    '0',
+                                    '',
+                                    baseInfo[6]
+                                ]);
+                            }
+                        });
+
                         dataStr = [headers, ...rows].map(row => row.join(',')).join('\n');
-                        filename = `orders_${Utils.toDateString(new Date())}.csv`;
+                        filename = `orders_detailed_${Utils.toDateString(new Date())}.csv`;
                         mimeType = 'text/csv';
                     }
                     
@@ -9111,6 +9209,9 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
                 `).join('');
 
+                // Render all analytics charts
+                this.renderAnalyticsCharts();
+
                 // Show recent orders (excluding merged orders)
                 const recentOrders = activeOrders.slice(-5).reverse();
                 this.renderTable('recentOrdersContainer', [
@@ -9143,6 +9244,265 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
                     `;
                 }
+            },
+
+            // Destroy existing charts to prevent memory leaks
+            destroyChart(chartId) {
+                if (this.charts && this.charts[chartId]) {
+                    this.charts[chartId].destroy();
+                    delete this.charts[chartId];
+                }
+            },
+
+            renderAnalyticsCharts() {
+                // Initialize charts storage
+                if (!this.charts) this.charts = {};
+
+                const activeOrders = this.data.orders.filter(o => !o.isMerged);
+
+                // 1. Revenue Trend Chart (Last 6 Months)
+                this.renderRevenueTrendChart(activeOrders);
+
+                // 2. Orders by Status Chart (Pie)
+                this.renderOrdersByStatusChart(activeOrders);
+
+                // 3. Monthly Orders Chart (Bar)
+                this.renderMonthlyOrdersChart(activeOrders);
+
+                // 4. Top Items Chart (Horizontal Bar)
+                this.renderTopItemsChart(activeOrders);
+            },
+
+            renderRevenueTrendChart(orders) {
+                this.destroyChart('revenueTrend');
+
+                const ctx = document.getElementById('revenueTrendChart');
+                if (!ctx) return;
+
+                // Calculate last 6 months revenue
+                const monthsData = {};
+                const today = new Date();
+
+                // Initialize last 6 months
+                for (let i = 5; i >= 0; i--) {
+                    const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    monthsData[monthKey] = { revenue: 0, label: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) };
+                }
+
+                // Calculate revenue per month (only completed orders)
+                orders.filter(o => o.status && o.status.toLowerCase() === 'completed').forEach(order => {
+                    const orderDate = order.date || order.startDate;
+                    if (orderDate) {
+                        const monthKey = orderDate.substring(0, 7);
+                        if (monthsData[monthKey]) {
+                            const revenue = order.totalAmount || 0;
+                            monthsData[monthKey].revenue += parseFloat(revenue);
+                        }
+                    }
+                });
+
+                const labels = Object.values(monthsData).map(m => m.label);
+                const data = Object.values(monthsData).map(m => m.revenue);
+
+                this.charts.revenueTrend = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Revenue (₹)',
+                            data: data,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `Revenue: ₹${context.parsed.y.toLocaleString('en-IN')}`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: (value) => `₹${value.toLocaleString('en-IN')}`
+                                }
+                            }
+                        }
+                    }
+                });
+            },
+
+            renderOrdersByStatusChart(orders) {
+                this.destroyChart('ordersByStatus');
+
+                const ctx = document.getElementById('ordersByStatusChart');
+                if (!ctx) return;
+
+                // Count orders by status
+                const statusCounts = {
+                    'Confirmed': orders.filter(o => o.status && o.status.toLowerCase() === 'confirmed').length,
+                    'Completed': orders.filter(o => o.status && o.status.toLowerCase() === 'completed').length,
+                    'Cancelled': orders.filter(o => o.status && o.status.toLowerCase() === 'cancelled').length,
+                    'Pending': orders.filter(o => !o.status || o.status.toLowerCase() === 'pending').length
+                };
+
+                this.charts.ordersByStatus = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(statusCounts),
+                        datasets: [{
+                            data: Object.values(statusCounts),
+                            backgroundColor: [
+                                '#f59e0b',  // Confirmed - warning
+                                '#10b981',  // Completed - success
+                                '#ef4444',  // Cancelled - danger
+                                '#6b7280'   // Pending - gray
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            },
+
+            renderMonthlyOrdersChart(orders) {
+                this.destroyChart('monthlyOrders');
+
+                const ctx = document.getElementById('monthlyOrdersChart');
+                if (!ctx) return;
+
+                // Calculate last 6 months orders count
+                const monthsData = {};
+                const today = new Date();
+
+                for (let i = 5; i >= 0; i--) {
+                    const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    monthsData[monthKey] = { count: 0, label: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) };
+                }
+
+                orders.forEach(order => {
+                    const orderDate = order.date || order.startDate;
+                    if (orderDate) {
+                        const monthKey = orderDate.substring(0, 7);
+                        if (monthsData[monthKey]) {
+                            monthsData[monthKey].count++;
+                        }
+                    }
+                });
+
+                const labels = Object.values(monthsData).map(m => m.label);
+                const data = Object.values(monthsData).map(m => m.count);
+
+                this.charts.monthlyOrders = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Orders',
+                            data: data,
+                            backgroundColor: '#667eea'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            },
+
+            renderTopItemsChart(orders) {
+                this.destroyChart('topItems');
+
+                const ctx = document.getElementById('topItemsChart');
+                if (!ctx) return;
+
+                // Count item usage across all completed orders
+                const itemCounts = {};
+
+                orders.filter(o => o.status && o.status.toLowerCase() === 'completed').forEach(order => {
+                    // Single day orders
+                    if (order.items && order.items.length > 0) {
+                        order.items.forEach(item => {
+                            const itemName = item.name || 'Unknown';
+                            itemCounts[itemName] = (itemCounts[itemName] || 0) + (item.quantity || 0);
+                        });
+                    }
+
+                    // Multi-day orders
+                    if (order.dayWiseData && order.dayWiseData.length > 0) {
+                        order.dayWiseData.forEach(day => {
+                            if (day.functions) {
+                                day.functions.forEach(func => {
+                                    if (func.items) {
+                                        func.items.forEach(item => {
+                                            const itemName = item.name || 'Unknown';
+                                            itemCounts[itemName] = (itemCounts[itemName] || 0) + (item.quantity || 0);
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+
+                // Sort and get top 10
+                const sortedItems = Object.entries(itemCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10);
+
+                const labels = sortedItems.map(item => item[0]);
+                const data = sortedItems.map(item => item[1]);
+
+                this.charts.topItems = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Usage Count',
+                            data: data,
+                            backgroundColor: '#10b981'
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
             },
 
             renderInventory() {
