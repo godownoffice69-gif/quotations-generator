@@ -12094,45 +12094,159 @@ Contact: 📱 98984 96111 / 76984 96111`;
             */
 
             async generatePDFFile(quotation) {
+                const loading = this.showLoading('Generating quotation PDF...');
+
                 try {
                     const element = document.getElementById('quotationPDFContent');
                     if (!element) {
+                        this.hideLoading(loading);
                         this.showToast('PDF content not found', 'error');
                         return;
                     }
 
-                    // Use html2pdf if available
-                    if (typeof html2pdf !== 'undefined') {
-                        // Get actual content height to avoid page breaks
-                        const contentHeight = element.scrollHeight;
-                        const contentWidth = element.scrollWidth;
-
-                        const opt = {
-                            margin: [10, 10, 10, 10],
-                            filename: `Quotation_${quotation.customer.name}_${quotation.quotationDate}.pdf`,
-                            image: { type: 'jpeg', quality: 0.98 },
-                            html2canvas: {
-                                scale: 2,
-                                useCORS: true,
-                                scrollY: 0,
-                                scrollX: 0,
-                                windowWidth: contentWidth
-                            },
-                            jsPDF: {
-                                unit: 'px',
-                                format: [contentWidth + 40, contentHeight + 40],
-                                orientation: 'portrait',
-                                compress: true
-                            },
-                            pagebreak: { mode: 'avoid-all' }
-                        };
-
-                        await html2pdf().set(opt).from(element).save();
-                        this.showToast('✅ PDF downloaded successfully!', 'success');
-                    } else {
+                    // Check if jsPDF is available
+                    if (typeof window.jspdf === 'undefined') {
+                        this.hideLoading(loading);
                         this.showToast('PDF library not loaded', 'error');
+                        return;
                     }
+
+                    const { jsPDF } = window.jspdf;
+
+                    // Use A4 dimensions (210mm x 297mm at 96 DPI = 794px x 1123px)
+                    const pageWidth = 794;
+                    const pageHeight = 1123;
+                    const margin = 40;
+                    const maxContentHeight = pageHeight - (margin * 2);
+
+                    // Set element to fixed width for consistent rendering
+                    element.style.width = (pageWidth - margin * 2) + 'px';
+                    element.style.maxWidth = (pageWidth - margin * 2) + 'px';
+                    element.style.display = 'block';
+                    element.style.visibility = 'hidden';
+                    element.style.position = 'static';
+                    element.style.opacity = '0';
+
+                    // Wait for layout to settle
+                    await new Promise(r => setTimeout(r, 300));
+
+                    // Get total content height
+                    const totalHeight = element.scrollHeight;
+                    console.log(`📏 Total quotation content height: ${totalHeight}px, max per page: ${maxContentHeight}px`);
+
+                    // Calculate number of pages needed
+                    const numPages = Math.ceil(totalHeight / maxContentHeight);
+                    console.log(`📄 Will generate ${numPages} page(s) for quotation`);
+
+                    // Initialize PDF
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'px',
+                        format: [pageWidth, pageHeight],
+                        compress: true
+                    });
+
+                    // Generate each page
+                    for (let pageNum = 0; pageNum < numPages; pageNum++) {
+                        this.updateLoadingMessage(loading, `Generating page ${pageNum + 1} of ${numPages}...`);
+
+                        // Calculate the scroll position for this page
+                        const scrollY = pageNum * maxContentHeight;
+
+                        // Create a temporary container for this page's content
+                        const pageContainer = document.createElement('div');
+                        pageContainer.style.width = (pageWidth - margin * 2) + 'px';
+                        pageContainer.style.height = maxContentHeight + 'px';
+                        pageContainer.style.overflow = 'hidden';
+                        pageContainer.style.position = 'absolute';
+                        pageContainer.style.top = '-10000px';
+                        pageContainer.style.left = '-10000px';
+                        pageContainer.style.background = 'white';
+
+                        // Clone the content
+                        const clonedElement = element.cloneNode(true);
+                        clonedElement.style.position = 'relative';
+                        clonedElement.style.top = (-scrollY) + 'px';
+                        clonedElement.style.display = 'block';
+                        clonedElement.style.visibility = 'visible';
+                        clonedElement.style.opacity = '1';
+
+                        pageContainer.appendChild(clonedElement);
+                        document.body.appendChild(pageContainer);
+
+                        // Wait for rendering
+                        await new Promise(r => setTimeout(r, 200));
+
+                        // Convert to canvas
+                        const canvas = await html2canvas(pageContainer, {
+                            scale: 2,
+                            useCORS: true,
+                            allowTaint: false,
+                            backgroundColor: '#ffffff',
+                            width: pageWidth - margin * 2,
+                            height: maxContentHeight,
+                            windowWidth: pageWidth - margin * 2,
+                            windowHeight: maxContentHeight,
+                            x: 0,
+                            y: 0
+                        });
+
+                        // Remove temporary container
+                        document.body.removeChild(pageContainer);
+
+                        // Convert canvas to image
+                        const imgData = canvas.toDataURL('image/png', 0.95);
+
+                        // Add page to PDF
+                        if (pageNum > 0) {
+                            pdf.addPage();
+                        }
+
+                        // Add image to PDF with margins
+                        pdf.addImage(
+                            imgData,
+                            'PNG',
+                            margin,
+                            margin,
+                            pageWidth - margin * 2,
+                            maxContentHeight,
+                            '',
+                            'FAST'
+                        );
+
+                        // Add page number footer
+                        if (numPages > 1) {
+                            pdf.setFontSize(9);
+                            pdf.setTextColor(128, 128, 128);
+                            pdf.text(
+                                `Page ${pageNum + 1} of ${numPages}`,
+                                pageWidth / 2,
+                                pageHeight - 20,
+                                { align: 'center' }
+                            );
+                        }
+
+                        console.log(`✅ Added page ${pageNum + 1} of ${numPages} to PDF`);
+                    }
+
+                    // Reset element styles
+                    element.style.display = 'none';
+                    element.style.visibility = 'visible';
+                    element.style.position = 'static';
+                    element.style.opacity = '1';
+                    element.style.width = '';
+                    element.style.maxWidth = '';
+
+                    // Save the PDF
+                    this.updateLoadingMessage(loading, 'Saving PDF...');
+                    const filename = `Quotation_${quotation.customer.name.replace(/[^a-z0-9]/gi, '_')}_${quotation.quotationDate}.pdf`;
+                    pdf.save(filename);
+
+                    this.hideLoading(loading);
+                    this.showToast(`✅ PDF downloaded successfully! (${numPages} page${numPages > 1 ? 's' : ''})`, 'success');
+
                 } catch (error) {
+                    this.hideLoading(loading);
                     console.error('Error generating PDF:', error);
                     this.showToast('Error generating PDF: ' + error.message, 'error');
                 }
