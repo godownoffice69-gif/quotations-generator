@@ -179,8 +179,8 @@
         /* Navigation */
         .nav-tabs {
             position: sticky;
-            top: 0;
-            z-index: 100;
+            top: 70px;
+            z-index: 999;
             background: var(--bg-card);
             border-bottom: 2px solid var(--border);
             overflow-x: auto;
@@ -12103,12 +12103,28 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
                     // Use html2pdf if available
                     if (typeof html2pdf !== 'undefined') {
+                        // Get actual content height to avoid page breaks
+                        const contentHeight = element.scrollHeight;
+                        const contentWidth = element.scrollWidth;
+
                         const opt = {
-                            margin: 10,
+                            margin: [10, 10, 10, 10],
                             filename: `Quotation_${quotation.customer.name}_${quotation.quotationDate}.pdf`,
                             image: { type: 'jpeg', quality: 0.98 },
-                            html2canvas: { scale: 2, useCORS: true },
-                            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                            html2canvas: {
+                                scale: 2,
+                                useCORS: true,
+                                scrollY: 0,
+                                scrollX: 0,
+                                windowWidth: contentWidth
+                            },
+                            jsPDF: {
+                                unit: 'px',
+                                format: [contentWidth + 40, contentHeight + 40],
+                                orientation: 'portrait',
+                                compress: true
+                            },
+                            pagebreak: { mode: 'avoid-all' }
                         };
 
                         await html2pdf().set(opt).from(element).save();
