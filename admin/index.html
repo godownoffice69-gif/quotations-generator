@@ -12268,9 +12268,16 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 };
 
                 // Calculate statistics
-                const totalItems = q.items ? q.items.length :
-                                  q.functions ? q.functions.reduce((sum, f) => sum + (f.items?.length || 0), 0) :
-                                  q.days ? q.days.reduce((sum, d) => sum + d.functions.reduce((s, f) => s + (f.items?.length || 0), 0), 0) : 0;
+                let totalItems = 0;
+                if (q.orderType === 'single' || !q.orderType) {
+                    totalItems = (q.items || []).length;
+                } else if (q.orderType === 'multifunction') {
+                    totalItems = (q.functions || []).reduce((sum, f) => sum + (f.items?.length || 0), 0);
+                } else if (q.orderType === 'multiday') {
+                    totalItems = (q.days || []).reduce((sum, d) => {
+                        return sum + (d.functions || []).reduce((s, f) => s + (f.items?.length || 0), 0);
+                    }, 0);
+                }
                 const totalDays = q.orderType === 'multiday' ? (q.days?.length || 1) : 1;
 
                 return `
@@ -12288,9 +12295,6 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                         <div style="display: grid; grid-template-columns: auto auto; gap: 16px; max-width: 500px;">
                                             <div style="background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 8px; backdrop-filter: blur(10px);"><strong>📅 Date:</strong> ${Utils.formatDate(q.quotationDate || new Date().toISOString().split('T')[0])}</div>
                                             <div style="background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 8px; backdrop-filter: blur(10px);"><strong>⏰ Valid Until:</strong> ${Utils.formatDate(q.validUntil || this.calculateValidUntil())}</div>
-                                        </div>
-                                        <div style="margin-top: 12px; font-size: 20px; font-weight: 600; background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; display: inline-block; backdrop-filter: blur(10px);">
-                                            📱 98984 96111 / 76984 96111
                                         </div>
                                     </div>
                                 </div>
@@ -12595,9 +12599,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
                         <!-- Footer -->
                         <div style="text-align: center; padding: 24px; background: white; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-                            <div style="color: #718096; font-size: 14px; margin-bottom: 8px;">For any queries, please contact:</div>
-                            <div style="color: #667eea; font-size: 20px; font-weight: 700;">📱 98984 96111 / 76984 96111</div>
-                            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e8eaf0; color: #718096; font-size: 12px;">
+                            <div style="color: #718096; font-size: 16px; font-weight: 600;">
                                 Thank you for choosing our services! We look forward to making your event spectacular. ✨
                             </div>
                         </div>
