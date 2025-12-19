@@ -2038,11 +2038,9 @@
                     <div id="whatsappOrdersPreview" style="margin-top: 1rem; display: none;">
                         <div style="background: var(--bg-hover); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
                             <h4 style="margin: 0 0 0.5rem 0;">📋 Orders Found: <span id="whatsappOrderCount">0</span></h4>
-                            <div id="whatsappOrdersList" style="max-height: 300px; overflow-y: auto; font-size: 0.9rem; white-space: pre-wrap; font-family: monospace; background: var(--bg-card); padding: 0.75rem; border-radius: 4px;"></div>
+                            <small style="color: var(--text-gray); display: block; margin-bottom: 1rem;">Each order has its own WhatsApp message. Copy and send individually to different contacts.</small>
+                            <div id="whatsappOrdersList" style="max-height: 500px; overflow-y: auto;"></div>
                         </div>
-                        <button type="button" class="btn btn-success" id="sendWhatsAppOrdersBtn" style="width: 100%;">
-                            📱 Send on WhatsApp
-                        </button>
                     </div>
                     <div id="whatsappNoOrders" style="display: none; padding: 1rem; text-align: center; color: var(--text-gray);">
                         📭 No orders found for selected date
@@ -11626,6 +11624,9 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             generateAndShowPDF(quotation) {
+                // Store quotation for download/actions
+                this.previewQuotation = quotation;
+
                 // This will use jsPDF or html2pdf - for now, show preview in modal
                 const modalHTML = `
                     <div class="modal show" id="pdfPreviewModal" onclick="if(event.target === this) OMS.closeModal('pdfPreviewModal')" style="z-index: 10000;">
@@ -13261,6 +13262,148 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 });
             },
 
+            // Generate individual WhatsApp message for a single order
+            generateWhatsAppSingleOrderMessage(order, orderNumber, selectedDate) {
+                if (!order) return '';
+
+                let message = `📋 Order ${orderNumber}\n`;
+                message += `📅 ${Utils.formatDate(selectedDate)}\n\n`;
+                message += `━━━━━━━━━━━━━━━━\n`;
+                message += `${order.clientName || 'N/A'}\n`;
+                message += `Contact: ${order.contact || 'N/A'}\n`;
+
+                // Venue with location combined
+                if (order.venue && order.venue !== 'N/A') {
+                    message += `Venue: ${order.venue}`;
+
+                    // Add Google Maps location link - check all possible sources
+                    let mapsUrl = null;
+
+                    // Priority 1: venueLocation with coordinates
+                    if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
+                        if (order.venueLocation.place_id) {
+                            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}&query_place_id=${order.venueLocation.place_id}`;
+                        } else {
+                            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}+${order.venueLocation.lat},${order.venueLocation.lng}`;
+                        }
+                    }
+                    // Priority 2: venueMapLink (stored link)
+                    else if (order.venueMapLink && order.venueMapLink.trim()) {
+                        mapsUrl = order.venueMapLink;
+                    }
+
+                    if (mapsUrl) {
+                        message += `\n📍 ${mapsUrl}`;
+                    }
+                    message += `\n`;
+                }
+
+                message += `Time: ${order.readyTime || 'TBD'}\n\n`;
+
+                // Find specific day data for multi-day orders
+                let specificDayData = null;
+                if (order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0) {
+                    specificDayData = order.dayWiseData.find(dayData => dayData.date === selectedDate);
+                }
+
+                // Collect items for this order
+                let orderItems = [];
+
+                // Functions and items (compact format - no "Items:" label)
+                if (specificDayData && specificDayData.functions) {
+                    specificDayData.functions.forEach((func, funcIdx) => {
+                        if (func.items && func.items.length > 0) {
+                            // Function name
+                            if (func.functionType) {
+                                message += `Function - ${func.functionType}`;
+                                if (func.timeSlot) message += ` (${func.timeSlot})`;
+                                message += `\n`;
+                            } else if (specificDayData.functions.length > 1) {
+                                message += `Function ${funcIdx + 1}`;
+                                if (func.timeSlot) message += ` (${func.timeSlot})`;
+                                message += `\n`;
+                            }
+
+                            // Items directly (no "Items:" label)
+                            func.items.forEach(item => {
+                                message += `${item.name} ${item.quantity}`;
+                                if (item.remarks) message += ` (${item.remarks})`;
+                                message += `\n`;
+                                orderItems.push(item);
+                            });
+                        }
+                    });
+                } else if (order.items && order.items.length > 0) {
+                    // Single-day order items
+                    order.items.forEach(item => {
+                        message += `${item.name} ${item.quantity}`;
+                        if (item.remarks) message += ` (${item.remarks})`;
+                        message += `\n`;
+                        orderItems.push(item);
+                    });
+                }
+
+                // Calculate RAW MATERIALS for this order only
+                let dryIceMachines = 0;
+                let flowerShowerMachines = 0;
+                let electricityKV = 0;
+
+                orderItems.forEach(item => {
+                    const itemNameLower = item.name?.toLowerCase() || '';
+                    const qty = item.quantity || 0;
+
+                    // Dry ice machines
+                    if (itemNameLower.includes('dry ice')) {
+                        dryIceMachines += qty;
+                    }
+
+                    // Flower shower machines
+                    if ((itemNameLower.includes('flower') && itemNameLower.includes('shower')) ||
+                        itemNameLower.includes('flower shower machine')) {
+                        flowerShowerMachines += qty;
+                    }
+
+                    // Electricity - 3KV machines
+                    const electricity3KV = ['showven sonic boom (co2 jet)', 'sonic boom', 'dry ice machine', '5 head flame'];
+                    if (electricity3KV.some(name => itemNameLower.includes(name))) {
+                        electricityKV += qty * 3;
+                    }
+                    // Electricity - 1KV machines
+                    else {
+                        const electricity1KV = ['sparkular', 'spinner', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
+                        if (electricity1KV.some(name => itemNameLower.includes(name))) {
+                            electricityKV += qty * 1;
+                        }
+                    }
+                });
+
+                // Add raw materials for this order
+                if (dryIceMachines > 0) {
+                    const dryIceNeeded = dryIceMachines * 20; // 20kg per machine
+                    message += `\n━━━━━━━━━━━━━━━━\n`;
+                    message += `🧊 DRY ICE: ${dryIceNeeded}kg\n`;
+                    message += `(${dryIceMachines} machine${dryIceMachines !== 1 ? 's' : ''} × 20kg)\n`;
+                }
+
+                if (flowerShowerMachines > 0) {
+                    const flowersNeeded = flowerShowerMachines * 20; // 20kg per machine
+                    message += `━━━━━━━━━━━━━━━━\n`;
+                    message += `🌸 FLOWERS: ${flowersNeeded}kg\n`;
+                    message += `(${flowerShowerMachines} machine${flowerShowerMachines !== 1 ? 's' : ''} × 20kg)\n`;
+                }
+
+                if (electricityKV > 0) {
+                    message += `━━━━━━━━━━━━━━━━\n`;
+                    message += `⚡ ELECTRICITY: ${electricityKV}KV\n`;
+                }
+
+                message += `\nFirepowerSFX Order Management`;
+
+                return message;
+            },
+
+            // OLD FUNCTION - Keep for reference but not used anymore
+            // This generated combined messages for all orders
             generateWhatsAppOrdersMessage(orders, selectedDate) {
                 if (!orders || orders.length === 0) return '';
 
@@ -13456,12 +13599,66 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 previewDiv.style.display = 'block';
                 orderCountSpan.textContent = filteredOrders.length;
 
-                // Generate and display message preview
-                const message = this.generateWhatsAppOrdersMessage(filteredOrders, selectedDate);
-                ordersListDiv.textContent = message;
+                // Generate individual message cards for each order
+                ordersListDiv.innerHTML = '';
 
-                // Store message for sending
-                this.whatsappCurrentMessage = message;
+                filteredOrders.forEach((order, index) => {
+                    const orderNumber = index + 1;
+                    const message = this.generateWhatsAppSingleOrderMessage(order, orderNumber, selectedDate);
+
+                    // Create card for this order
+                    const orderCard = document.createElement('div');
+                    orderCard.style.cssText = 'background: var(--bg-card); border: 2px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;';
+
+                    orderCard.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <h4 style="margin: 0; color: var(--primary);">📋 Order ${orderNumber}</h4>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn btn-primary btn-small" onclick="OMS.copyOrderMessage(${index})" title="Copy Message">
+                                    📋 Copy
+                                </button>
+                                <button class="btn btn-success btn-small" onclick="OMS.sendSingleOrderWhatsApp(${index})" title="Send WhatsApp">
+                                    📱 Send
+                                </button>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.9rem; white-space: pre-wrap; font-family: monospace; background: var(--bg-hover); padding: 0.75rem; border-radius: 4px; max-height: 250px; overflow-y: auto;">
+                            ${message}
+                        </div>
+                    `;
+
+                    ordersListDiv.appendChild(orderCard);
+                });
+
+                // Store orders and date for message operations
+                this.whatsappCurrentOrders = filteredOrders;
+                this.whatsappCurrentDate = selectedDate;
+            },
+
+            copyOrderMessage(orderIndex) {
+                const order = this.whatsappCurrentOrders[orderIndex];
+                const orderNumber = orderIndex + 1;
+                const message = this.generateWhatsAppSingleOrderMessage(order, orderNumber, this.whatsappCurrentDate);
+
+                // Copy to clipboard
+                navigator.clipboard.writeText(message).then(() => {
+                    this.showToast(`✅ Order ${orderNumber} message copied to clipboard!`, 'success');
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    this.showToast('Failed to copy message', 'error');
+                });
+            },
+
+            sendSingleOrderWhatsApp(orderIndex) {
+                const order = this.whatsappCurrentOrders[orderIndex];
+                const orderNumber = orderIndex + 1;
+                const message = this.generateWhatsAppSingleOrderMessage(order, orderNumber, this.whatsappCurrentDate);
+
+                // Encode and open WhatsApp
+                const encodedMessage = encodeURIComponent(message);
+                window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+
+                this.showToast(`📱 Opening WhatsApp for Order ${orderNumber}...`, 'success');
             },
 
             sendWhatsAppOrdersReport() {
