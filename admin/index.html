@@ -11383,8 +11383,27 @@ convertToQuotationDateFormat(dateStr) {
                     return;
                 }
 
-                if (q.items.length === 0) {
-                    this.showToast('Please add at least one item', 'error');
+                // Validate items based on order type
+                let hasItems = false;
+
+                if (!q.orderType || q.orderType === 'single') {
+                    // Single function - check q.items
+                    hasItems = q.items && q.items.length > 0;
+                } else if (q.orderType === 'multifunction') {
+                    // Multifunction - check if any function has items
+                    hasItems = q.functions && q.functions.length > 0 &&
+                               q.functions.some(func => func.items && func.items.length > 0);
+                } else if (q.orderType === 'multiday') {
+                    // Multiday - check if any day has functions with items
+                    hasItems = q.days && q.days.length > 0 &&
+                               q.days.some(day =>
+                                   day.functions && day.functions.length > 0 &&
+                                   day.functions.some(func => func.items && func.items.length > 0)
+                               );
+                }
+
+                if (!hasItems) {
+                    this.showToast('Please add at least one item to save quotation', 'error');
                     return;
                 }
 
@@ -11560,6 +11579,9 @@ convertToQuotationDateFormat(dateStr) {
                     validUntil: this.calculateValidUntil()
                 };
 
+                // Store temp quotation for preview actions
+                this.previewQuotation = tempQuotation;
+
                 this.generateAndShowPDF(tempQuotation);
             },
 
@@ -11574,8 +11596,8 @@ convertToQuotationDateFormat(dateStr) {
                             ${this.renderQuotationPDFContent(quotation)}
 
                             <div style="margin-top: 2rem; text-align: center;">
-                                <button class="btn btn-primary" onclick="OMS.downloadQuotationPDF('${quotation.id}')">📥 Download PDF</button>
-                                <button class="btn btn-success" onclick="OMS.sendQuotationWhatsApp('${quotation.id}')">📱 Send WhatsApp</button>
+                                <button class="btn btn-primary" onclick="OMS.downloadPreviewPDF()">📥 Download PDF</button>
+                                <button class="btn btn-success" onclick="OMS.sendPreviewWhatsApp()">📱 Send WhatsApp</button>
                                 <button class="btn btn-secondary" onclick="OMS.closeModal('pdfPreviewModal')">Close</button>
                             </div>
                         </div>
@@ -11583,6 +11605,99 @@ convertToQuotationDateFormat(dateStr) {
                 `;
 
                 document.getElementById('modalsContainer').innerHTML = modalHTML;
+            },
+
+            async downloadPreviewPDF() {
+                const quotation = this.previewQuotation;
+                if (!quotation) {
+                    this.showToast('No quotation data found', 'error');
+                    return;
+                }
+
+                // Use the existing downloadQuotationPDF logic but with preview data
+                await this.generatePDFFile(quotation);
+            },
+
+            async sendPreviewWhatsApp() {
+                const quotation = this.previewQuotation;
+                if (!quotation) {
+                    this.showToast('No quotation data found', 'error');
+                    return;
+                }
+
+                // Build order type specific details
+                let orderTypeInfo = '';
+                if (!quotation.orderType || quotation.orderType === 'single') {
+                    const itemCount = (quotation.items || []).length;
+                    orderTypeInfo = `*Items:* ${itemCount} item${itemCount !== 1 ? 's' : ''}`;
+                } else if (quotation.orderType === 'multifunction') {
+                    const funcCount = (quotation.functions || []).length;
+                    orderTypeInfo = `*Order Type:* Multifunction (${funcCount} function${funcCount !== 1 ? 's' : ''})`;
+                } else if (quotation.orderType === 'multiday') {
+                    const dayCount = (quotation.days || []).length;
+                    orderTypeInfo = `*Order Type:* Multiday Event (${dayCount} day${dayCount !== 1 ? 's' : ''})`;
+                }
+
+                // Build financial summary
+                let financialDetails = `*Subtotal:* ₹${quotation.financials.subtotal.toLocaleString('en-IN')}`;
+                if (quotation.financials.discountAmount > 0) {
+                    financialDetails += `\n*Discount:* -₹${quotation.financials.discountAmount.toLocaleString('en-IN')}`;
+                }
+                financialDetails += `\n*Grand Total:* ₹${quotation.financials.grandTotal.toLocaleString('en-IN')}`;
+
+                const message = `Hi ${quotation.customer.name}!
+
+Thank you for your interest. Please find your quotation details:
+
+*Event Date:* ${Utils.formatDate(quotation.customer.eventDate)}
+${quotation.customer.eventVenue ? `*Venue:* ${quotation.customer.eventVenue}\n` : ''}${orderTypeInfo}
+
+*FINANCIAL SUMMARY:*
+${financialDetails}
+
+*PAYMENT SCHEDULE:*
+• Booking Amount (50%): ₹${(quotation.financials.grandTotal * 0.5).toLocaleString('en-IN')}
+• Before Event (50%): ₹${(quotation.financials.grandTotal * 0.5).toLocaleString('en-IN')}
+
+Valid until: ${Utils.formatDate(quotation.validUntil || this.calculateValidUntil())}
+
+For detailed quotation, please visit our office or request PDF.
+
+Contact: 📱 98984 96111 / 76984 96111`;
+
+                const whatsappURL = `https://wa.me/91${quotation.customer.contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                window.open(whatsappURL, '_blank');
+
+                this.showToast('✅ Opening WhatsApp...', 'success');
+            },
+
+            async generatePDFFile(quotation) {
+                try {
+                    const element = document.getElementById('quotationPDFContent');
+                    if (!element) {
+                        this.showToast('PDF content not found', 'error');
+                        return;
+                    }
+
+                    // Use html2pdf if available
+                    if (typeof html2pdf !== 'undefined') {
+                        const opt = {
+                            margin: 10,
+                            filename: `Quotation_${quotation.customer.name}_${quotation.quotationDate}.pdf`,
+                            image: { type: 'jpeg', quality: 0.98 },
+                            html2canvas: { scale: 2, useCORS: true },
+                            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                        };
+
+                        await html2pdf().set(opt).from(element).save();
+                        this.showToast('✅ PDF downloaded successfully!', 'success');
+                    } else {
+                        this.showToast('PDF library not loaded', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error generating PDF:', error);
+                    this.showToast('Error generating PDF: ' + error.message, 'error');
+                }
             },
 
             renderQuotationPDFContent(q) {
@@ -13681,8 +13796,10 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     // Restore all original orders
                     for (const originalData of mergedOrder.mergedFrom) {
                         const restoredOrder = originalData.orderData;
-                        delete restoredOrder.isMerged;
-                        delete restoredOrder.mergedInto;
+
+                        // Explicitly set these to null to remove from Firestore
+                        restoredOrder.isMerged = firebase.firestore.FieldValue.delete();
+                        restoredOrder.mergedInto = firebase.firestore.FieldValue.delete();
 
                         await this.updateOrderInFirebase(restoredOrder, originalData.docId);
                     }
