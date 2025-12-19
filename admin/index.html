@@ -9,6 +9,7 @@
     <link rel="shortcut icon" type="image/png" href="logo.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -11157,7 +11158,9 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
                         <div class="form-group">
                             <label class="form-label">Items</label>
-                            <input type="text" class="form-input quotItemSearch" data-func-index="${index}" data-context="multifunction" placeholder="🔍 Search items from inventory..." style="margin-bottom: 0.5rem;">
+                            <div style="position: relative; margin-bottom: 0.5rem;">
+                                <input type="text" class="form-input quotItemSearch" data-func-index="${index}" data-context="multifunction" placeholder="🔍 Search items from inventory...">
+                            </div>
                             <div id="quotFunctionItems_${index}">
                                 ${items.map((item, itemIdx) => {
                                     const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
@@ -11203,7 +11206,9 @@ convertToQuotationDateFormat(dateStr) {
                                         </datalist>
                                         <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationDayFunction(${dayIndex}, ${funcIdx})">×</button>
                                     </div>
-                                    <input type="text" class="form-input quotItemSearch" data-day-index="${dayIndex}" data-func-index="${funcIdx}" data-context="multiday" placeholder="🔍 Search items..." style="margin-bottom: 0.5rem;">
+                                    <div style="position: relative; margin-bottom: 0.5rem;">
+                                        <input type="text" class="form-input quotItemSearch" data-day-index="${dayIndex}" data-func-index="${funcIdx}" data-context="multiday" placeholder="🔍 Search items...">
+                                    </div>
                                     <div id="quotDayFunctionItems_${dayIndex}_${funcIdx}">
                                         ${(func.items || []).map((item, itemIdx) => {
                                             const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
@@ -11665,7 +11670,21 @@ For detailed quotation, please visit our office or request PDF.
 
 Contact: 📱 98984 96111 / 76984 96111`;
 
-                const whatsappURL = `https://wa.me/91${quotation.customer.contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                // Clean and validate phone number
+                let phoneNumber = quotation.customer.contact.replace(/\D/g, ''); // Remove all non-digits
+
+                // Remove country code if already present (91 or +91)
+                if (phoneNumber.startsWith('91') && phoneNumber.length > 10) {
+                    phoneNumber = phoneNumber.substring(2);
+                }
+
+                // Validate phone number length
+                if (phoneNumber.length !== 10) {
+                    this.showToast('Invalid phone number. Must be 10 digits.', 'error');
+                    return;
+                }
+
+                const whatsappURL = `https://wa.me/91${phoneNumber}?text=${encodeURIComponent(message)}`;
                 window.open(whatsappURL, '_blank');
 
                 this.showToast('✅ Opening WhatsApp...', 'success');
@@ -12289,7 +12308,21 @@ For detailed quotation, please visit our office or request PDF.
 
 Contact: 📱 98984 96111 / 76984 96111`;
 
-                const whatsappURL = `https://wa.me/91${quotation.customer.contact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                // Clean and validate phone number
+                let phoneNumber = quotation.customer.contact.replace(/\D/g, ''); // Remove all non-digits
+
+                // Remove country code if already present (91 or +91)
+                if (phoneNumber.startsWith('91') && phoneNumber.length > 10) {
+                    phoneNumber = phoneNumber.substring(2);
+                }
+
+                // Validate phone number length
+                if (phoneNumber.length !== 10) {
+                    this.showToast('Invalid phone number. Must be 10 digits.', 'error');
+                    return;
+                }
+
+                const whatsappURL = `https://wa.me/91${phoneNumber}?text=${encodeURIComponent(message)}`;
                 window.open(whatsappURL, '_blank');
 
                 // Update status to sent
@@ -13793,19 +13826,27 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         return;
                     }
 
+                    console.log(`🔓 Unmerging order ${orderId}. Will restore ${mergedOrder.mergedFrom.length} original orders:`,
+                        mergedOrder.mergedFrom.map(o => `${o.orderId} (docId: ${o.docId})`));
+
                     // Restore all original orders
                     for (const originalData of mergedOrder.mergedFrom) {
                         const restoredOrder = originalData.orderData;
 
-                        // Explicitly set these to null to remove from Firestore
+                        // Explicitly remove merge-related fields from Firestore
                         restoredOrder.isMerged = firebase.firestore.FieldValue.delete();
                         restoredOrder.mergedInto = firebase.firestore.FieldValue.delete();
+                        restoredOrder.mergedFrom = firebase.firestore.FieldValue.delete();
+                        restoredOrder.mergedAt = firebase.firestore.FieldValue.delete();
 
+                        console.log(`📝 Restoring order ${originalData.orderId} to docId ${originalData.docId}`);
                         await this.updateOrderInFirebase(restoredOrder, originalData.docId);
                     }
 
-                    // Delete the merged order from Firestore
-                    await AdminUtils.deleteOrderByDocId(mergedOrder.docId || mergedOrder.orderId);
+                    // NOTE: We DON'T delete the merged order document because:
+                    // - The merged order's docId is the same as the base order's docId
+                    // - Restoring the base order already overwrites the merged order data
+                    // - Deleting it would delete the restored base order!
 
                     // Reload data
                     await this.loadOrdersFromFirestore();
