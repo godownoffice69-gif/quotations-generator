@@ -306,6 +306,19 @@
             font-family: 'Noto Sans Gujarati', sans-serif;
         }
 
+        /* Checkboxes - Make them bigger and easier to click */
+        .order-select-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .order-select-checkbox:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
         /* Buttons */
         .btn {
             display: inline-flex;
@@ -1721,10 +1734,13 @@
     <div id="loginScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: flex-end; justify-content: flex-end; padding: 2rem;">
         <!-- Login Background Slideshow -->
         <div class="login-slideshow">
-            <div class="login-slideshow-slide active" style="background-image: url('https://raw.githubusercontent.com/godownoffice69-gif/quotations-generator/main/assets/fire-background.jpg');"></div>
-            <div class="login-slideshow-slide" style="background-image: url('https://raw.githubusercontent.com/godownoffice69-gif/quotations-generator/main/assets/slideshow-1.jpg');"></div>
-            <div class="login-slideshow-slide" style="background-image: url('https://raw.githubusercontent.com/godownoffice69-gif/quotations-generator/main/assets/slideshow-2.jpg');"></div>
-            <div class="login-slideshow-slide" style="background-image: url('https://raw.githubusercontent.com/godownoffice69-gif/quotations-generator/main/assets/slideshow-3.jpg');"></div>
+            <div class="login-slideshow-slide active" style="background-image: url('bubble from Disney.png');"></div>
+            <div class="login-slideshow-slide" style="background-image: url('circle flame.jpg');"></div>
+            <div class="login-slideshow-slide" style="background-image: url('firepowersfx.png');"></div>
+            <div class="login-slideshow-slide" style="background-image: url('flame machine 1.jpg');"></div>
+            <div class="login-slideshow-slide" style="background-image: url('flames machine.jpg');"></div>
+            <div class="login-slideshow-slide" style="background-image: url('peper ribbon thrower.jpg');"></div>
+            <div class="login-slideshow-slide" style="background-image: url('sparkle fountain image 1.jpg');"></div>
         </div>
 
         <!-- Floating Particles Background -->
@@ -5568,8 +5584,11 @@ async refreshOrderId() {
 
             async updateWeatherMiniDashboard() {
                 try {
-                    const city = this.data.settings.city || 'Delhi';
-                    const apiKey = this.data.settings.weatherApiKey || '';
+                    // Use consistent city field name - defaultCity (not city)
+                    const city = this.data.settings?.defaultCity || 'Delhi';
+                    const apiKey = this.data.settings?.weatherApiKey || '';
+
+                    console.log('🌤️ Fetching weather for:', city, 'at', new Date().toLocaleTimeString());
                     const weather = await Utils.getWeather(city, apiKey);
 
                     const iconElement = document.querySelector('.weather-mini-icon');
@@ -5580,9 +5599,22 @@ async refreshOrderId() {
                         iconElement.textContent = Utils.getWeatherEmoji(weather.condition);
                         tempElement.textContent = weather.temp !== 'N/A' ? `${weather.temp}°C` : '--°C';
                         conditionElement.textContent = weather.condition !== 'N/A' ? weather.condition : 'Loading...';
+
+                        console.log('✅ Weather updated:', weather.temp + '°C', weather.condition);
                     }
                 } catch (error) {
-                    console.error('Error updating weather mini dashboard:', error);
+                    console.error('❌ Error updating weather mini dashboard:', error);
+
+                    // Show error state in UI
+                    const iconElement = document.querySelector('.weather-mini-icon');
+                    const tempElement = document.querySelector('.weather-mini-temp');
+                    const conditionElement = document.querySelector('.weather-mini-condition');
+
+                    if (iconElement && tempElement && conditionElement) {
+                        iconElement.textContent = '⚠️';
+                        tempElement.textContent = '--°C';
+                        conditionElement.textContent = 'Error';
+                    }
                 }
             },
 
@@ -10494,7 +10526,6 @@ convertToQuotationDateFormat(dateStr) {
                                             <div class="btn-group">
                                                 <button class="btn btn-info btn-small" onclick="OMS.viewQuotationPDF('${q.id}')" title="View PDF">👁️</button>
                                                 <button class="btn btn-primary btn-small" onclick="OMS.editQuotation('${q.id}')" title="Edit">✏️</button>
-                                                <button class="btn btn-success btn-small" onclick="OMS.sendQuotationWhatsApp('${q.id}')" title="Send WhatsApp">📱</button>
                                                 ${q.status !== 'converted' ? `<button class="btn btn-warning btn-small" onclick="OMS.convertQuotationToOrder('${q.id}')" title="Convert to Order">🔄</button>` : ''}
                                                 <button class="btn btn-danger btn-small" onclick="OMS.deleteQuotation('${q.id}')" title="Delete">🗑️</button>
                                             </div>
@@ -10732,7 +10763,7 @@ convertToQuotationDateFormat(dateStr) {
                                 <button class="btn btn-secondary" onclick="OMS.cancelQuotationEdit()">Cancel</button>
                                 <button class="btn btn-info" onclick="OMS.previewQuotationPDF()">👁️ Preview PDF</button>
                                 <button class="btn btn-primary" onclick="OMS.saveQuotation('draft')">💾 Save as Draft</button>
-                                <button class="btn btn-success" onclick="OMS.saveAndSendQuotation()">📱 Save & Send WhatsApp</button>
+                                <button class="btn btn-success" onclick="OMS.saveQuotation('sent')">💾 Save Quotation</button>
                             </div>
                         </div>
                     </div>
@@ -11480,12 +11511,16 @@ convertToQuotationDateFormat(dateStr) {
                 return date.toISOString().split('T')[0];
             },
 
+            // REMOVED: WhatsApp features disabled per user request
+            // User will send PDFs directly via WhatsApp instead
+            /*
             async saveAndSendQuotation() {
                 const quotation = await this.saveQuotation('sent');
                 if (quotation) {
                     await this.sendQuotationWhatsApp(quotation.id);
                 }
             },
+            */
 
             async editQuotation(quotationId) {
                 const quotation = this.data.quotations.find(q => q.id === quotationId);
@@ -11602,7 +11637,6 @@ convertToQuotationDateFormat(dateStr) {
 
                             <div style="margin-top: 2rem; text-align: center;">
                                 <button class="btn btn-primary" onclick="OMS.downloadPreviewPDF()">📥 Download PDF</button>
-                                <button class="btn btn-success" onclick="OMS.sendPreviewWhatsApp()">📱 Send WhatsApp</button>
                                 <button class="btn btn-secondary" onclick="OMS.closeModal('pdfPreviewModal')">Close</button>
                             </div>
                         </div>
@@ -11623,6 +11657,9 @@ convertToQuotationDateFormat(dateStr) {
                 await this.generatePDFFile(quotation);
             },
 
+            // REMOVED: WhatsApp features disabled per user request
+            // User will send PDFs directly via WhatsApp instead
+            /*
             async sendPreviewWhatsApp() {
                 const quotation = this.previewQuotation;
                 if (!quotation) {
@@ -11689,6 +11726,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
                 this.showToast('✅ Opening WhatsApp...', 'success');
             },
+            */
 
             async generatePDFFile(quotation) {
                 try {
@@ -12264,6 +12302,9 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 }
             },
 
+            // REMOVED: WhatsApp features disabled per user request
+            // User will send PDFs directly via WhatsApp instead
+            /*
             async sendQuotationWhatsApp(quotationId) {
                 const quotation = this.data.quotations.find(q => q.id === quotationId);
                 if (!quotation) return;
@@ -12340,6 +12381,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
                 this.showToast('✅ Opening WhatsApp...', 'success');
             },
+            */
 
             async convertQuotationToOrder(quotationId) {
                 const quotation = this.data.quotations.find(q => q.id === quotationId);
