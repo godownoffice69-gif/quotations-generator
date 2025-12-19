@@ -177,9 +177,13 @@
 
         /* Navigation */
         .nav-tabs {
+            position: sticky;
+            top: 0;
+            z-index: 100;
             background: var(--bg-card);
             border-bottom: 2px solid var(--border);
             overflow-x: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .nav-container {
@@ -13266,8 +13270,8 @@ Contact: 📱 98984 96111 / 76984 96111`;
             generateWhatsAppSingleOrderMessage(order, orderNumber, selectedDate) {
                 if (!order) return '';
 
-                let message = `📋 Order ${orderNumber}\n`;
-                message += `📅 ${Utils.formatDate(selectedDate)}\n\n`;
+                let message = `Order ${orderNumber}\n`;
+                message += `Date: ${Utils.formatDate(selectedDate)}\n\n`;
                 message += `━━━━━━━━━━━━━━━━\n`;
                 message += `${order.clientName || 'N/A'}\n`;
                 message += `Contact: ${order.contact || 'N/A'}\n`;
@@ -13293,7 +13297,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     }
 
                     if (mapsUrl) {
-                        message += `\n📍 ${mapsUrl}`;
+                        message += `\nLocation: ${mapsUrl}`;
                     }
                     message += `\n`;
                 }
@@ -13381,20 +13385,20 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 if (dryIceMachines > 0) {
                     const dryIceNeeded = dryIceMachines * 20; // 20kg per machine
                     message += `\n━━━━━━━━━━━━━━━━\n`;
-                    message += `🧊 DRY ICE: ${dryIceNeeded}kg\n`;
-                    message += `(${dryIceMachines} machine${dryIceMachines !== 1 ? 's' : ''} × 20kg)\n`;
+                    message += `DRY ICE: ${dryIceNeeded}kg\n`;
+                    message += `(${dryIceMachines} machine${dryIceMachines !== 1 ? 's' : ''} x 20kg)\n`;
                 }
 
                 if (flowerShowerMachines > 0) {
                     const flowersNeeded = flowerShowerMachines * 20; // 20kg per machine
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `🌸 FLOWERS: ${flowersNeeded}kg\n`;
-                    message += `(${flowerShowerMachines} machine${flowerShowerMachines !== 1 ? 's' : ''} × 20kg)\n`;
+                    message += `FLOWERS: ${flowersNeeded}kg\n`;
+                    message += `(${flowerShowerMachines} machine${flowerShowerMachines !== 1 ? 's' : ''} x 20kg)\n`;
                 }
 
                 if (electricityKV > 0) {
                     message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `⚡ ELECTRICITY: ${electricityKV}KV\n`;
+                    message += `ELECTRICITY: ${electricityKV}KV\n`;
                 }
 
                 message += `\nFirepowerSFX Order Management`;
