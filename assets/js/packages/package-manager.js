@@ -26,10 +26,17 @@ export class PackageManager {
      */
     async init() {
         console.log('📦 Package Manager initialized');
-        await this.loadInventory();
-        await this.loadPackages();
+
+        try {
+            await this.loadInventory();
+            await this.loadPackages();
+        } catch (error) {
+            console.error('❌ Error initializing package manager:', error);
+            // Still render even if loading fails
+        }
+
         this.setupEventListeners();
-        this.render();
+        this.render(); // Always render, even if loading failed
     }
 
     /**
@@ -137,6 +144,30 @@ export class PackageManager {
         const container = document.getElementById('packages-container');
         if (!container) return;
 
+        // Check if there was a loading error (packages array exists but is empty AND inventory is empty too)
+        if (this.packages.length === 0 && this.inventory.items.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: #64748B;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">Unable to load packages</h3>
+                    <p style="margin-bottom: 1rem;">Please ensure Firestore security rules are deployed.</p>
+                    <div style="background: #FEF3C7; padding: 1rem; border-radius: 8px; margin: 1rem auto; max-width: 500px; text-align: left;">
+                        <strong style="color: #92400E;">⚡ Action Required:</strong>
+                        <ol style="margin: 0.5rem 0 0 1.5rem; color: #92400E;">
+                            <li>Go to Firebase Console</li>
+                            <li>Navigate to Firestore Database → Rules</li>
+                            <li>Deploy the updated security rules</li>
+                            <li>Refresh this page</li>
+                        </ol>
+                    </div>
+                    <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1rem;">
+                        🔄 Reload Page
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
         if (this.packages.length === 0) {
             container.innerHTML = `
                 <div style="text-align: center; padding: 3rem; color: #64748B;">
@@ -144,7 +175,7 @@ export class PackageManager {
                     <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">No packages yet</h3>
                     <p>Create your first package to get started</p>
                     <button id="create-package-btn" class="btn btn-primary" style="margin-top: 1rem;">
-                        Create Package
+                        + Create Package
                     </button>
                 </div>
             `;

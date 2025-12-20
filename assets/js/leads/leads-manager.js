@@ -24,9 +24,16 @@ export class LeadsManager {
      */
     async init() {
         console.log('🎯 Leads Manager initialized');
-        await this.loadLeads();
+
+        try {
+            await this.loadLeads();
+        } catch (error) {
+            console.error('❌ Error loading leads:', error);
+            // Still render even if loading fails
+        }
+
         this.setupEventListeners();
-        this.render();
+        this.render(); // Always render, even if loading failed
     }
 
     /**
@@ -205,13 +212,37 @@ export class LeadsManager {
         if (!container) return;
 
         if (this.filteredLeads.length === 0) {
-            container.innerHTML = `
-                <div style="text-align: center; padding: 3rem; color: #64748B;">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎯</div>
-                    <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">No leads found</h3>
-                    <p>Leads will appear here when customers submit the quotation form</p>
-                </div>
-            `;
+            // Show error message if no leads loaded AND current filter is 'all'
+            // (this likely means Firestore permissions issue)
+            if (this.currentFilter === 'all' && this.leads.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #64748B;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                        <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">Unable to load leads</h3>
+                        <p style="margin-bottom: 1rem;">Please ensure Firestore security rules are deployed.</p>
+                        <div style="background: #FEF3C7; padding: 1rem; border-radius: 8px; margin: 1rem auto; max-width: 500px; text-align: left;">
+                            <strong style="color: #92400E;">⚡ Action Required:</strong>
+                            <ol style="margin: 0.5rem 0 0 1.5rem; color: #92400E;">
+                                <li>Go to Firebase Console</li>
+                                <li>Navigate to Firestore Database → Rules</li>
+                                <li>Deploy the updated security rules</li>
+                                <li>Refresh this page</li>
+                            </ol>
+                        </div>
+                        <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1rem;">
+                            🔄 Reload Page
+                        </button>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #64748B;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">🎯</div>
+                        <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">No leads found</h3>
+                        <p>Leads will appear here when customers submit the quotation form</p>
+                    </div>
+                `;
+            }
             return;
         }
 
