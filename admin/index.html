@@ -1818,6 +1818,8 @@
                 <button class="nav-tab" data-tab="videos">🎥 Videos</button>
                 <button class="nav-tab" data-tab="advertisements">📢 Ads</button>
                 <button class="nav-tab" data-tab="financials">💰 Financials</button>
+                <button class="nav-tab" data-tab="packages">📦 Packages</button>
+                <button class="nav-tab" data-tab="leads">🎯 Leads</button>
                 <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
             </div>
         </nav>
@@ -2098,6 +2100,47 @@
             <div id="videos" class="tab-content"></div>
             <div id="advertisements" class="tab-content"></div>
             <div id="financials" class="tab-content"></div>
+
+            <!-- Packages Tab -->
+            <div id="packages" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📦 Package Management</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="packages-container">
+                            <div style="text-align: center; padding: 3rem;">
+                                <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+                                <p>Loading packages...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leads Tab -->
+            <div id="leads" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🎯 Lead Management</h2>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filter Buttons -->
+                        <div id="leads-filter-buttons" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
+                            <!-- Filter buttons will be rendered here -->
+                        </div>
+
+                        <!-- Leads List -->
+                        <div id="leads-list-container">
+                            <div style="text-align: center; padding: 3rem;">
+                                <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+                                <p>Loading leads...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="settings" class="tab-content"></div>
         </main>
     </div>
@@ -21878,5 +21921,365 @@ if (diffDays > 30) {
         });
 
     </script>
+
+    <!-- Package Modal -->
+    <div id="package-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 id="package-modal-title">Create Package</h3>
+                <button class="modal-close" id="cancel-package-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-field">
+                    <label>Package Name *</label>
+                    <input type="text" id="package-name" placeholder="e.g. Premium Wedding Package">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-field">
+                        <label>Type *</label>
+                        <select id="package-type">
+                            <option value="basic">⭐ Basic</option>
+                            <option value="premium">💎 Premium</option>
+                        </select>
+                    </div>
+
+                    <div class="form-field">
+                        <label>Event Type *</label>
+                        <select id="package-event-type">
+                            <option value="wedding">💍 Wedding</option>
+                            <option value="corporate">🏢 Corporate</option>
+                            <option value="birthday">🎂 Birthday</option>
+                            <option value="anniversary">🎊 Anniversary</option>
+                            <option value="other">🎉 Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Description</label>
+                    <textarea id="package-description" rows="3" placeholder="Describe what makes this package special..."></textarea>
+                </div>
+
+                <div class="form-field">
+                    <label>Add Items</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <select id="select-inventory-item" style="flex: 1;">
+                            <option value="">Select an item...</option>
+                        </select>
+                        <button id="add-item-to-package-btn" class="btn btn-primary">➕ Add</button>
+                    </div>
+                </div>
+
+                <div id="package-items-list" style="margin-top: 1rem; max-height: 300px; overflow-y: auto;">
+                    <!-- Package items will be rendered here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-package-btn" class="btn btn-secondary">Cancel</button>
+                <button id="save-package-btn" class="btn btn-primary">Save Package</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lead Details Modal -->
+    <div id="lead-details-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>Lead Details</h3>
+                <button class="modal-close" id="close-lead-details-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="lead-details-content">
+                    <!-- Lead details will be rendered here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="close-lead-details-btn" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional CSS for Packages and Leads -->
+    <style>
+        /* Package Admin Cards */
+        .package-admin-card {
+            background: white;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .package-admin-card:hover {
+            border-color: #8B5CF6;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+        }
+
+        .package-admin-header {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .package-admin-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #F8FAFC;
+            border-radius: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #8B5CF6;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #64748B;
+            text-transform: uppercase;
+        }
+
+        .package-admin-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .package-item-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .package-item-info {
+            flex: 1;
+        }
+
+        .package-item-name {
+            font-weight: 600;
+            color: #1E293B;
+        }
+
+        .package-item-category {
+            font-size: 0.75rem;
+            color: #64748B;
+        }
+
+        .package-item-qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .package-item-qty-decrease,
+        .package-item-qty-increase {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            background: #8B5CF6;
+            color: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .package-item-qty-value {
+            min-width: 2rem;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        /* Leads Styles */
+        .leads-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .lead-card {
+            background: white;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .lead-card:hover {
+            border-color: #8B5CF6;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+        }
+
+        .lead-card-header {
+            padding: 1rem 1.5rem;
+            background: #F8FAFC;
+            border-bottom: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .lead-card-body {
+            padding: 1.5rem;
+        }
+
+        .lead-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .lead-info-row:last-child {
+            border-bottom: none;
+        }
+
+        .lead-info-label {
+            font-weight: 600;
+            color: #64748B;
+            font-size: 0.875rem;
+        }
+
+        .lead-info-value {
+            color: #1E293B;
+            font-size: 0.875rem;
+            text-align: right;
+        }
+
+        .lead-card-actions {
+            padding: 1rem 1.5rem;
+            background: #F8FAFC;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .lead-filter-btn {
+            padding: 0.5rem 1rem;
+            background: #F1F5F9;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            color: #64748B;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .lead-filter-btn:hover {
+            background: #E2E8F0;
+        }
+
+        .lead-filter-btn.active {
+            background: #8B5CF6;
+            border-color: #8B5CF6;
+            color: white;
+        }
+
+        .lead-details-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .lead-details-section:last-child {
+            border-bottom: none;
+        }
+
+        .lead-details-section h3 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 1rem;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #64748B;
+        }
+
+        .detail-value {
+            color: #1E293B;
+            text-align: right;
+            max-width: 60%;
+        }
+    </style>
+
+    <!-- Initialize Packages and Leads Managers -->
+    <script type="module">
+        // Import managers
+        import { PackageManager } from '/assets/js/packages/package-manager.js';
+        import { LeadsManager } from '/assets/js/leads/leads-manager.js';
+
+        // Initialize when OMS loads
+        window.addEventListener('OMSReady', async () => {
+            console.log('🚀 Initializing Packages and Leads managers...');
+
+            // Initialize Package Manager
+            const packageManager = new PackageManager();
+
+            // Initialize Leads Manager
+            const leadsManager = new LeadsManager();
+
+            // Initialize when respective tabs are opened
+            const packagesTab = document.querySelector('[data-tab="packages"]');
+            const leadsTab = document.querySelector('[data-tab="leads"]');
+
+            let packagesInitialized = false;
+            let leadsInitialized = false;
+
+            packagesTab?.addEventListener('click', async () => {
+                if (!packagesInitialized) {
+                    await packageManager.init();
+
+                    // Populate inventory items dropdown
+                    const selectItem = document.getElementById('select-inventory-item');
+                    if (selectItem && packageManager.inventory.items) {
+                        packageManager.inventory.items.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = item.name;
+                            selectItem.appendChild(option);
+                        });
+                    }
+
+                    packagesInitialized = true;
+                }
+            });
+
+            leadsTab?.addEventListener('click', async () => {
+                if (!leadsInitialized) {
+                    await leadsManager.init();
+                    leadsInitialized = true;
+                }
+            });
+
+            // Make managers globally available
+            window.packageManager = packageManager;
+            window.leadsManager = leadsManager;
+
+            console.log('✅ Packages and Leads managers ready');
+        });
+    </script>
+
 </body>
 </html>
