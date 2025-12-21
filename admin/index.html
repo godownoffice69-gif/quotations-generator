@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Version: 2024-12-21-FORCE-RELOAD-v4 -->
+    <!-- Version: 2024-12-21-SYNTAX-FIX-v5 -->
     <!-- TIMESTAMP: 1734748800 -->
+    <!-- FIXED: JavaScript syntax error with import statements -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Order Management System - Enhanced [v4-21Dec]</title>
+    <title>Order Management System - Enhanced [v5-FIXED-21Dec]</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="shortcut icon" type="image/png" href="logo.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -22232,7 +22233,7 @@ if (diffDays > 30) {
     <!-- Initialize Packages and Leads Managers -->
     <script type="module">
         // Force reload - new timestamp
-        const BUILD_VERSION = '2024-12-21-FORCE-RELOAD-v4';
+        const BUILD_VERSION = '2024-12-21-SYNTAX-FIX-v5';
         const BUILD_TIMESTAMP = Date.now(); // Always fresh
 
         // Log version for debugging - THIS MUST APPEAR IN CONSOLE
@@ -22241,13 +22242,13 @@ if (diffDays > 30) {
         console.log('%c⏰ Loaded at: ' + new Date().toLocaleString(), 'background: #3b82f6; color: white; padding: 8px; font-size: 14px;');
         console.log('%c🎯 If you can see this, the updated HTML is loading!', 'background: #f59e0b; color: white; padding: 8px; font-size: 14px;');
 
-        // Import managers with cache-busting timestamp
-        import { PackageManager } from `/assets/js/packages/package-manager.js?v=${BUILD_TIMESTAMP}`;
-        import { LeadsManager } from `/assets/js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`;
-
         // Initialize when OMS loads
         window.addEventListener('OMSReady', async () => {
             console.log('🚀 Initializing Packages and Leads managers...');
+
+            // Import managers with dynamic import (fixes syntax error)
+            const { PackageManager } = await import(`/assets/js/packages/package-manager.js?v=${BUILD_TIMESTAMP}`);
+            const { LeadsManager } = await import(`/assets/js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
 
             // Initialize Package Manager
             const packageManager = new PackageManager();
