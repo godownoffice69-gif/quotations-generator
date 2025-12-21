@@ -132,10 +132,6 @@ export class PackageManager {
                 this.deletePackage(packageId);
             }
 
-            if (e.target.matches('#add-item-to-package-btn')) {
-                this.addItemToPackage();
-            }
-
             if (e.target.closest('.remove-package-item-btn')) {
                 const btn = e.target.closest('.remove-package-item-btn');
                 const itemId = btn.dataset.itemId;
@@ -152,6 +148,89 @@ export class PackageManager {
                 const btn = e.target.closest('.package-item-qty-increase');
                 const itemId = btn.dataset.itemId;
                 this.adjustItemQuantity(itemId, 1);
+            }
+
+            // Click on search dropdown item to add to package
+            if (e.target.closest('.package-search-item')) {
+                const itemId = e.target.closest('.package-search-item').dataset.itemId;
+                this.addItemToPackageById(itemId);
+            }
+        });
+
+        // Handle quantity input changes
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('package-item-qty-input')) {
+                const itemId = e.target.dataset.itemId;
+                const newQty = parseInt(e.target.value) || 1;
+                this.setItemQuantity(itemId, newQty);
+            }
+        });
+
+        // Setup live search for items
+        this.setupItemSearch();
+    }
+
+    /**
+     * Setup live search for inventory items
+     */
+    setupItemSearch() {
+        const searchInput = document.getElementById('package-item-search');
+        const dropdown = document.getElementById('package-item-search-dropdown');
+
+        if (!searchInput || !dropdown) return;
+
+        // Debounce function to limit search frequency
+        let searchTimeout;
+        const debounce = (func, delay) => {
+            return (...args) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        };
+
+        const handleSearch = debounce((e) => {
+            const query = e.target.value.toLowerCase().trim();
+
+            if (query.length > 0) {
+                const items = this.inventory.items.filter(item =>
+                    item.name.toLowerCase().includes(query)
+                );
+
+                if (items.length > 0) {
+                    dropdown.innerHTML = items.map(item => {
+                        const category = this.inventory.categories.find(c => c.id === item.categoryId);
+                        const categoryName = category ? category.name : 'Uncategorized';
+
+                        return `
+                            <div class="search-item package-search-item" data-item-id="${item.id}">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600;">${item.name}</div>
+                                    <div style="font-size: 0.75rem; color: #64748B;">${categoryName}</div>
+                                </div>
+                                <div style="color: #8B5CF6; font-weight: 600;">${item.quantity || 0} in stock</div>
+                            </div>
+                        `;
+                    }).join('');
+                    dropdown.classList.add('show');
+                } else {
+                    dropdown.innerHTML = `
+                        <div class="search-item" style="color: #64748B; text-align: center;">
+                            No items found
+                        </div>
+                    `;
+                    dropdown.classList.add('show');
+                }
+            } else {
+                dropdown.classList.remove('show');
+            }
+        }, 300);
+
+        searchInput.addEventListener('input', handleSearch);
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
             }
         });
     }
@@ -364,12 +443,18 @@ export class PackageManager {
                         <div class="package-item-category">${categoryName}</div>
                     </div>
                     <div class="package-item-qty-controls">
-                        <button class="package-item-qty-decrease" data-item-id="${item.id}">➖</button>
-                        <span class="package-item-qty-value">${item.quantity}</span>
-                        <button class="package-item-qty-increase" data-item-id="${item.id}">➕</button>
+                        <button class="package-item-qty-decrease" data-item-id="${item.id}" title="Decrease quantity">−</button>
+                        <input type="number"
+                               class="package-item-qty-input"
+                               data-item-id="${item.id}"
+                               value="${item.quantity}"
+                               min="1"
+                               max="999"
+                               title="Enter quantity">
+                        <button class="package-item-qty-increase" data-item-id="${item.id}" title="Increase quantity">+</button>
                     </div>
-                    <button class="remove-package-item-btn btn btn-danger btn-small" data-item-id="${item.id}">
-                        ❌
+                    <button class="remove-package-item-btn btn btn-danger btn-small" data-item-id="${item.id}" title="Remove item">
+                        🗑️
                     </button>
                 </div>
             `;
@@ -379,25 +464,20 @@ export class PackageManager {
     }
 
     /**
-     * Add item to package
+     * Add item to package by ID (called from search dropdown)
      */
-    addItemToPackage() {
-        const selectItem = document.getElementById('select-inventory-item');
-        if (!selectItem) return;
-
-        const selectedItemId = selectItem.value;
-        if (!selectedItemId) {
-            alert('Please select an item');
+    addItemToPackageById(itemId) {
+        const inventoryItem = this.inventory.items.find(i => i.id === itemId);
+        if (!inventoryItem) {
+            console.error('Item not found:', itemId);
             return;
         }
 
-        const inventoryItem = this.inventory.items.find(i => i.id === selectedItemId);
-        if (!inventoryItem) return;
-
         // Check if item already exists
-        const existingItem = this.currentPackage.items.find(i => i.id === selectedItemId);
+        const existingItem = this.currentPackage.items.find(i => i.id === itemId);
         if (existingItem) {
             existingItem.quantity += 1;
+            OMS?.showNotification(`Increased quantity of ${inventoryItem.name}`, 'success');
         } else {
             this.currentPackage.items.push({
                 id: inventoryItem.id,
@@ -407,10 +487,16 @@ export class PackageManager {
                 quantity: 1,
                 imageUrl: inventoryItem.imageUrl || ''
             });
+            OMS?.showNotification(`Added ${inventoryItem.name} to package`, 'success');
         }
 
+        // Clear search and close dropdown
+        const searchInput = document.getElementById('package-item-search');
+        const dropdown = document.getElementById('package-item-search-dropdown');
+        if (searchInput) searchInput.value = '';
+        if (dropdown) dropdown.classList.remove('show');
+
         this.renderPackageItems();
-        selectItem.value = '';
     }
 
     /**
@@ -422,7 +508,7 @@ export class PackageManager {
     }
 
     /**
-     * Adjust item quantity
+     * Adjust item quantity (+ or - buttons)
      */
     adjustItemQuantity(itemId, delta) {
         const item = this.currentPackage.items.find(i => i.id === itemId);
@@ -430,6 +516,23 @@ export class PackageManager {
 
         item.quantity = Math.max(1, item.quantity + delta);
         this.renderPackageItems();
+    }
+
+    /**
+     * Set item quantity directly (from input field)
+     */
+    setItemQuantity(itemId, newQuantity) {
+        const item = this.currentPackage.items.find(i => i.id === itemId);
+        if (!item) return;
+
+        // Ensure quantity is at least 1
+        item.quantity = Math.max(1, Math.min(999, newQuantity));
+
+        // Update the input field to reflect the validated value
+        const input = document.querySelector(`.package-item-qty-input[data-item-id="${itemId}"]`);
+        if (input) {
+            input.value = item.quantity;
+        }
     }
 
     /**
