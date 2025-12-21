@@ -19,6 +19,7 @@ export class PackageManager {
         };
         this.currentPackage = null;
         this.editMode = false;
+        this.loadingError = false; // Track if there was an actual loading error
     }
 
     /**
@@ -30,9 +31,10 @@ export class PackageManager {
         try {
             await this.loadInventory();
             await this.loadPackages();
+            this.loadingError = false; // Successfully loaded (even if empty)
         } catch (error) {
             console.error('❌ Error initializing package manager:', error);
-            // Still render even if loading fails
+            this.loadingError = true; // Mark that an error occurred
         }
 
         this.setupEventListeners();
@@ -56,9 +58,15 @@ export class PackageManager {
                 this.inventory.items = data.inventory?.items || [];
                 this.inventory.categories = data.inventory?.categories || [];
                 console.log(`✅ Loaded ${this.inventory.items.length} items`);
+            } else {
+                console.log('ℹ️ No inventory data found yet - this is normal for a new setup');
+                this.inventory.items = [];
+                this.inventory.categories = [];
             }
         } catch (error) {
             console.error('❌ Error loading inventory:', error);
+            this.loadingError = true; // Mark that an error occurred
+            throw error; // Re-throw to be caught by init()
         }
     }
 
@@ -84,8 +92,13 @@ export class PackageManager {
             });
 
             console.log(`✅ Loaded ${this.packages.length} packages`);
+            if (this.packages.length === 0) {
+                console.log('ℹ️ No packages found - ready to create your first package!');
+            }
         } catch (error) {
             console.error('❌ Error loading packages:', error);
+            this.loadingError = true; // Mark that an error occurred
+            throw error; // Re-throw to be caught by init()
         }
     }
 
@@ -158,8 +171,9 @@ export class PackageManager {
             return;
         }
 
-        // Check if there was a loading error (packages array exists but is empty AND inventory is empty too)
-        if (this.packages.length === 0 && this.inventory.items.length === 0) {
+        // Only show error UI if there was an ACTUAL loading error
+        // Don't confuse "no data yet" with "error loading data"
+        if (this.loadingError && this.packages.length === 0 && this.inventory.items.length === 0) {
             console.error('⚠️ PACKAGES TAB ERROR: Unable to load data from Firestore');
             console.error('📋 This usually means Firestore security rules are not deployed yet');
             console.error('🔧 Follow the instructions shown on screen to fix this');
@@ -167,32 +181,25 @@ export class PackageManager {
             container.innerHTML = `
                 <div style="text-align: center; padding: 3rem; color: #64748B;">
                     <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
-                    <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">Firestore Rules Not Deployed</h3>
-                    <p style="margin-bottom: 1rem; color: #DC2626; font-weight: 600;">The Firestore security rules need to be deployed to Firebase Console</p>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">Unable to Load Data</h3>
+                    <p style="margin-bottom: 1rem; color: #DC2626; font-weight: 600;">There was an error connecting to Firestore</p>
                     <div style="background: #FEE2E2; border: 2px solid #DC2626; padding: 1.5rem; border-radius: 8px; margin: 1rem auto; max-width: 600px; text-align: left;">
-                        <strong style="color: #991B1B; font-size: 1.1rem;">⚡ REQUIRED ACTION - Deploy Firestore Rules:</strong>
+                        <strong style="color: #991B1B; font-size: 1.1rem;">⚡ POSSIBLE CAUSES:</strong>
                         <ol style="margin: 1rem 0 0 1.5rem; color: #991B1B; line-height: 1.8;">
-                            <li>Open <a href="https://console.firebase.google.com/project/firepowersfx-2558/firestore/rules" target="_blank" style="color: #DC2626; text-decoration: underline;">Firebase Console → Firestore Rules</a></li>
-                            <li>Click the "Publish" button to deploy the rules from your firestore.rules file</li>
-                            <li>Wait for deployment to complete (usually 10-30 seconds)</li>
-                            <li>Return here and click the Reload button below</li>
+                            <li>Firestore security rules not deployed to <a href="https://console.firebase.google.com/project/firepowersfx-2558/firestore/rules" target="_blank" style="color: #DC2626; text-decoration: underline;">Firebase Console</a></li>
+                            <li>Network connection issue - check your internet</li>
+                            <li>Firebase authentication issue - try logging out and back in</li>
                         </ol>
                     </div>
-                    <div style="background: #DBEAFE; padding: 1rem; border-radius: 8px; margin: 1rem auto; max-width: 600px; text-align: left;">
-                        <strong style="color: #1E40AF;">ℹ️ Why is this needed?</strong>
-                        <p style="margin: 0.5rem 0 0 0; color: #1E40AF; font-size: 0.9rem;">
-                            The new Packages and Leads features require updated Firestore security rules.
-                            These rules are already in your firestore.rules file, but must be deployed to Firebase Console to take effect.
-                        </p>
-                    </div>
                     <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1.5rem; padding: 1rem 2rem; font-size: 1.1rem;">
-                        🔄 Reload Page After Deploying Rules
+                        🔄 Reload Page
                     </button>
                 </div>
             `;
             return;
         }
 
+        // Show "No packages yet" UI with create button (this is normal when starting!)
         if (this.packages.length === 0) {
             container.innerHTML = `
                 <div style="text-align: center; padding: 3rem; color: #64748B;">
