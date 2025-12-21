@@ -146,22 +146,33 @@ export class PackageManager {
 
         // Check if there was a loading error (packages array exists but is empty AND inventory is empty too)
         if (this.packages.length === 0 && this.inventory.items.length === 0) {
+            console.error('⚠️ PACKAGES TAB ERROR: Unable to load data from Firestore');
+            console.error('📋 This usually means Firestore security rules are not deployed yet');
+            console.error('🔧 Follow the instructions shown on screen to fix this');
+
             container.innerHTML = `
                 <div style="text-align: center; padding: 3rem; color: #64748B;">
                     <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
-                    <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">Unable to load packages</h3>
-                    <p style="margin-bottom: 1rem;">Please ensure Firestore security rules are deployed.</p>
-                    <div style="background: #FEF3C7; padding: 1rem; border-radius: 8px; margin: 1rem auto; max-width: 500px; text-align: left;">
-                        <strong style="color: #92400E;">⚡ Action Required:</strong>
-                        <ol style="margin: 0.5rem 0 0 1.5rem; color: #92400E;">
-                            <li>Go to Firebase Console</li>
-                            <li>Navigate to Firestore Database → Rules</li>
-                            <li>Deploy the updated security rules</li>
-                            <li>Refresh this page</li>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">Firestore Rules Not Deployed</h3>
+                    <p style="margin-bottom: 1rem; color: #DC2626; font-weight: 600;">The Firestore security rules need to be deployed to Firebase Console</p>
+                    <div style="background: #FEE2E2; border: 2px solid #DC2626; padding: 1.5rem; border-radius: 8px; margin: 1rem auto; max-width: 600px; text-align: left;">
+                        <strong style="color: #991B1B; font-size: 1.1rem;">⚡ REQUIRED ACTION - Deploy Firestore Rules:</strong>
+                        <ol style="margin: 1rem 0 0 1.5rem; color: #991B1B; line-height: 1.8;">
+                            <li>Open <a href="https://console.firebase.google.com/project/firepowersfx-2558/firestore/rules" target="_blank" style="color: #DC2626; text-decoration: underline;">Firebase Console → Firestore Rules</a></li>
+                            <li>Click the "Publish" button to deploy the rules from your firestore.rules file</li>
+                            <li>Wait for deployment to complete (usually 10-30 seconds)</li>
+                            <li>Return here and click the Reload button below</li>
                         </ol>
                     </div>
-                    <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1rem;">
-                        🔄 Reload Page
+                    <div style="background: #DBEAFE; padding: 1rem; border-radius: 8px; margin: 1rem auto; max-width: 600px; text-align: left;">
+                        <strong style="color: #1E40AF;">ℹ️ Why is this needed?</strong>
+                        <p style="margin: 0.5rem 0 0 0; color: #1E40AF; font-size: 0.9rem;">
+                            The new Packages and Leads features require updated Firestore security rules.
+                            These rules are already in your firestore.rules file, but must be deployed to Firebase Console to take effect.
+                        </p>
+                    </div>
+                    <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1.5rem; padding: 1rem 2rem; font-size: 1.1rem;">
+                        🔄 Reload Page After Deploying Rules
                     </button>
                 </div>
             `;

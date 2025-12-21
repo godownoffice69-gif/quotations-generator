@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Admin Panel Version Check</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .version-box {
+            background: white;
+            border: 2px solid #10b981;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .version-box.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        .version-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #10b981;
+            margin: 20px 0;
+        }
+        .version-number.old {
+            color: #ef4444;
+        }
+        .info {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .check-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #10b981;
+            background: #f0fdf4;
+            padding-left: 15px;
+        }
+        .check-item.fail {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .timestamp {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="version-box">
+        <h1>🔍 Admin Panel Version Check</h1>
+        <p>This page helps you verify if you're seeing the latest version of the admin panel.</p>
+
+        <div class="version-number" id="version-display">
+            Version: 2024-12-20-v3-PACKAGES-TAB-FIX
+        </div>
+
+        <div class="timestamp">
+            Page loaded at: <span id="load-time"></span>
+        </div>
+
+        <div class="info">
+            <strong>✅ What this means:</strong>
+            <p>If you can see "Version: 2024-12-20-v3-PACKAGES-TAB-FIX" above, you're viewing the latest version with all the fixes.</p>
+        </div>
+
+        <h2>🔎 Verification Checklist:</h2>
+
+        <div class="check-item">
+            <strong>✓ Version Number:</strong> Should say "2024-12-20-v3-PACKAGES-TAB-FIX"
+        </div>
+
+        <div class="check-item" id="tab-check">
+            <strong>? Tab Name:</strong> In the main admin panel, the tab should say "📦 Packages" (not "Settings")
+        </div>
+
+        <div class="check-item" id="firestore-check">
+            <strong>? Firestore Rules:</strong> Must be deployed to Firebase Console
+        </div>
+
+        <div style="margin-top: 30px;">
+            <h2>🚀 Next Steps:</h2>
+            <ol style="line-height: 1.8;">
+                <li><strong>If version is correct:</strong> Go back to the main admin panel and check if the Packages tab now shows correctly</li>
+                <li><strong>If Packages tab still shows "Loading...":</strong> You need to deploy Firestore rules (instructions will appear in the Packages tab)</li>
+                <li><strong>If version is old/different:</strong> Hard refresh this page (Ctrl+Shift+R or Cmd+Shift+R) and check again</li>
+            </ol>
+        </div>
+
+        <div style="margin-top: 30px; text-align: center;">
+            <button onclick="window.location.href='index.html'">← Back to Admin Panel</button>
+            <button onclick="location.reload()">🔄 Reload This Page</button>
+            <button onclick="hardRefresh()">⚡ Hard Refresh</button>
+        </div>
+    </div>
+
+    <div class="version-box error" style="margin-top: 30px;">
+        <h2>⚠️ If Packages Tab Still Shows "Settings":</h2>
+        <p>This means your browser or server is still caching the old HTML file. Here's what to do:</p>
+        <ol style="line-height: 1.8; margin-left: 20px;">
+            <li><strong>Clear Browser Cache Completely:</strong>
+                <ul style="margin-top: 10px;">
+                    <li>Chrome: Settings → Privacy → Clear browsing data → Select "Cached images and files" → Clear data</li>
+                    <li>Firefox: Settings → Privacy → Clear Data → Select "Cached Web Content" → Clear</li>
+                </ul>
+            </li>
+            <li><strong>Hard Refresh:</strong> Press Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)</li>
+            <li><strong>Open in Incognito/Private Window:</strong> This bypasses cache completely</li>
+            <li><strong>If using Firebase Hosting:</strong> Run <code>firebase deploy --only hosting</code> to redeploy</li>
+        </ol>
+    </div>
+
+    <script>
+        // Display current time
+        document.getElementById('load-time').textContent = new Date().toLocaleString();
+
+        function hardRefresh() {
+            // Clear cache and reload
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => {
+                        caches.delete(name);
+                    });
+                });
+            }
+            window.location.reload(true);
+        }
+
+        // Log version to console for debugging
+        console.log('%c✅ VERSION CHECK PAGE LOADED', 'background: #10b981; color: white; padding: 10px; font-size: 16px; font-weight: bold;');
+        console.log('Version: 2024-12-20-v3-PACKAGES-TAB-FIX');
+        console.log('Timestamp:', new Date().toISOString());
+    </script>
+</body>
+</html>
