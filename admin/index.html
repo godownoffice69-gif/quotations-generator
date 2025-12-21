@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Version: 2024-12-20 v2 - Lead Generation System with Packages & Leads Tabs -->
+    <!-- Version: 2024-12-20 v3 - PACKAGES TAB FIX -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Order Management System - Enhanced</title>
@@ -22229,9 +22229,13 @@ if (diffDays > 30) {
 
     <!-- Initialize Packages and Leads Managers -->
     <script type="module">
-        // Import managers
-        import { PackageManager } from '/assets/js/packages/package-manager.js';
-        import { LeadsManager } from '/assets/js/leads/leads-manager.js';
+        // Log version for debugging
+        console.log('📋 Admin Panel Version: 2024-12-20-v3 - PACKAGES TAB FIX');
+
+        // Import managers with cache-busting
+        const timestamp = '20241220v3';
+        import { PackageManager } from `/assets/js/packages/package-manager.js?v=${timestamp}`;
+        import { LeadsManager } from `/assets/js/leads/leads-manager.js?v=${timestamp}`;
 
         // Initialize when OMS loads
         window.addEventListener('OMSReady', async () => {
