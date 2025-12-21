@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Deployment Diagnostic</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test { background: #2a2a2a; padding: 15px; margin: 10px 0; border-left: 4px solid #00ff00; }
+        .fail { border-left-color: #ff0000; color: #ff0000; }
+        .pass { border-left-color: #00ff00; color: #00ff00; }
+        h1 { color: #00ffff; }
+        h2 { color: #ffff00; }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 DEPLOYMENT DIAGNOSTIC - Version Detection</h1>
+    <p>Current time: <span id="time"></span></p>
+
+    <div class="test pass">
+        <h2>✅ TEST 1: This file loaded correctly</h2>
+        <p>If you can see this page, the basic deployment is working.</p>
+        <pre>File: admin/diagnostic.html
+Version: 2024-12-21-DIAGNOSTIC-v1</pre>
+    </div>
+
+    <div class="test" id="test2">
+        <h2>⏳ TEST 2: Checking admin panel version...</h2>
+        <p id="version-check">Loading...</p>
+    </div>
+
+    <div class="test" id="test3">
+        <h2>⏳ TEST 3: Checking tab structure...</h2>
+        <p id="tab-check">Loading...</p>
+    </div>
+
+    <div class="test">
+        <h2>📋 INSTRUCTIONS:</h2>
+        <ol>
+            <li>Check Vercel Dashboard: <a href="https://vercel.com/dashboard" style="color:#00ffff">https://vercel.com/dashboard</a></li>
+            <li>Look for "Deployments" tab</li>
+            <li>Check if the latest commit (158a33e - "Add quick fix guide") is deployed</li>
+            <li>If not deployed, it may be building now - wait 2-3 minutes</li>
+            <li>If it's stuck or failed, you may need to trigger a new deployment</li>
+        </ol>
+    </div>
+
+    <div class="test">
+        <h2>🔄 Manual Deployment Options:</h2>
+        <pre>Option 1: Push a new commit (trigger auto-deploy)
+git commit --allow-empty -m "Trigger Vercel deployment"
+git push
+
+Option 2: Use Vercel CLI
+vercel --prod
+
+Option 3: Redeploy from Vercel Dashboard
+Go to Deployments → Click on latest → Click "Redeploy"</pre>
+    </div>
+
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleString();
+
+        // Test 2: Fetch and check admin panel HTML
+        fetch('/admin/index.html')
+            .then(r => r.text())
+            .then(html => {
+                const test2 = document.getElementById('test2');
+                const versionCheck = document.getElementById('version-check');
+
+                if (html.includes('FORCE-RELOAD-v4')) {
+                    test2.className = 'test pass';
+                    versionCheck.innerHTML = '<strong style="color:#00ff00">✅ LATEST VERSION (v4) IS DEPLOYED!</strong><br>' +
+                        'Version: 2024-12-21-FORCE-RELOAD-v4<br>' +
+                        'This means Vercel has the updated files.';
+                } else if (html.includes('2024-12-20 v3')) {
+                    test2.className = 'test fail';
+                    versionCheck.innerHTML = '<strong style="color:#ff0000">❌ OLD VERSION (v3) - Not latest</strong><br>' +
+                        'Vercel is serving version 3, but we pushed version 4.<br>' +
+                        'Solution: Trigger a new deployment (see instructions below)';
+                } else {
+                    test2.className = 'test fail';
+                    versionCheck.innerHTML = '<strong style="color:#ff0000">❌ VERY OLD VERSION</strong><br>' +
+                        'No version marker found.<br>' +
+                        'This is a version from before our fixes.<br>' +
+                        'Solution: Trigger a new deployment immediately!';
+                }
+
+                // Test 3: Check tab structure
+                const test3 = document.getElementById('test3');
+                const tabCheck = document.getElementById('tab-check');
+                const hasPackagesTab = html.includes('data-tab="packages">📦 Packages');
+                const hasLeadsTab = html.includes('data-tab="leads">🎯 Leads');
+
+                if (hasPackagesTab && hasLeadsTab) {
+                    test3.className = 'test pass';
+                    tabCheck.innerHTML = '<strong style="color:#00ff00">✅ BOTH TABS FOUND IN HTML</strong><br>' +
+                        '- Packages tab: ✅ Found<br>' +
+                        '- Leads tab: ✅ Found<br><br>' +
+                        'If you still see "Settings" instead of "Packages" in your browser:<br>' +
+                        '1. Hard refresh (Ctrl+Shift+R)<br>' +
+                        '2. Clear browser cache completely<br>' +
+                        '3. Try incognito window';
+                } else {
+                    test3.className = 'test fail';
+                    tabCheck.innerHTML = '<strong style="color:#ff0000">❌ TABS MISSING FROM HTML</strong><br>' +
+                        '- Packages tab: ' + (hasPackagesTab ? '✅' : '❌') + '<br>' +
+                        '- Leads tab: ' + (hasLeadsTab ? '✅' : '❌') + '<br><br>' +
+                        'This confirms Vercel has NOT deployed the latest changes.<br>' +
+                        'You must trigger a new deployment.';
+                }
+            })
+            .catch(err => {
+                document.getElementById('test2').className = 'test fail';
+                document.getElementById('version-check').innerHTML =
+                    '<strong style="color:#ff0000">❌ ERROR: Could not fetch admin panel</strong><br>' + err;
+            });
+    </script>
+</body>
+</html>
