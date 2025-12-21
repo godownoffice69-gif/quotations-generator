@@ -22237,54 +22237,67 @@ if (diffDays > 30) {
     <!-- Initialize Packages and Leads Managers -->
     <script type="module">
         // Force reload - new timestamp
-        const BUILD_VERSION = '2024-12-21-TRANSLATION-FIX-v6-TABS-FIXED';
+        const BUILD_VERSION = '2024-12-21-DEBUG-PACKAGES-v7';
         const BUILD_TIMESTAMP = Date.now(); // Always fresh
 
         // Log version for debugging - THIS MUST APPEAR IN CONSOLE
         console.log('%c🔥 ADMIN PANEL VERSION CHECK 🔥', 'background: #ef4444; color: white; padding: 10px; font-size: 16px; font-weight: bold;');
         console.log('%c✅ Version: ' + BUILD_VERSION, 'background: #10b981; color: white; padding: 8px; font-size: 14px;');
         console.log('%c⏰ Loaded at: ' + new Date().toLocaleString(), 'background: #3b82f6; color: white; padding: 8px; font-size: 14px;');
-        console.log('%c🎯 Tab labels should now be CORRECT!', 'background: #f59e0b; color: white; padding: 8px; font-size: 14px;');
+        console.log('%c🔍 Added debugging for Package Manager initialization', 'background: #f59e0b; color: white; padding: 8px; font-size: 14px;');
 
         // Initialize when OMS loads
         window.addEventListener('OMSReady', async () => {
             console.log('🚀 Initializing Packages and Leads managers...');
 
-            // Import managers with dynamic import (fixes syntax error)
-            const { PackageManager } = await import(`/assets/js/packages/package-manager.js?v=${BUILD_TIMESTAMP}`);
-            const { LeadsManager } = await import(`/assets/js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
+            try {
+                // Import managers with dynamic import (fixes syntax error)
+                const { PackageManager } = await import(`/assets/js/packages/package-manager.js?v=${BUILD_TIMESTAMP}`);
+                const { LeadsManager } = await import(`/assets/js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
 
-            // Initialize Package Manager
-            const packageManager = new PackageManager();
+                console.log('✅ Package and Lead managers imported successfully');
 
-            // Initialize Leads Manager
-            const leadsManager = new LeadsManager();
+                // Initialize Package Manager
+                const packageManager = new PackageManager();
 
-            // Initialize when respective tabs are opened
-            const packagesTab = document.querySelector('[data-tab="packages"]');
-            const leadsTab = document.querySelector('[data-tab="leads"]');
+                // Initialize Leads Manager
+                const leadsManager = new LeadsManager();
 
-            let packagesInitialized = false;
-            let leadsInitialized = false;
+                // Initialize when respective tabs are opened
+                const packagesTab = document.querySelector('[data-tab="packages"]');
+                const leadsTab = document.querySelector('[data-tab="leads"]');
 
-            packagesTab?.addEventListener('click', async () => {
-                if (!packagesInitialized) {
-                    await packageManager.init();
+                console.log('📦 Packages tab found:', !!packagesTab);
+                console.log('🎯 Leads tab found:', !!leadsTab);
 
-                    // Populate inventory items dropdown
-                    const selectItem = document.getElementById('select-inventory-item');
-                    if (selectItem && packageManager.inventory.items) {
-                        packageManager.inventory.items.forEach(item => {
-                            const option = document.createElement('option');
-                            option.value = item.id;
-                            option.textContent = item.name;
-                            selectItem.appendChild(option);
-                        });
+                let packagesInitialized = false;
+                let leadsInitialized = false;
+
+                packagesTab?.addEventListener('click', async () => {
+                    console.log('📦 Packages tab clicked, initialized:', packagesInitialized);
+                    if (!packagesInitialized) {
+                        try {
+                            console.log('🔄 Initializing Package Manager...');
+                            await packageManager.init();
+                            console.log('✅ Package Manager initialized successfully');
+
+                            // Populate inventory items dropdown
+                            const selectItem = document.getElementById('select-inventory-item');
+                            if (selectItem && packageManager.inventory.items) {
+                                packageManager.inventory.items.forEach(item => {
+                                    const option = document.createElement('option');
+                                    option.value = item.id;
+                                    option.textContent = item.name;
+                                    selectItem.appendChild(option);
+                                });
+                            }
+
+                            packagesInitialized = true;
+                        } catch (error) {
+                            console.error('❌ Failed to initialize Package Manager:', error);
+                        }
                     }
-
-                    packagesInitialized = true;
-                }
-            });
+                });
 
             leadsTab?.addEventListener('click', async () => {
                 if (!leadsInitialized) {

@@ -141,8 +141,16 @@ export class PackageManager {
      * Render packages list
      */
     render() {
+        console.log('🎨 render() called');
         const container = document.getElementById('packages-container');
-        if (!container) return;
+        console.log('📦 Container found:', !!container);
+        console.log('📊 Packages count:', this.packages.length);
+        console.log('🏪 Inventory items count:', this.inventory.items.length);
+
+        if (!container) {
+            console.error('❌ packages-container element not found in DOM!');
+            return;
+        }
 
         // Check if there was a loading error (packages array exists but is empty AND inventory is empty too)
         if (this.packages.length === 0 && this.inventory.items.length === 0) {
