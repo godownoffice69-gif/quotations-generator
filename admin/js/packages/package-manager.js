@@ -164,7 +164,10 @@ export class PackageManager {
 
             // Click on search dropdown item to add to package
             if (e.target.closest('.package-search-item')) {
+                e.preventDefault();
+                e.stopPropagation();
                 const itemId = e.target.closest('.package-search-item').dataset.itemId;
+                console.log('🖱️ Search item clicked, ID:', itemId);
                 this.addItemToPackageById(itemId);
             }
         });
@@ -450,6 +453,19 @@ export class PackageManager {
         if (modal) {
             modal.style.display = 'none';
         }
+
+        // Clear search input and dropdown
+        const searchInput = document.getElementById('package-item-search');
+        const dropdown = document.getElementById('package-item-search-dropdown');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.dataset.searchInitialized = 'false'; // Reset for next time
+        }
+        if (dropdown) {
+            dropdown.classList.remove('show');
+            dropdown.innerHTML = '';
+        }
+
         this.currentPackage = null;
         this.editMode = false;
     }
@@ -506,6 +522,8 @@ export class PackageManager {
      * Add item to package by ID (called from search dropdown)
      */
     addItemToPackageById(itemId) {
+        console.log('📦 Adding item to package:', itemId);
+
         const inventoryItem = this.inventory.items.find(i => i.id === itemId);
         if (!inventoryItem) {
             console.error('Item not found:', itemId);
@@ -516,7 +534,10 @@ export class PackageManager {
         const existingItem = this.currentPackage.items.find(i => i.id === itemId);
         if (existingItem) {
             existingItem.quantity += 1;
-            OMS?.showNotification(`Increased quantity of ${inventoryItem.name}`, 'success');
+            console.log(`✅ Increased quantity of ${inventoryItem.name} to ${existingItem.quantity}`);
+            if (window.OMS && typeof OMS.showToast === 'function') {
+                OMS.showToast(`Increased quantity of ${inventoryItem.name}`, 'success');
+            }
         } else {
             this.currentPackage.items.push({
                 id: inventoryItem.id,
@@ -526,7 +547,10 @@ export class PackageManager {
                 quantity: 1,
                 imageUrl: inventoryItem.imageUrl || ''
             });
-            OMS?.showNotification(`Added ${inventoryItem.name} to package`, 'success');
+            console.log(`✅ Added ${inventoryItem.name} to package`);
+            if (window.OMS && typeof OMS.showToast === 'function') {
+                OMS.showToast(`Added ${inventoryItem.name} to package`, 'success');
+            }
         }
 
         // Clear search and close dropdown
@@ -535,15 +559,23 @@ export class PackageManager {
         if (searchInput) searchInput.value = '';
         if (dropdown) dropdown.classList.remove('show');
 
+        // Re-render the items list
         this.renderPackageItems();
+
+        console.log('📦 Current package items:', this.currentPackage.items.length);
     }
 
     /**
      * Remove item from package
      */
     removeItemFromPackage(itemId) {
+        const item = this.currentPackage.items.find(i => i.id === itemId);
+        if (item) {
+            console.log(`🗑️ Removing ${item.name} from package`);
+        }
         this.currentPackage.items = this.currentPackage.items.filter(i => i.id !== itemId);
         this.renderPackageItems();
+        console.log('📦 Remaining items:', this.currentPackage.items.length);
     }
 
     /**
@@ -551,9 +583,14 @@ export class PackageManager {
      */
     adjustItemQuantity(itemId, delta) {
         const item = this.currentPackage.items.find(i => i.id === itemId);
-        if (!item) return;
+        if (!item) {
+            console.error('❌ Item not found for quantity adjustment:', itemId);
+            return;
+        }
 
+        const oldQty = item.quantity;
         item.quantity = Math.max(1, item.quantity + delta);
+        console.log(`🔢 ${item.name}: ${oldQty} → ${item.quantity}`);
         this.renderPackageItems();
     }
 
@@ -621,7 +658,9 @@ export class PackageManager {
                     this.packages[pkgIndex] = { id: this.currentPackage.id, ...packageData };
                 }
 
-                OMS.showNotification('Package updated successfully', 'success');
+                if (window.OMS && typeof OMS.showToast === 'function') {
+                    OMS.showToast('Package updated successfully', 'success');
+                }
             } else {
                 // Create new package
                 packageData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -634,7 +673,9 @@ export class PackageManager {
                     ...packageData
                 });
 
-                OMS.showNotification('Package created successfully', 'success');
+                if (window.OMS && typeof OMS.showToast === 'function') {
+                    OMS.showToast('Package created successfully', 'success');
+                }
             }
 
             this.closeModal();
@@ -642,7 +683,9 @@ export class PackageManager {
 
         } catch (error) {
             console.error('❌ Error saving package:', error);
-            OMS.showNotification('Error saving package', 'error');
+            if (window.OMS && typeof OMS.showToast === 'function') {
+                OMS.showToast('Error saving package', 'error');
+            }
         }
     }
 
@@ -668,11 +711,15 @@ export class PackageManager {
             this.packages = this.packages.filter(p => p.id !== packageId);
 
             this.render();
-            OMS.showNotification('Package deleted successfully', 'success');
+            if (window.OMS && typeof OMS.showToast === 'function') {
+                OMS.showToast('Package deleted successfully', 'success');
+            }
 
         } catch (error) {
             console.error('❌ Error deleting package:', error);
-            OMS.showNotification('Error deleting package', 'error');
+            if (window.OMS && typeof OMS.showToast === 'function') {
+                OMS.showToast('Error deleting package', 'error');
+            }
         }
     }
 }
