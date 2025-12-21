@@ -44,11 +44,14 @@ export class PackageManager {
      */
     async loadInventory() {
         try {
-            const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-            const db = getFirestore();
+            // Use the existing Firebase instance from window.db (initialized in admin/index.html)
+            const db = window.db;
+            if (!db) {
+                throw new Error('Firebase Firestore not initialized. Make sure admin/index.html has initialized Firebase.');
+            }
 
-            const dataDoc = await getDoc(doc(db, 'admin', 'data'));
-            if (dataDoc.exists()) {
+            const dataDoc = await db.collection('admin').doc('data').get();
+            if (dataDoc.exists) {
                 const data = dataDoc.data();
                 this.inventory.items = data.inventory?.items || [];
                 this.inventory.categories = data.inventory?.categories || [];
@@ -64,10 +67,13 @@ export class PackageManager {
      */
     async loadPackages() {
         try {
-            const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-            const db = getFirestore();
+            // Use the existing Firebase instance from window.db (initialized in admin/index.html)
+            const db = window.db;
+            if (!db) {
+                throw new Error('Firebase Firestore not initialized. Make sure admin/index.html has initialized Firebase.');
+            }
 
-            const snapshot = await getDocs(collection(db, 'packages'));
+            const snapshot = await db.collection('packages').get();
             this.packages = [];
 
             snapshot.forEach(doc => {
@@ -440,8 +446,11 @@ export class PackageManager {
                 return;
             }
 
-            const { getFirestore, collection, doc, setDoc, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-            const db = getFirestore();
+            // Use the existing Firebase instance from window.db (initialized in admin/index.html)
+            const db = window.db;
+            if (!db) {
+                throw new Error('Firebase Firestore not initialized');
+            }
 
             const packageData = {
                 name,
@@ -449,12 +458,12 @@ export class PackageManager {
                 eventType,
                 description,
                 items: this.currentPackage.items,
-                updatedAt: serverTimestamp()
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             if (this.editMode) {
                 // Update existing package
-                await setDoc(doc(db, 'packages', this.currentPackage.id), packageData);
+                await db.collection('packages').doc(this.currentPackage.id).set(packageData);
                 console.log('✅ Package updated:', this.currentPackage.id);
 
                 // Update local data
@@ -466,8 +475,8 @@ export class PackageManager {
                 OMS.showNotification('Package updated successfully', 'success');
             } else {
                 // Create new package
-                packageData.createdAt = serverTimestamp();
-                const docRef = await addDoc(collection(db, 'packages'), packageData);
+                packageData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                const docRef = await db.collection('packages').add(packageData);
                 console.log('✅ Package created:', docRef.id);
 
                 // Add to local data
@@ -497,10 +506,13 @@ export class PackageManager {
         }
 
         try {
-            const { getFirestore, doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-            const db = getFirestore();
+            // Use the existing Firebase instance from window.db (initialized in admin/index.html)
+            const db = window.db;
+            if (!db) {
+                throw new Error('Firebase Firestore not initialized');
+            }
 
-            await deleteDoc(doc(db, 'packages', packageId));
+            await db.collection('packages').doc(packageId).delete();
             console.log('✅ Package deleted:', packageId);
 
             // Remove from local data
