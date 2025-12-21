@@ -41,15 +41,16 @@ export class LeadsManager {
      */
     async loadLeads() {
         try {
-            const { getFirestore, collection, getDocs, orderBy, query } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-            const db = getFirestore();
+            // Use the existing Firebase instance from window.db (initialized in admin/index.html)
+            const db = window.db;
+            if (!db) {
+                throw new Error('Firebase Firestore not initialized');
+            }
 
-            const leadsQuery = query(
-                collection(db, 'leads'),
-                orderBy('createdAt', 'desc')
-            );
+            const snapshot = await db.collection('leads')
+                .orderBy('createdAt', 'desc')
+                .get();
 
-            const snapshot = await getDocs(leadsQuery);
             this.leads = [];
 
             snapshot.forEach(doc => {
@@ -111,36 +112,36 @@ export class LeadsManager {
      */
     async setupRealtimeListener() {
         try {
-            const { getFirestore, collection, onSnapshot, orderBy, query } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-            const db = getFirestore();
+            // Use the existing Firebase instance from window.db (initialized in admin/index.html)
+            const db = window.db;
+            if (!db) {
+                throw new Error('Firebase Firestore not initialized');
+            }
 
-            const leadsQuery = query(
-                collection(db, 'leads'),
-                orderBy('createdAt', 'desc')
-            );
+            db.collection('leads')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot((snapshot) => {
+                    const currentCount = this.leads.length;
 
-            onSnapshot(leadsQuery, (snapshot) => {
-                const currentCount = this.leads.length;
-
-                this.leads = [];
-                snapshot.forEach(doc => {
-                    this.leads.push({
-                        docId: doc.id,
-                        ...doc.data()
+                    this.leads = [];
+                    snapshot.forEach(doc => {
+                        this.leads.push({
+                            docId: doc.id,
+                            ...doc.data()
+                        });
                     });
+
+                    // Show notification if new leads arrived
+                    if (this.leads.length > currentCount) {
+                        const newLeadsCount = this.leads.length - currentCount;
+                        OMS?.showNotification(`${newLeadsCount} new lead(s) received!`, 'success');
+                    }
+
+                    this.applyFilter();
+                    this.render();
+
+                    console.log('✅ Leads updated in real-time');
                 });
-
-                // Show notification if new leads arrived
-                if (this.leads.length > currentCount) {
-                    const newLeadsCount = this.leads.length - currentCount;
-                    OMS?.showNotification(`${newLeadsCount} new lead(s) received!`, 'success');
-                }
-
-                this.applyFilter();
-                this.render();
-
-                console.log('✅ Leads updated in real-time');
-            });
 
         } catch (error) {
             console.error('❌ Error setting up realtime listener:', error);
@@ -524,12 +525,15 @@ export class LeadsManager {
      */
     async updateLeadStatus(leadDocId, newStatus) {
         try {
-            const { getFirestore, doc, updateDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-            const db = getFirestore();
+            // Use the existing Firebase instance from window.db (initialized in admin/index.html)
+            const db = window.db;
+            if (!db) {
+                throw new Error('Firebase Firestore not initialized');
+            }
 
-            await updateDoc(doc(db, 'leads', leadDocId), {
+            await db.collection('leads').doc(leadDocId).update({
                 status: newStatus,
-                updatedAt: serverTimestamp()
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             console.log('✅ Lead status updated:', leadDocId, newStatus);
