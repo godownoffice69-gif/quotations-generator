@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Version: 2024-12-20 v3 - PACKAGES TAB FIX -->
+    <!-- Version: 2024-12-21-FORCE-RELOAD-v4 -->
+    <!-- TIMESTAMP: 1734748800 -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Order Management System - Enhanced</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Order Management System - Enhanced [v4-21Dec]</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="shortcut icon" type="image/png" href="logo.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -22229,13 +22231,19 @@ if (diffDays > 30) {
 
     <!-- Initialize Packages and Leads Managers -->
     <script type="module">
-        // Log version for debugging
-        console.log('📋 Admin Panel Version: 2024-12-20-v3 - PACKAGES TAB FIX');
+        // Force reload - new timestamp
+        const BUILD_VERSION = '2024-12-21-FORCE-RELOAD-v4';
+        const BUILD_TIMESTAMP = Date.now(); // Always fresh
 
-        // Import managers with cache-busting
-        const timestamp = '20241220v3';
-        import { PackageManager } from `/assets/js/packages/package-manager.js?v=${timestamp}`;
-        import { LeadsManager } from `/assets/js/leads/leads-manager.js?v=${timestamp}`;
+        // Log version for debugging - THIS MUST APPEAR IN CONSOLE
+        console.log('%c🔥 ADMIN PANEL VERSION CHECK 🔥', 'background: #ef4444; color: white; padding: 10px; font-size: 16px; font-weight: bold;');
+        console.log('%c📋 Version: ' + BUILD_VERSION, 'background: #10b981; color: white; padding: 8px; font-size: 14px;');
+        console.log('%c⏰ Loaded at: ' + new Date().toLocaleString(), 'background: #3b82f6; color: white; padding: 8px; font-size: 14px;');
+        console.log('%c🎯 If you can see this, the updated HTML is loading!', 'background: #f59e0b; color: white; padding: 8px; font-size: 14px;');
+
+        // Import managers with cache-busting timestamp
+        import { PackageManager } from `/assets/js/packages/package-manager.js?v=${BUILD_TIMESTAMP}`;
+        import { LeadsManager } from `/assets/js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`;
 
         // Initialize when OMS loads
         window.addEventListener('OMSReady', async () => {
