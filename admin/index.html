@@ -21979,11 +21979,9 @@ if (diffDays > 30) {
 
                 <div class="form-field">
                     <label>Add Items</label>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <select id="select-inventory-item" style="flex: 1;">
-                            <option value="">Select an item...</option>
-                        </select>
-                        <button id="add-item-to-package-btn" class="btn btn-primary">➕ Add</button>
+                    <div class="search-container">
+                        <input type="text" id="package-item-search" class="form-input" placeholder="🔍 Search items to add..." autocomplete="off">
+                        <div id="package-item-search-dropdown" class="search-dropdown"></div>
                     </div>
                 </div>
 
@@ -22105,11 +22103,41 @@ if (diffDays > 30) {
             width: 32px;
             height: 32px;
             border-radius: 6px;
-            border: none;
+            border: 1px solid #8B5CF6;
             background: #8B5CF6;
             color: white;
             cursor: pointer;
-            font-size: 0.875rem;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .package-item-qty-decrease:hover,
+        .package-item-qty-increase:hover {
+            background: #7C3AED;
+            border-color: #7C3AED;
+            transform: scale(1.05);
+        }
+
+        .package-item-qty-decrease:active,
+        .package-item-qty-increase:active {
+            transform: scale(0.95);
+        }
+
+        .package-item-qty-input {
+            width: 60px;
+            height: 32px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 0.25rem;
+        }
+
+        .package-item-qty-input:focus {
+            outline: none;
+            border-color: #8B5CF6;
         }
 
         .package-item-qty-value {
