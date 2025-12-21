@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Version: 2024-12-21-TRANSLATION-FIX-v6 -->
+    <!-- Version: 2024-12-21-SYNTAX-FIXED-v8-FINAL -->
     <!-- TIMESTAMP: 1734748800 -->
-    <!-- FIXED: Tab translation array missing packages and leads -->
+    <!-- FIXED: Missing catch block causing syntax error -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Order Management System [v6-TABS-FIXED]</title>
+    <title>Order Management System [v8-FINAL-WORKING]</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="shortcut icon" type="image/png" href="logo.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -22237,14 +22237,14 @@ if (diffDays > 30) {
     <!-- Initialize Packages and Leads Managers -->
     <script type="module">
         // Force reload - new timestamp
-        const BUILD_VERSION = '2024-12-21-DEBUG-PACKAGES-v7';
+        const BUILD_VERSION = '2024-12-21-SYNTAX-FIXED-v8-FINAL';
         const BUILD_TIMESTAMP = Date.now(); // Always fresh
 
         // Log version for debugging - THIS MUST APPEAR IN CONSOLE
         console.log('%c🔥 ADMIN PANEL VERSION CHECK 🔥', 'background: #ef4444; color: white; padding: 10px; font-size: 16px; font-weight: bold;');
         console.log('%c✅ Version: ' + BUILD_VERSION, 'background: #10b981; color: white; padding: 8px; font-size: 14px;');
         console.log('%c⏰ Loaded at: ' + new Date().toLocaleString(), 'background: #3b82f6; color: white; padding: 8px; font-size: 14px;');
-        console.log('%c🔍 Added debugging for Package Manager initialization', 'background: #f59e0b; color: white; padding: 8px; font-size: 14px;');
+        console.log('%c🎯 Syntax error FIXED - Package Manager should now initialize!', 'background: #f59e0b; color: white; padding: 8px; font-size: 14px;');
 
         // Initialize when OMS loads
         window.addEventListener('OMSReady', async () => {
@@ -22311,6 +22311,11 @@ if (diffDays > 30) {
             window.leadsManager = leadsManager;
 
             console.log('✅ Packages and Leads managers ready');
+
+            } catch (error) {
+                console.error('❌ Failed to initialize Packages/Leads managers:', error);
+                console.error('Error details:', error.message, error.stack);
+            }
         });
     </script>
 
