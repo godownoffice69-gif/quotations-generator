@@ -43,6 +43,7 @@ export class PackageManager {
 
     /**
      * Load inventory from Firebase
+     * Uses the same structure as OMS (Order tab) for consistency
      */
     async loadInventory() {
         try {
@@ -52,16 +53,27 @@ export class PackageManager {
                 throw new Error('Firebase Firestore not initialized. Make sure admin/index.html has initialized Firebase.');
             }
 
-            const dataDoc = await db.collection('admin').doc('data').get();
-            if (dataDoc.exists) {
-                const data = dataDoc.data();
-                this.inventory.items = data.inventory?.items || [];
-                this.inventory.categories = data.inventory?.categories || [];
-                console.log(`✅ Loaded ${this.inventory.items.length} items`);
-            } else {
-                console.log('ℹ️ No inventory data found yet - this is normal for a new setup');
-                this.inventory.items = [];
-                this.inventory.categories = [];
+            console.log('📦 Loading inventory from Firestore (same as Order tab)...');
+
+            // Load categories from: inventory/categories/items
+            const categoriesSnapshot = await db.collection('inventory').doc('categories').collection('items').get();
+            this.inventory.categories = [];
+            categoriesSnapshot.forEach(doc => {
+                this.inventory.categories.push({ id: doc.id, ...doc.data() });
+            });
+
+            // Load items from: inventory/items/list
+            const itemsSnapshot = await db.collection('inventory').doc('items').collection('list').get();
+            this.inventory.items = [];
+            itemsSnapshot.forEach(doc => {
+                this.inventory.items.push({ id: doc.id, ...doc.data() });
+            });
+
+            console.log(`✅ Loaded ${this.inventory.categories.length} categories`);
+            console.log(`✅ Loaded ${this.inventory.items.length} items`);
+
+            if (this.inventory.items.length === 0) {
+                console.log('ℹ️ No inventory items found - you need to create items in the Inventory tab first');
             }
         } catch (error) {
             console.error('❌ Error loading inventory:', error);
