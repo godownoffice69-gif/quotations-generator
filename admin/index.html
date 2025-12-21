@@ -22258,8 +22258,9 @@ if (diffDays > 30) {
 
             try {
                 // Import managers with dynamic import (fixes syntax error)
-                const { PackageManager } = await import(`/assets/js/packages/package-manager.js?v=${BUILD_TIMESTAMP}`);
-                const { LeadsManager } = await import(`/assets/js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
+                // Use relative paths from admin directory
+                const { PackageManager } = await import(`../assets/js/packages/package-manager.js?v=${BUILD_TIMESTAMP}`);
+                const { LeadsManager } = await import(`../assets/js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
 
                 console.log('✅ Package and Lead managers imported successfully');
 
