@@ -166,8 +166,8 @@ export class PackageManager {
             }
         });
 
-        // Setup live search for items
-        this.setupItemSearch();
+        // NOTE: setupItemSearch() is called in showModal() instead of here
+        // because the search input only exists inside the modal
     }
 
     /**
@@ -177,28 +177,41 @@ export class PackageManager {
         const searchInput = document.getElementById('package-item-search');
         const dropdown = document.getElementById('package-item-search-dropdown');
 
-        if (!searchInput || !dropdown) return;
+        if (!searchInput || !dropdown) {
+            console.warn('⚠️ Search elements not found - modal may not be open yet');
+            return;
+        }
 
-        // Debounce function to limit search frequency
-        let searchTimeout;
-        const debounce = (func, delay) => {
-            return (...args) => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => func.apply(this, args), delay);
-            };
-        };
+        // Prevent duplicate event listeners
+        if (searchInput.dataset.searchInitialized === 'true') {
+            console.log('✅ Search already initialized');
+            return;
+        }
+        searchInput.dataset.searchInitialized = 'true';
 
-        const handleSearch = debounce((e) => {
+        console.log('🔍 Setting up item search...');
+        console.log('📊 Available inventory items:', this.inventory.items.length);
+
+        // Store reference to manager instance
+        const manager = this;
+
+        // Handle search input
+        const handleSearch = (e) => {
             const query = e.target.value.toLowerCase().trim();
 
+            console.log('🔍 Searching for:', query);
+            console.log('📦 Inventory items available:', manager.inventory.items.length);
+
             if (query.length > 0) {
-                const items = this.inventory.items.filter(item =>
+                const items = manager.inventory.items.filter(item =>
                     item.name.toLowerCase().includes(query)
                 );
 
+                console.log(`✅ Found ${items.length} items matching "${query}"`);
+
                 if (items.length > 0) {
                     dropdown.innerHTML = items.map(item => {
-                        const category = this.inventory.categories.find(c => c.id === item.categoryId);
+                        const category = manager.inventory.categories.find(c => c.id === item.categoryId);
                         const categoryName = category ? category.name : 'Uncategorized';
 
                         return `
@@ -215,7 +228,7 @@ export class PackageManager {
                 } else {
                     dropdown.innerHTML = `
                         <div class="search-item" style="color: #64748B; text-align: center;">
-                            No items found
+                            No items found matching "${query}"
                         </div>
                     `;
                     dropdown.classList.add('show');
@@ -223,16 +236,24 @@ export class PackageManager {
             } else {
                 dropdown.classList.remove('show');
             }
-        }, 300);
+        };
 
-        searchInput.addEventListener('input', handleSearch);
+        // Debounced search
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => handleSearch(e), 200);
+        });
 
         // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
+        const closeDropdown = (e) => {
             if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                 dropdown.classList.remove('show');
             }
-        });
+        };
+        document.addEventListener('click', closeDropdown);
+
+        console.log('✅ Item search initialized successfully');
     }
 
     /**
@@ -400,7 +421,13 @@ export class PackageManager {
         // Render items
         this.renderPackageItems();
 
+        // Setup search after modal is displayed (elements now exist in DOM)
         modal.style.display = 'block';
+
+        // Initialize search on next tick to ensure DOM is ready
+        setTimeout(() => {
+            this.setupItemSearch();
+        }, 0);
     }
 
     /**
