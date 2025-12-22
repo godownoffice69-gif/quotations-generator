@@ -165,29 +165,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // GALLERY LIGHTBOX (Simple implementation)
   // ═══════════════════════════════════════════════════════════════════
 
-  galleryItems.forEach(item => {
-    item.addEventListener('click', function() {
-      // Only handle clicks on actual gallery items with images
-      if (!this.querySelector('img')) return;
-
-      // Get image data
-      const img = this.querySelector('img');
-      const overlay = this.querySelector('.gallery-overlay');
-      const title = overlay.querySelector('h3').textContent;
-      const description = overlay.querySelector('p').textContent;
-
-      // Track event
-      if (typeof gtag !== 'undefined') {
-        gtag('event', 'gallery_view', {
-          'event_category': 'engagement',
-          'event_label': title
-        });
-      }
-
-      // You can add a proper lightbox modal here
-      console.log('Gallery item clicked:', title, description);
-    });
-  });
+  // Note: Lightbox functionality disabled for video gallery
+  // Videos are played inline via iframe embeds
 
   // ═══════════════════════════════════════════════════════════════════
   // CTA BUTTON TRACKING
