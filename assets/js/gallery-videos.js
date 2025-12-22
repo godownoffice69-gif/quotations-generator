@@ -191,9 +191,12 @@
 
         // Instagram
         if (url.includes('instagram.com')) {
-            let postUrl = url.replace(/\/$/, '');
+            // Remove trailing slash and query parameters
+            let postUrl = url.replace(/\/$/, '').split('?')[0];
 
-            if (postUrl.includes('/reel/') || postUrl.includes('/p/')) {
+            console.log(`  ↳ Cleaned Instagram URL: ${postUrl}`);
+
+            if (postUrl.includes('/reel/') || postUrl.includes('/p/') || postUrl.includes('/tv/')) {
                 if (!postUrl.includes('/embed')) {
                     return `${postUrl}/embed/`;
                 }
