@@ -32,10 +32,20 @@
      * Wait for Firebase to be initialized
      */
     function waitForFirebase() {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds max
+
             const checkFirebase = () => {
+                attempts++;
+                console.log(`🔍 Checking for Firebase DB... attempt ${attempts}`);
+
                 if (window.firebaseDB) {
+                    console.log('✅ Firebase DB found!');
                     resolve(window.firebaseDB);
+                } else if (attempts >= maxAttempts) {
+                    console.error('❌ Firebase DB not found after 5 seconds');
+                    reject(new Error('Firebase DB not available'));
                 } else {
                     setTimeout(checkFirebase, 100);
                 }
@@ -80,12 +90,16 @@
     function renderGallery(videos) {
         const galleryGrid = document.querySelector('.gallery-grid');
 
+        console.log('🎨 renderGallery called with', videos.length, 'videos');
+        console.log('📍 Gallery grid element:', galleryGrid);
+
         if (!galleryGrid) {
-            console.warn('⚠️ Gallery grid not found');
+            console.error('❌ Gallery grid not found! Cannot render videos.');
             return;
         }
 
         if (videos.length === 0) {
+            console.warn('⚠️ No videos to render, showing empty state');
             galleryGrid.innerHTML = `
                 <div class="gallery-empty-state">
                     <div class="empty-icon">🎬</div>
@@ -96,22 +110,32 @@
             return;
         }
 
+        console.log('🧹 Clearing gallery grid...');
         // Clear existing loading state
         galleryGrid.innerHTML = '';
 
         // Add videos to gallery
-        videos.forEach(video => {
+        console.log('🎬 Creating video items...');
+        videos.forEach((video, index) => {
+            console.log(`Creating video ${index + 1}:`, video.title, video.url);
             const videoItem = createVideoItem(video);
             galleryGrid.appendChild(videoItem);
         });
 
-        console.log(`✅ Rendered ${videos.length} videos in gallery`);
+        console.log(`✅ Successfully rendered ${videos.length} videos in gallery!`);
+
+        // Dispatch event to notify that videos are loaded (for filter initialization)
+        const event = new CustomEvent('videosLoaded', { detail: { count: videos.length } });
+        document.dispatchEvent(event);
+        console.log('📢 Dispatched videosLoaded event');
     }
 
     /**
      * Create a video gallery item element
      */
     function createVideoItem(video) {
+        console.log('🎬 Creating video item for:', video.url);
+
         const item = document.createElement('div');
         item.className = 'gallery-item gallery-video-item';
         item.setAttribute('data-category', 'all'); // Show in all filters
@@ -119,6 +143,10 @@
         const embedUrl = getEmbedUrl(video.url);
         const platform = getPlatform(video.url);
         const aspectRatio = getAspectRatio(video.url);
+
+        console.log(`  ↳ Embed URL: ${embedUrl}`);
+        console.log(`  ↳ Platform: ${platform}`);
+        console.log(`  ↳ Aspect Ratio: ${aspectRatio}`);
 
         // Set dynamic aspect ratio based on video type
         item.style.aspectRatio = aspectRatio;
@@ -140,6 +168,7 @@
             </div>
         `;
 
+        console.log('  ✅ Video item created successfully');
         return item;
     }
 
