@@ -941,57 +941,6 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Convert YouTube/Instagram URL to embed URL
-  function getEmbedUrl(url) {
-    if (!url) return null;
-
-    // YouTube
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      let videoId = '';
-      if (url.includes('youtube.com/watch?v=')) {
-        videoId = url.split('v=')[1]?.split('&')[0];
-      } else if (url.includes('youtu.be/')) {
-        videoId = url.split('youtu.be/')[1]?.split('?')[0];
-      }
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
-    }
-
-    // Instagram - IMPROVED VALIDATION
-    if (url.includes('instagram.com')) {
-      // Remove trailing slash
-      let cleanUrl = url.replace(/\/$/, '');
-
-      // Extract post/reel ID using regex
-      // Matches: /p/ABC123 or /reel/ABC123 or /tv/ABC123
-      const match = cleanUrl.match(/\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
-
-      if (match) {
-        const type = match[1]; // 'p', 'reel', or 'tv'
-        const id = match[2];   // post/reel ID
-
-        // Return proper embed URL
-        return `https://www.instagram.com/${type}/${id}/embed/`;
-      }
-
-      // If no valid post/reel found, return null
-      console.warn('⚠️ Invalid Instagram URL format:', url);
-      return null;
-    }
-
-    return url;
-  }
-
-  // Get platform name from URL
-  function getPlatform(url) {
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      return '📺 YouTube';
-    }
-    if (url.includes('instagram.com')) {
-      return '📷 Instagram';
-    }
-    return '🎬 Video';
-  }
-
   // Make db available globally for gallery-videos.js
   window.firebaseDB = db;
   console.log('✅ Firebase DB available for gallery videos');
