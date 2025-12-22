@@ -148,11 +148,15 @@
         console.log(`  ↳ Platform: ${platform}`);
         console.log(`  ↳ Aspect Ratio: ${aspectRatio}`);
 
-        // Set dynamic aspect ratio based on video type
-        item.style.aspectRatio = aspectRatio;
+        // Calculate padding-bottom percentage for aspect ratio
+        // 9/16 = 177.78%, 16/9 = 56.25%, 1/1 = 100%
+        const [width, height] = aspectRatio.split('/').map(Number);
+        const paddingBottom = (height / width * 100).toFixed(2);
+
+        console.log(`  ↳ Padding Bottom: ${paddingBottom}%`);
 
         item.innerHTML = `
-            <div class="gallery-video-wrapper">
+            <div class="gallery-video-wrapper" style="padding-bottom: ${paddingBottom}%;">
                 <iframe
                     src="${embedUrl}"
                     frameborder="0"
