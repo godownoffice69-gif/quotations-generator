@@ -4,47 +4,38 @@
  * ============================================
  *
  * Loads and displays videos from Firestore in the "Our Spectacular Work" gallery
- * Replaces static photos with dynamic video content from admin panel
  */
 
-class GalleryVideos {
-    constructor() {
-        this.videos = [];
-        this.db = null;
-    }
+(async function() {
+    'use strict';
 
-    /**
-     * Initialize the gallery videos
-     */
-    async init() {
-        try {
-            console.log('🎬 Initializing Gallery Videos...');
+    console.log('🎬 Gallery Videos Loader starting...');
 
-            // Wait for Firebase to be initialized
-            await this.waitForFirebase();
+    try {
+        // Wait for Firebase to be initialized
+        await waitForFirebase();
+        console.log('✅ Firebase ready for video loading');
 
-            // Load videos from Firestore
-            await this.loadVideos();
+        // Load videos from Firestore
+        const videos = await loadVideos();
+        console.log(`✅ Loaded ${videos.length} videos`);
 
-            // Render videos in gallery
-            this.renderGallery();
+        // Render videos in gallery
+        renderGallery(videos);
 
-            console.log('✅ Gallery Videos initialized successfully!');
-        } catch (error) {
-            console.error('❌ Error initializing gallery videos:', error);
-            this.showError();
-        }
+    } catch (error) {
+        console.error('❌ Error loading gallery videos:', error);
+        showError();
     }
 
     /**
      * Wait for Firebase to be initialized
      */
-    async waitForFirebase() {
+    function waitForFirebase() {
         return new Promise((resolve) => {
             const checkFirebase = () => {
                 if (window.firebaseDB) {
-                    this.db = window.firebaseDB;
-                    resolve();
+                    resolve(window.firebaseDB);
                 } else {
                     setTimeout(checkFirebase, 100);
                 }
@@ -56,33 +47,37 @@ class GalleryVideos {
     /**
      * Load videos from Firestore
      */
-    async loadVideos() {
+    async function loadVideos() {
         try {
             const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const db = window.firebaseDB;
 
             console.log('📦 Loading videos from Firestore (admin/data)...');
 
-            const dataDoc = await getDoc(doc(this.db, 'admin', 'data'));
+            const dataDoc = await getDoc(doc(db, 'admin', 'data'));
 
             if (dataDoc.exists()) {
                 const data = dataDoc.data();
-                this.videos = (data.videos || []).filter(v => v.visible !== false);
+                const allVideos = data.videos || [];
+                // Filter only visible videos
+                const visibleVideos = allVideos.filter(v => v.visible !== false);
 
-                console.log(`✅ Loaded ${this.videos.length} visible videos`);
+                console.log(`✅ Found ${visibleVideos.length} visible videos out of ${allVideos.length} total`);
+                return visibleVideos;
             } else {
-                console.warn('⚠️ No videos found in Firestore');
-                this.videos = [];
+                console.warn('⚠️ No admin/data document found in Firestore');
+                return [];
             }
         } catch (error) {
             console.error('❌ Error loading videos from Firestore:', error);
-            throw error;
+            return [];
         }
     }
 
     /**
      * Render videos in the gallery grid
      */
-    renderGallery() {
+    function renderGallery(videos) {
         const galleryGrid = document.querySelector('.gallery-grid');
 
         if (!galleryGrid) {
@@ -90,39 +85,39 @@ class GalleryVideos {
             return;
         }
 
-        if (this.videos.length === 0) {
+        if (videos.length === 0) {
             galleryGrid.innerHTML = `
                 <div class="gallery-empty-state">
                     <div class="empty-icon">🎬</div>
                     <h3>No Videos Available</h3>
-                    <p>Videos will appear here once uploaded in the admin panel</p>
+                    <p>Upload videos in the admin panel to showcase your spectacular work</p>
                 </div>
             `;
             return;
         }
 
-        // Clear existing static content
+        // Clear existing loading state
         galleryGrid.innerHTML = '';
 
         // Add videos to gallery
-        this.videos.forEach(video => {
-            const videoItem = this.createVideoItem(video);
+        videos.forEach(video => {
+            const videoItem = createVideoItem(video);
             galleryGrid.appendChild(videoItem);
         });
 
-        console.log(`✅ Rendered ${this.videos.length} videos in gallery`);
+        console.log(`✅ Rendered ${videos.length} videos in gallery`);
     }
 
     /**
      * Create a video gallery item element
      */
-    createVideoItem(video) {
+    function createVideoItem(video) {
         const item = document.createElement('div');
         item.className = 'gallery-item gallery-video-item';
-        item.setAttribute('data-category', 'all'); // Make videos show up in all filters
+        item.setAttribute('data-category', 'all'); // Show in all filters
 
-        const embedUrl = this.getEmbedUrl(video.url);
-        const platform = this.getPlatform(video.url);
+        const embedUrl = getEmbedUrl(video.url);
+        const platform = getPlatform(video.url);
 
         item.innerHTML = `
             <div class="gallery-video-wrapper">
@@ -136,7 +131,7 @@ class GalleryVideos {
                 <div class="video-platform-badge">${platform}</div>
             </div>
             <div class="gallery-overlay">
-                <h3>${video.title || 'FirepowerSFX Video'}</h3>
+                <h3>${escapeHtml(video.title || 'FirepowerSFX Video')}</h3>
                 <p>See our spectacular work in action</p>
             </div>
         `;
@@ -147,7 +142,7 @@ class GalleryVideos {
     /**
      * Convert YouTube/Instagram URL to embed URL
      */
-    getEmbedUrl(url) {
+    function getEmbedUrl(url) {
         // YouTube
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
             let videoId = '';
@@ -179,7 +174,7 @@ class GalleryVideos {
     /**
      * Get platform name from URL
      */
-    getPlatform(url) {
+    function getPlatform(url) {
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
             return '📺 YouTube';
         }
@@ -190,9 +185,18 @@ class GalleryVideos {
     }
 
     /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
      * Show error message in gallery
      */
-    showError() {
+    function showError() {
         const galleryGrid = document.querySelector('.gallery-grid');
 
         if (galleryGrid) {
@@ -200,25 +204,10 @@ class GalleryVideos {
                 <div class="gallery-empty-state">
                     <div class="empty-icon">❌</div>
                     <h3>Unable to Load Videos</h3>
-                    <p>Please try refreshing the page or contact support</p>
+                    <p>Please try refreshing the page</p>
                 </div>
             `;
         }
     }
-}
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        const galleryVideos = new GalleryVideos();
-        galleryVideos.init();
-    });
-} else {
-    const galleryVideos = new GalleryVideos();
-    galleryVideos.init();
-}
-
-// Make globally available
-if (typeof window !== 'undefined') {
-    window.GalleryVideos = GalleryVideos;
-}
+})();
