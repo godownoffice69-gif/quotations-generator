@@ -191,8 +191,8 @@
 
         // Instagram
         if (url.includes('instagram.com')) {
-            // Remove trailing slash and query parameters
-            let postUrl = url.replace(/\/$/, '').split('?')[0];
+            // Remove query parameters first, THEN remove trailing slash
+            let postUrl = url.split('?')[0].replace(/\/$/, '');
 
             console.log(`  ↳ Cleaned Instagram URL: ${postUrl}`);
 
