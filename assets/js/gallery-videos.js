@@ -123,6 +123,11 @@
         });
 
         console.log(`✅ Successfully rendered ${videos.length} videos in gallery!`);
+
+        // Dispatch event to notify that videos are loaded (for filter initialization)
+        const event = new CustomEvent('videosLoaded', { detail: { count: videos.length } });
+        document.dispatchEvent(event);
+        console.log('📢 Dispatched videosLoaded event');
     }
 
     /**
