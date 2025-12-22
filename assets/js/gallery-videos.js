@@ -118,6 +118,10 @@
 
         const embedUrl = getEmbedUrl(video.url);
         const platform = getPlatform(video.url);
+        const aspectRatio = getAspectRatio(video.url);
+
+        // Set dynamic aspect ratio based on video type
+        item.style.aspectRatio = aspectRatio;
 
         item.innerHTML = `
             <div class="gallery-video-wrapper">
@@ -182,6 +186,22 @@
             return '📷 Instagram';
         }
         return '🎬 Video';
+    }
+
+    /**
+     * Get aspect ratio based on video type
+     */
+    function getAspectRatio(url) {
+        // Instagram reels/stories - portrait (9:16)
+        if (url.includes('instagram.com/reel/') || url.includes('instagram.com/tv/') || url.includes('instagram.com/stories/')) {
+            return '9/16';
+        }
+        // Instagram posts - square (1:1)
+        if (url.includes('instagram.com/p/')) {
+            return '1/1';
+        }
+        // YouTube and others - landscape (16:9)
+        return '16/9';
     }
 
     /**
