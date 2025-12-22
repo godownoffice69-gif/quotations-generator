@@ -32,17 +32,28 @@ export class Step3Customization {
      */
     async loadInventory() {
         try {
-            const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const { getFirestore, doc, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             const db = getFirestore();
 
-            const dataDoc = await getDoc(doc(db, 'admin', 'data'));
-            if (dataDoc.exists()) {
-                const data = dataDoc.data();
-                this.allItems = data.inventory?.items || [];
-                this.categories = data.inventory?.categories || [];
+            console.log('📦 Loading inventory from correct Firestore location (same as PackageManager)...');
 
-                console.log(`✅ Loaded ${this.allItems.length} items, ${this.categories.length} categories`);
-            }
+            // Load categories from: inventory/categories/items
+            const categoriesRef = collection(doc(db, 'inventory', 'categories'), 'items');
+            const categoriesSnapshot = await getDocs(categoriesRef);
+            this.categories = [];
+            categoriesSnapshot.forEach(docSnap => {
+                this.categories.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            // Load items from: inventory/items/list
+            const itemsRef = collection(doc(db, 'inventory', 'items'), 'list');
+            const itemsSnapshot = await getDocs(itemsRef);
+            this.allItems = [];
+            itemsSnapshot.forEach(docSnap => {
+                this.allItems.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            console.log(`✅ Loaded ${this.allItems.length} items, ${this.categories.length} categories`);
 
         } catch (error) {
             console.error('❌ Error loading inventory:', error);
