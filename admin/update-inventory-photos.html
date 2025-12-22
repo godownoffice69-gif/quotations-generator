@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Inventory Photos - FirePowerSFX</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #8B5CF6;
+            padding-bottom: 0.5rem;
+        }
+        .section {
+            background: white;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 0.5rem;
+        }
+        .btn-primary {
+            background: #8B5CF6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #7C3AED;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        #log {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            max-height: 500px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .mapping {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin: 0.25rem 0;
+        }
+        .mapping.matched {
+            background: #d4edda;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 Update Inventory Photos from FirePowerSFX-media</h1>
+
+    <div class="section">
+        <h2>Photo Mappings</h2>
+        <p>These inventory items will be updated with photos from FirePowerSFX-media directory:</p>
+        <div id="mappings"></div>
+    </div>
+
+    <div class="section">
+        <button class="btn btn-primary" onclick="updateAllPhotos()">🚀 Update All Inventory Photos</button>
+        <button class="btn btn-success" onclick="location.reload()">🔄 Reload Page</button>
+    </div>
+
+    <div class="section">
+        <h2>Console Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, doc, collection, getDocs, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
+            authDomain: "firepowersfx-2558.firebaseapp.com",
+            projectId: "firepowersfx-2558",
+            storageBucket: "firepowersfx-2558.firebasestorage.app",
+            messagingSenderId: "723483292867",
+            appId: "1:723483292867:web:d6d83a79ba87cd2dee5e76"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.firestoreModules = { doc, collection, getDocs, updateDoc };
+
+        log('✅ Firebase initialized');
+
+        // Auto-load on page load
+        loadAndDisplayMappings();
+    </script>
+
+    <script>
+        // Photo mappings based on FirePowerSFX-media directory structure
+        const photoMappings = [
+            { itemNameMatch: '5-head flame', photoPath: 'FirePowerSFX-media/5-head-flame/1.jpg' },
+            { itemNameMatch: 'co2.*confetti', photoPath: 'FirePowerSFX-media/Co2-confetti-paper-flower-blower/1.jpg' },
+            { itemNameMatch: 'cyclone', photoPath: 'FirePowerSFX-media/Cyclone-sparkular/1.jpeg' },
+            { itemNameMatch: 'led.*co2.*gun', photoPath: 'FirePowerSFX-media/LED-co2-gun/1.jpeg' },
+            { itemNameMatch: 'led.*pyro.*gun', photoPath: 'FirePowerSFX-media/LED-pyro-gun/1.png' },
+            { itemNameMatch: 'spinner', photoPath: 'FirePowerSFX-media/Spinner/1.jpg' },
+            { itemNameMatch: 'bubble', photoPath: 'FirePowerSFX-media/bubble-machine/1.png' },
+            { itemNameMatch: 'circle.*flame', photoPath: 'FirePowerSFX-media/circle-flame/1.jpg' },
+            { itemNameMatch: 'curtain.*power.*drop', photoPath: 'FirePowerSFX-media/curtain-power-drop/1.jpg' },
+            { itemNameMatch: 'electric.*confetti', photoPath: 'FirePowerSFX-media/electric-confetti-gun/1.png' },
+            { itemNameMatch: 'fan.*wheel', photoPath: 'FirePowerSFX-media/fan-wheel-machine/1.jpeg' },
+            { itemNameMatch: 'niagara', photoPath: 'FirePowerSFX-media/niagarafall/1.jpg' },
+            { itemNameMatch: 'pyro.*dancing', photoPath: 'FirePowerSFX-media/pyro-dancing-machine/1.png' },
+            { itemNameMatch: 'smoke.*machine', photoPath: 'FirePowerSFX-media/smoke-machine/1.jpeg' },
+            { itemNameMatch: 'snow.*machine', photoPath: 'FirePowerSFX-media/snow-machine/1.jpg' },
+            { itemNameMatch: 'sonic.*boom', photoPath: 'FirePowerSFX-media/sonic-boom-jet/1.jpeg' },
+            { itemNameMatch: 'sparkler|cold.*spark', photoPath: 'FirePowerSFX-media/sparkler/1.jpg' },
+            { itemNameMatch: 'sparkular.*blaster', photoPath: 'FirePowerSFX-media/sparkular-blaster-hand-gun/1.png' },
+            { itemNameMatch: 'sparkular.*waver', photoPath: 'FirePowerSFX-media/sparkular-waver/1.jpg' },
+            { itemNameMatch: 'stadium.*shot', photoPath: 'FirePowerSFX-media/stadium-shot/1.jpeg' },
+            { itemNameMatch: 'triple.*sparkular', photoPath: 'FirePowerSFX-media/triple-sparkular/1.png' }
+        ];
+
+        let inventoryItems = [];
+        let matchedItems = [];
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        async function loadAndDisplayMappings() {
+            try {
+                log('📦 Loading inventory items from Firestore...');
+
+                const { doc, collection, getDocs } = window.firestoreModules;
+
+                // Load items from inventory/items/list
+                const itemsRef = collection(doc(window.db, 'inventory', 'items'), 'list');
+                const itemsSnapshot = await getDocs(itemsRef);
+                inventoryItems = [];
+                itemsSnapshot.forEach(docSnap => {
+                    inventoryItems.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                log(`✅ Loaded ${inventoryItems.length} inventory items`);
+
+                // Match items with photos
+                matchedItems = [];
+                const mappingsDiv = document.getElementById('mappings');
+                mappingsDiv.innerHTML = '';
+
+                inventoryItems.forEach(item => {
+                    // Find matching photo
+                    const matchedMapping = photoMappings.find(mapping => {
+                        const regex = new RegExp(mapping.itemNameMatch, 'i');
+                        return regex.test(item.name);
+                    });
+
+                    if (matchedMapping) {
+                        matchedItems.push({
+                            item: item,
+                            photoPath: matchedMapping.photoPath
+                        });
+
+                        const div = document.createElement('div');
+                        div.className = 'mapping matched';
+                        div.innerHTML = `
+                            <div><strong>${item.name}</strong></div>
+                            <div style="color: #28a745;">→ ${matchedMapping.photoPath}</div>
+                        `;
+                        mappingsDiv.appendChild(div);
+                    } else {
+                        const div = document.createElement('div');
+                        div.className = 'mapping';
+                        div.innerHTML = `
+                            <div>${item.name}</div>
+                            <div style="color: #dc3545;">⚠️ No photo match found</div>
+                        `;
+                        mappingsDiv.appendChild(div);
+                    }
+                });
+
+                log(`✅ Found ${matchedItems.length} items with photo matches`);
+
+            } catch (error) {
+                log(`❌ Error loading inventory: ${error.message}`);
+                console.error(error);
+            }
+        }
+
+        async function updateAllPhotos() {
+            if (matchedItems.length === 0) {
+                log('⚠️ No items to update. Please reload and try again.');
+                return;
+            }
+
+            if (!confirm(`Update ${matchedItems.length} inventory items with photos from FirePowerSFX-media directory?`)) {
+                return;
+            }
+
+            log(`🚀 Starting bulk update of ${matchedItems.length} items...`);
+
+            const { doc, updateDoc } = window.firestoreModules;
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const matched of matchedItems) {
+                try {
+                    const itemRef = doc(window.db, 'inventory', 'items', 'list', matched.item.id);
+                    await updateDoc(itemRef, {
+                        imageUrl: matched.photoPath
+                    });
+
+                    log(`✅ Updated: ${matched.item.name} → ${matched.photoPath}`);
+                    successCount++;
+
+                } catch (error) {
+                    log(`❌ Failed: ${matched.item.name} - ${error.message}`);
+                    errorCount++;
+                    console.error(error);
+                }
+            }
+
+            log('');
+            log(`🎉 Update complete!`);
+            log(`✅ Success: ${successCount} items`);
+            if (errorCount > 0) {
+                log(`❌ Errors: ${errorCount} items`);
+            }
+            log('');
+            log('💡 You can now test the quotation wizard to see photos!');
+        }
+
+        window.updateAllPhotos = updateAllPhotos;
+    </script>
+</body>
+</html>
