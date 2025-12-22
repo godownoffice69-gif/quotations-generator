@@ -468,16 +468,18 @@ html {
 
 /* Video Gallery Styles */
 .gallery-video-item {
-  /* aspect-ratio is set dynamically via JavaScript based on video type */
+  /* Override .gallery-item's aspect-ratio: 1 */
+  aspect-ratio: auto !important;
   background: #000;
   max-width: 100%;
   margin: 0 auto;
+  min-height: 400px; /* Ensure videos have minimum height */
 }
 
 .gallery-video-wrapper {
   position: relative;
   width: 100%;
-  height: 100%;
+  padding-bottom: 100%; /* Default to square ratio, overridden by JS */
   overflow: hidden;
   border-radius: 12px;
 }
