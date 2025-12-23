@@ -182,11 +182,14 @@ html {
 
 .video-wrapper {
   position: relative;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
-  height: 0;
+  width: 100%;
+  min-height: 400px;
+  max-height: 800px;
+  aspect-ratio: 16 / 9; /* Default 16:9, but flexible */
   overflow: hidden;
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  background: #000;
 }
 
 .video-wrapper iframe {
@@ -195,6 +198,7 @@ html {
   left: 0;
   width: 100%;
   height: 100%;
+  border: none;
 }
 
 .video-caption {
@@ -255,7 +259,8 @@ html {
 .video-card-preview {
   position: relative;
   width: 100%;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  min-height: 300px;
+  aspect-ratio: 16 / 9; /* Default 16:9, but flexible */
   background: #000;
   overflow: hidden;
 }
@@ -479,18 +484,20 @@ html {
 .gallery-video-wrapper {
   position: relative;
   width: 100%;
-  padding-bottom: 100%; /* Default to square ratio, overridden by JS */
+  height: auto;
   overflow: hidden;
   border-radius: 12px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gallery-video-wrapper iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   border: none;
+  display: block;
 }
 
 .video-platform-badge {
