@@ -1813,6 +1813,7 @@
                 <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
                 <button class="nav-tab" data-tab="orders">📝 Orders</button>
                 <button class="nav-tab" data-tab="inventory">📦 Inventory</button>
+                <button class="nav-tab" data-tab="productPhotos">📸 Product Photos</button>
                 <button class="nav-tab" data-tab="itemHistory">📜 Item History</button>
                 <button class="nav-tab" data-tab="preparation">📋 Preparation</button>
                 <button class="nav-tab" data-tab="customers">👥 Customers</button>
@@ -2095,6 +2096,7 @@
 
             <!-- Other tabs will be dynamically populated -->
             <div id="inventory" class="tab-content"></div>
+            <div id="productPhotos" class="tab-content"></div>
             <div id="itemHistory" class="tab-content"></div>
             <div id="preparation" class="tab-content"></div>
             <div id="customers" class="tab-content"></div>
@@ -2556,6 +2558,7 @@ debounce: (func, wait) => {
                 dashboard: '📊 Dashboard',
                 orders: '📋 Orders',
                 inventory: '📦 Inventory',
+                productPhotos: '📸 Product Photos',
                 itemHistory: '📜 Item History',
                 preparation: '🍳 Preparation',
                 customers: '👥 Customers',
@@ -2904,6 +2907,7 @@ debounce: (func, wait) => {
                 dashboard: '📊 ડેશબોર્ડ',
                 orders: '📋 ઓર્ડર્સ',
                 inventory: '📦 ઇન્વેન્ટરી',
+                productPhotos: '📸 ઉત્પાદન ફોટા',
                 itemHistory: '📜 આઇટમ ઇતિહાસ',
                 preparation: '🍳 તૈયારી',
                 customers: '👥 ગ્રાહકો',
@@ -4386,7 +4390,7 @@ const OMS = {
 
                 // Update tabs
                 const tabs = document.querySelectorAll('.nav-tab');
-                const tabKeys = ['dashboard', 'orders', 'inventory', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'videos', 'advertisements', 'financials', 'packages', 'leads', 'settings'];
+                const tabKeys = ['dashboard', 'orders', 'inventory', 'productPhotos', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'videos', 'advertisements', 'financials', 'packages', 'leads', 'settings'];
                 tabs.forEach((tab, index) => {
                     if (tabKeys[index] && t[tabKeys[index]]) {
                         tab.textContent = t[tabKeys[index]];
@@ -9210,6 +9214,7 @@ convertToQuotationDateFormat(dateStr) {
                 setTimeout(() => {
                     if (tabName === 'dashboard') this.renderDashboard();
                     else if (tabName === 'inventory') this.renderInventory();
+                    else if (tabName === 'productPhotos') this.renderProductPhotos();
                     else if (tabName === 'itemHistory') this.renderItemHistory();
                     else if (tabName === 'preparation') this.renderPreparation();
                     else if (tabName === 'customers') this.renderCustomers();
@@ -9590,6 +9595,135 @@ convertToQuotationDateFormat(dateStr) {
                 `;
 
                 this.updateInventoryDisplay();
+            },
+
+            renderProductPhotos() {
+                const container = document.getElementById('productPhotos');
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📸 Product Photos Management</h2>
+                            <p style="color: var(--text-gray); margin-top: 0.5rem;">
+                                Upload product photos to display on quotation website. Click any product to upload/change its image.
+                            </p>
+                        </div>
+                        <div id="productPhotosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; padding: 1.5rem;">
+                            ${this.data.inventory.items.map(item => {
+                                const category = this.data.inventory.categories.find(c => c.id === item.categoryId);
+                                const imageUrl = item.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image';
+
+                                return `
+                                    <div class="product-photo-card" style="border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s; cursor: pointer;" onclick="OMS.uploadProductPhoto('${item.id}')">
+                                        <div style="position: relative; padding-top: 66.67%; background: #f5f5f5;">
+                                            <img src="${imageUrl}" alt="${item.name}"
+                                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+                                                onerror="this.src='https://via.placeholder.com/300x200?text=${encodeURIComponent(item.name)}'">
+                                            <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
+                                                ${category?.name || 'No Category'}
+                                            </div>
+                                        </div>
+                                        <div style="padding: 1rem;">
+                                            <h4 style="margin: 0 0 0.5rem 0; font-size: 15px; font-weight: 600; color: #1a1a1a;">${item.name}</h4>
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">
+                                                <span style="font-size: 12px; color: #666;">Stock: ${item.quantity}</span>
+                                                <button class="btn btn-primary btn-small" style="font-size: 12px; padding: 6px 12px;" onclick="event.stopPropagation(); OMS.uploadProductPhoto('${item.id}')">
+                                                    📤 ${item.imageUrl ? 'Change' : 'Upload'} Photo
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <input type="file" id="productPhotoInput" accept="image/*" style="display: none;" onchange="OMS.handleProductPhotoSelect(event)">
+                `;
+
+                // Add hover effect with CSS
+                const style = document.createElement('style');
+                style.textContent = `
+                    .product-photo-card:hover {
+                        transform: translateY(-4px);
+                        box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            },
+
+            currentProductItemId: null,
+
+            uploadProductPhoto(itemId) {
+                this.currentProductItemId = itemId;
+                document.getElementById('productPhotoInput').click();
+            },
+
+            async handleProductPhotoSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    this.showToast('❌ Please select an image file', 'error');
+                    return;
+                }
+
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    this.showToast('❌ Image size must be less than 5MB', 'error');
+                    return;
+                }
+
+                const itemId = this.currentProductItemId;
+                const item = this.data.inventory.items.find(i => i.id === itemId);
+                if (!item) {
+                    this.showToast('❌ Item not found', 'error');
+                    return;
+                }
+
+                const loading = this.showLoading('Uploading image...');
+
+                try {
+                    // Import Firebase Storage
+                    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
+                    const storage = getStorage();
+
+                    // Create filename: products/{itemId}_{timestamp}.jpg
+                    const timestamp = Date.now();
+                    const extension = file.name.split('.').pop();
+                    const filename = `products/${itemId}_${timestamp}.${extension}`;
+
+                    // Upload to Firebase Storage
+                    const storageRef = ref(storage, filename);
+                    await uploadBytes(storageRef, file);
+
+                    // Get download URL
+                    const imageUrl = await getDownloadURL(storageRef);
+
+                    // Update item in local data
+                    item.imageUrl = imageUrl;
+                    item.updatedAt = new Date().toISOString();
+
+                    // Save to Firestore
+                    await this.saveInventoryItemToFirestore(item);
+
+                    // Save to localStorage
+                    this.saveToStorage();
+
+                    this.hideLoading(loading);
+                    this.showToast(`✅ Photo uploaded successfully for ${item.name}!`, 'success');
+
+                    // Re-render to show new image
+                    this.renderProductPhotos();
+
+                    // Reset file input
+                    event.target.value = '';
+
+                } catch (error) {
+                    console.error('❌ Error uploading photo:', error);
+                    this.hideLoading(loading);
+                    this.showToast('❌ Upload failed: ' + error.message, 'error');
+                }
             },
 
             renderItemHistory() {
