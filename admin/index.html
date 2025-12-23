@@ -12349,8 +12349,8 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                     </div>
                                 </div>
                                 <div style="text-align: center;">
-                                    <div style="background: linear-gradient(135deg, #E1306C 0%, #C13584 50%, #833AB4 100%); padding: 18px 60px; display: inline-block; border-radius: 10px;">
-                                        <span style="display: block; font-size: 42px; font-weight: bold; letter-spacing: 5px; color: #FFFFFF; font-family: Arial, sans-serif;">QUOTATION</span>
+                                    <div style="background: linear-gradient(135deg, #E1306C 0%, #C13584 50%, #833AB4 100%); padding: 20px 70px; display: inline-block; border-radius: 12px; font-size: 48px; font-weight: bold; color: white; font-family: Arial, Helvetica, sans-serif;">
+                                        QUOTATION
                                     </div>
                                 </div>
                             </div>
@@ -19645,7 +19645,21 @@ if (change.type === 'modified') {
             return;
         }
 
-        console.warn('⚠️ Modified order not found locally, adding it');
+        console.warn('⚠️ Modified order not found locally - checking for duplicates before adding');
+
+        // CRITICAL FIX: Check if order already exists by any identifier before adding
+        const alreadyExists = this.data.orders.some(o =>
+            o.docId === docId ||
+            (orderId && o.orderId === orderId) ||
+            (orderData.clientName && o.clientName === customer.name && o.date === (orderData.isMultiDay ? '' : Utils.convertDateFormat(customer.dates)))
+        );
+
+        if (alreadyExists) {
+            console.warn('⚠️ Order already exists in local array - skipping duplicate add');
+            return;
+        }
+
+        console.log('✅ Order genuinely missing - adding it');
         // Add it as new if somehow missing
         const newOrder = {
             orderId: orderId,
