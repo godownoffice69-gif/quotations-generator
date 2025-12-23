@@ -12339,55 +12339,55 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     <div id="quotationPDFContent" style="background: white; padding: 0; font-family: Arial, sans-serif; max-width: 100%; margin: 0; border: 2px solid #000;">
 
                         <!-- Clean Professional Header -->
-                        <div style="padding: 20px; border-bottom: 2px solid #000;">
+                        <div style="padding: 16px; border-bottom: 2px solid #000;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div style="flex: 1;">
-                                    <div style="font-size: 11px; color: #333; line-height: 1.8;">
+                                    <div style="font-size: 11px; color: #000; line-height: 1.6; font-weight: 600;">
                                         <div><strong>Quotation No:</strong> ${q.quotationNumber || 'N/A'}</div>
                                         <div><strong>Date:</strong> ${Utils.formatDate(q.quotationDate || new Date().toISOString().split('T')[0])}</div>
                                         <div><strong>Valid Until:</strong> ${Utils.formatDate(q.validUntil || this.calculateValidUntil())}</div>
                                     </div>
                                 </div>
                                 <div style="text-align: center;">
-                                    <div style="background: #667eea; color: white; padding: 12px 30px; display: inline-block;">
-                                        <h1 style="margin: 0; font-size: 32px; font-weight: bold; letter-spacing: 2px;">QUOTATION</h1>
+                                    <div style="background: linear-gradient(135deg, #E1306C 0%, #C13584 50%, #833AB4 100%); color: white; padding: 14px 40px; display: inline-block; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.15);">
+                                        <h1 style="margin: 0; font-size: 36px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">QUOTATION</h1>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Customer Details -->
-                        <div style="padding: 20px; border-bottom: 1px solid #ddd;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <div style="padding: 15px; border-bottom: 1px solid #ddd;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-weight: 600; color: #000;">
                                 <tr>
-                                    <td style="padding: 6px 0; width: 25%; vertical-align: top;"><strong>TO</strong></td>
-                                    <td style="padding: 6px 0; width: 75%; vertical-align: top;">${q.customer.name}</td>
+                                    <td style="padding: 4px 0; width: 25%; vertical-align: top;"><strong>TO</strong></td>
+                                    <td style="padding: 4px 0; width: 75%; vertical-align: top;">${q.customer.name}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 6px 0; vertical-align: top;"><strong>Mobile No.</strong></td>
-                                    <td style="padding: 6px 0; vertical-align: top;">: ${q.customer.contact}</td>
+                                    <td style="padding: 4px 0; vertical-align: top;"><strong>Mobile No.</strong></td>
+                                    <td style="padding: 4px 0; vertical-align: top;">: ${q.customer.contact}</td>
                                 </tr>
                                 ${q.customer.email ? `
                                 <tr>
-                                    <td style="padding: 6px 0; vertical-align: top;"><strong>Email</strong></td>
-                                    <td style="padding: 6px 0; vertical-align: top;">: ${q.customer.email}</td>
+                                    <td style="padding: 4px 0; vertical-align: top;"><strong>Email</strong></td>
+                                    <td style="padding: 4px 0; vertical-align: top;">: ${q.customer.email}</td>
                                 </tr>
                                 ` : ''}
                                 <tr>
-                                    <td style="padding: 6px 0; vertical-align: top;"><strong>Event Date</strong></td>
-                                    <td style="padding: 6px 0; vertical-align: top;">: ${Utils.formatDate(q.customer.eventDate)}</td>
+                                    <td style="padding: 4px 0; vertical-align: top;"><strong>Event Date</strong></td>
+                                    <td style="padding: 4px 0; vertical-align: top;">: ${Utils.formatDate(q.customer.eventDate)}</td>
                                 </tr>
                                 ${q.customer.eventVenue ? `
                                 <tr>
-                                    <td style="padding: 6px 0; vertical-align: top;"><strong>Venue</strong></td>
-                                    <td style="padding: 6px 0; vertical-align: top;">: ${q.customer.eventVenue}</td>
+                                    <td style="padding: 4px 0; vertical-align: top;"><strong>Venue</strong></td>
+                                    <td style="padding: 4px 0; vertical-align: top;">: ${q.customer.eventVenue}</td>
                                 </tr>
                                 ` : ''}
                             </table>
                         </div>
 
                         <!-- Items Table -->
-                        <div style="padding: 20px;">
+                        <div style="padding: 15px;">
                             ${!q.orderType || q.orderType === 'single' ? `
                                 <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
                                     <thead>
@@ -12499,33 +12499,33 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         </div>
 
                         <!-- Terms & Conditions Section -->
-                        <div style="padding: 20px; border-top: 2px solid #000;">
-                            <div style="font-size: 13px; font-weight: bold; margin-bottom: 12px; color: #000;">Terms & Conditions:</div>
-                            <div style="font-size: 11px; line-height: 2; color: #333;">
-                                <div style="margin-bottom: 6px;"><strong style="color: #1976D2;">Payment Terms:</strong></div>
-                                <div style="margin-bottom: 4px; padding-left: 20px;">• 50% booking required to confirm</div>
-                                <div style="margin-bottom: 10px; padding-left: 20px;">• 50% before event starts</div>
+                        <div style="padding: 15px; border-top: 2px solid #000;">
+                            <div style="font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #000;">Terms & Conditions:</div>
+                            <div style="font-size: 11px; line-height: 1.7; color: #000; font-weight: 500;">
+                                <div style="margin-bottom: 5px;"><strong style="color: #1976D2;">Payment Terms:</strong></div>
+                                <div style="margin-bottom: 3px; padding-left: 20px;">• 50% booking required to confirm</div>
+                                <div style="margin-bottom: 8px; padding-left: 20px;">• 50% before event starts</div>
 
-                                <div style="margin-bottom: 6px;"><strong style="color: #2E7D32;">Inclusions:</strong></div>
-                                <div style="margin-bottom: 10px; padding-left: 20px;">• Generator for electricity provision</div>
+                                <div style="margin-bottom: 5px;"><strong style="color: #2E7D32;">Inclusions:</strong></div>
+                                <div style="margin-bottom: 8px; padding-left: 20px;">• Generator for electricity provision</div>
 
-                                <div style="margin-bottom: 6px;"><strong style="color: #D84315;">Customer Responsibilities:</strong></div>
-                                <div style="margin-bottom: 4px; padding-left: 20px;">• Fire safety permissions & Fire NOC</div>
-                                <div style="margin-bottom: 4px; padding-left: 20px;">• Venue/ground permissions</div>
-                                <div style="margin-bottom: 4px; padding-left: 20px;">• AMC permissions</div>
-                                <div style="margin-bottom: 4px; padding-left: 20px;">• First aid provision</div>
-                                <div style="margin-bottom: 4px; padding-left: 20px;">• Resource manager approval</div>
-                                <div style="margin-bottom: 4px; padding-left: 20px;">• Contractor competence proof</div>
-                                <div style="margin-bottom: 10px; padding-left: 20px;">• Security clearance for restricted materials</div>
+                                <div style="margin-bottom: 5px;"><strong style="color: #D84315;">Customer Responsibilities:</strong></div>
+                                <div style="margin-bottom: 3px; padding-left: 20px;">• Fire safety permissions & Fire NOC</div>
+                                <div style="margin-bottom: 3px; padding-left: 20px;">• Venue/ground permissions</div>
+                                <div style="margin-bottom: 3px; padding-left: 20px;">• AMC permissions</div>
+                                <div style="margin-bottom: 3px; padding-left: 20px;">• First aid provision</div>
+                                <div style="margin-bottom: 3px; padding-left: 20px;">• Resource manager approval</div>
+                                <div style="margin-bottom: 3px; padding-left: 20px;">• Contractor competence proof</div>
+                                <div style="margin-bottom: 8px; padding-left: 20px;">• Security clearance for restricted materials</div>
 
-                                <div style="margin-top: 12px; padding: 12px; background: #fff9c4; border-left: 4px solid #F57C00; font-weight: bold; color: #e65100;">
+                                <div style="margin-top: 10px; padding: 10px; background: #fff9c4; border-left: 4px solid #F57C00; font-weight: bold; color: #e65100;">
                                     ⚠️ IMPORTANT: Quotation valid for 15 days from quotation date
                                 </div>
                             </div>
                         </div>
 
                         <!-- Footer -->
-                        <div style="text-align: center; padding: 20px; border-top: 1px solid #ddd; background: #f9f9f9; font-size: 12px; color: #666;">
+                        <div style="text-align: center; padding: 15px; border-top: 1px solid #ddd; background: #f9f9f9; font-size: 11px; color: #666;">
                             Thank you for choosing our services! We look forward to making your event spectacular. ✨
                         </div>
                     </div>
