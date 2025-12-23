@@ -12336,109 +12336,106 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 return `
                     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-                    <div id="quotationPDFContent" style="background: #fafbff; padding: 24px; font-family: 'Poppins', sans-serif; max-width: 100%; margin: 0;">
+                    <div id="quotationPDFContent" style="background: white; padding: 0; font-family: Arial, sans-serif; max-width: 100%; margin: 0; border: 1px solid #000;">
 
-                        <!-- Instagram Gradient Header -->
-                        <div style="background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); padding: 32px; margin-bottom: 24px; border-radius: 16px; box-shadow: 0 8px 24px rgba(188, 24, 136, 0.3);">
-                            <div style="display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center;">
-                                <!-- Left Column: Title & Contact -->
-                                <div>
-                                    <h1 style="margin: 0; font-size: 48px; font-weight: 700; color: white; letter-spacing: 0.05em; text-shadow: 0 2px 8px rgba(0,0,0,0.3);">QUOTATION</h1>
-                                    <div style="margin-top: 16px; color: white; font-size: 14px;">
-                                        <div style="display: grid; grid-template-columns: auto auto; gap: 16px; max-width: 500px;">
-                                            <div style="background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 8px; backdrop-filter: blur(10px);"><strong>📅 Date:</strong> ${Utils.formatDate(q.quotationDate || new Date().toISOString().split('T')[0])}</div>
-                                            <div style="background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 8px; backdrop-filter: blur(10px);"><strong>⏰ Valid Until:</strong> ${Utils.formatDate(q.validUntil || this.calculateValidUntil())}</div>
+                        <!-- Clean Professional Header -->
+                        <div style="border-bottom: 2px solid #000; padding: 20px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="width: 60%; vertical-align: top;">
+                                        <div style="margin-bottom: 15px;">
+                                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                                <div style="width: 40px; height: 40px; background: #8B4513; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white;">फ</div>
+                                                <div>
+                                                    <div style="font-size: 24px; font-weight: bold; color: #8B4513; font-family: 'Poppins', Arial, sans-serif;">PhatakeWala</div>
+                                                    <div style="font-size: 11px; color: #666; font-style: italic; margin-top: -2px;">Phatakejala</div>
+                                                </div>
+                                            </div>
+                                            <div style="font-size: 11px; color: #333; line-height: 1.5;">
+                                                <strong>Contact :</strong> 9825608948 | <strong>Email :</strong> nishit_19@hotmail.com
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <!-- Right Column: QR Codes -->
-                                <div style="display: flex; gap: 16px; align-items: center;">
-                                    <div style="text-align: center;">
-                                        <img src="Firepowersfx Instagram.png" style="width: 90px; height: 90px; background: white; padding: 10px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" onerror="this.style.display='none'">
-                                        <div style="color: white; font-size: 11px; margin-top: 6px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Instagram</div>
-                                    </div>
-                                    <div style="text-align: center;">
-                                        <img src="Firepowersfx Youtube.png" style="width: 90px; height: 90px; background: white; padding: 10px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" onerror="this.style.display='none'">
-                                        <div style="color: white; font-size: 11px; margin-top: 6px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">YouTube</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Visual Stats -->
-                            <div style="margin-top: 24px; display: flex; gap: 12px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.3); flex-wrap: wrap;">
-                                <div style="background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 24px; backdrop-filter: blur(10px); box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                    <span style="color: white; font-size: 13px; font-weight: 600;">📦 ${totalItems} Item${totalItems !== 1 ? 's' : ''}</span>
-                                </div>
-                                <div style="background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 24px; backdrop-filter: blur(10px); box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                    <span style="color: white; font-size: 13px; font-weight: 600;">📅 ${totalDays} Day${totalDays !== 1 ? 's' : ''}</span>
-                                </div>
-                                <div style="background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 24px; backdrop-filter: blur(10px); box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                    <span style="color: white; font-size: 13px; font-weight: 600;">💰 ₹${q.financials.grandTotal.toLocaleString('en-IN')}</span>
-                                </div>
-                            </div>
+                                    </td>
+                                    <td style="width: 40%; vertical-align: top; text-align: right;">
+                                        <div style="background: #8B4513; color: white; padding: 8px 16px; display: inline-block; margin-bottom: 8px;">
+                                            <h1 style="margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 1px;">QUOTATION</h1>
+                                        </div>
+                                        <div style="font-size: 11px; color: #333; text-align: right;">
+                                            <div><strong>Quotation No.</strong> : ${q.quotationNumber || 'N/A'}</div>
+                                            <div><strong>Quotation Date</strong> : ${Utils.formatDate(q.quotationDate || new Date().toISOString().split('T')[0])}</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
                         </div>
 
-                        <!-- Customer Details Card -->
-                        <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; border-left: 6px solid #667eea; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-                            <h3 style="margin: 0 0 20px 0; color: #667eea; font-size: 24px; font-weight: 600; letter-spacing: 0.02em;">👤 Customer Details</h3>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                                <div style="background: #fafbff; padding: 12px 16px; border-radius: 12px;">
-                                    <div style="color: #718096; font-size: 12px; font-weight: 500; margin-bottom: 4px;">👤 NAME</div>
-                                    <div style="color: #1a202c; font-size: 15px; font-weight: 600;">${q.customer.name}</div>
-                                </div>
-                                <div style="background: #fafbff; padding: 12px 16px; border-radius: 12px;">
-                                    <div style="color: #718096; font-size: 12px; font-weight: 500; margin-bottom: 4px;">📞 CONTACT</div>
-                                    <div style="color: #1a202c; font-size: 15px; font-weight: 600; font-family: 'Courier New', monospace;">${q.customer.contact}</div>
-                                </div>
-                                ${q.customer.email ? `
-                                <div style="background: #fafbff; padding: 12px 16px; border-radius: 12px;">
-                                    <div style="color: #718096; font-size: 12px; font-weight: 500; margin-bottom: 4px;">📧 EMAIL</div>
-                                    <div style="color: #1a202c; font-size: 15px; font-weight: 600;">${q.customer.email}</div>
-                                </div>
-                                ` : ''}
-                                <div style="background: #fafbff; padding: 12px 16px; border-radius: 12px;">
-                                    <div style="color: #718096; font-size: 12px; font-weight: 500; margin-bottom: 4px;">📅 EVENT DATE</div>
-                                    <div style="color: #1a202c; font-size: 15px; font-weight: 600;">${Utils.formatDate(q.customer.eventDate)}</div>
-                                </div>
-                                ${q.customer.eventVenue ? `
-                                <div style="background: #fafbff; padding: 12px 16px; border-radius: 12px; grid-column: span 2;">
-                                    <div style="color: #718096; font-size: 12px; font-weight: 500; margin-bottom: 4px;">📍 VENUE</div>
-                                    <div style="color: #1a202c; font-size: 15px; font-weight: 600;">${q.customer.eventVenue}</div>
-                                </div>
-                                ` : ''}
-                            </div>
+                        <!-- Customer & Event Details -->
+                        <div style="padding: 20px; border-bottom: 1px solid #ddd;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <tr>
+                                    <td style="padding: 6px 0; width: 25%; vertical-align: top;"><strong>TO</strong></td>
+                                    <td style="padding: 6px 0; width: 55%; vertical-align: top;">${q.customer.name}</td>
+                                    <td style="padding: 6px 0; width: 20%; vertical-align: top;"></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 0; vertical-align: top;"><strong>Mobile No.</strong></td>
+                                    <td style="padding: 6px 0; vertical-align: top;">: ${q.customer.contact}</td>
+                                    <td style="padding: 6px 0; vertical-align: top;"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" style="padding: 12px 0 6px 0;"><strong>Event Name :</strong> ${q.customer.eventName || 'Event'} &nbsp;&nbsp;&nbsp; <strong>Destination :</strong> ${q.customer.eventVenue || ''}</td>
+                                </tr>
+                            </table>
                         </div>
 
-                        <!-- Items Section -->
-                        <div style="margin-bottom: 24px;">
+                        <!-- Event Details Row -->
+                        <div style="padding: 15px 20px; background: #f9f9f9; border-bottom: 1px solid #ddd;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <tr>
+                                    <td style="width: 50%;">
+                                        <div style="margin-bottom: 8px;"><strong>Event Type</strong> : ${q.customer.eventType || 'CELEBRATION'}</div>
+                                        <div style="margin-bottom: 8px;"><strong>Event Date</strong> : ${Utils.formatDate(q.customer.eventDate)}</div>
+                                        <div style="margin-bottom: 8px;"><strong>Reporting Date</strong> : ${Utils.formatDate(q.customer.reportingDate || q.customer.eventDate)}</div>
+                                        <div><strong>Venue</strong> : ${q.customer.eventVenue || 'AHMEDABAD'}</div>
+                                    </td>
+                                    <td style="width: 50%;">
+                                        <div style="margin-bottom: 8px;"><strong>Package</strong> : NO PACKAGE</div>
+                                        <div style="margin-bottom: 8px;"><strong>Remark</strong> : </div>
+                                        <div><strong>Venue Info</strong> : </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Items Table -->
+                        <div style="padding: 20px;">
                             ${!q.orderType || q.orderType === 'single' ? `
-                                <!-- Single Function Order -->
-                                <h3 style="margin: 0 0 16px 0; color: #667eea; font-size: 24px; font-weight: 600; letter-spacing: 0.02em;">📦 Items</h3>
-                                <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-                                    <table style="width: 100%; border-collapse: collapse;">
-                                        <thead>
-                                            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                                <th style="padding: 16px; text-align: left; color: white; font-weight: 600; font-size: 14px; letter-spacing: 0.05em; width: 50px;">#</th>
-                                                <th style="padding: 16px; text-align: left; color: white; font-weight: 600; font-size: 14px; letter-spacing: 0.05em;">ITEM NAME</th>
-                                                <th style="padding: 16px; text-align: center; color: white; font-weight: 600; font-size: 14px; letter-spacing: 0.05em; width: 80px;">QTY</th>
-                                                <th style="padding: 16px; text-align: right; color: white; font-weight: 600; font-size: 14px; letter-spacing: 0.05em; width: 120px;">RATE</th>
-                                                <th style="padding: 16px; text-align: right; color: white; font-weight: 600; font-size: 14px; letter-spacing: 0.05em; width: 140px;">AMOUNT</th>
+                                <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
+                                    <thead>
+                                        <tr style="background: #f5f5f5; border: 1px solid #000;">
+                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
+                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
+                                            <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
+                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 150px;">Remark</th>
+                                            <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${(q.items || []).map((item, index) => `
+                                            <tr style="border: 1px solid #000;">
+                                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${index + 1}</td>
+                                                <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${item.quantity.toFixed(2)}</td>
+                                                <td style="padding: 10px; border: 1px solid #000; color: #666;">${item.remark || ''}</td>
+                                                <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 500;">${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${(q.items || []).map((item, index) => `
-                                                <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#fafbff'}; border-bottom: 1px solid #e8eaf0;">
-                                                    <td style="padding: 14px 16px; color: #718096; font-weight: 500;">${index + 1}</td>
-                                                    <td style="padding: 14px 16px; color: #1a202c; font-weight: 500;">${getCategoryIcon(item.category)} ${item.name}</td>
-                                                    <td style="padding: 14px 16px; text-align: center; color: #1a202c; font-weight: 600; font-family: 'Courier New', monospace;">${item.quantity}</td>
-                                                    <td style="padding: 14px 16px; text-align: right; color: #718096; font-family: 'Courier New', monospace;">₹${(item.rate || item.price || 0).toLocaleString('en-IN')}</td>
-                                                    <td style="padding: 14px 16px; text-align: right; color: #f6ad55; font-weight: 700; font-size: 15px; font-family: 'Courier New', monospace;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
-                                                </tr>
-                                            `).join('')}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        `).join('')}
+                                        <tr style="border: 1px solid #000;">
+                                            <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold;">Total</td>
+                                            <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 14px;">${q.financials.grandTotal.toLocaleString('en-IN')}/-</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             ` : ''}
 
                             ${q.orderType === 'multifunction' || q.orderType === 'multiday' ? `
@@ -12446,33 +12443,33 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             ` : ''}
 
                             ${q.orderType === 'multifunction' ? (q.functions || []).map((func, funcIdx) => `
-                                <div style="margin-bottom: 20px; background: white; border-radius: 16px; overflow: hidden; border-left: 6px solid #2196F3; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-                                    <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 16px 20px;">
-                                        <h4 style="margin: 0; color: #1976D2; font-size: 18px; font-weight: 600;">📋 Function ${funcIdx + 1}: ${func.name || 'Unnamed'}</h4>
+                                <div style="margin-bottom: 20px;">
+                                    <div style="background: #f5f5f5; padding: 12px; border: 1px solid #000; font-weight: bold; font-size: 13px; color: #1976D2;">
+                                        ${q.customer.eventType || 'CELEBRATION'} - Function ${funcIdx + 1}: ${func.name || 'Unnamed'}
                                     </div>
-                                    <table style="width: 100%; border-collapse: collapse;">
+                                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
                                         <thead>
-                                            <tr style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);">
-                                                <th style="padding: 14px 16px; text-align: left; color: white; font-weight: 600; font-size: 13px; letter-spacing: 0.05em; width: 50px;">#</th>
-                                                <th style="padding: 14px 16px; text-align: left; color: white; font-weight: 600; font-size: 13px; letter-spacing: 0.05em;">ITEM NAME</th>
-                                                <th style="padding: 14px 16px; text-align: center; color: white; font-weight: 600; font-size: 13px; letter-spacing: 0.05em; width: 70px;">QTY</th>
-                                                <th style="padding: 14px 16px; text-align: right; color: white; font-weight: 600; font-size: 13px; letter-spacing: 0.05em; width: 110px;">RATE</th>
-                                                <th style="padding: 14px 16px; text-align: right; color: white; font-weight: 600; font-size: 13px; letter-spacing: 0.05em; width: 130px;">AMOUNT</th>
+                                            <tr style="background: #f5f5f5; border: 1px solid #000;">
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
+                                                <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 150px;">Remark</th>
+                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Price</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             ${(func.items || []).map((item, itemIdx) => `
-                                                <tr style="background: ${itemIdx % 2 === 0 ? '#ffffff' : '#fafbff'}; border-bottom: 1px solid #e8eaf0;">
-                                                    <td style="padding: 12px 16px; color: #718096; font-weight: 500;">${itemIdx + 1}</td>
-                                                    <td style="padding: 12px 16px; color: #1a202c; font-weight: 500;">${getCategoryIcon(item.category)} ${item.name}</td>
-                                                    <td style="padding: 12px 16px; text-align: center; color: #1a202c; font-weight: 600; font-family: 'Courier New', monospace;">${item.quantity}</td>
-                                                    <td style="padding: 12px 16px; text-align: right; color: #718096; font-family: 'Courier New', monospace;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
-                                                    <td style="padding: 12px 16px; text-align: right; color: #f6ad55; font-weight: 700; font-family: 'Courier New', monospace;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                                <tr style="border: 1px solid #000;">
+                                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${item.quantity.toFixed(2)}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; color: #666;">${item.remark || ''}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 500;">${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                                 </tr>
                                             `).join('')}
-                                            <tr style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
-                                                <td colspan="4" style="padding: 14px 16px; text-align: right; color: #1976D2; font-weight: 700; font-size: 15px;">Function Total:</td>
-                                                <td style="padding: 14px 16px; text-align: right; color: #1976D2; font-weight: 700; font-size: 16px; font-family: 'Courier New', monospace;">₹${(func.subtotal || 0).toLocaleString('en-IN')}</td>
+                                            <tr style="border: 1px solid #000; background: #f5f5f5;">
+                                                <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold;">Function Total</td>
+                                                <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 14px;">${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -12480,181 +12477,74 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             `).join('') : ''}
 
                             ${q.orderType === 'multiday' ? (q.days || []).map((day, dayIdx) => `
-                                <div style="margin-bottom: 24px; background: white; border-radius: 16px; overflow: hidden; border-left: 6px solid #1976D2; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-                                    <div style="background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%); padding: 18px 24px;">
-                                        <h4 style="margin: 0; color: #0d47a1; font-size: 20px; font-weight: 700;">📅 Day ${dayIdx + 1}: ${day.date ? Utils.formatDate(day.date) : 'No date set'}</h4>
+                                <div style="margin-bottom: 30px;">
+                                    <div style="background: #e3f2fd; padding: 14px; border: 1px solid #000; font-weight: bold; font-size: 14px; color: #0d47a1; margin-bottom: 15px;">
+                                        Day ${dayIdx + 1}: ${day.date ? Utils.formatDate(day.date) : 'No date set'}
                                     </div>
 
                                     ${(day.functions || []).map((func, funcIdx) => `
-                                        <div style="margin: 16px; background: #fafbff; border-radius: 12px; overflow: hidden;">
-                                            <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 12px 16px;">
-                                                <h5 style="margin: 0; color: #1976D2; font-size: 16px; font-weight: 600;">📋 ${func.name || 'Unnamed Function'}</h5>
+                                        <div style="margin-bottom: 15px;">
+                                            <div style="background: #f5f5f5; padding: 10px; border: 1px solid #000; font-weight: bold; font-size: 12px; color: #1976D2;">
+                                                ${q.customer.eventType || 'CELEBRATION'} - ${func.name || 'Unnamed Function'}
                                             </div>
-                                            <table style="width: 100%; border-collapse: collapse;">
+                                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
                                                 <thead>
-                                                    <tr style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);">
-                                                        <th style="padding: 12px; text-align: left; color: white; font-weight: 600; font-size: 12px; letter-spacing: 0.05em; width: 40px;">#</th>
-                                                        <th style="padding: 12px; text-align: left; color: white; font-weight: 600; font-size: 12px; letter-spacing: 0.05em;">ITEM</th>
-                                                        <th style="padding: 12px; text-align: center; color: white; font-weight: 600; font-size: 12px; letter-spacing: 0.05em; width: 60px;">QTY</th>
-                                                        <th style="padding: 12px; text-align: right; color: white; font-weight: 600; font-size: 12px; letter-spacing: 0.05em; width: 100px;">RATE</th>
-                                                        <th style="padding: 12px; text-align: right; color: white; font-weight: 600; font-size: 12px; letter-spacing: 0.05em; width: 120px;">AMOUNT</th>
+                                                    <tr style="background: #f5f5f5; border: 1px solid #000;">
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
+                                                        <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 150px;">Remark</th>
+                                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Price</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     ${(func.items || []).map((item, itemIdx) => `
-                                                        <tr style="background: ${itemIdx % 2 === 0 ? '#ffffff' : '#fafbff'}; border-bottom: 1px solid #e8eaf0;">
-                                                            <td style="padding: 10px 12px; color: #718096; font-weight: 500;">${itemIdx + 1}</td>
-                                                            <td style="padding: 10px 12px; color: #1a202c; font-weight: 500;">${getCategoryIcon(item.category)} ${item.name}</td>
-                                                            <td style="padding: 10px 12px; text-align: center; color: #1a202c; font-weight: 600; font-family: 'Courier New', monospace;">${item.quantity}</td>
-                                                            <td style="padding: 10px 12px; text-align: right; color: #718096; font-family: 'Courier New', monospace;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
-                                                            <td style="padding: 10px 12px; text-align: right; color: #f6ad55; font-weight: 700; font-family: 'Courier New', monospace;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                                        <tr style="border: 1px solid #000;">
+                                                            <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
+                                                            <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                            <td style="padding: 10px; border: 1px solid #000; text-align: center;">${item.quantity.toFixed(2)}</td>
+                                                            <td style="padding: 10px; border: 1px solid #000; color: #666;">${item.remark || ''}</td>
+                                                            <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 500;">${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                                         </tr>
                                                     `).join('')}
-                                                    <tr style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
-                                                        <td colspan="4" style="padding: 12px; text-align: right; color: #1976D2; font-weight: 700;">Function Total:</td>
-                                                        <td style="padding: 12px; text-align: right; color: #1976D2; font-weight: 700; font-family: 'Courier New', monospace;">₹${(func.subtotal || 0).toLocaleString('en-IN')}</td>
+                                                    <tr style="border: 1px solid #000; background: #f5f5f5;">
+                                                        <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold;">Function Total</td>
+                                                        <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 14px;">${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
                                         </div>
                                     `).join('')}
 
-                                    <div style="background: linear-gradient(135deg, #90caf9 0%, #64b5f6 100%); padding: 16px 24px; margin: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                        <div style="text-align: right; color: #0d47a1; font-size: 18px; font-weight: 700; font-family: 'Courier New', monospace;">Day ${dayIdx + 1} Total: ₹${(day.subtotal || 0).toLocaleString('en-IN')}</div>
+                                    <div style="background: #e3f2fd; padding: 14px; border: 1px solid #000; text-align: right; font-weight: bold; color: #0d47a1; font-size: 15px; margin-top: 10px;">
+                                        Day ${dayIdx + 1} Total: ₹${(day.subtotal || 0).toLocaleString('en-IN')}/-
                                     </div>
                                 </div>
                             `).join('') : ''}
                         </div>
 
-                        <!-- Financial Summary - Prominent Box -->
-                        <div style="background: white; border-radius: 16px; padding: 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); border: 2px solid #667eea;">
-                            <h3 style="margin: 0 0 24px 0; color: #667eea; font-size: 24px; font-weight: 600; letter-spacing: 0.02em; text-align: center;">💰 Financial Summary</h3>
-
-                            <div style="max-width: 500px; margin: 0 auto;">
-                                <div style="background: #fafbff; padding: 16px 24px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="color: #718096; font-size: 16px; font-weight: 500;">Subtotal</span>
-                                    <span style="color: #1a202c; font-size: 18px; font-weight: 600; font-family: 'Courier New', monospace;">₹${q.financials.subtotal.toLocaleString('en-IN')}</span>
-                                </div>
-
-                                ${q.financials.discountAmount > 0 ? `
-                                <div style="background: #fff5f5; padding: 16px 24px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #f44336;">
-                                    <span style="color: #c62828; font-size: 16px; font-weight: 500;">Discount</span>
-                                    <span style="color: #f44336; font-size: 18px; font-weight: 700; font-family: 'Courier New', monospace;">- ₹${q.financials.discountAmount.toLocaleString('en-IN')}</span>
-                                </div>
-                                ` : ''}
-
-                                <div style="height: 3px; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); margin: 20px 0; border-radius: 4px;"></div>
-
-                                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px 28px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);">
-                                    <span style="color: white; font-size: 22px; font-weight: 700; letter-spacing: 0.05em;">GRAND TOTAL</span>
-                                    <span style="color: white; font-size: 32px; font-weight: 700; font-family: 'Courier New', monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">₹${q.financials.grandTotal.toLocaleString('en-IN')}</span>
-                                </div>
+                        <!-- Terms Section -->
+                        <div style="padding: 20px; border-top: 1px solid #ddd;">
+                            <div style="font-size: 12px; font-weight: bold; margin-bottom: 10px;">Terms :</div>
+                            <div style="font-size: 11px; line-height: 1.8; color: #333;">
+                                <div style="margin-bottom: 4px;">1. <span style="color: #8B4513; font-weight: 500;">18%GST</span> WILL BE CHARGED <span style="color: #D84315; font-weight: 500;">EXTRA</span></div>
+                                <div style="margin-bottom: 4px;">2. <span style="color: #1976D2; font-weight: 500;">50% payment advance</span> at the time of <span style="color: #2E7D32; font-weight: 500;">confirmation</span>.</div>
+                                <div style="margin-bottom: 4px;">3. <span style="color: #1976D2; font-weight: 500;">50% payment 2 days</span> prior the <span style="color: #D84315; font-weight: 500;">event</span>.</div>
+                                <div>4. Order outside ahmedabad city, <span style="color: #8B4513; font-weight: 500;">transportation</span> will be charged as per <span style="color: #D84315; font-weight: 500;">actual</span>.</div>
                             </div>
                         </div>
 
-                        <!-- Payment Schedule -->
-                        <div style="background: white; border-radius: 16px; padding: 24px; margin-bottom: 24px; border-left: 6px solid #48bb78; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-                            <h3 style="margin: 0 0 20px 0; color: #48bb78; font-size: 24px; font-weight: 600; letter-spacing: 0.02em;">💳 Payment Schedule</h3>
-                            <div style="display: grid; gap: 16px;">
-                                <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 18px 24px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #48bb78;">
-                                    <div>
-                                        <div style="color: #2e7d32; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Booking Amount</div>
-                                        <div style="color: #1b5e20; font-size: 16px; font-weight: 600;">50% to confirm order</div>
-                                    </div>
-                                    <div style="color: #2e7d32; font-size: 24px; font-weight: 700; font-family: 'Courier New', monospace;">₹${(q.financials.grandTotal * 0.5).toLocaleString('en-IN')}</div>
-                                </div>
-                                <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 18px 24px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #48bb78;">
-                                    <div>
-                                        <div style="color: #2e7d32; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Before Event</div>
-                                        <div style="color: #1b5e20; font-size: 16px; font-weight: 600;">50% before event starts</div>
-                                    </div>
-                                    <div style="color: #2e7d32; font-size: 24px; font-weight: 700; font-family: 'Courier New', monospace;">₹${(q.financials.grandTotal * 0.5).toLocaleString('en-IN')}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Terms & Conditions - Sticky Notes Style -->
-                        <div style="margin-bottom: 24px;">
-                            <h3 style="margin: 0 0 20px 0; color: #e65100; font-size: 24px; font-weight: 600; letter-spacing: 0.02em;">📋 Terms & Conditions</h3>
-
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                                <!-- Payment Terms Sticky Note -->
-                                <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); padding: 20px; border-radius: 12px; border-left: 6px solid #f57c00; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-                                    <h4 style="margin: 0 0 12px 0; color: #e65100; font-size: 16px; font-weight: 700; letter-spacing: 0.05em;">💰 PAYMENT TERMS</h4>
-                                    <div style="color: #5d4037; font-size: 13px; line-height: 1.6;">
-                                        <div style="margin-bottom: 8px; padding-left: 16px; position: relative;">
-                                            <span style="position: absolute; left: 0;">✓</span>
-                                            50% booking required to confirm
-                                        </div>
-                                        <div style="padding-left: 16px; position: relative;">
-                                            <span style="position: absolute; left: 0;">✓</span>
-                                            50% before event starts
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Inclusions Sticky Note -->
-                                <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 20px; border-radius: 12px; border-left: 6px solid #43a047; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-                                    <h4 style="margin: 0 0 12px 0; color: #2e7d32; font-size: 16px; font-weight: 700; letter-spacing: 0.05em;">✅ INCLUSIONS</h4>
-                                    <div style="color: #1b5e20; font-size: 13px; line-height: 1.6;">
-                                        <div style="padding-left: 16px; position: relative;">
-                                            <span style="position: absolute; left: 0;">✓</span>
-                                            Generator for electricity provision
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Customer Responsibilities - Full Width Sticky Note -->
-                            <div style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); padding: 20px; border-radius: 12px; border-left: 6px solid #c2185b; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 16px;">
-                                <h4 style="margin: 0 0 12px 0; color: #c2185b; font-size: 16px; font-weight: 700; letter-spacing: 0.05em;">⚠️ CUSTOMER RESPONSIBILITIES</h4>
-                                <div style="color: #880e4f; font-size: 13px; line-height: 1.6; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                    <div style="padding-left: 16px; position: relative;">
-                                        <span style="position: absolute; left: 0;">✓</span>
-                                        Fire safety permissions & Fire NOC
-                                    </div>
-                                    <div style="padding-left: 16px; position: relative;">
-                                        <span style="position: absolute; left: 0;">✓</span>
-                                        Venue/ground permissions
-                                    </div>
-                                    <div style="padding-left: 16px; position: relative;">
-                                        <span style="position: absolute; left: 0;">✓</span>
-                                        AMC permissions
-                                    </div>
-                                    <div style="padding-left: 16px; position: relative;">
-                                        <span style="position: absolute; left: 0;">✓</span>
-                                        First aid provision
-                                    </div>
-                                    <div style="padding-left: 16px; position: relative;">
-                                        <span style="position: absolute; left: 0;">✓</span>
-                                        Resource manager approval
-                                    </div>
-                                    <div style="padding-left: 16px; position: relative;">
-                                        <span style="position: absolute; left: 0;">✓</span>
-                                        Contractor competence proof
-                                    </div>
-                                    <div style="padding-left: 16px; position: relative; grid-column: span 2;">
-                                        <span style="position: absolute; left: 0;">✓</span>
-                                        Security clearance for restricted materials
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Validity - Important Highlight -->
-                            <div style="background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); padding: 16px 24px; border-radius: 12px; border-left: 6px solid #fbc02d; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px;">
-                                <div style="font-size: 32px;">⏰</div>
-                                <div>
-                                    <div style="color: #f57f17; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">IMPORTANT</div>
-                                    <div style="color: #e65100; font-size: 16px; font-weight: 700;">Quotation valid for 15 days from quotation date</div>
-                                </div>
+                        <!-- Signature Section -->
+                        <div style="padding: 30px 20px 20px 20px; border-top: 1px solid #ddd;">
+                            <div style="text-align: right;">
+                                <div style="font-size: 11px; font-weight: bold; margin-bottom: 40px;">For, PhatakeWala</div>
+                                <div style="border-top: 1px solid #333; width: 200px; margin-left: auto; padding-top: 5px; font-size: 10px; text-align: center;">Authorised Signatory</div>
                             </div>
                         </div>
 
                         <!-- Footer -->
-                        <div style="text-align: center; padding: 24px; background: white; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-                            <div style="color: #718096; font-size: 16px; font-weight: 600;">
-                                Thank you for choosing our services! We look forward to making your event spectacular. ✨
-                            </div>
+                        <div style="padding: 15px 20px; border-top: 2px solid #000; font-size: 10px; color: #666; background: #f9f9f9;">
+                            <div style="text-align: left;">Printed By : <span style="color: #1976D2; font-weight: 500;">WIPRA</span> - ${new Date().toLocaleDateString('en-GB').replace(/\//g, '-')} ${new Date().toLocaleTimeString('en-GB', {hour12: false})}</div>
                         </div>
                     </div>
                 `;

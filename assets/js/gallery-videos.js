@@ -148,15 +148,14 @@
         console.log(`  ↳ Platform: ${platform}`);
         console.log(`  ↳ Aspect Ratio: ${aspectRatio}`);
 
-        // Calculate padding-bottom percentage for aspect ratio
-        // 9/16 = 177.78%, 16/9 = 56.25%, 1/1 = 100%
-        const [width, height] = aspectRatio.split('/').map(Number);
-        const paddingBottom = (height / width * 100).toFixed(2);
+        // Use CSS aspect-ratio property for better video display
+        // 9/16 for vertical (Instagram Reels), 16/9 for horizontal, 1/1 for square
+        const aspectRatioStyle = aspectRatio;
 
-        console.log(`  ↳ Padding Bottom: ${paddingBottom}%`);
+        console.log(`  ↳ Aspect Ratio: ${aspectRatioStyle}`);
 
         item.innerHTML = `
-            <div class="gallery-video-wrapper" style="padding-bottom: ${paddingBottom}%;">
+            <div class="gallery-video-wrapper" style="aspect-ratio: ${aspectRatioStyle};">
                 <iframe
                     src="${embedUrl}"
                     frameborder="0"
