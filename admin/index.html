@@ -9690,11 +9690,8 @@ convertToQuotationDateFormat(dateStr) {
                 const loading = this.showLoading('Uploading image...');
 
                 try {
-                    // Use existing Firebase app instance
-                    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
-
-                    // Get storage from the existing Firebase app
-                    const storage = getStorage(window.firebaseApp);
+                    // Use the old Firebase SDK (not modular)
+                    const storage = firebase.storage();
 
                     // Create filename: products/{itemId}_{timestamp}.jpg
                     const timestamp = Date.now();
@@ -9702,11 +9699,11 @@ convertToQuotationDateFormat(dateStr) {
                     const filename = `products/${itemId}_${timestamp}.${extension}`;
 
                     // Upload to Firebase Storage
-                    const storageRef = ref(storage, filename);
-                    await uploadBytes(storageRef, file);
+                    const storageRef = storage.ref(filename);
+                    const uploadTask = await storageRef.put(file);
 
                     // Get download URL
-                    const imageUrl = await getDownloadURL(storageRef);
+                    const imageUrl = await uploadTask.ref.getDownloadURL();
 
                     // Update item in local data
                     item.imageUrl = imageUrl;
