@@ -12343,7 +12343,6 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div style="flex: 1;">
                                     <div style="font-size: 11px; color: #000; line-height: 1.6; font-weight: 600;">
-                                        <div><strong>Quotation No:</strong> ${q.quotationNumber || 'N/A'}</div>
                                         <div><strong>Date:</strong> ${Utils.formatDate(q.quotationDate || new Date().toISOString().split('T')[0])}</div>
                                         <div><strong>Valid Until:</strong> ${Utils.formatDate(q.validUntil || this.calculateValidUntil())}</div>
                                     </div>
