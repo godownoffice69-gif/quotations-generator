@@ -50,10 +50,18 @@ export class Step3Customization {
             const itemsSnapshot = await getDocs(itemsRef);
             this.allItems = [];
             itemsSnapshot.forEach(docSnap => {
-                this.allItems.push({ id: docSnap.id, ...docSnap.data() });
+                const itemData = { id: docSnap.id, ...docSnap.data() };
+                this.allItems.push(itemData);
+
+                // Debug: Log each item with its imageUrl status
+                if (itemData.imageUrl) {
+                    console.log(`✅ Item "${itemData.name}" has image:`, itemData.imageUrl);
+                } else {
+                    console.log(`⚠️ Item "${itemData.name}" has NO image`);
+                }
             });
 
-            console.log(`✅ Loaded ${this.allItems.length} items, ${this.categories.length} categories`);
+            console.log(`✅ Loaded ${this.allItems.length} items (${this.allItems.filter(i => i.imageUrl).length} with images), ${this.categories.length} categories`);
 
         } catch (error) {
             console.error('❌ Error loading inventory:', error);
@@ -133,8 +141,13 @@ export class Step3Customization {
     /**
      * Called when step is entered
      */
-    onStepEnter() {
+    async onStepEnter() {
         console.log('👋 Entered Step 3');
+        console.log('🔄 Reloading inventory to get latest images...');
+
+        // CRITICAL: Reload inventory to get latest imageUrl values
+        await this.loadInventory();
+
         this.renderView();
     }
 
@@ -182,7 +195,17 @@ export class Step3Customization {
             const fullItem = this.allItems.find(i => i.id === item.id);
             const imageUrl = fullItem?.imageUrl || item.imageUrl || '';
 
-            console.log(`🖼️ Item: ${item.name}, ImageURL:`, imageUrl);
+            // Sync the imageUrl back to the item so it persists
+            if (fullItem?.imageUrl && !item.imageUrl) {
+                item.imageUrl = fullItem.imageUrl;
+            }
+
+            console.log(`🖼️ Selected Item: ${item.name}`);
+            console.log(`   - Item ID: ${item.id}`);
+            console.log(`   - Found in inventory: ${fullItem ? 'YES' : 'NO'}`);
+            console.log(`   - ImageURL from inventory: ${fullItem?.imageUrl || 'NONE'}`);
+            console.log(`   - ImageURL from item: ${item.imageUrl || 'NONE'}`);
+            console.log(`   - Final ImageURL: ${imageUrl || 'NONE'}`);
 
             html += `
                 <div class="selected-item-card">
