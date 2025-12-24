@@ -11196,8 +11196,21 @@ convertToQuotationDateFormat(dateStr) {
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Event Venue</label>
-                                <textarea id="quotEventVenue" class="form-input" rows="2" placeholder="Enter event venue address">${q.customer.eventVenue || ''}</textarea>
+                                <label class="form-label">Event Venue (Live Location Search)</label>
+                                <input type="text" id="quotEventVenue" class="form-input" value="${q.customer.eventVenue || ''}" placeholder="🔍 Search for venue location...">
+                                <div id="quotSelectedVenueDisplay" style="display: ${q.customer.eventVenue ? 'block' : 'none'}; margin-top: 0.5rem; padding: 0.75rem; background: white; border-radius: 8px; border: 1px solid #e0e0e0;">
+                                    <div style="display: flex; align-items: start; gap: 0.5rem;">
+                                        <div style="font-size: 1.5rem;">📍</div>
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 600; color: #1976D2;">${q.customer.eventVenueName || q.customer.eventVenue || ''}</div>
+                                            <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;">${q.customer.eventVenue || ''}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Notes (Optional)</label>
+                                <textarea id="quotNotes" class="form-input" rows="3" placeholder="Add any special notes, requests, or instructions for this quotation...">${q.notes || ''}</textarea>
                             </div>
                         </div>
 
@@ -11324,9 +11337,10 @@ convertToQuotationDateFormat(dateStr) {
                     </div>
                 `;
 
-                // Initialize item search after render
+                // Initialize item search and Google Maps autocomplete after render
                 setTimeout(() => {
                     this.initQuotationItemSearch();
+                    this.initQuotationVenueAutocomplete();
                     this.recalculateQuotation();
                 }, 100);
             },
