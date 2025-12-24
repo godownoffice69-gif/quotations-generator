@@ -41,7 +41,7 @@ export class Step1EventType {
             }
         });
 
-        // Event type selection - use multiple approaches for better compatibility
+        // Event type selection - use event delegation
         document.addEventListener('click', (e) => {
             const card = e.target.closest('.event-type-card');
             if (card) {
@@ -53,19 +53,31 @@ export class Step1EventType {
             }
         });
 
-        // Direct click handler as backup
+        console.log('✅ Step 1 event listeners set up (using delegation)');
+    }
+
+    /**
+     * Attach direct listeners to cards (called when step is shown)
+     */
+    attachDirectListeners() {
         const cards = document.querySelectorAll('.event-type-card');
-        cards.forEach(card => {
-            card.addEventListener('click', (e) => {
-                const eventType = card.dataset.eventType || card.getAttribute('data-event-type');
+        cards.forEach((card, index) => {
+            // Remove any existing listeners by cloning
+            const newCard = card.cloneNode(true);
+            card.parentNode.replaceChild(newCard, card);
+
+            // Add fresh listener
+            newCard.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const eventType = newCard.dataset.eventType || newCard.getAttribute('data-event-type');
                 if (eventType) {
-                    console.log('🎯 Event type card clicked (direct):', eventType);
+                    console.log(`🎯 Card ${index + 1} clicked (direct):`, eventType);
                     this.selectEventType(eventType);
                 }
             });
         });
-
-        console.log(`✅ Step 1 event listeners set up for ${cards.length} cards`);
+        console.log(`✅ Attached direct listeners to ${cards.length} celebration cards`);
     }
 
     /**
@@ -73,6 +85,8 @@ export class Step1EventType {
      */
     onStepEnter() {
         console.log('👋 Entered Step 1');
+        // Attach direct listeners after DOM is ready
+        setTimeout(() => this.attachDirectListeners(), 100);
     }
 
     /**
