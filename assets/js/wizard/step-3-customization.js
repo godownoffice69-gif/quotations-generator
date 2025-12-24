@@ -272,7 +272,7 @@ export class Step3Customization {
                         ${imageUrl ? `
                             <img src="${imageUrl}" alt="${item.name}" loading="lazy"
                                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
-                                 onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.parentElement.innerHTML='<div style=\\'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; font-size: 18px; font-weight: 600;\\'>📸<br/>No Image</div>${isSelected ? '<div class=\\'already-selected-badge\\' style=\\'position: absolute; top: 8px; right: 8px; background: #10B981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;\\'>✓ Added</div>' : ''}';">
+                                 onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.parentElement.innerHTML='<div style=\\'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; font-size: 18px; font-weight: 600;\\'>📸<br/>No Image</div>';">
                         ` : `
                             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; font-size: 18px; font-weight: 600;">
                                 📸<br/>No Image

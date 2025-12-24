@@ -11462,6 +11462,67 @@ convertToQuotationDateFormat(dateStr) {
                 });
             },
 
+            initQuotationVenueAutocomplete() {
+                if (typeof google === 'undefined' || !google.maps) {
+                    console.log('⏳ Google Maps not loaded yet for quotation, retrying...');
+                    setTimeout(() => this.initQuotationVenueAutocomplete(), 500);
+                    return;
+                }
+
+                const venueInput = document.getElementById('quotEventVenue');
+                if (!venueInput) {
+                    console.log('Quotation venue input not found');
+                    return;
+                }
+
+                try {
+                    const autocomplete = new google.maps.places.Autocomplete(venueInput, {
+                        componentRestrictions: { country: 'in' },
+                        fields: ['name', 'formatted_address', 'geometry', 'place_id']
+                    });
+
+                    autocomplete.addListener('place_changed', () => {
+                        const place = autocomplete.getPlace();
+                        if (!place.geometry) return;
+
+                        // Update current quotation with venue data
+                        if (!this.currentQuotation.customer) {
+                            this.currentQuotation.customer = {};
+                        }
+                        this.currentQuotation.customer.eventVenue = place.formatted_address;
+                        this.currentQuotation.customer.eventVenueName = place.name;
+                        this.currentQuotation.customer.eventVenueCoordinates = {
+                            lat: place.geometry.location.lat(),
+                            lng: place.geometry.location.lng()
+                        };
+
+                        // Update input value
+                        venueInput.value = place.formatted_address;
+
+                        // Show selected venue
+                        const display = document.getElementById('quotSelectedVenueDisplay');
+                        if (display) {
+                            display.innerHTML = `
+                                <div style="display: flex; align-items: start; gap: 0.5rem;">
+                                    <div style="font-size: 1.5rem;">📍</div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; color: #1976D2;">${place.name}</div>
+                                        <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;">${place.formatted_address}</div>
+                                    </div>
+                                </div>
+                            `;
+                            display.style.display = 'block';
+                        }
+
+                        console.log('✅ Quotation venue selected:', place.name);
+                    });
+
+                    console.log('✅ Quotation venue autocomplete initialized');
+                } catch (error) {
+                    console.error('Error initializing quotation venue autocomplete:', error);
+                }
+            },
+
             selectQuotationFunctionItem(funcIndex, itemName, price) {
                 if (!this.currentQuotation.functions[funcIndex].items) {
                     this.currentQuotation.functions[funcIndex].items = [];
@@ -12018,8 +12079,13 @@ convertToQuotationDateFormat(dateStr) {
                     contact: customerContact,
                     email: Utils.get('quotCustomerEmail'),
                     eventDate: eventDate,
-                    eventVenue: Utils.get('quotEventVenue')
+                    eventVenue: Utils.get('quotEventVenue'),
+                    eventVenueName: q.customer?.eventVenueName || '',
+                    eventVenueCoordinates: q.customer?.eventVenueCoordinates || null
                 };
+
+                // Add notes field
+                q.notes = Utils.get('quotNotes') || '';
 
                 const quotationData = {
                     ...q,
@@ -12676,6 +12742,16 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                 </div>
                             `).join('') : ''}
                         </div>
+
+                        <!-- Notes Section (if exists) -->
+                        ${q.notes ? `
+                        <div style="padding: 15px; border-top: 2px solid #000; margin-top: 25px;">
+                            <div style="font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #000;">📝 Notes:</div>
+                            <div style="font-size: 11px; line-height: 1.7; color: #000; background: #fffbf0; padding: 12px; border-left: 4px solid #F57C00; border-radius: 4px;">
+                                ${q.notes.replace(/\n/g, '<br>')}
+                            </div>
+                        </div>
+                        ` : ''}
 
                         <!-- Terms & Conditions Section -->
                         <div style="padding: 15px; border-top: 2px solid #000; margin-top: 25px;">
