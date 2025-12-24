@@ -11864,6 +11864,18 @@ convertToQuotationDateFormat(dateStr) {
                             </datalist>
                         </div>
                         <div class="form-group">
+                            <label class="form-label">📍 Venue/Location (for this function)</label>
+                            <input type="text" id="quotFunc_${index}_venue" class="form-input" value="${func.venue || ''}"
+                                   onchange="OMS.updateQuotationFunctionField(${index}, 'venue', this.value)"
+                                   placeholder="🔍 Enter venue/location for this function...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">📝 Notes (for this function)</label>
+                            <textarea id="quotFunc_${index}_notes" class="form-input" rows="2"
+                                      onchange="OMS.updateQuotationFunctionField(${index}, 'notes', this.value)"
+                                      placeholder="Add notes specific to this function...">${func.notes || ''}</textarea>
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Items</label>
                             <div style="position: relative; margin-bottom: 0.5rem;">
                                 <input type="text" class="form-input quotItemSearch" data-func-index="${index}" data-context="multifunction" placeholder="🔍 Search items from inventory...">
@@ -11912,6 +11924,18 @@ convertToQuotationDateFormat(dateStr) {
                                             ${this.data.eventsList.map(event => `<option value="${event}">`).join('')}
                                         </datalist>
                                         <button type="button" class="btn btn-danger btn-small" onclick="OMS.removeQuotationDayFunction(${dayIndex}, ${funcIdx})">×</button>
+                                    </div>
+                                    <div style="margin-bottom: 0.5rem;">
+                                        <label style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.25rem; color: #666;">📍 Venue/Location</label>
+                                        <input type="text" class="form-input" id="quotDayFunc_${dayIndex}_${funcIdx}_venue" value="${func.venue || ''}"
+                                               onchange="OMS.updateQuotationDayFunctionField(${dayIndex}, ${funcIdx}, 'venue', this.value)"
+                                               placeholder="Enter venue for this function...">
+                                    </div>
+                                    <div style="margin-bottom: 0.5rem;">
+                                        <label style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.25rem; color: #666;">📝 Notes</label>
+                                        <textarea class="form-input" id="quotDayFunc_${dayIndex}_${funcIdx}_notes" rows="2"
+                                                  onchange="OMS.updateQuotationDayFunctionField(${dayIndex}, ${funcIdx}, 'notes', this.value)"
+                                                  placeholder="Add notes for this function...">${func.notes || ''}</textarea>
                                     </div>
                                     <div style="position: relative; margin-bottom: 0.5rem;">
                                         <input type="text" class="form-input quotItemSearch" data-day-index="${dayIndex}" data-func-index="${funcIdx}" data-context="multiday" placeholder="🔍 Search items...">
@@ -11969,6 +11993,11 @@ convertToQuotationDateFormat(dateStr) {
             updateQuotationFunctionName(funcIndex, value) {
                 this.currentQuotation.functions[funcIndex].name = value;
                 this.recalculateQuotation();
+            },
+
+            updateQuotationFunctionField(funcIndex, field, value) {
+                this.currentQuotation.functions[funcIndex][field] = value;
+                // No need to recalculate for notes/venue fields
             },
 
             addQuotationFunctionItem(funcIndex) {
@@ -12031,6 +12060,11 @@ convertToQuotationDateFormat(dateStr) {
 
             updateQuotationDayFunctionName(dayIndex, funcIndex, value) {
                 this.currentQuotation.days[dayIndex].functions[funcIndex].name = value;
+            },
+
+            updateQuotationDayFunctionField(dayIndex, funcIndex, field, value) {
+                this.currentQuotation.days[dayIndex].functions[funcIndex][field] = value;
+                // No need to recalculate for notes/venue fields
             },
 
             addQuotationDayFunctionItem(dayIndex, funcIndex) {
@@ -12713,7 +12747,17 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                     <div style="background: #f5f5f5; padding: 12px; border: 1px solid #000; font-weight: bold; font-size: 13px; color: #1976D2;">
                                         Function ${funcIdx + 1}: ${func.name || 'Unnamed'}
                                     </div>
-                                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
+                                    ${func.venue ? `
+                                    <div style="padding: 10px; border-left: 1px solid #000; border-right: 1px solid #000; background: #fff; font-size: 11px;">
+                                        <strong style="color: #1976D2;">📍 Venue:</strong> ${func.venue}
+                                    </div>
+                                    ` : ''}
+                                    ${func.notes ? `
+                                    <div style="padding: 10px; border-left: 1px solid #000; border-right: 1px solid #000; background: #fffbf0; font-size: 11px; border-top: ${func.venue ? '0' : '1px solid #ddd'};">
+                                        <strong style="color: #F57C00;">📝 Notes:</strong> ${func.notes.replace(/\n/g, '<br>')}
+                                    </div>
+                                    ` : ''}
+                                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
                                         <thead>
                                             <tr style="background: #f5f5f5; border: 1px solid #000;">
                                                 <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
@@ -12753,7 +12797,17 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                             <div style="background: #f5f5f5; padding: 10px; border: 1px solid #000; font-weight: bold; font-size: 12px; color: #1976D2;">
                                                 ${func.name || 'Unnamed Function'}
                                             </div>
-                                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
+                                            ${func.venue ? `
+                                            <div style="padding: 10px; border-left: 1px solid #000; border-right: 1px solid #000; background: #fff; font-size: 11px;">
+                                                <strong style="color: #1976D2;">📍 Venue:</strong> ${func.venue}
+                                            </div>
+                                            ` : ''}
+                                            ${func.notes ? `
+                                            <div style="padding: 10px; border-left: 1px solid #000; border-right: 1px solid #000; background: #fffbf0; font-size: 11px; border-top: ${func.venue ? '0' : '1px solid #ddd'};">
+                                                <strong style="color: #F57C00;">📝 Notes:</strong> ${func.notes.replace(/\n/g, '<br>')}
+                                            </div>
+                                            ` : ''}
+                                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
                                                 <thead>
                                                     <tr style="background: #f5f5f5; border: 1px solid #000;">
                                                         <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
