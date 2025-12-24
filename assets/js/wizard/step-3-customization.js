@@ -178,14 +178,25 @@ export class Step3Customization {
         `;
 
         selectedItems.forEach(item => {
+            // Always get the latest imageUrl from inventory (source of truth)
             const fullItem = this.allItems.find(i => i.id === item.id);
-            const imageUrl = fullItem?.imageUrl || 'https://via.placeholder.com/300x200?text=Effect';
+            const imageUrl = fullItem?.imageUrl || item.imageUrl || '';
+
+            console.log(`🖼️ Item: ${item.name}, ImageURL:`, imageUrl);
 
             html += `
                 <div class="selected-item-card">
-                    <div class="selected-item-image">
-                        <img src="${imageUrl}" alt="${item.name}" loading="lazy">
-                        <button class="remove-item-btn" data-item-id="${item.id}" title="Remove">
+                    <div class="selected-item-image" style="position: relative; padding-top: 66.67%; ${!imageUrl ? 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);' : 'background: #f5f5f5;'}">
+                        ${imageUrl ? `
+                            <img src="${imageUrl}" alt="${item.name}" loading="lazy"
+                                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+                                 onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.parentElement.innerHTML='<div style=\\'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; font-size: 18px; font-weight: 600;\\'>📸<br/>No Image</div><button class=\\'remove-item-btn\\' data-item-id=\\'${item.id}\\' title=\\'Remove\\' style=\\'position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px;\\'>❌</button>';">
+                        ` : `
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; font-size: 18px; font-weight: 600;">
+                                📸<br/>No Image
+                            </div>
+                        `}
+                        <button class="remove-item-btn" data-item-id="${item.id}" title="Remove" style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px; z-index: 10;">
                             ❌
                         </button>
                     </div>
@@ -253,13 +264,21 @@ export class Step3Customization {
 
         filteredItems.forEach(item => {
             const isSelected = selectedItemIds.includes(item.id);
-            const imageUrl = item.imageUrl || 'https://via.placeholder.com/300x200?text=Effect';
+            const imageUrl = item.imageUrl || '';
 
             itemsHtml += `
                 <div class="catalog-item-card ${isSelected ? 'already-selected' : ''}">
-                    <div class="catalog-item-image">
-                        <img src="${imageUrl}" alt="${item.name}" loading="lazy">
-                        ${isSelected ? '<div class="already-selected-badge">✓ Added</div>' : ''}
+                    <div class="catalog-item-image" style="position: relative; padding-top: 66.67%; ${!imageUrl ? 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);' : 'background: #f5f5f5;'}">
+                        ${imageUrl ? `
+                            <img src="${imageUrl}" alt="${item.name}" loading="lazy"
+                                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+                                 onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.parentElement.innerHTML='<div style=\\'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; font-size: 18px; font-weight: 600;\\'>📸<br/>No Image</div>${isSelected ? '<div class=\\'already-selected-badge\\' style=\\'position: absolute; top: 8px; right: 8px; background: #10B981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;\\'>✓ Added</div>' : ''}';">
+                        ` : `
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; font-size: 18px; font-weight: 600;">
+                                📸<br/>No Image
+                            </div>
+                        `}
+                        ${isSelected ? '<div class="already-selected-badge" style="position: absolute; top: 8px; right: 8px; z-index: 10;">✓ Added</div>' : ''}
                     </div>
                     <div class="catalog-item-info">
                         <h4>${item.name}</h4>
