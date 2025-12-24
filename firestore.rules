@@ -66,9 +66,10 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
-    // Inventory collection - authenticated users can read/write
+    // Inventory collection - public can read (for quotation website), authenticated users can write
     match /inventory/{document=**} {
-      allow read, write: if isAuthenticated();
+      allow read: if true;  // Public read access for quotation website to display product images
+      allow write: if isAuthenticated();  // Only authenticated users can modify inventory
     }
 
     // Item History collection - authenticated users can read/write
