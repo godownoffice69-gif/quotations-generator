@@ -41,13 +41,31 @@ export class Step1EventType {
             }
         });
 
-        // Event type selection
+        // Event type selection - use multiple approaches for better compatibility
         document.addEventListener('click', (e) => {
-            if (e.target.closest('.event-type-card')) {
-                const card = e.target.closest('.event-type-card');
-                this.selectEventType(card.dataset.eventType);
+            const card = e.target.closest('.event-type-card');
+            if (card) {
+                const eventType = card.dataset.eventType || card.getAttribute('data-event-type');
+                if (eventType) {
+                    console.log('🎯 Event type card clicked:', eventType);
+                    this.selectEventType(eventType);
+                }
             }
         });
+
+        // Direct click handler as backup
+        const cards = document.querySelectorAll('.event-type-card');
+        cards.forEach(card => {
+            card.addEventListener('click', (e) => {
+                const eventType = card.dataset.eventType || card.getAttribute('data-event-type');
+                if (eventType) {
+                    console.log('🎯 Event type card clicked (direct):', eventType);
+                    this.selectEventType(eventType);
+                }
+            });
+        });
+
+        console.log(`✅ Step 1 event listeners set up for ${cards.length} cards`);
     }
 
     /**
