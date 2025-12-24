@@ -9637,6 +9637,14 @@ convertToQuotationDateFormat(dateStr) {
                                                     📤 ${item.imageUrl ? 'Change' : 'Upload'} Photo
                                                 </button>
                                             </div>
+                                            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between;">
+                                                <span style="font-size: 13px; color: #333; font-weight: 500;">👁️ Show on Website</span>
+                                                <label class="visibility-toggle" style="position: relative; display: inline-block; width: 48px; height: 24px; cursor: pointer;" onclick="event.stopPropagation();">
+                                                    <input type="checkbox" ${item.visibleOnWebsite !== false ? 'checked' : ''} onchange="event.stopPropagation(); OMS.toggleItemVisibility('${item.id}', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                                    <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${item.visibleOnWebsite !== false ? '#4CAF50' : '#ccc'}; border-radius: 24px; transition: 0.3s;"></span>
+                                                    <span style="position: absolute; content: ''; height: 18px; width: 18px; left: ${item.visibleOnWebsite !== false ? '27px' : '3px'}; bottom: 3px; background-color: white; border-radius: 50%; transition: 0.3s;"></span>
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
                                 `;
@@ -9729,6 +9737,44 @@ convertToQuotationDateFormat(dateStr) {
                     console.error('❌ Error uploading photo:', error);
                     this.hideLoading(loading);
                     this.showToast('❌ Upload failed: ' + error.message, 'error');
+                }
+            },
+
+            async toggleItemVisibility(itemId, isVisible) {
+                const item = this.data.inventory.items.find(i => i.id === itemId);
+                if (!item) {
+                    this.showToast('❌ Item not found', 'error');
+                    return;
+                }
+
+                const loading = this.showLoading(isVisible ? 'Showing on website...' : 'Hiding from website...');
+
+                try {
+                    // Update item in local data
+                    item.visibleOnWebsite = isVisible;
+                    item.updatedAt = new Date().toISOString();
+
+                    // Save to Firestore
+                    await this.saveInventoryItemToFirestore(item);
+
+                    // Save to localStorage
+                    this.saveToStorage();
+
+                    this.hideLoading(loading);
+                    this.showToast(
+                        isVisible
+                            ? `✅ "${item.name}" is now visible on quotation website`
+                            : `🔒 "${item.name}" is now hidden from quotation website`,
+                        'success'
+                    );
+
+                    // Re-render to update toggle state
+                    this.renderProductPhotos();
+
+                } catch (error) {
+                    console.error('❌ Error toggling visibility:', error);
+                    this.hideLoading(loading);
+                    this.showToast('❌ Failed to update visibility: ' + error.message, 'error');
                 }
             },
 
