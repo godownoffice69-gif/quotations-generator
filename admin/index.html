@@ -12310,7 +12310,8 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     const pageWidth = 794;
                     const pageHeight = 1123;
                     const margin = 40;
-                    const maxContentHeight = pageHeight - (margin * 2);
+                    // Reduce content height to add buffer and prevent element splitting
+                    const maxContentHeight = pageHeight - (margin * 2) - 60; // Extra 60px buffer
 
                     // Set element to fixed width for consistent rendering
                     element.style.width = (pageWidth - margin * 2) + 'px';
@@ -12475,6 +12476,31 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
                 return `
                     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                    <style>
+                        /* Prevent elements from breaking across pages */
+                        #quotationPDFContent * {
+                            page-break-inside: avoid;
+                            break-inside: avoid;
+                        }
+                        #quotationPDFContent table {
+                            page-break-inside: auto;
+                            break-inside: auto;
+                        }
+                        #quotationPDFContent tr {
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
+                        }
+                        #quotationPDFContent td, #quotationPDFContent th {
+                            word-wrap: break-word;
+                            overflow-wrap: break-word;
+                            word-break: break-word;
+                        }
+                        /* Prevent breaking inside major sections */
+                        #quotationPDFContent > div {
+                            page-break-inside: avoid;
+                            break-inside: avoid;
+                        }
+                    </style>
 
                     <div id="quotationPDFContent" style="background: white; padding: 0; font-family: Arial, sans-serif; max-width: 100%; margin: 0; border: 2px solid #000;">
 
@@ -12526,7 +12552,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         </div>
 
                         <!-- Items Table -->
-                        <div style="padding: 15px;">
+                        <div style="padding: 15px; margin-bottom: 20px;">
                             ${!q.orderType || q.orderType === 'single' ? `
                                 <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
                                     <thead>
@@ -12543,7 +12569,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                             <tr style="border: 1px solid #000;">
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: center;">${index + 1}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
-                                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${item.quantity.toFixed(2)}</td>
+                                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.rate || item.price || 0).toLocaleString('en-IN')}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                             </tr>
@@ -12557,7 +12583,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             ` : ''}
 
                             ${q.orderType === 'multifunction' ? (q.functions || []).map((func, funcIdx) => `
-                                <div style="margin-bottom: 20px;">
+                                <div style="margin-bottom: 25px; margin-top: 15px;">
                                     <div style="background: #f5f5f5; padding: 12px; border: 1px solid #000; font-weight: bold; font-size: 13px; color: #1976D2;">
                                         Function ${funcIdx + 1}: ${func.name || 'Unnamed'}
                                     </div>
@@ -12576,7 +12602,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                                 <tr style="border: 1px solid #000;">
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
-                                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${item.quantity.toFixed(2)}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                                 </tr>
@@ -12591,13 +12617,13 @@ Contact: 📱 98984 96111 / 76984 96111`;
                             `).join('') : ''}
 
                             ${q.orderType === 'multiday' ? (q.days || []).map((day, dayIdx) => `
-                                <div style="margin-bottom: 30px;">
+                                <div style="margin-bottom: 35px; margin-top: 20px;">
                                     <div style="background: #e3f2fd; padding: 14px; border: 1px solid #000; font-weight: bold; font-size: 14px; color: #0d47a1; margin-bottom: 15px;">
                                         Day ${dayIdx + 1}: ${day.date ? Utils.formatDate(day.date) : 'No date set'}
                                     </div>
 
                                     ${(day.functions || []).map((func, funcIdx) => `
-                                        <div style="margin-bottom: 15px;">
+                                        <div style="margin-bottom: 20px; margin-top: 10px;">
                                             <div style="background: #f5f5f5; padding: 10px; border: 1px solid #000; font-weight: bold; font-size: 12px; color: #1976D2;">
                                                 ${func.name || 'Unnamed Function'}
                                             </div>
@@ -12616,7 +12642,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                                         <tr style="border: 1px solid #000;">
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
-                                                            <td style="padding: 10px; border: 1px solid #000; text-align: center;">${item.quantity.toFixed(2)}</td>
+                                                            <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                                         </tr>
@@ -12638,7 +12664,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         </div>
 
                         <!-- Terms & Conditions Section -->
-                        <div style="padding: 15px; border-top: 2px solid #000;">
+                        <div style="padding: 15px; border-top: 2px solid #000; margin-top: 25px;">
                             <div style="font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #000;">Terms & Conditions:</div>
                             <div style="font-size: 11px; line-height: 1.7; color: #000; font-weight: 500;">
                                 <div style="margin-bottom: 5px;"><strong style="color: #1976D2;">Payment Terms:</strong></div>
@@ -12826,7 +12852,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(...black);
-                        doc.text(item.quantity.toFixed(2), currentX + 2, yPos + 5);
+                        doc.text(Math.round(item.quantity).toString(), currentX + 2, yPos + 5);
                         currentX += colWidths[3];
 
                         doc.text(`₹${(item.rate || item.price || 0).toLocaleString('en-IN')}`, currentX + 2, yPos + 5);
