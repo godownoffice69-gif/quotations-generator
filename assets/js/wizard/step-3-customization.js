@@ -49,19 +49,29 @@ export class Step3Customization {
             const itemsRef = collection(doc(db, 'inventory', 'items'), 'list');
             const itemsSnapshot = await getDocs(itemsRef);
             this.allItems = [];
+            let hiddenCount = 0;
+
             itemsSnapshot.forEach(docSnap => {
                 const itemData = { id: docSnap.id, ...docSnap.data() };
-                this.allItems.push(itemData);
 
-                // Debug: Log each item with its imageUrl status
-                if (itemData.imageUrl) {
-                    console.log(`✅ Item "${itemData.name}" has image:`, itemData.imageUrl);
+                // Filter: Only include items that are visible on website
+                // Default to visible if field doesn't exist (backward compatibility)
+                if (itemData.visibleOnWebsite !== false) {
+                    this.allItems.push(itemData);
+
+                    // Debug: Log each item with its imageUrl status
+                    if (itemData.imageUrl) {
+                        console.log(`✅ Item "${itemData.name}" has image:`, itemData.imageUrl);
+                    } else {
+                        console.log(`⚠️ Item "${itemData.name}" has NO image`);
+                    }
                 } else {
-                    console.log(`⚠️ Item "${itemData.name}" has NO image`);
+                    hiddenCount++;
+                    console.log(`🔒 Item "${itemData.name}" is hidden from website`);
                 }
             });
 
-            console.log(`✅ Loaded ${this.allItems.length} items (${this.allItems.filter(i => i.imageUrl).length} with images), ${this.categories.length} categories`);
+            console.log(`✅ Loaded ${this.allItems.length} visible items (${this.allItems.filter(i => i.imageUrl).length} with images), ${hiddenCount} hidden, ${this.categories.length} categories`);
 
         } catch (error) {
             console.error('❌ Error loading inventory:', error);
