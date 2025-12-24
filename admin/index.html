@@ -12786,6 +12786,15 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                 </div>
                             `).join('') : ''}
 
+                            ${q.orderType === 'multifunction' && (q.functions || []).length > 0 ? `
+                                <!-- Grand Total for Multifunction -->
+                                <div style="margin-top: 20px; padding: 15px; border: 2px solid #000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: right;">
+                                    <div style="font-size: 18px; font-weight: bold; color: white;">
+                                        GRAND TOTAL: ₹${q.financials.grandTotal.toLocaleString('en-IN')}/-
+                                    </div>
+                                </div>
+                            ` : ''}
+
                             ${q.orderType === 'multiday' ? (q.days || []).map((day, dayIdx) => `
                                 <div style="margin-bottom: 35px; margin-top: 20px;">
                                     <div style="background: #e3f2fd; padding: 14px; border: 1px solid #000; font-weight: bold; font-size: 14px; color: #0d47a1; margin-bottom: 15px;">
@@ -12841,6 +12850,15 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                     </div>
                                 </div>
                             `).join('') : ''}
+
+                            ${q.orderType === 'multiday' && (q.days || []).length > 0 ? `
+                                <!-- Grand Total for Multiday -->
+                                <div style="margin-top: 20px; padding: 15px; border: 2px solid #000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: right;">
+                                    <div style="font-size: 18px; font-weight: bold; color: white;">
+                                        GRAND TOTAL: ₹${q.financials.grandTotal.toLocaleString('en-IN')}/-
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
 
                         <!-- Notes Section (if exists) -->
