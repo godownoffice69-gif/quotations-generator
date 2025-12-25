@@ -483,11 +483,13 @@ html {
 .gallery-video-wrapper {
   position: relative;
   width: 100%;
-  /* DO NOT set height - let aspect-ratio determine it naturally */
+  /* The inline aspect-ratio style from JS determines the height */
   overflow: hidden;
   border-radius: 12px;
   background: #000;
   display: block;
+  /* Ensure aspect-ratio is respected */
+  contain: layout;
 }
 
 .gallery-video-wrapper iframe {
@@ -498,6 +500,7 @@ html {
   height: 100%;
   border: none;
   display: block;
+  object-fit: contain; /* Ensure video maintains aspect ratio */
 }
 
 .video-platform-badge {

@@ -108,71 +108,74 @@ class AdDisplayManager {
                 this.ads = [];
             });
         } catch (error) {
-            console.error('Error setting up ad listener:', error);
-            console.log('📡 Fetching from Firestore collection: advertisements');
-            const snapshot = await this.db.collection('advertisements').get();
-            console.log('📦 Raw snapshot size:', snapshot.size);
+            console.error('❌ Error setting up ad listener, falling back to static fetch:', error);
 
-            const allAds = snapshot.docs.map(doc => {
-                console.log('📄 Ad document:', doc.id, doc.data());
-                return doc.data();
-            });
-            console.log('📊 Total ads fetched:', allAds.length);
+            try {
+                console.log('📡 Fetching from Firestore collection: advertisements');
+                const snapshot = await this.db.collection('advertisements').get();
+                console.log('📦 Raw snapshot size:', snapshot.size);
 
-            // Filter ads based on:
-            // 1. Status (active or scheduled within date range)
-            // 2. Page (all or current page)
-            // 3. Visibility
-            this.ads = allAds.filter(ad => {
-                console.log('🔍 Filtering ad:', ad.title);
+                const allAds = snapshot.docs.map(doc => {
+                    console.log('📄 Ad document:', doc.id, doc.data());
+                    return doc.data();
+                });
+                console.log('📊 Total ads fetched:', allAds.length);
 
-                // Check visibility
-                if (!ad.isVisible) {
-                    console.log('  ❌ Not visible');
-                    return false;
-                }
+                // Filter ads based on:
+                // 1. Status (active or scheduled within date range)
+                // 2. Page (all or current page)
+                // 3. Visibility
+                this.ads = allAds.filter(ad => {
+                    console.log('🔍 Filtering ad:', ad.title);
 
-                // Check page
-                const adPage = ad.placement?.page || 'all';
-                console.log('  📍 Ad page:', adPage, '| Current page:', this.currentPage);
-                if (adPage !== 'all' && adPage !== this.currentPage) {
-                    console.log('  ❌ Page mismatch');
-                    return false;
-                }
-
-                // Check status and schedule
-                console.log('  📊 Status:', ad.status);
-                if (ad.status === 'inactive') {
-                    console.log('  ❌ Inactive');
-                    return false;
-                }
-
-                if (ad.status === 'scheduled') {
-                    const now = new Date();
-                    const startDate = ad.schedule?.startDate ? new Date(ad.schedule.startDate) : null;
-                    const endDate = ad.schedule?.endDate ? new Date(ad.schedule.endDate) : null;
-
-                    console.log('  ⏰ Schedule check:', { now, startDate, endDate });
-                    if (startDate && now < startDate) {
-                        console.log('  ❌ Not started yet');
+                    // Check visibility
+                    if (!ad.isVisible) {
+                        console.log('  ❌ Not visible');
                         return false;
                     }
-                    if (endDate && now > endDate) {
-                        console.log('  ❌ Already ended');
+
+                    // Check page
+                    const adPage = ad.placement?.page || 'all';
+                    console.log('  📍 Ad page:', adPage, '| Current page:', this.currentPage);
+                    if (adPage !== 'all' && adPage !== this.currentPage) {
+                        console.log('  ❌ Page mismatch');
                         return false;
                     }
-                }
 
-                console.log('  ✅ Ad passed all filters');
-                return true;
-            });
+                    // Check status and schedule
+                    console.log('  📊 Status:', ad.status);
+                    if (ad.status === 'inactive') {
+                        console.log('  ❌ Inactive');
+                        return false;
+                    }
 
-            console.log(`✅ Loaded ${this.ads.length} active ads for ${this.currentPage} page`);
-            console.log('📋 Filtered ads:', this.ads);
-        } catch (error) {
-            console.error('❌ Error loading ads from Firestore:', error);
-            console.error('Error details:', error.message, error.stack);
-            this.ads = [];
+                    if (ad.status === 'scheduled') {
+                        const now = new Date();
+                        const startDate = ad.schedule?.startDate ? new Date(ad.schedule.startDate) : null;
+                        const endDate = ad.schedule?.endDate ? new Date(ad.schedule.endDate) : null;
+
+                        console.log('  ⏰ Schedule check:', { now, startDate, endDate });
+                        if (startDate && now < startDate) {
+                            console.log('  ❌ Not started yet');
+                            return false;
+                        }
+                        if (endDate && now > endDate) {
+                            console.log('  ❌ Already ended');
+                            return false;
+                        }
+                    }
+
+                    console.log('  ✅ Ad passed all filters');
+                    return true;
+                });
+
+                console.log(`✅ Loaded ${this.ads.length} active ads for ${this.currentPage} page`);
+                console.log('📋 Filtered ads:', this.ads);
+            } catch (innerError) {
+                console.error('❌ Error loading ads from Firestore:', innerError);
+                console.error('Error details:', innerError.message, innerError.stack);
+                this.ads = [];
+            }
         }
     }
 
