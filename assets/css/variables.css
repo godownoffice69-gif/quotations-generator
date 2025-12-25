@@ -3,6 +3,13 @@
    Centralized colors, spacing, typography, and design tokens
    ═══════════════════════════════════════════════════════════════════ */
 
+/* CSS Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 :root {
   /* Color Palette */
   --primary: #8B5CF6;
