@@ -4545,8 +4545,14 @@ const OMS = {
 
         if (!startDate || !endDate) {
             container.innerHTML = '';
+            // CRITICAL FIX: Clear function data when dates are cleared
+            window.dayFunctionsData = {};
             return;
         }
+
+        // CRITICAL FIX: Reset function data before regenerating days
+        // This prevents duplicate functions when generateDayWiseFunctions() is called multiple times
+        window.dayFunctionsData = {};
 
         const start = new Date(startDate);
         const end = new Date(endDate);
