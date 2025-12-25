@@ -142,6 +142,21 @@ export const Utils = {
     // ========== VALIDATION ==========
 
     /**
+     * Escape HTML to prevent XSS attacks
+     * @param {string} unsafe - Unsafe HTML string
+     * @returns {string} Escaped HTML string
+     */
+    escapeHtml: (unsafe) => {
+        if (!unsafe) return '';
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    },
+
+    /**
      * Validate required fields
      * @param {array} fields - Array of field IDs to validate
      * @returns {array} Array of field IDs that are empty
