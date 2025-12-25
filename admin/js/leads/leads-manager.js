@@ -281,15 +281,45 @@ export class LeadsManager {
         const createdDate = lead.createdAt ? this.formatDate(lead.createdAt.toDate()) : 'Just now';
         const totalItems = lead.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
+        // Check for popup offer
+        const hasPopupOffer = lead.popupOffer && lead.popupOffer.popupId;
+        const popupOfferBadge = hasPopupOffer ?
+            `<span class="badge" style="background: linear-gradient(135deg, #FF6B6B 0%, #FFD93D 100%); color: #1E293B; font-weight: 600; animation: pulse 2s infinite;">
+                🎁 SPECIAL OFFER
+            </span>` : '';
+
         return `
-            <div class="lead-card">
+            <div class="lead-card" style="${hasPopupOffer ? 'border-left: 4px solid #FF6B6B;' : ''}">
                 <div class="lead-card-header">
                     <div>
                         <strong style="font-size: 1.125rem;">${lead.leadId || 'N/A'}</strong>
                         <div style="font-size: 0.75rem; color: #64748B; margin-top: 0.25rem;">${createdDate}</div>
                     </div>
-                    ${statusBadges[lead.status] || ''}
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        ${statusBadges[lead.status] || ''}
+                        ${popupOfferBadge}
+                    </div>
                 </div>
+
+                ${hasPopupOffer ? `
+                    <div style="background: linear-gradient(135deg, #FFF5E1 0%, #FFE4B5 100%); padding: 0.75rem; margin: 0.5rem 0; border-radius: 6px; border: 1px solid #FFD700;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <span style="font-size: 1.5rem;">🎯</span>
+                            <strong style="color: #B8860B;">Popup Offer Applied</strong>
+                        </div>
+                        <div style="font-size: 0.9rem; color: #333; margin-bottom: 0.25rem;">
+                            <strong>${lead.popupOffer.discountText || 'Special Discount'}</strong>
+                        </div>
+                        ${lead.popupOffer.description ? `
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">
+                                ${lead.popupOffer.description}
+                            </div>
+                        ` : ''}
+                        <div style="font-size: 0.75rem; color: #B8860B; font-style: italic;">
+                            ⚠️ Remember to apply this discount during checkout!
+                        </div>
+                    </div>
+                ` : ''}
 
                 <div class="lead-card-body">
                     <div class="lead-info-row">
