@@ -65,7 +65,7 @@ class AdDisplayManager {
     /**
      * Load ads from Firestore with real-time updates
      */
-    loadAds() {
+    async loadAds() {
         try {
             // Set up real-time listener for advertisements
             this.db.collection('advertisements').onSnapshot(snapshot => {
