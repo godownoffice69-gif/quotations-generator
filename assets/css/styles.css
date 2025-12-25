@@ -473,23 +473,46 @@ html {
 /* Video Gallery Styles */
 .gallery-video-item {
   /* Override .gallery-item's aspect-ratio: 1 to allow natural video dimensions */
+  position: relative; /* Required for overlay positioning */
   aspect-ratio: unset !important; /* Completely remove any aspect-ratio constraint */
   background: #000;
   max-width: 100%;
   margin: 0 auto;
   min-height: unset !important; /* Remove fixed min-height to allow natural sizing */
   height: auto !important; /* Let content determine height */
+  display: flex; /* Use flex to wrap child tightly */
+  flex-direction: column; /* Stack children vertically */
 }
 
 .gallery-video-wrapper {
   position: relative;
   width: 100%;
   /* The inline aspect-ratio style from JS (e.g., "9/16") determines the height */
-  /* NO height property - aspect-ratio calculates it automatically */
   overflow: hidden;
   border-radius: 12px;
   background: #000;
   display: block;
+  isolation: isolate; /* Create stacking context */
+}
+
+/* Use ::before pseudo-element to force aspect-ratio height calculation */
+.gallery-video-wrapper::before {
+  content: '';
+  display: block;
+  padding-bottom: var(--aspect-ratio-padding, 56.25%); /* Default 16:9 = 56.25% */
+}
+
+/* Apply aspect-ratio based heights */
+.gallery-video-wrapper[style*="aspect-ratio: 9/16"]::before {
+  padding-bottom: 177.78%; /* 16/9 * 100 = 177.78% for 9:16 vertical */
+}
+
+.gallery-video-wrapper[style*="aspect-ratio: 16/9"]::before {
+  padding-bottom: 56.25%; /* 9/16 * 100 = 56.25% for 16:9 landscape */
+}
+
+.gallery-video-wrapper[style*="aspect-ratio: 1/1"]::before {
+  padding-bottom: 100%; /* 1/1 * 100 = 100% for square */
 }
 
 .gallery-video-wrapper iframe {
@@ -500,7 +523,6 @@ html {
   height: 100%;
   border: none;
   display: block;
-  object-fit: contain; /* Ensure video maintains aspect ratio */
 }
 
 .video-platform-badge {
@@ -1050,10 +1072,13 @@ html {
 
   /* Mobile Video Optimization - Fix "trapped in box" issue */
   .gallery-video-item {
+    position: relative !important; /* Ensure positioning context for overlay */
     aspect-ratio: unset !important; /* Remove any aspect-ratio constraint on mobile */
     min-height: unset !important; /* Force remove any min-height */
     max-width: 100%; /* Full width on mobile */
     height: auto !important; /* Let content (video wrapper) determine height */
+    display: flex !important; /* Wrap child tightly */
+    flex-direction: column !important;
   }
 
   .gallery-video-wrapper {
