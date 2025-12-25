@@ -21,6 +21,7 @@ import { Utils } from '../utils/helpers.js';
 
 export const Conversion = {
     currentSection: 'popups', // Default section
+    exitPopupsListenerActive: false, // Track if real-time listener is active
 
     /**
      * Render main Marketing & Conversion interface
@@ -223,6 +224,25 @@ export const Conversion = {
     async renderExitIntentPopups(oms, container) {
         // Load existing popups
         const popups = await this.loadExitIntentPopups(oms);
+
+        // Set up real-time listener for analytics updates (only once)
+        if (!this.exitPopupsListenerActive) {
+            const db = window.db;
+            if (db) {
+                db.collection('exit_intent_popups').onSnapshot(() => {
+                    console.log('📊 Popup analytics updated, refreshing display...');
+                    // Reload popups and re-render without setting up another listener
+                    this.loadExitIntentPopups(oms).then(updatedPopups => {
+                        const grid = document.getElementById('exitPopupsGrid');
+                        if (grid && updatedPopups.length > 0) {
+                            grid.innerHTML = updatedPopups.map(popup => this.renderExitPopupCard(popup, oms)).join('');
+                        }
+                    });
+                });
+                this.exitPopupsListenerActive = true;
+                console.log('✅ Real-time analytics listener activated');
+            }
+        }
 
         container.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">

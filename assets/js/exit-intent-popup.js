@@ -128,7 +128,9 @@
 
         // Desktop: Mouse leaving viewport
         if (!isMobile()) {
-            document.addEventListener('mouseout', handleMouseOut);
+            // Use mousemove to detect when cursor goes to top (more reliable than mouseout)
+            document.addEventListener('mousemove', handleMouseMove);
+            console.log('✅ Desktop exit intent enabled (mouse move to top)');
         } else if (CONFIG.mobileEnabled) {
             // Mobile: Scroll up detection (alternative for mobile)
             let lastScrollY = window.scrollY;
@@ -149,14 +151,27 @@
 
                 lastScrollY = currentScrollY;
             });
+            console.log('✅ Mobile exit intent enabled (scroll up detection)');
         }
 
         exitIntentListenerAdded = true;
-        console.log('Exit intent detection enabled');
     }
 
     /**
-     * Handle mouse leaving viewport
+     * Handle mouse movement (desktop exit detection)
+     */
+    function handleMouseMove(e) {
+        // Check if mouse is in the top 50px of viewport (about to leave)
+        if (e.clientY <= 50 && !hasShownPopup) {
+            // Remove listener after triggering once
+            document.removeEventListener('mousemove', handleMouseMove);
+            console.log('🎯 Exit intent detected! (mouse at top)');
+            showPopup();
+        }
+    }
+
+    /**
+     * Handle mouse leaving viewport (backup method)
      */
     function handleMouseOut(e) {
         // Check if mouse is leaving through the top of the viewport
