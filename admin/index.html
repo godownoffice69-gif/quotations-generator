@@ -402,6 +402,52 @@
             font-weight: 500;
         }
 
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--success);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
         /* Tables */
         .table-container {
             overflow-x: auto;
@@ -1828,6 +1874,7 @@
                 <button class="nav-tab" data-tab="financials">💰 Financials</button>
                 <button class="nav-tab" data-tab="packages">📦 Packages</button>
                 <button class="nav-tab" data-tab="leads">🎯 Leads</button>
+                <button class="nav-tab" data-tab="conversion">🚀 Marketing</button>
                 <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
             </div>
         </nav>
@@ -2150,6 +2197,10 @@
                 </div>
             </div>
 
+            <!-- Marketing & Conversion Tab -->
+            <div id="conversion" class="tab-content"></div>
+
+            <!-- Settings Tab -->
             <div id="settings" class="tab-content"></div>
         </main>
     </div>
@@ -22504,6 +22555,7 @@ if (diffDays > 30) {
                 // Use local paths from admin/js directory for Vercel compatibility
                 const { PackageManager } = await import(`./js/packages/package-manager.js?v=${BUILD_TIMESTAMP}`);
                 const { LeadsManager } = await import(`./js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
+                const { Conversion } = await import(`./js/features/conversion.js?v=${BUILD_TIMESTAMP}`);
 
                 console.log('✅ Package and Lead managers imported successfully');
 
@@ -22556,9 +22608,28 @@ if (diffDays > 30) {
                 }
             });
 
+            // Initialize Marketing & Conversion tab
+            const conversionTab = document.querySelector('[data-tab="conversion"]');
+            let conversionInitialized = false;
+
+            conversionTab?.addEventListener('click', async () => {
+                if (!conversionInitialized) {
+                    console.log('🚀 Initializing Conversion module...');
+                    try {
+                        // Render conversion interface
+                        Conversion.renderConversion(window.OMS);
+                        conversionInitialized = true;
+                        console.log('✅ Conversion module initialized');
+                    } catch (error) {
+                        console.error('❌ Failed to initialize Conversion module:', error);
+                    }
+                }
+            });
+
             // Make managers globally available
             window.packageManager = packageManager;
             window.leadsManager = leadsManager;
+            window.Conversion = Conversion;
 
             console.log('✅ Packages and Leads managers ready');
 
