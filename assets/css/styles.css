@@ -472,24 +472,24 @@ html {
 
 /* Video Gallery Styles */
 .gallery-video-item {
-  /* Override .gallery-item's aspect-ratio: 1 */
-  aspect-ratio: auto !important;
+  /* Override .gallery-item's aspect-ratio: 1 to allow natural video dimensions */
+  aspect-ratio: unset !important; /* Completely remove any aspect-ratio constraint */
   background: #000;
   max-width: 100%;
   margin: 0 auto;
-  min-height: unset; /* Remove fixed min-height to allow natural sizing */
+  min-height: unset !important; /* Remove fixed min-height to allow natural sizing */
+  height: auto !important; /* Let content determine height */
 }
 
 .gallery-video-wrapper {
   position: relative;
   width: 100%;
-  /* The inline aspect-ratio style from JS determines the height */
+  /* The inline aspect-ratio style from JS (e.g., "9/16") determines the height */
+  /* NO height property - aspect-ratio calculates it automatically */
   overflow: hidden;
   border-radius: 12px;
   background: #000;
   display: block;
-  /* Ensure aspect-ratio is respected */
-  contain: layout;
 }
 
 .gallery-video-wrapper iframe {
@@ -1050,13 +1050,15 @@ html {
 
   /* Mobile Video Optimization - Fix "trapped in box" issue */
   .gallery-video-item {
+    aspect-ratio: unset !important; /* Remove any aspect-ratio constraint on mobile */
     min-height: unset !important; /* Force remove any min-height */
     max-width: 100%; /* Full width on mobile */
+    height: auto !important; /* Let content (video wrapper) determine height */
   }
 
   .gallery-video-wrapper {
     border-radius: 8px; /* Slightly smaller border radius */
-    /* NO min-height or max-height - let aspect-ratio work naturally */
+    /* NO min-height or max-height - let inline aspect-ratio work naturally */
   }
 
   /* Limit very tall videos on mobile to prevent dominating the screen */
