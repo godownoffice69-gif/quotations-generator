@@ -257,12 +257,82 @@
     }
 
     @media (max-width: 768px) {
+      /* Hero Section Mobile Optimization */
+      .hero {
+        min-height: 100vh;
+        padding: 1rem;
+      }
+
+      .hero-content {
+        padding: 1rem;
+      }
+
+      .logo {
+        max-width: 120px;
+        margin-bottom: 2rem;
+      }
+
+      .hero h1 {
+        font-size: clamp(2rem, 8vw, 3rem);
+        line-height: 1.2;
+        margin-bottom: 1rem;
+      }
+
+      .hero h1 .highlight {
+        font-size: 1.1em;
+      }
+
+      .hero p {
+        font-size: clamp(0.95rem, 3vw, 1.1rem);
+        margin-bottom: 2rem;
+        padding: 0 0.5rem;
+      }
+
+      .cta-buttons {
+        gap: 1rem;
+        flex-direction: column;
+        width: 100%;
+        padding: 0 1rem;
+      }
+
+      .btn {
+        width: 100%;
+        max-width: 100%;
+        padding: 1rem 2rem;
+        font-size: 1rem;
+        justify-content: center;
+        min-height: 48px; /* Touch-friendly height */
+      }
+
+      .trust-line {
+        font-size: 0.85rem;
+        margin-top: 2rem;
+        padding: 0 1rem;
+      }
+
+      /* Ad Container Mobile */
       .ad-container {
         padding: 0 0.5rem;
       }
 
       .ad-video iframe {
         min-height: 250px;
+      }
+    }
+
+    /* Small mobile devices (under 400px) */
+    @media (max-width: 400px) {
+      .hero h1 {
+        font-size: 1.75rem;
+      }
+
+      .hero p {
+        font-size: 0.9rem;
+      }
+
+      .btn {
+        padding: 0.9rem 1.5rem;
+        font-size: 0.95rem;
       }
     }
 

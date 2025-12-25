@@ -3,29 +3,198 @@
    ============================================ */
 
 @media (max-width: 768px) {
+    /* Container and Layout */
+    .container {
+        padding: 0 1rem;
+    }
+
+    .admin-container {
+        padding: 1rem;
+    }
+
+    /* Forms */
     .form-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
     }
 
     .form-row {
         grid-template-columns: 1fr;
     }
 
+    .form-group label {
+        font-size: 0.95rem;
+    }
+
+    .form-control {
+        font-size: 16px; /* Prevent iOS zoom */
+        padding: 0.75rem;
+        min-height: 48px; /* Touch-friendly */
+    }
+
+    textarea.form-control {
+        min-height: 120px;
+    }
+
+    /* Buttons */
+    .btn {
+        width: 100%;
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+        min-height: 48px;
+        justify-content: center;
+    }
+
+    .btn-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .btn-group .btn {
+        width: 100%;
+    }
+
+    /* Stats and Dashboard */
     .stats-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
     }
 
+    .stat-card {
+        padding: 1.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+    }
+
+    /* Tables - Mobile Responsive */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-table {
+        min-width: 600px; /* Allow horizontal scroll */
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    /* Calendar */
     .calendar-day {
         min-height: 80px;
+        font-size: 0.875rem;
     }
 
-    .search-global {
-        width: 200px;
+    .calendar-header {
+        font-size: 0.75rem;
     }
 
+    /* Header */
     .header-content {
         flex-direction: column;
         gap: 1rem;
+        padding: 1rem;
+    }
+
+    .search-global {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Navigation */
+    .admin-nav {
+        flex-direction: column;
+    }
+
+    .admin-nav a {
+        padding: 0.875rem 1rem;
+        width: 100%;
+    }
+
+    /* Modals */
+    .modal-content {
+        margin: 1rem;
+        padding: 1.5rem;
+        max-width: calc(100vw - 2rem);
+    }
+
+    .modal-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+        gap: 0.5rem;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+    }
+
+    /* Cards */
+    .card {
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .card-header {
+        font-size: 1.125rem;
+    }
+
+    /* Video Upload */
+    .video-preview {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* Package Items */
+    .items-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+}
+
+/* Small mobile devices (under 400px) */
+@media (max-width: 400px) {
+    .admin-container {
+        padding: 0.75rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.95rem;
+    }
+
+    .modal-content {
+        padding: 1rem;
+    }
+}
+
+/* Tablet breakpoint (iPad, etc.) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .items-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
