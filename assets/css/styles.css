@@ -1067,28 +1067,28 @@ html {
 
   .gallery-grid {
     grid-template-columns: 1fr;
-    gap: 1.5rem; /* Increased gap for better separation */
+    gap: 2rem; /* Good separation between videos */
+    padding: 0; /* No extra padding - let videos be full width */
   }
 
-  /* Mobile Video Optimization - Fix "trapped in box" issue */
+  /* Mobile Video Optimization - Make videos LARGE (one per screen) */
   .gallery-video-item {
     position: relative !important; /* Ensure positioning context for overlay */
     aspect-ratio: unset !important; /* Remove any aspect-ratio constraint on mobile */
     min-height: unset !important; /* Force remove any min-height */
+    max-height: none !important; /* No max-height constraint */
     max-width: 100%; /* Full width on mobile */
+    width: 100%; /* Full width */
     height: auto !important; /* Let content (video wrapper) determine height */
     display: flex !important; /* Wrap child tightly */
     flex-direction: column !important;
+    margin: 0 auto; /* Center if needed */
   }
 
   .gallery-video-wrapper {
     border-radius: 8px; /* Slightly smaller border radius */
-    /* NO min-height or max-height - let inline aspect-ratio work naturally */
-  }
-
-  /* Limit very tall videos on mobile to prevent dominating the screen */
-  .gallery-video-wrapper[style*="aspect-ratio: 9/16"] {
-    max-height: 80vh; /* Limit vertical videos to 80% of viewport */
+    width: 100%; /* Ensure full width */
+    /* Allow videos to be their NATURAL SIZE based on aspect-ratio - NO constraints! */
   }
 
   .video-platform-badge {
