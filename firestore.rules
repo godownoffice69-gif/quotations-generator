@@ -183,6 +183,70 @@ service cloud.firestore {
       allow read, update, delete: if isAuthenticated();  // Authenticated users can manage leads
     }
 
+    // ========================================
+    // MARKETING & CONVERSION COLLECTIONS
+    // ========================================
+    // Collections for conversion optimization features managed via Marketing tab
+    // Public can read (for website display), authenticated users can write (admin panel)
+
+    // Exit Intent Popups - displays popups when visitors try to leave
+    match /exit_intent_popups/{popupId} {
+      allow read: if true;  // Public read for website display
+      allow write: if isAuthenticated();  // Authenticated users can manage
+    }
+
+    // Social Proof Notifications - "X just booked..." notifications
+    match /social_proof_notifications/{notificationId} {
+      allow read: if true;  // Public read for website display
+      allow write: if isAuthenticated();  // Authenticated users can manage
+    }
+
+    // Sticky Bars - top/bottom announcement bars
+    match /sticky_bars/{barId} {
+      allow read: if true;  // Public read for website display
+      allow write: if isAuthenticated();  // Authenticated users can manage
+    }
+
+    // Testimonials - customer reviews and video testimonials
+    match /testimonials/{testimonialId} {
+      allow read: if true;  // Public read for website display
+      allow write: if isAuthenticated();  // Authenticated users can manage
+    }
+
+    // Before/After Gallery - transformation comparison images
+    match /before_after_gallery/{galleryId} {
+      allow read: if true;  // Public read for website display
+      allow write: if isAuthenticated();  // Authenticated users can manage
+    }
+
+    // Trust Elements - badges, certifications, trust indicators
+    match /trust_elements/{elementId} {
+      allow read: if true;  // Public read for website display
+      allow write: if isAuthenticated();  // Authenticated users can manage
+    }
+
+    // Email Templates - automated email sequences
+    match /email_templates/{templateId} {
+      allow read, write: if isAuthenticated();  // Only authenticated users
+    }
+
+    // WhatsApp Templates - automated WhatsApp messages
+    match /whatsapp_templates/{templateId} {
+      allow read, write: if isAuthenticated();  // Only authenticated users
+    }
+
+    // Chatbot Responses - chatbot conversation flows
+    match /chatbot_responses/{responseId} {
+      allow read: if true;  // Public read for chatbot
+      allow write: if isAuthenticated();  // Authenticated users can manage
+    }
+
+    // Discount Campaigns - seasonal discount campaigns
+    match /discount_campaigns/{campaignId} {
+      allow read: if true;  // Public read for website display
+      allow write: if isAuthenticated();  // Authenticated users can manage
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
@@ -247,6 +311,53 @@ service firebase.storage {
       // Only authenticated users can upload quotation attachments
       allow write, delete: if request.auth != null
                           && request.resource.size < 20 * 1024 * 1024;  // Max 20MB
+    }
+
+    // ========================================
+    // MARKETING & CONVERSION ASSETS
+    // ========================================
+    // Storage for popup backgrounds, testimonial images, etc.
+
+    // Exit Intent Popup backgrounds and images
+    match /popups/{imageId} {
+      // Anyone can read popup images (for website display)
+      allow read: if true;
+
+      // Only authenticated users can upload popup images
+      allow write, delete: if request.auth != null
+                          && request.resource.size < 5 * 1024 * 1024  // Max 5MB
+                          && request.resource.contentType.matches('image/.*');  // Images only
+    }
+
+    // Testimonial images and videos
+    match /testimonials/{mediaId} {
+      // Anyone can read testimonial media (for website display)
+      allow read: if true;
+
+      // Only authenticated users can upload testimonial media
+      allow write, delete: if request.auth != null
+                          && request.resource.size < 20 * 1024 * 1024;  // Max 20MB
+    }
+
+    // Before/After gallery images
+    match /before_after/{imageId} {
+      // Anyone can read before/after images (for website display)
+      allow read: if true;
+
+      // Only authenticated users can upload images
+      allow write, delete: if request.auth != null
+                          && request.resource.size < 5 * 1024 * 1024  // Max 5MB
+                          && request.resource.contentType.matches('image/.*');  // Images only
+    }
+
+    // Trust element badges and certifications
+    match /trust_elements/{imageId} {
+      // Anyone can read trust badges (for website display)
+      allow read: if true;
+
+      // Only authenticated users can upload badges
+      allow write, delete: if request.auth != null
+                          && request.resource.size < 2 * 1024 * 1024;  // Max 2MB
     }
 
     // ========================================

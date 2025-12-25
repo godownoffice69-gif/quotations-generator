@@ -476,25 +476,489 @@ export const Conversion = {
         }
     },
 
-    showCreateExitPopupModal() {
-        // Will implement modal creation
-        alert('Exit popup creation modal - TO BE IMPLEMENTED');
+    showCreateExitPopupModal(popupData = null) {
+        const isEdit = popupData !== null;
+        const modalId = 'exitPopupModal';
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById(modalId);
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h2 class="modal-title">${isEdit ? '✏️ Edit' : '➕ Create'} Exit Intent Popup</h2>
+                    <button class="modal-close" onclick="document.getElementById('${modalId}').remove()">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="exitPopupForm">
+                        <!-- Basic Information -->
+                        <div style="margin-bottom: 1.5rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">📝 Basic Information</h3>
+
+                            <div class="form-group">
+                                <label class="form-label">Popup Title *</label>
+                                <input type="text" id="popup-title" class="form-input"
+                                       placeholder="e.g., Wait! Don't Leave Without Your Quote"
+                                       value="${isEdit ? Utils.escapeHtml(popupData.title) : ''}" required>
+                                <small style="color: var(--text-gray);">This is the main headline visitors will see</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Discount/Offer Text *</label>
+                                <input type="text" id="popup-discount" class="form-input"
+                                       placeholder="e.g., Get 15% OFF if you book in next 10 minutes"
+                                       value="${isEdit ? Utils.escapeHtml(popupData.discountText || '') : ''}" required>
+                                <small style="color: var(--text-gray);">Describe the special offer</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Description (Optional)</label>
+                                <textarea id="popup-description" class="form-input" rows="3"
+                                          placeholder="Additional details about the offer...">${isEdit ? Utils.escapeHtml(popupData.description || '') : ''}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Countdown Timer -->
+                        <div style="margin-bottom: 1.5rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">⏰ Countdown Timer</h3>
+
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" id="popup-countdown-enabled"
+                                           ${isEdit && popupData.countdown?.enabled ? 'checked' : ''}>
+                                    <span>Enable countdown timer (creates urgency)</span>
+                                </label>
+                            </div>
+
+                            <div class="form-group" id="countdown-duration-group" style="display: ${isEdit && popupData.countdown?.enabled ? 'block' : 'none'};">
+                                <label class="form-label">Duration (minutes)</label>
+                                <input type="number" id="popup-countdown-duration" class="form-input"
+                                       min="1" max="60" value="${isEdit && popupData.countdown?.durationMinutes ? popupData.countdown.durationMinutes : 10}">
+                            </div>
+                        </div>
+
+                        <!-- Call-to-Action Button -->
+                        <div style="margin-bottom: 1.5rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">🎯 Call-to-Action Button</h3>
+
+                            <div class="form-group">
+                                <label class="form-label">Button Text *</label>
+                                <input type="text" id="popup-button-text" class="form-input"
+                                       placeholder="e.g., Get My Discount Now"
+                                       value="${isEdit ? Utils.escapeHtml(popupData.buttonText || 'Get Quote') : 'Get Quote'}" required>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Button Color</label>
+                                    <input type="color" id="popup-button-color" class="form-input"
+                                           value="${isEdit ? popupData.buttonColor || '#8B5CF6' : '#8B5CF6'}"
+                                           style="height: 50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Text Color</label>
+                                    <input type="color" id="popup-button-text-color" class="form-input"
+                                           value="${isEdit ? popupData.buttonTextColor || '#FFFFFF' : '#FFFFFF'}"
+                                           style="height: 50px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Background & Styling -->
+                        <div style="margin-bottom: 1.5rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">🎨 Background & Styling</h3>
+
+                            <div class="form-group">
+                                <label class="form-label">Background Image URL (Optional)</label>
+                                <input type="url" id="popup-bg-image" class="form-input"
+                                       placeholder="https://example.com/background.jpg"
+                                       value="${isEdit ? popupData.backgroundImage || '' : ''}">
+                                <small style="color: var(--text-gray);">Leave empty for solid color background</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Background Color</label>
+                                <input type="color" id="popup-bg-color" class="form-input"
+                                       value="${isEdit ? popupData.backgroundColor || '#FFFFFF' : '#FFFFFF'}"
+                                       style="height: 50px;">
+                            </div>
+                        </div>
+
+                        <!-- Display Settings -->
+                        <div style="margin-bottom: 1.5rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">👁️ Display Settings</h3>
+
+                            <div class="form-group">
+                                <label class="form-label">Show on Pages *</label>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" class="popup-pages" value="all"
+                                               ${isEdit && popupData.pages?.includes('all') ? 'checked' : !isEdit ? 'checked' : ''}>
+                                        <span>All Pages</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" class="popup-pages" value="homepage"
+                                               ${isEdit && popupData.pages?.includes('homepage') ? 'checked' : ''}>
+                                        <span>Homepage Only</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" class="popup-pages" value="quotation"
+                                               ${isEdit && popupData.pages?.includes('quotation') ? 'checked' : ''}>
+                                        <span>Quotation Page Only</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Delay (seconds)</label>
+                                <input type="number" id="popup-delay" class="form-input"
+                                       min="0" max="60" value="${isEdit ? popupData.delay || 0 : 0}">
+                                <small style="color: var(--text-gray);">Wait this many seconds before detecting exit intent</small>
+                            </div>
+                        </div>
+
+                        <!-- Scheduling -->
+                        <div style="margin-bottom: 1.5rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">📅 Scheduling (Optional)</h3>
+
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" id="popup-schedule-enabled"
+                                           ${isEdit && popupData.schedule ? 'checked' : ''}>
+                                    <span>Schedule specific dates</span>
+                                </label>
+                            </div>
+
+                            <div id="schedule-dates-group" style="display: ${isEdit && popupData.schedule ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Start Date</label>
+                                    <input type="date" id="popup-start-date" class="form-input"
+                                           value="${isEdit && popupData.schedule?.startDate ? popupData.schedule.startDate : ''}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">End Date</label>
+                                    <input type="date" id="popup-end-date" class="form-input"
+                                           value="${isEdit && popupData.schedule?.endDate ? popupData.schedule.endDate : ''}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div style="margin-bottom: 1.5rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">🚦 Status</h3>
+
+                            <div class="form-group">
+                                <label class="form-label">Initial Status</label>
+                                <select id="popup-status" class="form-input">
+                                    <option value="active" ${isEdit && popupData.status === 'active' ? 'selected' : ''}>Active (Show Immediately)</option>
+                                    <option value="inactive" ${isEdit && popupData.status === 'inactive' ? 'selected' : ''}>Inactive (Don't Show)</option>
+                                    <option value="scheduled" ${isEdit && popupData.status === 'scheduled' ? 'selected' : ''}>Scheduled (Show on Dates)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="Conversion.saveExitPopup(${isEdit ? `'${popupData.id}'` : 'null'})">
+                        ${isEdit ? '💾 Update Popup' : '✨ Create Popup'}
+                    </button>
+                </div>
+            </div>
+
+            <style>
+                .modal {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.2s;
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                .modal-content {
+                    background: var(--white);
+                    border-radius: var(--radius);
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s;
+                }
+
+                @keyframes slideUp {
+                    from { transform: translateY(50px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+
+                .modal-header {
+                    padding: 1.5rem;
+                    border-bottom: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .modal-title {
+                    margin: 0;
+                    font-size: 1.5rem;
+                }
+
+                .modal-close {
+                    background: none;
+                    border: none;
+                    font-size: 2rem;
+                    cursor: pointer;
+                    color: var(--text-gray);
+                    line-height: 1;
+                    padding: 0;
+                    width: 30px;
+                    height: 30px;
+                }
+
+                .modal-close:hover {
+                    color: var(--danger);
+                }
+
+                .modal-body {
+                    padding: 1.5rem;
+                }
+
+                .modal-footer {
+                    padding: 1rem 1.5rem;
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 0.5rem;
+                }
+
+                .form-group {
+                    margin-bottom: 1rem;
+                }
+
+                .form-label {
+                    display: block;
+                    margin-bottom: 0.5rem;
+                    font-weight: 500;
+                    color: var(--text-dark);
+                }
+
+                .form-input {
+                    width: 100%;
+                    padding: 0.6rem;
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius);
+                    font-size: 0.95rem;
+                    transition: var(--transition);
+                }
+
+                .form-input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+                }
+            </style>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Add event listeners for conditional fields
+        const countdownEnabled = document.getElementById('popup-countdown-enabled');
+        const countdownDurationGroup = document.getElementById('countdown-duration-group');
+        countdownEnabled.addEventListener('change', (e) => {
+            countdownDurationGroup.style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        const scheduleEnabled = document.getElementById('popup-schedule-enabled');
+        const scheduleDatesGroup = document.getElementById('schedule-dates-group');
+        scheduleEnabled.addEventListener('change', (e) => {
+            scheduleDatesGroup.style.display = e.target.checked ? 'grid' : 'none';
+        });
+
+        // Handle "All Pages" checkbox logic
+        const pagesCheckboxes = document.querySelectorAll('.popup-pages');
+        pagesCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.value === 'all' && e.target.checked) {
+                    pagesCheckboxes.forEach(cb => {
+                        if (cb.value !== 'all') cb.checked = false;
+                    });
+                } else if (e.target.value !== 'all' && e.target.checked) {
+                    pagesCheckboxes.forEach(cb => {
+                        if (cb.value === 'all') cb.checked = false;
+                    });
+                }
+            });
+        });
+    },
+
+    async saveExitPopup(popupId) {
+        const db = window.db;
+        if (!db) {
+            alert('Firebase not initialized');
+            return;
+        }
+
+        // Gather form data
+        const title = document.getElementById('popup-title').value.trim();
+        const discountText = document.getElementById('popup-discount').value.trim();
+        const description = document.getElementById('popup-description').value.trim();
+        const buttonText = document.getElementById('popup-button-text').value.trim();
+        const buttonColor = document.getElementById('popup-button-color').value;
+        const buttonTextColor = document.getElementById('popup-button-text-color').value;
+        const backgroundImage = document.getElementById('popup-bg-image').value.trim();
+        const backgroundColor = document.getElementById('popup-bg-color').value;
+        const delay = parseInt(document.getElementById('popup-delay').value);
+        const status = document.getElementById('popup-status').value;
+
+        // Validate required fields
+        if (!title || !discountText || !buttonText) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        // Get selected pages
+        const pagesCheckboxes = document.querySelectorAll('.popup-pages:checked');
+        const pages = Array.from(pagesCheckboxes).map(cb => cb.value);
+        if (pages.length === 0) {
+            alert('Please select at least one page to display the popup');
+            return;
+        }
+
+        // Countdown settings
+        const countdownEnabled = document.getElementById('popup-countdown-enabled').checked;
+        const countdown = countdownEnabled ? {
+            enabled: true,
+            durationMinutes: parseInt(document.getElementById('popup-countdown-duration').value)
+        } : { enabled: false };
+
+        // Schedule settings
+        const scheduleEnabled = document.getElementById('popup-schedule-enabled').checked;
+        const schedule = scheduleEnabled ? {
+            startDate: document.getElementById('popup-start-date').value,
+            endDate: document.getElementById('popup-end-date').value
+        } : null;
+
+        // Build popup data object
+        const popupData = {
+            title,
+            discountText,
+            description,
+            buttonText,
+            buttonColor,
+            buttonTextColor,
+            backgroundImage,
+            backgroundColor,
+            pages,
+            delay,
+            countdown,
+            schedule,
+            status,
+            analytics: popupId ? undefined : {
+                views: 0,
+                conversions: 0,
+                dismissals: 0
+            },
+            updatedAt: new Date().toISOString()
+        };
+
+        if (!popupId) {
+            popupData.createdAt = new Date().toISOString();
+        }
+
+        try {
+            if (popupId) {
+                // Update existing popup
+                await db.collection('exit_intent_popups').doc(popupId).update(popupData);
+                alert('✅ Popup updated successfully!');
+            } else {
+                // Create new popup
+                await db.collection('exit_intent_popups').add(popupData);
+                alert('✅ Popup created successfully!');
+            }
+
+            // Close modal
+            document.getElementById('exitPopupModal').remove();
+
+            // Refresh the list
+            this.renderPopupType('exit-intent', window.OMS);
+        } catch (error) {
+            console.error('Error saving popup:', error);
+            alert('❌ Error saving popup: ' + error.message);
+        }
     },
 
     async togglePopupStatus(popupId, isActive) {
-        // Will implement toggle
-        console.log('Toggle popup', popupId, isActive);
+        const db = window.db;
+        if (!db) return;
+
+        try {
+            const newStatus = isActive ? 'active' : 'inactive';
+            await db.collection('exit_intent_popups').doc(popupId).update({
+                status: newStatus,
+                updatedAt: new Date().toISOString()
+            });
+
+            console.log(`Popup ${popupId} status changed to ${newStatus}`);
+
+            // Refresh the list
+            setTimeout(() => {
+                this.renderPopupType('exit-intent', window.OMS);
+            }, 500);
+        } catch (error) {
+            console.error('Error toggling popup status:', error);
+            alert('Error updating popup status');
+        }
     },
 
-    editExitPopup(popupId) {
-        // Will implement edit
-        alert('Edit popup ' + popupId + ' - TO BE IMPLEMENTED');
+    async editExitPopup(popupId) {
+        const db = window.db;
+        if (!db) return;
+
+        try {
+            const doc = await db.collection('exit_intent_popups').doc(popupId).get();
+            if (doc.exists) {
+                const popupData = { id: doc.id, ...doc.data() };
+                this.showCreateExitPopupModal(popupData);
+            }
+        } catch (error) {
+            console.error('Error loading popup:', error);
+            alert('Error loading popup data');
+        }
     },
 
     async deleteExitPopup(popupId) {
-        if (confirm('Are you sure you want to delete this popup?')) {
-            // Will implement delete
-            console.log('Delete popup', popupId);
+        if (!confirm('Are you sure you want to delete this popup? This action cannot be undone.')) {
+            return;
+        }
+
+        const db = window.db;
+        if (!db) return;
+
+        try {
+            await db.collection('exit_intent_popups').doc(popupId).delete();
+            alert('✅ Popup deleted successfully');
+
+            // Refresh the list
+            this.renderPopupType('exit-intent', window.OMS);
+        } catch (error) {
+            console.error('Error deleting popup:', error);
+            alert('❌ Error deleting popup: ' + error.message);
         }
     },
 
