@@ -462,7 +462,13 @@ export const Conversion = {
 
     async loadExitIntentPopups(oms) {
         try {
-            const snapshot = await oms.db.collection('exit_intent_popups').get();
+            // Use window.db (Firebase Firestore instance initialized in admin panel)
+            const db = window.db;
+            if (!db) {
+                console.error('Firebase not initialized');
+                return [];
+            }
+            const snapshot = await db.collection('exit_intent_popups').get();
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error('Error loading exit intent popups:', error);
