@@ -471,12 +471,15 @@ html {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   VIDEO GALLERY STYLES - COMPLETELY REWRITTEN FOR MOBILE
+   VIDEO GALLERY STYLES - FREE HEIGHT (No Constraints!)
    ═══════════════════════════════════════════════════════════════════ */
 
 .gallery-video-item {
+  /* REMOVE ALL CONSTRAINTS - Let videos be FREE! */
   position: relative;
   width: 100%;
+  aspect-ratio: unset !important; /* Remove square constraint from .gallery-item */
+  height: auto !important; /* Free height - let child decide */
   background: #000;
   border-radius: 15px;
   overflow: hidden;
@@ -493,6 +496,8 @@ html {
 .gallery-video-wrapper {
   position: relative;
   width: 100%;
+  height: 0; /* Start with 0 height */
+  /* padding-bottom set by JavaScript creates the actual height */
   background: #000;
   overflow: hidden;
 }
@@ -1051,9 +1056,11 @@ html {
     gap: 2rem;
   }
 
-  /* Mobile Video Styles - Clean and Simple */
+  /* Mobile Video Styles - FREE HEIGHT (No Constraints!) */
   .gallery-video-item {
     width: 100%;
+    aspect-ratio: unset !important; /* Ensure no square constraint on mobile */
+    height: auto !important; /* Free height on mobile too */
     margin-bottom: 1.5rem;
   }
 
