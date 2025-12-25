@@ -183,8 +183,7 @@ html {
 .video-wrapper {
   position: relative;
   width: 100%;
-  min-height: 400px;
-  max-height: 800px;
+  /* Let aspect-ratio determine height naturally - NO min/max-height */
   aspect-ratio: 16 / 9; /* Default 16:9, but flexible */
   overflow: hidden;
   border-radius: 20px;
@@ -259,7 +258,7 @@ html {
 .video-card-preview {
   position: relative;
   width: 100%;
-  min-height: 300px;
+  /* Let aspect-ratio determine height naturally - NO min-height */
   aspect-ratio: 16 / 9; /* Default 16:9, but flexible */
   background: #000;
   overflow: hidden;
@@ -484,8 +483,7 @@ html {
 .gallery-video-wrapper {
   position: relative;
   width: 100%;
-  height: 100%;
-  min-height: 300px; /* Minimum height for very small screens */
+  /* DO NOT set height - let aspect-ratio determine it naturally */
   overflow: hidden;
   border-radius: 12px;
   background: #000;
@@ -1054,21 +1052,13 @@ html {
   }
 
   .gallery-video-wrapper {
-    min-height: 200px; /* Smaller min-height for mobile */
     border-radius: 8px; /* Slightly smaller border radius */
+    /* NO min-height or max-height - let aspect-ratio work naturally */
   }
 
-  /* Ensure videos maintain aspect ratio on mobile */
+  /* Limit very tall videos on mobile to prevent dominating the screen */
   .gallery-video-wrapper[style*="aspect-ratio: 9/16"] {
-    max-height: 70vh; /* Limit vertical videos height on mobile */
-  }
-
-  .gallery-video-wrapper[style*="aspect-ratio: 16/9"] {
-    min-height: 200px;
-  }
-
-  .gallery-video-wrapper[style*="aspect-ratio: 1/1"] {
-    min-height: 250px;
+    max-height: 80vh; /* Limit vertical videos to 80% of viewport */
   }
 
   .video-platform-badge {
@@ -1182,9 +1172,7 @@ html {
     gap: 1.5rem;
   }
 
-  .gallery-video-wrapper {
-    min-height: 250px;
-  }
+  /* Videos use natural aspect-ratio - no height constraints */
 
   .services-grid,
   .testimonials-grid {
