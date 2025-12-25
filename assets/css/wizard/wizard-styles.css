@@ -1258,47 +1258,167 @@
         padding: 1.5rem 1rem 2rem;
     }
 
+    .wizard-progress-step-label {
+        display: none; /* Hide step labels on mobile for cleaner look */
+    }
+
     .wizard-step {
         padding: 2rem 1rem;
     }
 
     .wizard-step-title {
         font-size: 1.875rem;
+        line-height: 1.2;
     }
 
     .wizard-step-subtitle {
         font-size: 1rem;
+        line-height: 1.5;
     }
 
     .event-types-grid,
     .packages-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    /* Event Type Cards - Mobile Optimization */
+    .event-type-card,
+    .package-card {
+        padding: 1.5rem;
+        min-height: unset;
+    }
+
+    .event-type-card h3,
+    .package-card h3 {
+        font-size: 1.25rem;
     }
 
     .selected-items-grid,
     .catalog-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.75rem;
     }
 
+    /* Form inputs - Touch-friendly sizing */
+    .wizard-input,
+    .wizard-textarea,
+    .wizard-select {
+        font-size: 16px; /* Prevent zoom on iOS */
+        padding: 0.875rem 1rem;
+        min-height: 48px; /* Touch-friendly height */
+    }
+
+    .wizard-textarea {
+        min-height: 120px;
+    }
+
+    /* Navigation buttons - Touch-friendly */
     .wizard-nav {
         flex-direction: column-reverse;
+        gap: 0.75rem;
     }
 
     .wizard-btn {
         width: 100%;
         justify-content: center;
+        min-height: 52px; /* Extra touch-friendly */
+        font-size: 1rem;
+        padding: 1rem 2rem;
     }
 
+    /* Lead Summary - Mobile Layout */
+    .lead-summary-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .lead-summary-item {
+        padding: 1rem;
+    }
+
+    /* Thank You Page */
     .thank-you-page h1 {
         font-size: 2rem;
+        line-height: 1.2;
     }
 
+    .thank-you-page p {
+        font-size: 1rem;
+    }
+
+    /* Item Counter - Mobile Position */
     .wizard-item-counter {
         bottom: 1rem;
         right: 1rem;
         width: 56px;
         height: 56px;
         font-size: 1.25rem;
+    }
+
+    /* Package Items - Mobile Spacing */
+    .package-items-list {
+        gap: 0.5rem;
+    }
+
+    .package-item-tag {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    /* Date and Time Pickers - Mobile Friendly */
+    .wizard-date-picker,
+    .wizard-time-picker {
+        width: 100%;
+        font-size: 16px;
+        min-height: 48px;
+    }
+}
+
+/* Small mobile devices (under 400px) */
+@media (max-width: 400px) {
+    .wizard-wrapper {
+        padding: 0.5rem 0.25rem;
+    }
+
+    .wizard-step {
+        padding: 1.5rem 0.75rem;
+    }
+
+    .wizard-step-title {
+        font-size: 1.5rem;
+    }
+
+    .wizard-step-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .event-type-card,
+    .package-card {
+        padding: 1.25rem;
+    }
+
+    .selected-items-grid,
+    .catalog-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    .wizard-btn {
+        font-size: 0.95rem;
+        padding: 0.875rem 1.5rem;
+    }
+}
+
+/* Tablet breakpoint (iPad, etc.) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .event-types-grid,
+    .packages-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .selected-items-grid,
+    .catalog-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     }
 }
 
