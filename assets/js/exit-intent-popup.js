@@ -60,13 +60,17 @@
      */
     async function loadPopups() {
         try {
+            // Import Firestore functions
+            const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
             // Get current page type
             const currentPage = getCurrentPage();
 
-            // Query Firestore for active popups
-            const snapshot = await window.db.collection('exit_intent_popups')
-                .where('status', '==', 'active')
-                .get();
+            // Query Firestore for active popups using modular SDK
+            const db = window.db;
+            const popupsRef = collection(db, 'exit_intent_popups');
+            const q = query(popupsRef, where('status', '==', 'active'));
+            const snapshot = await getDocs(q);
 
             const now = new Date();
 
@@ -94,9 +98,9 @@
                     return true;
                 });
 
-            console.log(`Loaded ${popups.length} eligible exit intent popup(s)`);
+            console.log(`✅ Loaded ${popups.length} eligible exit intent popup(s)`);
         } catch (error) {
-            console.error('Error loading exit intent popups:', error);
+            console.error('❌ Error loading exit intent popups:', error);
             popups = [];
         }
     }
@@ -473,16 +477,19 @@
         if (!currentPopup) return;
 
         try {
+            // Import Firestore functions
+            const { doc, updateDoc, increment } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
             const db = window.db;
-            const popupRef = db.collection('exit_intent_popups').doc(currentPopup.id);
+            const popupRef = doc(db, 'exit_intent_popups', currentPopup.id);
 
             if (eventType === 'view') {
-                await popupRef.update({
-                    'analytics.views': window.firebase.firestore.FieldValue.increment(1)
+                await updateDoc(popupRef, {
+                    'analytics.views': increment(1)
                 });
             } else if (eventType === 'conversion') {
-                await popupRef.update({
-                    'analytics.conversions': window.firebase.firestore.FieldValue.increment(1)
+                await updateDoc(popupRef, {
+                    'analytics.conversions': increment(1)
                 });
 
                 // Also track in Google Analytics if available
@@ -493,12 +500,14 @@
                     });
                 }
             } else if (eventType === 'dismissal') {
-                await popupRef.update({
-                    'analytics.dismissals': window.firebase.firestore.FieldValue.increment(1)
+                await updateDoc(popupRef, {
+                    'analytics.dismissals': increment(1)
                 });
             }
+
+            console.log(`📊 Tracked ${eventType} for popup: ${currentPopup.title}`);
         } catch (error) {
-            console.error('Error tracking exit popup analytics:', error);
+            console.error('❌ Error tracking exit popup analytics:', error);
         }
     }
 
@@ -552,18 +561,41 @@
         init
     };
 
-    // Auto-initialize when Firebase is ready
-    if (window.db) {
-        init();
-    } else {
-        // Wait for Firebase to initialize
-        window.addEventListener('load', () => {
-            if (window.db) {
-                init();
-            } else {
-                console.warn('Firebase not initialized - exit popups disabled');
-            }
+    /**
+     * Wait for Firebase to be ready
+     */
+    function waitForFirebase() {
+        return new Promise((resolve, reject) => {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds max
+
+            const checkFirebase = () => {
+                attempts++;
+
+                // Check for Firebase DB (window.firebaseDB is set in index.html)
+                if (window.firebaseDB) {
+                    console.log('✅ Firebase DB ready for exit popups');
+                    resolve(window.firebaseDB);
+                } else if (attempts >= maxAttempts) {
+                    console.warn('⚠️ Firebase DB not found - exit popups disabled');
+                    reject(new Error('Firebase DB not available'));
+                } else {
+                    setTimeout(checkFirebase, 100);
+                }
+            };
+            checkFirebase();
         });
     }
+
+    // Auto-initialize when Firebase is ready
+    (async function() {
+        try {
+            const db = await waitForFirebase();
+            window.db = db; // Set window.db for compatibility
+            await init();
+        } catch (error) {
+            console.warn('Exit popups disabled:', error.message);
+        }
+    })();
 
 })();
