@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Version: 2024-12-21-OMSREADY-EVENT-v9-FINAL -->
-    <!-- TIMESTAMP: 1734748800 -->
-    <!-- FIXED: OMSReady event was never dispatched -->
+    <!-- Version: 2025-12-25-MARKETING-DROPDOWN-GRADIENT-v10 -->
+    <!-- TIMESTAMP: 1735131600 -->
+    <!-- NEW: Marketing dropdown menu + Animated gradient header -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0">
@@ -61,13 +61,70 @@
         .app-container { min-height: 100vh; display: flex; flex-direction: column; }
         
         .app-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: var(--white);
             padding: 1rem 0;
             box-shadow: var(--shadow-lg);
             position: sticky;
             top: 0;
             z-index: 1000;
+            position: relative;
+            overflow: hidden;
+            animation: gradientCycle 15s ease infinite;
+            background-size: 400% 400%;
+        }
+
+        @keyframes gradientCycle {
+            0% {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background-size: 400% 400%;
+                background-position: 0% 50%;
+            }
+            20% {
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                background-size: 400% 400%;
+                background-position: 100% 50%;
+            }
+            40% {
+                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                background-size: 400% 400%;
+                background-position: 0% 50%;
+            }
+            60% {
+                background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+                background-size: 400% 400%;
+                background-position: 100% 50%;
+            }
+            80% {
+                background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+                background-size: 400% 400%;
+                background-position: 0% 50%;
+            }
+            100% {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background-size: 400% 400%;
+                background-position: 100% 50%;
+            }
+        }
+
+        .app-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: wave 3s linear infinite;
+        }
+
+        @keyframes wave {
+            0% {
+                left: -100%;
+            }
+            100% {
+                left: 100%;
+            }
         }
 
         .header-content {
@@ -77,6 +134,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            position: relative;
+            z-index: 1;
         }
 
         .company-name { font-size: 1.8rem; font-weight: 700; }
@@ -218,6 +277,71 @@
 
         .nav-tab:hover { color: var(--primary); background: var(--bg-hover); }
         .nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--bg-hover); }
+
+        /* Dropdown Menu for Marketing Tab */
+        .nav-tab-dropdown {
+            position: relative;
+        }
+
+        .nav-tab-dropdown .dropdown-arrow {
+            display: inline-block;
+            margin-left: 0.3rem;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-tab-dropdown.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--bg-card);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 2000;
+            margin-top: 0.5rem;
+        }
+
+        .nav-tab-dropdown.open .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: var(--bg-hover);
+            color: var(--primary);
+            padding-left: 1.5rem;
+        }
+
+        .dropdown-item.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            color: var(--primary);
+            font-weight: 600;
+        }
 
         .main-content {
             flex: 1;
@@ -1874,12 +1998,32 @@
                 <button class="nav-tab" data-tab="calendar">🗓️ Calendar</button>
                 <button class="nav-tab" data-tab="history">📚 History</button>
                 <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
-                <button class="nav-tab" data-tab="videos">🎥 Videos</button>
-                <button class="nav-tab" data-tab="advertisements">📢 Ads</button>
                 <button class="nav-tab" data-tab="financials">💰 Financials</button>
-                <button class="nav-tab" data-tab="packages">📦 Packages</button>
-                <button class="nav-tab" data-tab="leads">🎯 Leads</button>
-                <button class="nav-tab" data-tab="conversion">🚀 Marketing</button>
+
+                <!-- Marketing Dropdown Menu -->
+                <div class="nav-tab-dropdown" id="marketingDropdown">
+                    <button class="nav-tab" id="marketingTabBtn">
+                        🚀 Marketing <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item" data-tab="conversion">
+                            🎯 Marketing Dashboard
+                        </div>
+                        <div class="dropdown-item" data-tab="videos">
+                            🎥 Videos
+                        </div>
+                        <div class="dropdown-item" data-tab="advertisements">
+                            📢 Ads
+                        </div>
+                        <div class="dropdown-item" data-tab="packages">
+                            📦 Packages
+                        </div>
+                        <div class="dropdown-item" data-tab="leads">
+                            🎯 Leads
+                        </div>
+                    </div>
+                </div>
+
                 <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
             </div>
         </nav>
@@ -4579,9 +4723,34 @@ const OMS = {
 
                 // Navigation - use event delegation on parent
                 document.querySelector('.nav-container')?.addEventListener('click', (e) => {
+                    // Handle dropdown items
+                    const dropdownItem = e.target.closest('.dropdown-item');
+                    if (dropdownItem && dropdownItem.dataset.tab) {
+                        this.switchTab(dropdownItem.dataset.tab);
+                        // Close dropdown after selection
+                        document.getElementById('marketingDropdown')?.classList.remove('open');
+                        return;
+                    }
+
+                    // Handle dropdown toggle
+                    const dropdownBtn = e.target.closest('#marketingTabBtn');
+                    if (dropdownBtn) {
+                        e.stopPropagation();
+                        document.getElementById('marketingDropdown')?.classList.toggle('open');
+                        return;
+                    }
+
+                    // Handle regular tabs
                     const tab = e.target.closest('.nav-tab');
                     if (tab && tab.dataset.tab) {
                         this.switchTab(tab.dataset.tab);
+                    }
+                });
+
+                // Close marketing dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('#marketingDropdown')) {
+                        document.getElementById('marketingDropdown')?.classList.remove('open');
                     }
                 });
 
@@ -9259,10 +9428,23 @@ convertToQuotationDateFormat(dateStr) {
                     }
                 }
 
+                // Remove active class from all tabs and dropdown items
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.dropdown-item').forEach(d => d.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+                // Add active class to the selected item (either nav-tab or dropdown-item)
+                const navTab = document.querySelector(`.nav-tab[data-tab="${tabName}"]`);
+                const dropdownItem = document.querySelector(`.dropdown-item[data-tab="${tabName}"]`);
+
+                if (navTab) {
+                    navTab.classList.add('active');
+                } else if (dropdownItem) {
+                    dropdownItem.classList.add('active');
+                    // Also highlight the Marketing dropdown button
+                    document.getElementById('marketingTabBtn')?.classList.add('active');
+                }
+
                 document.getElementById(tabName).classList.add('active');
 
                 this.currentTab = tabName;
