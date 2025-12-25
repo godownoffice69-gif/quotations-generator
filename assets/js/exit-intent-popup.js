@@ -478,6 +478,20 @@
         // Track analytics
         if (converted) {
             trackAnalytics('conversion');
+
+            // Save popup offer details to localStorage for quotation tracking
+            if (currentPopup) {
+                const popupOffer = {
+                    popupId: currentPopup.id,
+                    popupTitle: currentPopup.title,
+                    discountText: currentPopup.discountText,
+                    description: currentPopup.description,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('activePopupOffer', JSON.stringify(popupOffer));
+                console.log('💾 Popup offer saved for quotation tracking:', popupOffer);
+            }
+
             // Redirect to quotation page
             window.location.href = '/quotation.html';
         } else {
@@ -489,23 +503,35 @@
      * Track analytics
      */
     async function trackAnalytics(eventType) {
-        if (!currentPopup) return;
+        if (!currentPopup) {
+            console.warn('⚠️ Cannot track analytics: No popup active');
+            return;
+        }
+
+        console.log(`📊 Attempting to track ${eventType} for popup ID: ${currentPopup.id}`);
 
         try {
             // Import Firestore functions
             const { doc, updateDoc, increment } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
             const db = window.db;
+            if (!db) {
+                console.error('❌ Firebase DB not available for analytics tracking');
+                return;
+            }
+
             const popupRef = doc(db, 'exit_intent_popups', currentPopup.id);
 
             if (eventType === 'view') {
                 await updateDoc(popupRef, {
                     'analytics.views': increment(1)
                 });
+                console.log(`✅ View tracked successfully for: ${currentPopup.title}`);
             } else if (eventType === 'conversion') {
                 await updateDoc(popupRef, {
                     'analytics.conversions': increment(1)
                 });
+                console.log(`✅ Conversion tracked successfully for: ${currentPopup.title}`);
 
                 // Also track in Google Analytics if available
                 if (typeof gtag !== 'undefined') {
@@ -518,11 +544,16 @@
                 await updateDoc(popupRef, {
                     'analytics.dismissals': increment(1)
                 });
+                console.log(`✅ Dismissal tracked successfully for: ${currentPopup.title}`);
             }
-
-            console.log(`📊 Tracked ${eventType} for popup: ${currentPopup.title}`);
         } catch (error) {
             console.error('❌ Error tracking exit popup analytics:', error);
+            console.error('Error details:', {
+                eventType,
+                popupId: currentPopup?.id,
+                popupTitle: currentPopup?.title,
+                errorMessage: error.message
+            });
         }
     }
 

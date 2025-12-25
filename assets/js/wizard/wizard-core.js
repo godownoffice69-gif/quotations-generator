@@ -327,6 +327,18 @@ export class WizardCore {
             // Add timestamp
             this.leadData.timestamp = new Date().toISOString();
 
+            // Check for popup offer in localStorage
+            let popupOffer = null;
+            const storedOffer = localStorage.getItem('activePopupOffer');
+            if (storedOffer) {
+                try {
+                    popupOffer = JSON.parse(storedOffer);
+                    console.log('🎯 Popup offer detected for this lead:', popupOffer);
+                } catch (e) {
+                    console.warn('⚠️ Failed to parse popup offer:', e);
+                }
+            }
+
             // Import Firebase
             const { getFirestore, collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             const db = getFirestore();
@@ -348,17 +360,24 @@ export class WizardCore {
                 eventTime: this.leadData.eventTime,
                 customer: this.leadData.customer,
                 sessionInfo: this.leadData.sessionInfo,
+                popupOffer: popupOffer, // Add popup offer if exists
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
-                source: 'quotation_wizard'
+                source: popupOffer ? 'exit_popup' : 'quotation_wizard'
             };
 
             // Save to Firestore
             const docRef = await addDoc(collection(db, 'leads'), leadDoc);
             console.log('✅ Lead submitted:', docRef.id);
 
+            // Clear popup offer from localStorage after successful submission
+            if (popupOffer) {
+                localStorage.removeItem('activePopupOffer');
+                console.log('🗑️ Popup offer cleared from storage');
+            }
+
             // Track submission
-            await this.trackLeadSubmission(leadId);
+            await this.trackLeadSubmission(leadId, popupOffer);
 
             return { success: true, leadId: leadId, docId: docRef.id };
 
@@ -371,7 +390,7 @@ export class WizardCore {
     /**
      * Track lead submission in analytics
      */
-    async trackLeadSubmission(leadId) {
+    async trackLeadSubmission(leadId, popupOffer = null) {
         try {
             const { getFirestore, collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             const db = getFirestore();
@@ -384,10 +403,13 @@ export class WizardCore {
                 eventType: this.leadData.eventType,
                 packageType: this.leadData.packageType,
                 itemCount: this.leadData.customItems.length,
-                userInfo: this.leadData.sessionInfo
+                userInfo: this.leadData.sessionInfo,
+                fromPopup: popupOffer ? true : false,
+                popupId: popupOffer?.popupId || null,
+                popupTitle: popupOffer?.popupTitle || null
             });
 
-            console.log('📊 Lead submission tracked');
+            console.log('📊 Lead submission tracked', popupOffer ? '(from popup)' : '');
         } catch (error) {
             console.error('⚠️ Error tracking lead:', error);
         }

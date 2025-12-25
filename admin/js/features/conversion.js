@@ -229,16 +229,32 @@ export const Conversion = {
         if (!this.exitPopupsListenerActive) {
             const db = window.db;
             if (db) {
-                db.collection('exit_intent_popups').onSnapshot(() => {
-                    console.log('📊 Popup analytics updated, refreshing display...');
-                    // Reload popups and re-render without setting up another listener
-                    this.loadExitIntentPopups(oms).then(updatedPopups => {
-                        const grid = document.getElementById('exitPopupsGrid');
-                        if (grid && updatedPopups.length > 0) {
-                            grid.innerHTML = updatedPopups.map(popup => this.renderExitPopupCard(popup, oms)).join('');
-                        }
-                    });
-                });
+                db.collection('exit_intent_popups').onSnapshot(
+                    (snapshot) => {
+                        console.log('📊 Popup analytics updated, refreshing display...');
+                        // Reload popups and re-render without setting up another listener
+                        this.loadExitIntentPopups(oms).then(updatedPopups => {
+                            const grid = document.getElementById('exitPopupsGrid');
+                            if (grid) {
+                                if (updatedPopups.length > 0) {
+                                    grid.innerHTML = updatedPopups.map(popup => this.renderExitPopupCard(popup, oms)).join('');
+                                } else {
+                                    grid.innerHTML = `
+                                        <div class="empty-state">
+                                            <div style="font-size: 2rem; margin-bottom: 1rem;">📭</div>
+                                            <p>No popups created yet</p>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        }).catch(error => {
+                            console.error('❌ Error reloading popups:', error);
+                        });
+                    },
+                    (error) => {
+                        console.error('❌ Error in analytics listener:', error);
+                    }
+                );
                 this.exitPopupsListenerActive = true;
                 console.log('✅ Real-time analytics listener activated');
             }
