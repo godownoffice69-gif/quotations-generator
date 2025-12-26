@@ -11289,8 +11289,8 @@ convertToQuotationDateFormat(dateStr) {
                                     </datalist>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label required">Contact Number</label>
-                                    <input type="tel" id="quotCustomerContact" class="form-input" value="${q.customer.contact || ''}" required placeholder="Enter contact number">
+                                    <label class="form-label">Contact Number (Optional)</label>
+                                    <input type="tel" id="quotCustomerContact" class="form-input" value="${q.customer.contact || ''}" placeholder="Enter contact number (optional)">
                                 </div>
                             </div>
                             <div class="form-row">
@@ -12251,19 +12251,17 @@ convertToQuotationDateFormat(dateStr) {
                 this.saveQuotationCustomerData();
                 console.log('✅ Saved customer data, updated quotation:', this.currentQuotation);
 
-                // Validate - NOW check the saved data in the object
+                // Validate - ONLY customer name and event date required (contact is optional)
                 const customerName = this.currentQuotation.customer.name;
-                const customerContact = this.currentQuotation.customer.contact;
                 const eventDate = this.currentQuotation.customer.eventDate;
 
                 console.log('🔍 Validation check:');
                 console.log('  - Customer Name:', customerName);
-                console.log('  - Customer Contact:', customerContact);
                 console.log('  - Event Date:', eventDate);
 
-                if (!customerName || !customerContact || !eventDate) {
+                if (!customerName || !eventDate) {
                     console.error('❌ Validation failed - missing required fields');
-                    this.showToast('Please fill customer name, contact, and event date', 'error');
+                    this.showToast('Please fill customer name and event date', 'error');
                     return;
                 }
 
@@ -12304,7 +12302,7 @@ convertToQuotationDateFormat(dateStr) {
                 // Gather data - use the already saved customer data
                 q.customer = {
                     name: customerName,
-                    contact: customerContact,
+                    contact: this.currentQuotation.customer.contact || '', // Optional - can be empty
                     email: this.currentQuotation.customer.email || Utils.get('quotCustomerEmail'),
                     eventDate: eventDate,
                     eventVenue: this.currentQuotation.customer.eventVenue || Utils.get('quotEventVenue'),
