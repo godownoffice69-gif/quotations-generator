@@ -11459,12 +11459,13 @@ convertToQuotationDateFormat(dateStr) {
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th style="width: 5%;">#</th>
-                                    <th style="width: 35%;">Item Name</th>
-                                    <th style="width: 15%;">Quantity</th>
-                                    <th style="width: 20%;">Rate (₹)</th>
-                                    <th style="width: 20%;">Subtotal</th>
-                                    <th style="width: 5%;"></th>
+                                    <th style="width: 4%;">#</th>
+                                    <th style="width: 20%;">Item Name</th>
+                                    <th style="width: 25%;">Notes/Description</th>
+                                    <th style="width: 10%;">Quantity</th>
+                                    <th style="width: 15%;">Rate (₹)</th>
+                                    <th style="width: 15%;">Subtotal</th>
+                                    <th style="width: 4%;"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -11473,6 +11474,9 @@ convertToQuotationDateFormat(dateStr) {
                                         <td>${index + 1}</td>
                                         <td>
                                             <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationItem(${index}, 'name', this.value)" style="width: 100%;">
+                                        </td>
+                                        <td>
+                                            <textarea class="form-input" onchange="OMS.updateQuotationItem(${index}, 'notes', this.value)" placeholder="Add description..." style="width: 100%; min-height: 60px; resize: vertical;">${item.notes || ''}</textarea>
                                         </td>
                                         <td>
                                             <input type="number" class="form-input" value="${item.quantity}" min="1" onchange="OMS.updateQuotationItem(${index}, 'quantity', this.value)" style="width: 100%;">
@@ -11946,8 +11950,9 @@ convertToQuotationDateFormat(dateStr) {
                                 ${items.map((item, itemIdx) => {
                                     const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
                                     return `
-                                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
+                                    <div style="display: grid; grid-template-columns: 1.5fr 2fr 0.8fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: start;">
                                         <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'name', this.value)" placeholder="Item name">
+                                        <textarea class="form-input" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'notes', this.value)" placeholder="Add notes/description..." style="min-height: 50px; resize: vertical;">${item.notes || ''}</textarea>
                                         <input type="number" class="form-input" value="${item.quantity}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
                                         <input type="number" class="form-input" value="${item.price}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'price', this.value)" placeholder="Price">
                                         <div style="font-weight: 600; color: #2196F3;">₹${subtotal.toLocaleString('en-IN')}</div>
@@ -12006,8 +12011,9 @@ convertToQuotationDateFormat(dateStr) {
                                         ${(func.items || []).map((item, itemIdx) => {
                                             const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
                                             return `
-                                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
+                                            <div style="display: grid; grid-template-columns: 1.5fr 2fr 0.8fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: start;">
                                                 <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'name', this.value)" placeholder="Item">
+                                                <textarea class="form-input" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'notes', this.value)" placeholder="Add notes/description..." style="min-height: 50px; resize: vertical;">${item.notes || ''}</textarea>
                                                 <input type="number" class="form-input" value="${item.quantity}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
                                                 <input type="number" class="form-input" value="${item.price}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'price', this.value)" placeholder="Price">
                                                 <div style="font-weight: 600; color: #2196F3;">₹${subtotal.toLocaleString('en-IN')}</div>
@@ -13076,63 +13082,87 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     yPos += 8; // Reduced from 10
 
                     // === ITEMS TABLE ===
-                    const colWidths = [15, 20, 80, 30, 35];
+                    const colWidths = [12, 35, 50, 20, 25, 30]; // Sr, Product, Notes, Qty, Rate, Price
                     const startX = margin;
                     let currentX = startX;
 
                     // Table header
                     doc.setFillColor(245, 245, 245);
-                    doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'FD'); // Reduced from 10 to 8
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'FD');
 
-                    doc.setFontSize(10); // Reduced from 11
+                    doc.setFontSize(9);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...black);
 
-                    doc.text('Sr.', currentX + 2, yPos + 5.5); // Adjusted for smaller header
+                    doc.text('Sr.', currentX + 2, yPos + 5.5);
                     currentX += colWidths[0];
                     doc.text('Product', currentX + 2, yPos + 5.5);
+                    currentX += colWidths[1];
+                    doc.text('Notes', currentX + 2, yPos + 5.5);
                     currentX += colWidths[2];
-                    doc.text('Quantity', currentX + 2, yPos + 5.5);
+                    doc.text('Qty', currentX + 2, yPos + 5.5);
                     currentX += colWidths[3];
                     doc.text('Rate', currentX + 2, yPos + 5.5);
                     currentX += colWidths[4];
                     doc.text('Price', currentX + 2, yPos + 5.5);
 
-                    yPos += 8; // Reduced from 10
+                    yPos += 8;
 
                     // Table rows
-                    doc.setFontSize(9.5); // Reduced from 10
+                    doc.setFontSize(8);
                     (quotation.items || []).forEach((item, index) => {
                         currentX = startX;
 
+                        // Calculate row height based on notes (if present)
+                        const notes = item.notes || '';
+                        const notesLines = notes ? doc.splitTextToSize(notes, colWidths[2] - 4) : [];
+                        const rowHeight = Math.max(7, notesLines.length * 4 + 3);
+
                         // Draw row border
                         doc.setDrawColor(...black);
-                        doc.rect(margin, yPos, pageWidth - 2 * margin, 7, 'S'); // Reduced from 8 to 7
+                        doc.rect(margin, yPos, pageWidth - 2 * margin, rowHeight, 'S');
 
+                        // Serial number
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(...black);
                         doc.text((index + 1).toString(), currentX + 2, yPos + 5);
                         currentX += colWidths[0];
 
+                        // Product name
                         doc.setTextColor(...blue);
                         doc.setFont('helvetica', 'bold');
-                        const itemName = item.name.length > 45 ? item.name.substring(0, 42) + '...' : item.name;
+                        const itemName = item.name.length > 20 ? item.name.substring(0, 18) + '...' : item.name;
                         doc.text(itemName, currentX + 2, yPos + 5);
+                        currentX += colWidths[1];
+
+                        // Notes (multi-line support)
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(7);
+                        doc.setTextColor(80, 80, 80);
+                        if (notesLines.length > 0) {
+                            notesLines.forEach((line, idx) => {
+                                doc.text(line, currentX + 2, yPos + 4 + (idx * 3.5));
+                            });
+                        }
+                        doc.setFontSize(8);
                         currentX += colWidths[2];
 
+                        // Quantity
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(...black);
                         doc.text(Math.round(item.quantity).toString(), currentX + 2, yPos + 5);
                         currentX += colWidths[3];
 
+                        // Rate
                         doc.text(`₹${(item.rate || item.price || 0).toLocaleString('en-IN')}`, currentX + 2, yPos + 5);
                         currentX += colWidths[4];
 
+                        // Subtotal/Price
                         doc.setFont('helvetica', 'bold');
                         doc.setTextColor(...red);
                         doc.text(`₹${item.subtotal.toLocaleString('en-IN')}`, currentX + 2, yPos + 5);
 
-                        yPos += 7; // Reduced from 8
+                        yPos += rowHeight;
                     });
 
                     // Total row
