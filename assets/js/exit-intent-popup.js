@@ -35,9 +35,15 @@
      * Initialize exit intent popups
      */
     async function init() {
+        console.log('🚀 Initializing exit intent popups...');
+        console.log('📱 Device type:', isMobile() ? 'Mobile' : 'Desktop');
+
         // Check if popup was already shown in this session
-        if (getCookie(CONFIG.cookieName)) {
-            console.log('Exit popup already shown in this session');
+        const cookieExists = getCookie(CONFIG.cookieName);
+        console.log('🍪 Cookie check:', cookieExists ? 'Found (popup already shown)' : 'Not found (can show popup)');
+
+        if (cookieExists) {
+            console.log('⏸️ Exit popup already shown in this session - skipping');
             return;
         }
 
@@ -49,9 +55,12 @@
             const firstPopup = popups[0];
             const delay = (firstPopup.delay || 0) * 1000;
 
+            console.log(`⏱️ Setting up exit intent with ${delay / 1000}s delay...`);
             setTimeout(() => {
                 setupExitIntent();
             }, delay);
+        } else {
+            console.log('❌ No eligible popups found');
         }
     }
 
@@ -184,10 +193,18 @@
      * Show the popup
      */
     function showPopup() {
-        if (hasShownPopup || popups.length === 0) return;
+        console.log('🎬 showPopup() called');
+        console.log('hasShownPopup:', hasShownPopup, 'popups.length:', popups.length);
+
+        if (hasShownPopup || popups.length === 0) {
+            console.log('⏸️ Popup blocked:', hasShownPopup ? 'Already shown' : 'No popups available');
+            return;
+        }
 
         hasShownPopup = true;
         currentPopup = popups[0]; // Show first eligible popup
+
+        console.log('✅ Showing popup:', currentPopup.title);
 
         // Track view
         trackAnalytics('view');
@@ -197,6 +214,7 @@
 
         // Set cookie to prevent showing again
         setCookie(CONFIG.cookieName, 'true', CONFIG.cookieDays);
+        console.log(`🍪 Cookie set for ${CONFIG.cookieDays} days`);
     }
 
     /**
@@ -601,10 +619,19 @@
         return null;
     }
 
+    /**
+     * Clear the exit popup cookie (for testing)
+     */
+    function clearCookie() {
+        document.cookie = `${CONFIG.cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        console.log('🗑️ Exit popup cookie cleared - popup can be shown again');
+    }
+
     // Public API
     window.ExitPopup = {
         close,
-        init
+        init,
+        clearCookie
     };
 
     /**
