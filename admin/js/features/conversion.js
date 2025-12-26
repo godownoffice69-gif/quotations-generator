@@ -280,9 +280,14 @@ export const Conversion = {
                         Show special offers when visitors try to leave your website
                     </p>
                 </div>
-                <button class="btn btn-primary" onclick="Conversion.showCreateExitPopupModal()">
-                    ➕ Create New Popup
-                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary" onclick="Conversion.refreshExitPopups()" title="Refresh analytics manually">
+                        🔄 Refresh
+                    </button>
+                    <button class="btn btn-primary" onclick="Conversion.showCreateExitPopupModal()">
+                        ➕ Create New Popup
+                    </button>
+                </div>
             </div>
 
             <!-- Stats Cards -->
@@ -1007,6 +1012,21 @@ export const Conversion = {
         } catch (error) {
             console.error('Error deleting popup:', error);
             alert('❌ Error deleting popup: ' + error.message);
+        }
+    },
+
+    async refreshExitPopups() {
+        console.log('🔄 Manual refresh requested...');
+        try {
+            const container = document.querySelector('#popups-exit-intent-container');
+            if (container) {
+                await this.renderExitIntentPopups(window.OMS, container);
+                console.log('✅ Popups refreshed successfully');
+            } else {
+                console.error('❌ Container not found for refresh');
+            }
+        } catch (error) {
+            console.error('❌ Error refreshing popups:', error);
         }
     },
 

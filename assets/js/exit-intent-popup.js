@@ -20,8 +20,8 @@
     // Configuration
     const CONFIG = {
         cookieName: 'exitPopupShown',
-        cookieDays: 7, // Don't show again for 7 days
-        exitThreshold: 10, // Mouse must be within 10px of top
+        cookieDays: 0.04, // Don't show again for ~1 hour (0.04 days = 1 hour)
+        exitThreshold: 150, // Mouse must be within 150px of top (easier to trigger)
         mobileEnabled: true // Show on mobile (on scroll up instead of mouse exit)
     };
 
@@ -139,7 +139,7 @@
         if (!isMobile()) {
             // Use mousemove to detect when cursor goes to top (more reliable than mouseout)
             document.addEventListener('mousemove', handleMouseMove);
-            console.log('✅ Desktop exit intent enabled (mouse move to top)');
+            console.log(`✅ Desktop exit intent enabled (trigger when mouse ≤ ${CONFIG.exitThreshold}px from top)`);
         } else if (CONFIG.mobileEnabled) {
             // Mobile: Scroll up detection (alternative for mobile)
             let lastScrollY = window.scrollY;
@@ -170,11 +170,11 @@
      * Handle mouse movement (desktop exit detection)
      */
     function handleMouseMove(e) {
-        // Check if mouse is in the top 50px of viewport (about to leave)
-        if (e.clientY <= 50 && !hasShownPopup) {
+        // Check if mouse is in the top area of viewport (about to leave)
+        if (e.clientY <= CONFIG.exitThreshold && !hasShownPopup) {
             // Remove listener after triggering once
             document.removeEventListener('mousemove', handleMouseMove);
-            console.log('🎯 Exit intent detected! (mouse at top)');
+            console.log(`🎯 Exit intent detected! (mouse at ${e.clientY}px, threshold: ${CONFIG.exitThreshold}px)`);
             showPopup();
         }
     }
@@ -214,7 +214,8 @@
 
         // Set cookie to prevent showing again
         setCookie(CONFIG.cookieName, 'true', CONFIG.cookieDays);
-        console.log(`🍪 Cookie set for ${CONFIG.cookieDays} days`);
+        const hours = (CONFIG.cookieDays * 24).toFixed(1);
+        console.log(`🍪 Cookie set for ${hours} hour(s) - popup won't show again until then`);
     }
 
     /**
