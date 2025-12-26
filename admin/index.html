@@ -11896,8 +11896,40 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            // CRITICAL FIX: Helper to save customer data from form fields before re-rendering
+            saveQuotationCustomerData() {
+                if (!this.currentQuotation) return;
+
+                const customerName = Utils.get('quotCustomerName');
+                const customerContact = Utils.get('quotCustomerContact');
+                const customerEmail = Utils.get('quotCustomerEmail');
+                const eventDate = Utils.get('quotEventDate');
+                const eventVenue = Utils.get('quotEventVenue');
+                const notes = Utils.get('quotNotes');
+
+                // Only update if at least one field has a value (preserve existing data if fields don't exist yet)
+                if (customerName || customerContact || eventDate || customerEmail || eventVenue) {
+                    this.currentQuotation.customer = {
+                        ...this.currentQuotation.customer,
+                        name: customerName || this.currentQuotation.customer.name || '',
+                        contact: customerContact || this.currentQuotation.customer.contact || '',
+                        email: customerEmail || this.currentQuotation.customer.email || '',
+                        eventDate: eventDate || this.currentQuotation.customer.eventDate || '',
+                        eventVenue: eventVenue || this.currentQuotation.customer.eventVenue || ''
+                    };
+                }
+
+                if (notes) {
+                    this.currentQuotation.notes = notes;
+                }
+            },
+
             setQuotationOrderType(type) {
                 if (!this.currentQuotation) return;
+
+                // Save customer data BEFORE re-rendering to prevent data loss
+                this.saveQuotationCustomerData();
+
                 this.currentQuotation.orderType = type;
 
                 // Initialize appropriate data structures
@@ -12033,12 +12065,14 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             addQuotationFunction() {
+                this.saveQuotationCustomerData(); // Preserve customer data
                 if (!this.currentQuotation.functions) this.currentQuotation.functions = [];
                 this.currentQuotation.functions.push({ name: '', items: [] });
                 this.renderQuotations();
             },
 
             addQuotationDay() {
+                this.saveQuotationCustomerData(); // Preserve customer data
                 if (!this.currentQuotation.days) this.currentQuotation.days = [];
                 this.currentQuotation.days.push({ date: '', functions: [] });
                 this.renderQuotations();
@@ -12046,6 +12080,7 @@ convertToQuotationDateFormat(dateStr) {
 
             removeQuotationFunction(index) {
                 if (confirm('Remove this function?')) {
+                    this.saveQuotationCustomerData(); // Preserve customer data
                     this.currentQuotation.functions.splice(index, 1);
                     this.renderQuotations();
                 }
@@ -12053,6 +12088,7 @@ convertToQuotationDateFormat(dateStr) {
 
             removeQuotationDay(index) {
                 if (confirm('Remove this day?')) {
+                    this.saveQuotationCustomerData(); // Preserve customer data
                     this.currentQuotation.days.splice(index, 1);
                     this.renderQuotations();
                 }
