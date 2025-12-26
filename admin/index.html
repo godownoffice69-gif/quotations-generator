@@ -12867,11 +12867,12 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                 <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
                                     <thead>
                                         <tr style="background: #f5f5f5; border: 1px solid #000;">
-                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
-                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
-                                            <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
-                                            <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
-                                            <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 50px;">Sr.</th>
+                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 25%;">Product</th>
+                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 30%;">Notes/Description</th>
+                                            <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 80px;">Qty</th>
+                                            <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 100px;">Rate</th>
+                                            <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 110px;">Price</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -12879,13 +12880,14 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                             <tr style="border: 1px solid #000;">
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: center;">${index + 1}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                <td style="padding: 10px; border: 1px solid #000; color: #666; font-size: 11px; line-height: 1.4;">${item.notes ? item.notes.replace(/\n/g, '<br>') : '-'}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.rate || item.price || 0).toLocaleString('en-IN')}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                             </tr>
                                         `).join('')}
                                         <tr style="border: 1px solid #000; background: #f5f5f5;">
-                                            <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Total</td>
+                                            <td colspan="5" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Total</td>
                                             <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${q.financials.grandTotal.toLocaleString('en-IN')}/-</td>
                                         </tr>
                                     </tbody>
@@ -12910,11 +12912,12 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                     <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
                                         <thead>
                                             <tr style="background: #f5f5f5; border: 1px solid #000;">
-                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
-                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
-                                                <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
-                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
-                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 50px;">Sr.</th>
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 25%;">Product</th>
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 30%;">Notes/Description</th>
+                                                <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 80px;">Qty</th>
+                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 100px;">Rate</th>
+                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 110px;">Price</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -12922,13 +12925,14 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                                 <tr style="border: 1px solid #000;">
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; color: #666; font-size: 11px; line-height: 1.4;">${item.notes ? item.notes.replace(/\n/g, '<br>') : '-'}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                                 </tr>
                                             `).join('')}
                                             <tr style="border: 1px solid #000; background: #f5f5f5;">
-                                                <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
+                                                <td colspan="5" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
                                                 <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
                                             </tr>
                                         </tbody>
@@ -12969,11 +12973,12 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                             <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
                                                 <thead>
                                                     <tr style="background: #f5f5f5; border: 1px solid #000;">
-                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
-                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
-                                                        <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
-                                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
-                                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 50px;">Sr.</th>
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 25%;">Product</th>
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 30%;">Notes/Description</th>
+                                                        <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 80px;">Qty</th>
+                                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 100px;">Rate</th>
+                                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 110px;">Price</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -12981,13 +12986,14 @@ Contact: 📱 98984 96111 / 76984 96111`;
                                                         <tr style="border: 1px solid #000;">
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                            <td style="padding: 10px; border: 1px solid #000; color: #666; font-size: 11px; line-height: 1.4;">${item.notes ? item.notes.replace(/\n/g, '<br>') : '-'}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                                         </tr>
                                                     `).join('')}
                                                     <tr style="border: 1px solid #000; background: #f5f5f5;">
-                                                        <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
+                                                        <td colspan="5" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
                                                         <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
                                                     </tr>
                                                 </tbody>
@@ -13190,15 +13196,24 @@ Contact: 📱 98984 96111 / 76984 96111`;
 
                     yPos += 8;
 
-                    // Table rows
+                    // Table rows - Handle all quotation types
                     doc.setFontSize(8);
-                    (quotation.items || []).forEach((item, index) => {
+                    let itemIndex = 0;
+
+                    // Helper function to render an item row with notes
+                    const renderItemRow = (item, index) => {
                         currentX = startX;
 
                         // Calculate row height based on notes (if present)
                         const notes = item.notes || '';
                         const notesLines = notes ? doc.splitTextToSize(notes, colWidths[2] - 4) : [];
                         const rowHeight = Math.max(7, notesLines.length * 4 + 3);
+
+                        // Check if we need a new page
+                        if (yPos + rowHeight > pageHeight - 20) {
+                            doc.addPage();
+                            yPos = margin;
+                        }
 
                         // Draw row border
                         doc.setDrawColor(...black);
@@ -13245,7 +13260,64 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         doc.text(`₹${item.subtotal.toLocaleString('en-IN')}`, currentX + 2, yPos + 5);
 
                         yPos += rowHeight;
-                    });
+                    };
+
+                    // Helper function to render section header (for multifunction/multiday)
+                    const renderSectionHeader = (title) => {
+                        // Check if we need a new page
+                        if (yPos + 8 > pageHeight - 20) {
+                            doc.addPage();
+                            yPos = margin;
+                        }
+
+                        doc.setFillColor(240, 248, 255); // Light blue background
+                        doc.rect(margin, yPos, pageWidth - 2 * margin, 7, 'FD');
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(...blue);
+                        doc.text(title, margin + 3, yPos + 5);
+                        yPos += 7;
+                    };
+
+                    // Process items based on quotation type
+                    if (!quotation.orderType || quotation.orderType === 'single') {
+                        // Single-day quotation
+                        (quotation.items || []).forEach((item, index) => {
+                            renderItemRow(item, itemIndex);
+                            itemIndex++;
+                        });
+                    } else if (quotation.orderType === 'multifunction') {
+                        // Multifunction quotation (same day, multiple functions)
+                        (quotation.functions || []).forEach((func, funcIdx) => {
+                            // Render function header
+                            renderSectionHeader(`Function ${funcIdx + 1}: ${func.name || 'Unnamed Function'}`);
+
+                            // Render items for this function
+                            (func.items || []).forEach((item) => {
+                                renderItemRow(item, itemIndex);
+                                itemIndex++;
+                            });
+                        });
+                    } else if (quotation.orderType === 'multiday') {
+                        // Multiday quotation (multiple days, multiple functions per day)
+                        (quotation.days || []).forEach((day, dayIdx) => {
+                            // Render day header
+                            const dayDate = day.date ? Utils.formatDate(day.date) : `Day ${dayIdx + 1}`;
+                            renderSectionHeader(`📅 ${dayDate}`);
+
+                            // Render functions for this day
+                            (day.functions || []).forEach((func, funcIdx) => {
+                                // Render function header (indented under day)
+                                renderSectionHeader(`  Function ${funcIdx + 1}: ${func.name || 'Unnamed Function'}`);
+
+                                // Render items for this function
+                                (func.items || []).forEach((item) => {
+                                    renderItemRow(item, itemIndex);
+                                    itemIndex++;
+                                });
+                            });
+                        });
+                    }
 
                     // Total row
                     doc.setFillColor(245, 245, 245);
