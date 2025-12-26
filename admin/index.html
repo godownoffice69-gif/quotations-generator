@@ -11898,7 +11898,12 @@ convertToQuotationDateFormat(dateStr) {
 
             // CRITICAL FIX: Helper to save customer data from form fields before re-rendering
             saveQuotationCustomerData() {
-                if (!this.currentQuotation) return;
+                if (!this.currentQuotation) {
+                    console.warn('⚠️ saveQuotationCustomerData: No currentQuotation');
+                    return;
+                }
+
+                console.log('💾 saveQuotationCustomerData: Reading form fields...');
 
                 const customerName = Utils.get('quotCustomerName');
                 const customerContact = Utils.get('quotCustomerContact');
@@ -11907,21 +11912,33 @@ convertToQuotationDateFormat(dateStr) {
                 const eventVenue = Utils.get('quotEventVenue');
                 const notes = Utils.get('quotNotes');
 
-                // Only update if at least one field has a value (preserve existing data if fields don't exist yet)
-                if (customerName || customerContact || eventDate || customerEmail || eventVenue) {
-                    this.currentQuotation.customer = {
-                        ...this.currentQuotation.customer,
-                        name: customerName || this.currentQuotation.customer.name || '',
-                        contact: customerContact || this.currentQuotation.customer.contact || '',
-                        email: customerEmail || this.currentQuotation.customer.email || '',
-                        eventDate: eventDate || this.currentQuotation.customer.eventDate || '',
-                        eventVenue: eventVenue || this.currentQuotation.customer.eventVenue || ''
-                    };
+                console.log('📝 Form field values:');
+                console.log('  - Name:', customerName);
+                console.log('  - Contact:', customerContact);
+                console.log('  - Email:', customerEmail);
+                console.log('  - Date:', eventDate);
+                console.log('  - Venue:', eventVenue);
+                console.log('  - Notes:', notes);
+
+                // Initialize customer object if it doesn't exist
+                if (!this.currentQuotation.customer) {
+                    console.log('⚙️ Initializing customer object');
+                    this.currentQuotation.customer = {};
                 }
 
-                if (notes) {
-                    this.currentQuotation.notes = notes;
-                }
+                // Update customer data from form fields
+                this.currentQuotation.customer = {
+                    ...this.currentQuotation.customer,
+                    name: customerName || this.currentQuotation.customer.name || '',
+                    contact: customerContact || this.currentQuotation.customer.contact || '',
+                    email: customerEmail || this.currentQuotation.customer.email || '',
+                    eventDate: eventDate || this.currentQuotation.customer.eventDate || '',
+                    eventVenue: eventVenue || this.currentQuotation.customer.eventVenue || ''
+                };
+
+                this.currentQuotation.notes = notes || this.currentQuotation.notes || '';
+
+                console.log('✅ Updated customer data:', this.currentQuotation.customer);
             },
 
             setQuotationOrderType(type) {
@@ -12220,18 +12237,37 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             async saveQuotation(status = 'draft') {
-                const q = this.currentQuotation;
-                if (!q) return;
+                console.log('🔍 DEBUG: saveQuotation called with status:', status);
 
-                // Validate
-                const customerName = Utils.get('quotCustomerName');
-                const customerContact = Utils.get('quotCustomerContact');
-                const eventDate = Utils.get('quotEventDate');
+                const q = this.currentQuotation;
+                if (!q) {
+                    console.error('❌ No currentQuotation object');
+                    return;
+                }
+
+                console.log('📋 Current quotation object:', q);
+
+                // CRITICAL: Save customer data from form fields FIRST before validation
+                this.saveQuotationCustomerData();
+                console.log('✅ Saved customer data, updated quotation:', this.currentQuotation);
+
+                // Validate - NOW check the saved data in the object
+                const customerName = this.currentQuotation.customer.name;
+                const customerContact = this.currentQuotation.customer.contact;
+                const eventDate = this.currentQuotation.customer.eventDate;
+
+                console.log('🔍 Validation check:');
+                console.log('  - Customer Name:', customerName);
+                console.log('  - Customer Contact:', customerContact);
+                console.log('  - Event Date:', eventDate);
 
                 if (!customerName || !customerContact || !eventDate) {
+                    console.error('❌ Validation failed - missing required fields');
                     this.showToast('Please fill customer name, contact, and event date', 'error');
                     return;
                 }
+
+                console.log('✅ Customer validation passed');
 
                 // Validate items based on order type
                 let hasItems = false;
@@ -12239,10 +12275,12 @@ convertToQuotationDateFormat(dateStr) {
                 if (!q.orderType || q.orderType === 'single') {
                     // Single function - check q.items
                     hasItems = q.items && q.items.length > 0;
+                    console.log('📦 Single order type - items count:', q.items?.length || 0);
                 } else if (q.orderType === 'multifunction') {
                     // Multifunction - check if any function has items
                     hasItems = q.functions && q.functions.length > 0 &&
                                q.functions.some(func => func.items && func.items.length > 0);
+                    console.log('📋 Multifunction order type - functions count:', q.functions?.length || 0);
                 } else if (q.orderType === 'multiday') {
                     // Multiday - check if any day has functions with items
                     hasItems = q.days && q.days.length > 0 &&
@@ -12250,32 +12288,40 @@ convertToQuotationDateFormat(dateStr) {
                                    day.functions && day.functions.length > 0 &&
                                    day.functions.some(func => func.items && func.items.length > 0)
                                );
+                    console.log('📅 Multiday order type - days count:', q.days?.length || 0);
                 }
 
+                console.log('🔍 Has items?', hasItems);
+
                 if (!hasItems) {
+                    console.error('❌ No items found');
                     this.showToast('Please add at least one item to save quotation', 'error');
                     return;
                 }
 
-                // Gather data
+                console.log('✅ Items validation passed');
+
+                // Gather data - use the already saved customer data
                 q.customer = {
                     name: customerName,
                     contact: customerContact,
-                    email: Utils.get('quotCustomerEmail'),
+                    email: this.currentQuotation.customer.email || Utils.get('quotCustomerEmail'),
                     eventDate: eventDate,
-                    eventVenue: Utils.get('quotEventVenue'),
+                    eventVenue: this.currentQuotation.customer.eventVenue || Utils.get('quotEventVenue'),
                     eventVenueName: q.customer?.eventVenueName || '',
                     eventVenueCoordinates: q.customer?.eventVenueCoordinates || null
                 };
 
                 // Add notes field
-                q.notes = Utils.get('quotNotes') || '';
+                q.notes = this.currentQuotation.notes || Utils.get('quotNotes') || '';
 
                 const quotationData = {
                     ...q,
                     status: status,
                     updatedAt: new Date().toISOString()
                 };
+
+                console.log('💾 About to save quotation data:', quotationData);
 
                 try {
                     if (this.editingQuotationId) {
@@ -12286,6 +12332,7 @@ convertToQuotationDateFormat(dateStr) {
 
                         await db.collection('quotations').doc(this.editingQuotationId).update(quotationData);
                         this.showToast('✅ Quotation updated!', 'success');
+                        console.log('✅ Updated existing quotation:', this.editingQuotationId);
                     } else {
                         // Create new
                         quotationData.quotationNumber = await this.generateQuotationNumber();
@@ -12297,6 +12344,7 @@ convertToQuotationDateFormat(dateStr) {
                         quotationData.id = docRef.id;
 
                         this.showToast('✅ Quotation saved!', 'success');
+                        console.log('✅ Created new quotation:', docRef.id);
                     }
 
                     // Reload quotations
@@ -12308,7 +12356,7 @@ convertToQuotationDateFormat(dateStr) {
 
                     return quotationData;
                 } catch (error) {
-                    console.error('Error saving quotation:', error);
+                    console.error('❌ Error saving quotation:', error);
                     this.showToast('Error: ' + error.message, 'error');
                 }
             },
