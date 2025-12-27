@@ -164,10 +164,15 @@ export const Conversion = {
             </div>
 
             <!-- Sub-tabs for Popups -->
-            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
-                <button class="popup-subtab active" data-popup-type="exit-intent">Exit Intent Popups</button>
-                <button class="popup-subtab" data-popup-type="social-proof">Social Proof Notifications</button>
-                <button class="popup-subtab" data-popup-type="sticky-bar">Sticky Bars</button>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="popup-subtab active" data-popup-type="exit-intent">Exit Intent Popups</button>
+                    <button class="popup-subtab" data-popup-type="social-proof">Social Proof Notifications</button>
+                    <button class="popup-subtab" data-popup-type="sticky-bar">Sticky Bars</button>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="Conversion.showPopupSettings()" style="white-space: nowrap;">
+                    ⚙️ Popup Settings
+                </button>
             </div>
 
             <div id="popupTypeContent">
@@ -905,15 +910,16 @@ export const Conversion = {
             countdown,
             schedule,
             status,
-            analytics: popupId ? undefined : {
-                views: 0,
-                conversions: 0,
-                dismissals: 0
-            },
             updatedAt: new Date().toISOString()
         };
 
+        // Only add analytics for new popups (not updates)
         if (!popupId) {
+            popupData.analytics = {
+                views: 0,
+                conversions: 0,
+                dismissals: 0
+            };
             popupData.createdAt = new Date().toISOString();
         }
 
@@ -995,6 +1001,386 @@ export const Conversion = {
         } catch (error) {
             console.error('Error deleting popup:', error);
             alert('❌ Error deleting popup: ' + error.message);
+        }
+    },
+
+    /**
+     * Show Popup Settings Modal
+     */
+    async showPopupSettings() {
+        const modalId = 'popupSettingsModal';
+
+        // Load current settings
+        const settings = await this.loadPopupSettings();
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById(modalId);
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h2 class="modal-title">⚙️ Exit Popup Configuration</h2>
+                    <button class="modal-close" onclick="document.getElementById('${modalId}').remove()">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="popupSettingsForm">
+                        <!-- Trigger Settings -->
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">🎯 Trigger Settings</h3>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Desktop Scroll Depth (%)</label>
+                                    <input type="number" id="settings-desktop-scroll" class="form-input"
+                                           min="50" max="100" step="5" value="${settings.scrollDepth.desktop * 100}">
+                                    <small style="color: var(--text-gray);">Trigger when user scrolls this % of page</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Mobile Scroll Depth (%)</label>
+                                    <input type="number" id="settings-mobile-scroll" class="form-input"
+                                           min="50" max="100" step="5" value="${settings.scrollDepth.mobile * 100}">
+                                    <small style="color: var(--text-gray);">Higher for mobile (users scroll more)</small>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Exit Intent Threshold (px)</label>
+                                    <input type="number" id="settings-exit-threshold" class="form-input"
+                                           min="10" max="100" step="10" value="${settings.exitThreshold}">
+                                    <small style="color: var(--text-gray);">Mouse within X pixels of top triggers exit</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Time on Page (seconds)</label>
+                                    <input type="number" id="settings-time-on-page" class="form-input"
+                                           min="5" max="120" step="5" value="${settings.timeOnPage / 1000}">
+                                    <small style="color: var(--text-gray);">Wait before popup becomes eligible</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Frequency Capping -->
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">⏱️ Frequency Capping</h3>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Hours Between Shows</label>
+                                    <input type="number" id="settings-frequency-hours" class="form-input"
+                                           min="1" max="168" step="1" value="${settings.frequencyCap.hours}">
+                                    <small style="color: var(--text-gray);">After showing, wait X hours before showing again</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">"Don't Show Again" Days</label>
+                                    <input type="number" id="settings-dont-show-days" class="form-input"
+                                           min="1" max="365" step="1" value="${settings.frequencyCap.dontShowDays}">
+                                    <small style="color: var(--text-gray);">Opt-out duration when user checks "don't show"</small>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" id="settings-session-once"
+                                           ${settings.frequencyCap.session ? 'checked' : ''}>
+                                    <span>Show only once per session (recommended)</span>
+                                </label>
+                                <small style="color: var(--text-gray); display: block; margin-left: 1.8rem;">
+                                    Prevents annoying users with multiple popups in same visit
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Smart Messages -->
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">💬 Smart Messages</h3>
+                            <p style="color: var(--text-gray); margin: 0 0 1rem; font-size: 0.9rem;">
+                                Customize messages shown based on how popup was triggered
+                            </p>
+
+                            <!-- Exit Intent Messages -->
+                            <div style="background: var(--bg-body); padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem;">
+                                <h4 style="margin: 0 0 0.5rem; font-size: 0.95rem;">🏃 Exit Intent Trigger</h4>
+                                <div class="form-group">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" id="settings-exit-title" class="form-input"
+                                           value="${settings.smartMessages.exitIntent.title}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Subtitle</label>
+                                    <input type="text" id="settings-exit-subtitle" class="form-input"
+                                           value="${settings.smartMessages.exitIntent.subtitle}">
+                                </div>
+                            </div>
+
+                            <!-- Scroll Depth Messages -->
+                            <div style="background: var(--bg-body); padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem;">
+                                <h4 style="margin: 0 0 0.5rem; font-size: 0.95rem;">📜 Scroll Depth Trigger</h4>
+                                <div class="form-group">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" id="settings-scroll-title" class="form-input"
+                                           value="${settings.smartMessages.scrollDepth.title}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Subtitle</label>
+                                    <input type="text" id="settings-scroll-subtitle" class="form-input"
+                                           value="${settings.smartMessages.scrollDepth.subtitle}">
+                                </div>
+                            </div>
+
+                            <!-- Time-Based Messages -->
+                            <div style="background: var(--bg-body); padding: 1rem; border-radius: var(--radius);">
+                                <h4 style="margin: 0 0 0.5rem; font-size: 0.95rem;">⏰ Time-Based Trigger</h4>
+                                <div class="form-group">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" id="settings-time-title" class="form-input"
+                                           value="${settings.smartMessages.timeBased.title}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Subtitle</label>
+                                    <input type="text" id="settings-time-subtitle" class="form-input"
+                                           value="${settings.smartMessages.timeBased.subtitle}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trigger Enable/Disable -->
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">🔌 Trigger Control</h3>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                        <input type="checkbox" id="settings-enable-exit-intent"
+                                               ${settings.triggersEnabled.exitIntent ? 'checked' : ''}>
+                                        <span>Enable Exit Intent (Desktop)</span>
+                                    </label>
+                                    <small style="color: var(--text-gray); display: block; margin-left: 1.8rem;">
+                                        Trigger when mouse moves to top of page
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                        <input type="checkbox" id="settings-enable-scroll-depth"
+                                               ${settings.triggersEnabled.scrollDepth ? 'checked' : ''}>
+                                        <span>Enable Scroll Depth</span>
+                                    </label>
+                                    <small style="color: var(--text-gray); display: block; margin-left: 1.8rem;">
+                                        Trigger when user scrolls to threshold
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" id="settings-check-quotation"
+                                           ${settings.triggersEnabled.checkQuotationCreated ? 'checked' : ''}>
+                                    <span>Hide popup if user already created quotation</span>
+                                </label>
+                                <small style="color: var(--text-gray); display: block; margin-left: 1.8rem;">
+                                    Don't show to converted users (recommended)
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Styling Options -->
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: var(--primary);">🎨 Styling Options</h3>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Animation Duration (ms)</label>
+                                    <input type="number" id="settings-animation-duration" class="form-input"
+                                           min="100" max="1000" step="100" value="${settings.styling.animationDuration}">
+                                    <small style="color: var(--text-gray);">Fade-in/out animation speed</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Backdrop Blur (px)</label>
+                                    <input type="number" id="settings-backdrop-blur" class="form-input"
+                                           min="0" max="20" step="2" value="${settings.styling.backdropBlur}">
+                                    <small style="color: var(--text-gray);">Background blur effect (0 = none)</small>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" id="settings-mobile-bottom-sheet"
+                                           ${settings.styling.mobileBottomSheet ? 'checked' : ''}>
+                                    <span>Use bottom sheet design on mobile</span>
+                                </label>
+                                <small style="color: var(--text-gray); display: block; margin-left: 1.8rem;">
+                                    Slides from bottom on mobile (better UX)
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" id="settings-background-close"
+                                           ${settings.styling.backgroundClickClose ? 'checked' : ''}>
+                                    <span>Allow closing by clicking background</span>
+                                </label>
+                                <small style="color: var(--text-gray); display: block; margin-left: 1.8rem;">
+                                    Users can dismiss by clicking outside popup
+                                </small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="Conversion.savePopupSettings()">
+                        💾 Save Settings
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    },
+
+    /**
+     * Load popup settings from Firestore
+     */
+    async loadPopupSettings() {
+        try {
+            const db = window.db;
+            if (!db) {
+                console.error('Firebase not initialized');
+                return this.getDefaultSettings();
+            }
+
+            const doc = await db.collection('popup_settings').doc('config').get();
+
+            if (doc.exists) {
+                console.log('✅ Loaded popup settings from Firestore');
+                return doc.data();
+            } else {
+                console.log('📝 No settings found, using defaults');
+                return this.getDefaultSettings();
+            }
+        } catch (error) {
+            console.error('Error loading popup settings:', error);
+            return this.getDefaultSettings();
+        }
+    },
+
+    /**
+     * Get default settings
+     */
+    getDefaultSettings() {
+        return {
+            scrollDepth: {
+                desktop: 0.70,
+                mobile: 0.75
+            },
+            exitThreshold: 50,
+            timeOnPage: 20000,
+            frequencyCap: {
+                session: true,
+                hours: 24,
+                dontShowDays: 7
+            },
+            smartMessages: {
+                exitIntent: {
+                    title: "Wait! Before you go...",
+                    subtitle: "Get your free quote in 2 minutes!"
+                },
+                scrollDepth: {
+                    title: "Interested in our services?",
+                    subtitle: "Create a custom quotation now!"
+                },
+                timeBased: {
+                    title: "Still browsing?",
+                    subtitle: "Let us help you find the perfect package!"
+                }
+            },
+            triggersEnabled: {
+                exitIntent: true,
+                scrollDepth: true,
+                checkQuotationCreated: true
+            },
+            styling: {
+                animationDuration: 400,
+                backdropBlur: 4,
+                mobileBottomSheet: true,
+                backgroundClickClose: true
+            },
+            updatedAt: new Date().toISOString(),
+            version: '1.0.0'
+        };
+    },
+
+    /**
+     * Save popup settings to Firestore
+     */
+    async savePopupSettings() {
+        try {
+            const db = window.db;
+            if (!db) {
+                alert('Firebase not initialized');
+                return;
+            }
+
+            // Gather settings from form
+            const settings = {
+                scrollDepth: {
+                    desktop: parseFloat(document.getElementById('settings-desktop-scroll').value) / 100,
+                    mobile: parseFloat(document.getElementById('settings-mobile-scroll').value) / 100
+                },
+                exitThreshold: parseInt(document.getElementById('settings-exit-threshold').value),
+                timeOnPage: parseInt(document.getElementById('settings-time-on-page').value) * 1000,
+                frequencyCap: {
+                    session: document.getElementById('settings-session-once').checked,
+                    hours: parseInt(document.getElementById('settings-frequency-hours').value),
+                    dontShowDays: parseInt(document.getElementById('settings-dont-show-days').value)
+                },
+                smartMessages: {
+                    exitIntent: {
+                        title: document.getElementById('settings-exit-title').value.trim(),
+                        subtitle: document.getElementById('settings-exit-subtitle').value.trim()
+                    },
+                    scrollDepth: {
+                        title: document.getElementById('settings-scroll-title').value.trim(),
+                        subtitle: document.getElementById('settings-scroll-subtitle').value.trim()
+                    },
+                    timeBased: {
+                        title: document.getElementById('settings-time-title').value.trim(),
+                        subtitle: document.getElementById('settings-time-subtitle').value.trim()
+                    }
+                },
+                triggersEnabled: {
+                    exitIntent: document.getElementById('settings-enable-exit-intent').checked,
+                    scrollDepth: document.getElementById('settings-enable-scroll-depth').checked,
+                    checkQuotationCreated: document.getElementById('settings-check-quotation').checked
+                },
+                styling: {
+                    animationDuration: parseInt(document.getElementById('settings-animation-duration').value),
+                    backdropBlur: parseInt(document.getElementById('settings-backdrop-blur').value),
+                    mobileBottomSheet: document.getElementById('settings-mobile-bottom-sheet').checked,
+                    backgroundClickClose: document.getElementById('settings-background-close').checked
+                },
+                updatedAt: new Date().toISOString(),
+                version: '1.0.0'
+            };
+
+            // Save to Firestore
+            await db.collection('popup_settings').doc('config').set(settings);
+
+            alert('✅ Popup settings saved successfully!\n\n⚠️ Note: Settings will take effect on next page load for website visitors.');
+
+            // Close modal
+            document.getElementById('popupSettingsModal').remove();
+
+        } catch (error) {
+            console.error('Error saving popup settings:', error);
+            alert('❌ Error saving settings: ' + error.message);
         }
     },
 
