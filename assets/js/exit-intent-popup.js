@@ -1,17 +1,19 @@
 /**
- * Exit Intent Popups - Website Integration
+ * Exit Intent Popups - Website Integration (Option 3: Simple but Effective)
  *
- * Detects when visitors are about to leave and displays targeted popups
- * with special offers to capture them before they go.
- *
- * Features:
- * - Exit intent detection (mouse leaving viewport)
- * - Countdown timer support
- * - Page-specific targeting
- * - Scheduling support
- * - Analytics tracking (views, conversions, dismissals)
- * - Mobile-responsive design
- * - One popup per session (cookie-based)
+ * Enhanced with:
+ * - Exit intent (mouse to top 50px)
+ * - Scroll depth tracking (70% desktop, 75% mobile)
+ * - Quotation creation check
+ * - 20-second minimum time on page
+ * - 24-hour frequency capping (localStorage)
+ * - Device-specific logic
+ * - Smart messaging based on trigger type
+ * - Background click to close
+ * - "Don't show again" checkbox
+ * - Mobile-optimized bottom sheet style
+ * - Fade-in animation
+ * - Analytics tracking
  */
 
 (function() {
@@ -19,6 +21,22 @@
 
     // Configuration
     const CONFIG = {
+        localStorage: {
+            popupShownKey: 'exitPopupLastShown',
+            dontShowAgainKey: 'exitPopupDontShow',
+            quotationCreatedKey: 'quotationCreated'
+        },
+        timeOnPage: 20000, // 20 seconds minimum
+        scrollDepth: {
+            desktop: 0.70, // 70% for desktop
+            mobile: 0.75  // 75% for mobile
+        },
+        exitThreshold: 50, // Top 50px for exit intent
+        frequencyCap: {
+            session: true,           // Once per session
+            hours: 24,              // 24 hours between shows
+            dontShowDays: 7         // 7 days if "Don't show again" clicked
+        }
         cookieName: 'exitPopupShown',
         cookieDays: 0.04, // Don't show again for ~1 hour (0.04 days = 1 hour)
         exitThreshold: 150, // Mouse must be within 150px of top (easier to trigger)
@@ -28,13 +46,33 @@
     // State
     let popups = [];
     let currentPopup = null;
-    let exitIntentListenerAdded = false;
+    let triggerType = null; // 'exit-intent' or 'scroll-depth' or 'time-based'
     let hasShownPopup = false;
+    let pageLoadTime = Date.now();
+    let highestScrollDepth = 0;
+    let listenersActive = false;
 
     /**
      * Initialize exit intent popups
      */
     async function init() {
+        console.log('🎯 Initializing smart exit popup system...');
+
+        // Check if user clicked "Don't show again"
+        if (checkDontShowAgain()) {
+            console.log('⏭️ User opted out - popup disabled');
+            return;
+        }
+
+        // Check frequency cap (24-hour rule)
+        if (!checkFrequencyCap()) {
+            console.log('⏱️ Frequency cap active - popup shown recently');
+            return;
+        }
+
+        // Check if user has already created a quotation
+        if (hasCreatedQuotation()) {
+            console.log('✅ User already created quotation - no need to show popup');
         console.log('🚀 Initializing exit intent popups...');
         console.log('📱 Device type:', isMobile() ? 'Mobile' : 'Desktop');
 
@@ -50,11 +88,34 @@
         // Load popups from Firebase
         await loadPopups();
 
-        // Setup exit intent detection after delay
-        if (popups.length > 0) {
-            const firstPopup = popups[0];
-            const delay = (firstPopup.delay || 0) * 1000;
+        if (popups.length === 0) {
+            console.log('📭 No eligible popups found');
+            return;
+        }
 
+        // Wait for minimum time on page before becoming eligible
+        setTimeout(() => {
+            console.log('⏰ Time on page requirement met (20s) - popup now eligible');
+            setupTriggers();
+        }, CONFIG.timeOnPage);
+    }
+
+    /**
+     * Check if "Don't show again" was clicked
+     */
+    function checkDontShowAgain() {
+        const dontShowUntil = localStorage.getItem(CONFIG.localStorage.dontShowAgainKey);
+        if (!dontShowUntil) return false;
+
+        const expiryDate = new Date(dontShowUntil);
+        const now = new Date();
+
+        if (now < expiryDate) {
+            return true; // Still in "don't show" period
+        } else {
+            // Expired, clear it
+            localStorage.removeItem(CONFIG.localStorage.dontShowAgainKey);
+            return false;
             console.log(`⏱️ Setting up exit intent with ${delay / 1000}s delay...`);
             setTimeout(() => {
                 setupExitIntent();
@@ -65,17 +126,36 @@
     }
 
     /**
+     * Check 24-hour frequency cap
+     */
+    function checkFrequencyCap() {
+        const lastShown = localStorage.getItem(CONFIG.localStorage.popupShownKey);
+        if (!lastShown) return true; // Never shown before
+
+        const lastShownDate = new Date(lastShown);
+        const now = new Date();
+        const hoursSinceLastShown = (now - lastShownDate) / (1000 * 60 * 60);
+
+        return hoursSinceLastShown >= CONFIG.frequencyCap.hours;
+    }
+
+    /**
+     * Check if user has created a quotation
+     */
+    function hasCreatedQuotation() {
+        // Check localStorage for quotation creation flag
+        const quotationCreated = localStorage.getItem(CONFIG.localStorage.quotationCreatedKey);
+        return quotationCreated === 'true';
+    }
+
+    /**
      * Load active popups from Firestore
      */
     async function loadPopups() {
         try {
-            // Import Firestore functions
             const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
-            // Get current page type
             const currentPage = getCurrentPage();
-
-            // Query Firestore for active popups using modular SDK
             const db = window.db;
             const popupsRef = collection(db, 'exit_intent_popups');
             const q = query(popupsRef, where('status', '==', 'active'));
@@ -86,30 +166,30 @@
             popups = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() }))
                 .filter(popup => {
-                    // Check if popup is scheduled
+                    // Check schedule
                     if (popup.schedule && popup.schedule.startDate && popup.schedule.endDate) {
                         const start = new Date(popup.schedule.startDate);
                         const end = new Date(popup.schedule.endDate);
-                        end.setHours(23, 59, 59); // End of day
+                        end.setHours(23, 59, 59);
 
                         if (now < start || now > end) {
-                            return false; // Outside schedule
+                            return false;
                         }
                     }
 
                     // Check page targeting
                     if (popup.pages && popup.pages.length > 0) {
                         if (!popup.pages.includes('all') && !popup.pages.includes(currentPage)) {
-                            return false; // Wrong page
+                            return false;
                         }
                     }
 
                     return true;
                 });
 
-            console.log(`✅ Loaded ${popups.length} eligible exit intent popup(s)`);
+            console.log(`✅ Loaded ${popups.length} eligible popup(s)`);
         } catch (error) {
-            console.error('❌ Error loading exit intent popups:', error);
+            console.error('❌ Error loading popups:', error);
             popups = [];
         }
     }
@@ -130,14 +210,20 @@
     }
 
     /**
-     * Setup exit intent detection
+     * Setup all popup triggers
      */
-    function setupExitIntent() {
-        if (exitIntentListenerAdded) return;
+    function setupTriggers() {
+        if (listenersActive) return;
 
-        // Desktop: Mouse leaving viewport
-        if (!isMobile()) {
-            // Use mousemove to detect when cursor goes to top (more reliable than mouseout)
+        const isMobileDevice = isMobile();
+
+        if (!isMobileDevice) {
+            // Desktop triggers
+            console.log('🖥️ Desktop triggers active:');
+            console.log('  - Exit intent (mouse to top 50px)');
+            console.log('  - Scroll depth (70%)');
+
+            // Exit intent
             document.addEventListener('mousemove', handleMouseMove);
             console.log(`✅ Desktop exit intent enabled (trigger when mouse ≤ ${CONFIG.exitThreshold}px from top)`);
         } else if (CONFIG.mobileEnabled) {
@@ -158,18 +244,30 @@
                     scrollUpCount = 0; // Reset if scrolling down
                 }
 
-                lastScrollY = currentScrollY;
-            });
-            console.log('✅ Mobile exit intent enabled (scroll up detection)');
+            // Scroll depth
+            window.addEventListener('scroll', handleScrollDepth);
+        } else {
+            // Mobile triggers
+            console.log('📱 Mobile triggers active:');
+            console.log('  - Scroll depth (75%)');
+
+            // Scroll depth only (no exit intent on mobile)
+            window.addEventListener('scroll', handleScrollDepth);
         }
 
-        exitIntentListenerAdded = true;
+        listenersActive = true;
     }
 
     /**
-     * Handle mouse movement (desktop exit detection)
+     * Handle mouse movement (desktop exit intent)
      */
     function handleMouseMove(e) {
+        if (hasShownPopup) return;
+
+        // Check if mouse is in top 50px (about to leave)
+        if (e.clientY <= CONFIG.exitThreshold) {
+            triggerType = 'exit-intent';
+            console.log('🎯 Exit intent detected! (mouse at top)');
         // Check if mouse is in the top area of viewport (about to leave)
         if (e.clientY <= CONFIG.exitThreshold && !hasShownPopup) {
             // Remove listener after triggering once
@@ -180,17 +278,31 @@
     }
 
     /**
-     * Handle mouse leaving viewport (backup method)
+     * Handle scroll depth tracking
      */
-    function handleMouseOut(e) {
-        // Check if mouse is leaving through the top of the viewport
-        if (e.clientY < CONFIG.exitThreshold && !hasShownPopup) {
+    function handleScrollDepth() {
+        if (hasShownPopup) return;
+
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const scrollPercent = scrollTop / docHeight;
+
+        // Update highest scroll depth
+        if (scrollPercent > highestScrollDepth) {
+            highestScrollDepth = scrollPercent;
+        }
+
+        const threshold = isMobile() ? CONFIG.scrollDepth.mobile : CONFIG.scrollDepth.desktop;
+
+        if (scrollPercent >= threshold) {
+            triggerType = 'scroll-depth';
+            console.log(`📜 Scroll depth reached! (${Math.round(scrollPercent * 100)}%)`);
             showPopup();
         }
     }
 
     /**
-     * Show the popup
+     * Show the popup with smart messaging
      */
     function showPopup() {
         console.log('🎬 showPopup() called');
@@ -204,6 +316,8 @@
         hasShownPopup = true;
         currentPopup = popups[0]; // Show first eligible popup
 
+        // Record show timestamp
+        localStorage.setItem(CONFIG.localStorage.popupShownKey, new Date().toISOString());
         console.log('✅ Showing popup:', currentPopup.title);
 
         // Track view
@@ -211,7 +325,28 @@
 
         // Build and display popup
         renderPopup();
+    }
 
+    /**
+     * Get smart message based on trigger type
+     */
+    function getSmartMessage() {
+        const messages = {
+            'exit-intent': {
+                title: "Wait! Before you go...",
+                subtitle: "Get your free quote in 2 minutes!"
+            },
+            'scroll-depth': {
+                title: "Interested in our services?",
+                subtitle: "Create a custom quotation now!"
+            },
+            'time-based': {
+                title: "Still browsing?",
+                subtitle: "Let us help you find the perfect package!"
+            }
+        };
+
+        return messages[triggerType] || messages['scroll-depth'];
         // Set cookie to prevent showing again
         setCookie(CONFIG.cookieName, 'true', CONFIG.cookieDays);
         const hours = (CONFIG.cookieDays * 24).toFixed(1);
@@ -219,15 +354,24 @@
     }
 
     /**
-     * Render popup HTML
+     * Render popup HTML with all enhancements
      */
     function renderPopup() {
         const popup = currentPopup;
+        const smartMsg = getSmartMessage();
+        const isMobileDevice = isMobile();
 
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'exitPopupOverlay';
         overlay.className = 'exit-popup-overlay';
+
+        // Add click to close on background
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                close(false);
+            }
+        });
 
         // Build countdown HTML
         let countdownHTML = '';
@@ -243,12 +387,20 @@
             `;
         }
 
+        // Mobile bottom sheet class
+        const mobileClass = isMobileDevice ? 'mobile-bottom-sheet' : '';
+
         // Build popup HTML
         overlay.innerHTML = `
-            <div class="exit-popup-modal" style="background-color: ${popup.backgroundColor}; ${popup.backgroundImage ? `background-image: url('${popup.backgroundImage}'); background-size: cover; background-position: center;` : ''}">
-                <button class="exit-popup-close" onclick="window.ExitPopup.close(false)">&times;</button>
+            <div class="exit-popup-modal ${mobileClass}" style="background-color: ${popup.backgroundColor}; ${popup.backgroundImage ? `background-image: url('${popup.backgroundImage}'); background-size: cover; background-position: center;` : ''}">
+                <button class="exit-popup-close" onclick="window.ExitPopup.close(false)" aria-label="Close">&times;</button>
 
                 <div class="exit-popup-content">
+                    <div class="smart-message">
+                        <div class="smart-title">${escapeHtml(smartMsg.title)}</div>
+                        <div class="smart-subtitle">${escapeHtml(smartMsg.subtitle)}</div>
+                    </div>
+
                     <h2 class="exit-popup-title">${escapeHtml(popup.title)}</h2>
                     <p class="exit-popup-discount">${escapeHtml(popup.discountText)}</p>
 
@@ -262,9 +414,15 @@
                         ${escapeHtml(popup.buttonText)}
                     </button>
 
-                    <p class="exit-popup-dismiss">
-                        <a href="#" onclick="window.ExitPopup.close(false); return false;">No thanks, I'll leave</a>
-                    </p>
+                    <div class="exit-popup-options">
+                        <label class="dont-show-checkbox">
+                            <input type="checkbox" id="dontShowAgain">
+                            <span>Don't show this again</span>
+                        </label>
+                        <p class="exit-popup-dismiss">
+                            <a href="#" onclick="window.ExitPopup.close(false); return false;">No thanks, I'll leave</a>
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -275,17 +433,22 @@
                     left: 0;
                     width: 100%;
                     height: 100%;
-                    background: rgba(0, 0, 0, 0.8);
+                    background: rgba(0, 0, 0, 0.75);
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     z-index: 999999;
-                    animation: fadeIn 0.3s ease;
+                    animation: fadeIn 0.4s ease;
+                    backdrop-filter: blur(4px);
                 }
 
                 @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
+                    from {
+                        opacity: 0;
+                    }
+                    to {
+                        opacity: 1;
+                    }
                 }
 
                 .exit-popup-modal {
@@ -294,16 +457,16 @@
                     width: 90%;
                     max-height: 90vh;
                     overflow-y: auto;
-                    border-radius: 16px;
+                    border-radius: 20px;
                     padding: 3rem 2rem;
                     text-align: center;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-                    animation: slideUp 0.4s ease;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
                 }
 
                 @keyframes slideUp {
                     from {
-                        transform: translateY(50px) scale(0.9);
+                        transform: translateY(50px) scale(0.95);
                         opacity: 0;
                     }
                     to {
@@ -312,25 +475,71 @@
                     }
                 }
 
+                /* Mobile Bottom Sheet Style */
+                @media (max-width: 768px) {
+                    .exit-popup-overlay {
+                        align-items: flex-end;
+                    }
+
+                    .exit-popup-modal.mobile-bottom-sheet {
+                        width: 100%;
+                        max-width: 100%;
+                        border-radius: 20px 20px 0 0;
+                        max-height: 85vh;
+                        padding: 2rem 1.5rem 2.5rem;
+                        animation: slideUpMobile 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    }
+
+                    @keyframes slideUpMobile {
+                        from {
+                            transform: translateY(100%);
+                            opacity: 0.8;
+                        }
+                        to {
+                            transform: translateY(0);
+                            opacity: 1;
+                        }
+                    }
+
+                    /* Handle notch for mobile */
+                    .exit-popup-modal.mobile-bottom-sheet::before {
+                        content: '';
+                        display: block;
+                        width: 40px;
+                        height: 4px;
+                        background: rgba(0,0,0,0.2);
+                        border-radius: 2px;
+                        position: absolute;
+                        top: 12px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                    }
+                }
+
                 .exit-popup-close {
                     position: absolute;
                     top: 1rem;
                     right: 1rem;
-                    background: rgba(0, 0, 0, 0.3);
-                    border: none;
-                    color: white;
-                    font-size: 2rem;
-                    width: 40px;
-                    height: 40px;
+                    background: rgba(0, 0, 0, 0.15);
+                    border: 2px solid rgba(255,255,255,0.3);
+                    color: rgba(0,0,0,0.7);
+                    font-size: 1.8rem;
+                    width: 44px;
+                    height: 44px;
                     border-radius: 50%;
                     cursor: pointer;
                     line-height: 1;
-                    transition: all 0.3s;
+                    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10;
                 }
 
                 .exit-popup-close:hover {
-                    background: rgba(0, 0, 0, 0.5);
-                    transform: rotate(90deg);
+                    background: rgba(0, 0, 0, 0.3);
+                    transform: rotate(90deg) scale(1.1);
+                    border-color: rgba(255,255,255,0.5);
                 }
 
                 .exit-popup-content {
@@ -338,41 +547,75 @@
                     z-index: 1;
                 }
 
+                /* Smart Message */
+                .smart-message {
+                    margin-bottom: 1.5rem;
+                    padding: 1rem;
+                    background: rgba(139, 92, 246, 0.1);
+                    border-radius: 12px;
+                    border: 2px dashed rgba(139, 92, 246, 0.3);
+                }
+
+                .smart-title {
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: #7C3AED;
+                    margin-bottom: 0.25rem;
+                }
+
+                .smart-subtitle {
+                    font-size: 0.95rem;
+                    font-weight: 500;
+                    color: #8B5CF6;
+                }
+
                 .exit-popup-title {
                     font-size: 2rem;
                     font-weight: 700;
                     margin: 0 0 1rem;
                     line-height: 1.2;
+                    color: #1F2937;
                 }
 
                 .exit-popup-discount {
                     font-size: 1.3rem;
                     font-weight: 600;
                     margin: 0 0 1rem;
-                    color: #f59e0b;
+                    color: #F59E0B;
+                    background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
                 }
 
                 .exit-popup-description {
                     font-size: 1rem;
                     margin: 0 0 1.5rem;
-                    opacity: 0.9;
+                    opacity: 0.85;
+                    color: #374151;
                 }
 
                 .exit-popup-countdown {
                     margin: 1.5rem 0;
+                    padding: 1rem;
+                    background: rgba(239, 68, 68, 0.05);
+                    border-radius: 12px;
                 }
 
                 .countdown-timer {
                     font-size: 3rem;
                     font-weight: 700;
-                    color: #ef4444;
+                    color: #EF4444;
                     margin-bottom: 0.5rem;
                     font-family: 'Courier New', monospace;
+                    letter-spacing: 2px;
                 }
 
                 .countdown-label {
                     font-size: 0.9rem;
                     opacity: 0.8;
+                    font-weight: 500;
+                    color: #6B7280;
                 }
 
                 .exit-popup-cta {
@@ -381,39 +624,91 @@
                     font-size: 1.2rem;
                     font-weight: 600;
                     border: none;
-                    border-radius: 8px;
+                    border-radius: 12px;
                     cursor: pointer;
-                    transition: all 0.3s;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                     text-decoration: none;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .exit-popup-cta::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    width: 0;
+                    height: 0;
+                    border-radius: 50%;
+                    background: rgba(255,255,255,0.2);
+                    transform: translate(-50%, -50%);
+                    transition: width 0.6s, height 0.6s;
+                }
+
+                .exit-popup-cta:hover::before {
+                    width: 300px;
+                    height: 300px;
                 }
 
                 .exit-popup-cta:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+                    transform: translateY(-3px) scale(1.02);
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+                }
+
+                .exit-popup-cta:active {
+                    transform: translateY(-1px) scale(0.98);
+                }
+
+                /* Options Section */
+                .exit-popup-options {
+                    margin-top: 1.5rem;
+                    padding-top: 1rem;
+                    border-top: 1px solid rgba(0,0,0,0.1);
+                }
+
+                .dont-show-checkbox {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                    cursor: pointer;
+                    margin-bottom: 0.75rem;
+                    font-size: 0.95rem;
+                    color: #6B7280;
+                    transition: color 0.2s;
+                }
+
+                .dont-show-checkbox:hover {
+                    color: #374151;
+                }
+
+                .dont-show-checkbox input[type="checkbox"] {
+                    width: 18px;
+                    height: 18px;
+                    cursor: pointer;
+                    accent-color: #8B5CF6;
                 }
 
                 .exit-popup-dismiss {
-                    margin-top: 1.5rem;
+                    margin: 0;
                     font-size: 0.9rem;
                 }
 
                 .exit-popup-dismiss a {
-                    color: inherit;
-                    opacity: 0.7;
+                    color: #6B7280;
+                    opacity: 0.8;
                     text-decoration: underline;
+                    transition: all 0.2s;
                 }
 
                 .exit-popup-dismiss a:hover {
                     opacity: 1;
+                    color: #374151;
                 }
 
-                /* Mobile responsive */
+                /* Mobile optimizations */
                 @media (max-width: 768px) {
-                    .exit-popup-modal {
-                        padding: 2rem 1.5rem;
-                    }
-
                     .exit-popup-title {
                         font-size: 1.5rem;
                     }
@@ -423,12 +718,29 @@
                     }
 
                     .countdown-timer {
-                        font-size: 2rem;
+                        font-size: 2.2rem;
                     }
 
                     .exit-popup-cta {
-                        padding: 0.8rem 2rem;
+                        padding: 0.9rem 2rem;
+                        font-size: 1.05rem;
+                        width: 100%;
+                    }
+
+                    .smart-title {
                         font-size: 1rem;
+                    }
+
+                    .smart-subtitle {
+                        font-size: 0.9rem;
+                    }
+                }
+
+                /* Accessibility */
+                @media (prefers-reduced-motion: reduce) {
+                    .exit-popup-overlay,
+                    .exit-popup-modal {
+                        animation: none;
                     }
                 }
             </style>
@@ -459,7 +771,6 @@
 
             if (totalSeconds <= 0) {
                 clearInterval(interval);
-                // Auto-close popup when timer expires
                 close(false);
                 return;
             }
@@ -473,9 +784,8 @@
             if (minutesEl) minutesEl.textContent = String(mins).padStart(2, '0');
             if (secondsEl) secondsEl.textContent = String(secs).padStart(2, '0');
 
-            // Add urgency color when < 1 minute
+            // Add urgency animation when < 1 minute
             if (totalSeconds < 60) {
-                timerElement.style.color = '#ef4444';
                 timerElement.style.animation = 'pulse 1s infinite';
             }
         }, 1000);
@@ -483,12 +793,23 @@
 
     /**
      * Close popup
-     * @param {boolean} converted - Whether user clicked CTA (converted) or dismissed
+     * @param {boolean} converted - Whether user clicked CTA
      */
     function close(converted) {
+        // Check "Don't show again" checkbox
+        const dontShowCheckbox = document.getElementById('dontShowAgain');
+        if (dontShowCheckbox && dontShowCheckbox.checked) {
+            const dontShowUntil = new Date();
+            dontShowUntil.setDate(dontShowUntil.getDate() + CONFIG.frequencyCap.dontShowDays);
+            localStorage.setItem(CONFIG.localStorage.dontShowAgainKey, dontShowUntil.toISOString());
+            console.log(`🚫 User opted out for ${CONFIG.frequencyCap.dontShowDays} days`);
+        }
+
         const overlay = document.getElementById('exitPopupOverlay');
         if (overlay) {
-            overlay.remove();
+            // Fade out animation
+            overlay.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => overlay.remove(), 300);
         }
 
         // Re-enable body scroll
@@ -498,17 +819,18 @@
         if (converted) {
             trackAnalytics('conversion');
 
-            // Save popup offer details to localStorage for quotation tracking
+            // Save popup offer details to localStorage
             if (currentPopup) {
                 const popupOffer = {
                     popupId: currentPopup.id,
                     popupTitle: currentPopup.title,
                     discountText: currentPopup.discountText,
                     description: currentPopup.description,
+                    triggerType: triggerType,
                     timestamp: new Date().toISOString()
                 };
                 localStorage.setItem('activePopupOffer', JSON.stringify(popupOffer));
-                console.log('💾 Popup offer saved for quotation tracking:', popupOffer);
+                console.log('💾 Popup offer saved:', popupOffer);
             }
 
             // Redirect to quotation page
@@ -522,22 +844,15 @@
      * Track analytics
      */
     async function trackAnalytics(eventType) {
-        if (!currentPopup) {
-            console.warn('⚠️ Cannot track analytics: No popup active');
-            return;
-        }
+        if (!currentPopup) return;
 
-        console.log(`📊 Attempting to track ${eventType} for popup ID: ${currentPopup.id}`);
+        console.log(`📊 Tracking ${eventType} for popup: ${currentPopup.title}`);
 
         try {
-            // Import Firestore functions
             const { doc, updateDoc, increment } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
             const db = window.db;
-            if (!db) {
-                console.error('❌ Firebase DB not available for analytics tracking');
-                return;
-            }
+            if (!db) return;
 
             const popupRef = doc(db, 'exit_intent_popups', currentPopup.id);
 
@@ -545,34 +860,29 @@
                 await updateDoc(popupRef, {
                     'analytics.views': increment(1)
                 });
-                console.log(`✅ View tracked successfully for: ${currentPopup.title}`);
+                console.log(`✅ View tracked`);
             } else if (eventType === 'conversion') {
                 await updateDoc(popupRef, {
                     'analytics.conversions': increment(1)
                 });
-                console.log(`✅ Conversion tracked successfully for: ${currentPopup.title}`);
+                console.log(`✅ Conversion tracked`);
 
-                // Also track in Google Analytics if available
+                // Google Analytics
                 if (typeof gtag !== 'undefined') {
                     gtag('event', 'exit_popup_conversion', {
                         'event_category': 'Exit Popup',
-                        'event_label': currentPopup.title
+                        'event_label': currentPopup.title,
+                        'trigger_type': triggerType
                     });
                 }
             } else if (eventType === 'dismissal') {
                 await updateDoc(popupRef, {
                     'analytics.dismissals': increment(1)
                 });
-                console.log(`✅ Dismissal tracked successfully for: ${currentPopup.title}`);
+                console.log(`✅ Dismissal tracked`);
             }
         } catch (error) {
-            console.error('❌ Error tracking exit popup analytics:', error);
-            console.error('Error details:', {
-                eventType,
-                popupId: currentPopup?.id,
-                popupTitle: currentPopup?.title,
-                errorMessage: error.message
-            });
+            console.error('❌ Error tracking analytics:', error);
         }
     }
 
@@ -641,17 +951,16 @@
     function waitForFirebase() {
         return new Promise((resolve, reject) => {
             let attempts = 0;
-            const maxAttempts = 50; // 5 seconds max
+            const maxAttempts = 50;
 
             const checkFirebase = () => {
                 attempts++;
 
-                // Check for Firebase DB (window.firebaseDB is set in index.html)
                 if (window.firebaseDB) {
-                    console.log('✅ Firebase DB ready for exit popups');
+                    console.log('✅ Firebase DB ready');
                     resolve(window.firebaseDB);
                 } else if (attempts >= maxAttempts) {
-                    console.warn('⚠️ Firebase DB not found - exit popups disabled');
+                    console.warn('⚠️ Firebase DB not found');
                     reject(new Error('Firebase DB not available'));
                 } else {
                     setTimeout(checkFirebase, 100);
@@ -661,11 +970,23 @@
         });
     }
 
+    /**
+     * Add CSS for fade out animation
+     */
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+
     // Auto-initialize when Firebase is ready
     (async function() {
         try {
             const db = await waitForFirebase();
-            window.db = db; // Set window.db for compatibility
+            window.db = db;
             await init();
         } catch (error) {
             console.warn('Exit popups disabled:', error.message);
