@@ -1076,6 +1076,7 @@ export const Conversion = {
         const modal = document.createElement('div');
         modal.id = modalId;
         modal.className = 'modal';
+        modal.style.display = 'flex'; // Ensure modal is visible
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header">
