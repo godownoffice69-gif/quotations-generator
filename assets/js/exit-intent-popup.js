@@ -19,23 +19,48 @@
 (function() {
     'use strict';
 
-    // Configuration
-    const CONFIG = {
+    // Configuration - Will be loaded from Firestore
+    let CONFIG = {
         localStorage: {
             popupShownKey: 'exitPopupLastShown',
             dontShowAgainKey: 'exitPopupDontShow',
             quotationCreatedKey: 'quotationCreated'
         },
-        timeOnPage: 20000, // 20 seconds minimum
+        timeOnPage: 20000, // Default: 20 seconds minimum
         scrollDepth: {
-            desktop: 0.70, // 70% for desktop
-            mobile: 0.75  // 75% for mobile
+            desktop: 0.70, // Default: 70% for desktop
+            mobile: 0.75  // Default: 75% for mobile
         },
-        exitThreshold: 50, // Top 50px for exit intent
+        exitThreshold: 50, // Default: Top 50px for exit intent
         frequencyCap: {
-            session: true,           // Once per session
-            hours: 24,              // 24 hours between shows
-            dontShowDays: 7         // 7 days if "Don't show again" clicked
+            session: true,           // Default: Once per session
+            hours: 24,              // Default: 24 hours between shows
+            dontShowDays: 7         // Default: 7 days if "Don't show again" clicked
+        },
+        smartMessages: {
+            exitIntent: {
+                title: "Wait! Before you go...",
+                subtitle: "Get your free quote in 2 minutes!"
+            },
+            scrollDepth: {
+                title: "Interested in our services?",
+                subtitle: "Create a custom quotation now!"
+            },
+            timeBased: {
+                title: "Still browsing?",
+                subtitle: "Let us help you find the perfect package!"
+            }
+        },
+        triggersEnabled: {
+            exitIntent: true,
+            scrollDepth: true,
+            checkQuotationCreated: true
+        },
+        styling: {
+            animationDuration: 400,
+            backdropBlur: 4,
+            mobileBottomSheet: true,
+            backgroundClickClose: true
         }
         cookieName: 'exitPopupShown',
         cookieDays: 0.04, // Don't show again for ~1 hour (0.04 days = 1 hour)
@@ -53,10 +78,60 @@
     let listenersActive = false;
 
     /**
+     * Load configuration from Firestore
+     */
+    async function loadSettings() {
+        try {
+            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const db = window.db;
+
+            if (!db) {
+                console.warn('⚠️ DB not available, using default settings');
+                return;
+            }
+
+            const settingsDoc = await getDoc(doc(db, 'popup_settings', 'config'));
+
+            if (settingsDoc.exists()) {
+                const settings = settingsDoc.data();
+                console.log('✅ Loaded popup settings from Firestore');
+
+                // Merge with CONFIG (keep localStorage keys unchanged)
+                CONFIG = {
+                    ...CONFIG,
+                    timeOnPage: settings.timeOnPage || CONFIG.timeOnPage,
+                    scrollDepth: settings.scrollDepth || CONFIG.scrollDepth,
+                    exitThreshold: settings.exitThreshold || CONFIG.exitThreshold,
+                    frequencyCap: {
+                        ...CONFIG.frequencyCap,
+                        ...settings.frequencyCap
+                    },
+                    smartMessages: settings.smartMessages || CONFIG.smartMessages,
+                    triggersEnabled: settings.triggersEnabled || CONFIG.triggersEnabled,
+                    styling: settings.styling || CONFIG.styling
+                };
+
+                console.log('📊 Settings:', {
+                    scrollDepth: CONFIG.scrollDepth,
+                    timeOnPage: CONFIG.timeOnPage / 1000 + 's',
+                    triggers: CONFIG.triggersEnabled
+                });
+            } else {
+                console.log('📝 No custom settings found, using defaults');
+            }
+        } catch (error) {
+            console.warn('⚠️ Error loading settings, using defaults:', error.message);
+        }
+    }
+
+    /**
      * Initialize exit intent popups
      */
     async function init() {
         console.log('🎯 Initializing smart exit popup system...');
+
+        // Load settings from Firestore first
+        await loadSettings();
 
         // Check if user clicked "Don't show again"
         if (checkDontShowAgain()) {
@@ -64,14 +139,14 @@
             return;
         }
 
-        // Check frequency cap (24-hour rule)
+        // Check frequency cap
         if (!checkFrequencyCap()) {
             console.log('⏱️ Frequency cap active - popup shown recently');
             return;
         }
 
-        // Check if user has already created a quotation
-        if (hasCreatedQuotation()) {
+        // Check if quotation check is enabled and user has created a quotation
+        if (CONFIG.triggersEnabled.checkQuotationCreated && hasCreatedQuotation()) {
             console.log('✅ User already created quotation - no need to show popup');
         console.log('🚀 Initializing exit intent popups...');
         console.log('📱 Device type:', isMobile() ? 'Mobile' : 'Desktop');
@@ -95,7 +170,7 @@
 
         // Wait for minimum time on page before becoming eligible
         setTimeout(() => {
-            console.log('⏰ Time on page requirement met (20s) - popup now eligible');
+            console.log(`⏰ Time on page requirement met (${CONFIG.timeOnPage/1000}s) - popup now eligible`);
             setupTriggers();
         }, CONFIG.timeOnPage);
     }
@@ -216,43 +291,48 @@
         if (listenersActive) return;
 
         const isMobileDevice = isMobile();
+        const activeTriggersLog = [];
 
         if (!isMobileDevice) {
             // Desktop triggers
-            console.log('🖥️ Desktop triggers active:');
-            console.log('  - Exit intent (mouse to top 50px)');
-            console.log('  - Scroll depth (70%)');
+            console.log('🖥️ Desktop triggers:');
 
-            // Exit intent
-            document.addEventListener('mousemove', handleMouseMove);
-            console.log(`✅ Desktop exit intent enabled (trigger when mouse ≤ ${CONFIG.exitThreshold}px from top)`);
-        } else if (CONFIG.mobileEnabled) {
-            // Mobile: Scroll up detection (alternative for mobile)
-            let lastScrollY = window.scrollY;
-            let scrollUpCount = 0;
+            // Exit intent (if enabled)
+            if (CONFIG.triggersEnabled.exitIntent) {
+                document.addEventListener('mousemove', handleMouseMove);
+                activeTriggersLog.push(`  ✓ Exit intent (mouse to top ${CONFIG.exitThreshold}px)`);
+            } else {
+                activeTriggersLog.push(`  ✗ Exit intent (disabled)`);
+            }
 
-            window.addEventListener('scroll', () => {
-                const currentScrollY = window.scrollY;
-
-                if (currentScrollY < lastScrollY) {
-                    scrollUpCount++;
-                    // Trigger after user scrolls up 3 times
-                    if (scrollUpCount >= 3 && !hasShownPopup) {
-                        showPopup();
-                    }
-                } else {
-                    scrollUpCount = 0; // Reset if scrolling down
-                }
-
-            // Scroll depth
-            window.addEventListener('scroll', handleScrollDepth);
+            // Scroll depth (if enabled)
+            if (CONFIG.triggersEnabled.scrollDepth) {
+                window.addEventListener('scroll', handleScrollDepth);
+                activeTriggersLog.push(`  ✓ Scroll depth (${CONFIG.scrollDepth.desktop * 100}%)`);
+            } else {
+                activeTriggersLog.push(`  ✗ Scroll depth (disabled)`);
+            }
         } else {
             // Mobile triggers
-            console.log('📱 Mobile triggers active:');
-            console.log('  - Scroll depth (75%)');
+            console.log('📱 Mobile triggers:');
 
             // Scroll depth only (no exit intent on mobile)
-            window.addEventListener('scroll', handleScrollDepth);
+            if (CONFIG.triggersEnabled.scrollDepth) {
+                window.addEventListener('scroll', handleScrollDepth);
+                activeTriggersLog.push(`  ✓ Scroll depth (${CONFIG.scrollDepth.mobile * 100}%)`);
+            } else {
+                activeTriggersLog.push(`  ✗ Scroll depth (disabled)`);
+            }
+        }
+
+        activeTriggersLog.forEach(log => console.log(log));
+
+        // Check if at least one trigger is active
+        const hasActiveTriggers = (!isMobileDevice && (CONFIG.triggersEnabled.exitIntent || CONFIG.triggersEnabled.scrollDepth)) ||
+                                  (isMobileDevice && CONFIG.triggersEnabled.scrollDepth);
+
+        if (!hasActiveTriggers) {
+            console.warn('⚠️ No triggers enabled! Popup will never show.');
         }
 
         listenersActive = true;
@@ -264,14 +344,9 @@
     function handleMouseMove(e) {
         if (hasShownPopup) return;
 
-        // Check if mouse is in top 50px (about to leave)
+        // Check if mouse is in the top area of viewport (about to leave)
         if (e.clientY <= CONFIG.exitThreshold) {
             triggerType = 'exit-intent';
-            console.log('🎯 Exit intent detected! (mouse at top)');
-        // Check if mouse is in the top area of viewport (about to leave)
-        if (e.clientY <= CONFIG.exitThreshold && !hasShownPopup) {
-            // Remove listener after triggering once
-            document.removeEventListener('mousemove', handleMouseMove);
             console.log(`🎯 Exit intent detected! (mouse at ${e.clientY}px, threshold: ${CONFIG.exitThreshold}px)`);
             showPopup();
         }
@@ -332,25 +407,12 @@
      */
     function getSmartMessage() {
         const messages = {
-            'exit-intent': {
-                title: "Wait! Before you go...",
-                subtitle: "Get your free quote in 2 minutes!"
-            },
-            'scroll-depth': {
-                title: "Interested in our services?",
-                subtitle: "Create a custom quotation now!"
-            },
-            'time-based': {
-                title: "Still browsing?",
-                subtitle: "Let us help you find the perfect package!"
-            }
+            'exit-intent': CONFIG.smartMessages.exitIntent,
+            'scroll-depth': CONFIG.smartMessages.scrollDepth,
+            'time-based': CONFIG.smartMessages.timeBased
         };
 
-        return messages[triggerType] || messages['scroll-depth'];
-        // Set cookie to prevent showing again
-        setCookie(CONFIG.cookieName, 'true', CONFIG.cookieDays);
-        const hours = (CONFIG.cookieDays * 24).toFixed(1);
-        console.log(`🍪 Cookie set for ${hours} hour(s) - popup won't show again until then`);
+        return messages[triggerType] || CONFIG.smartMessages.scrollDepth;
     }
 
     /**
@@ -366,12 +428,14 @@
         overlay.id = 'exitPopupOverlay';
         overlay.className = 'exit-popup-overlay';
 
-        // Add click to close on background
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) {
-                close(false);
-            }
-        });
+        // Add click to close on background (if enabled in settings)
+        if (CONFIG.styling.backgroundClickClose) {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    close(false);
+                }
+            });
+        }
 
         // Build countdown HTML
         let countdownHTML = '';
@@ -387,8 +451,8 @@
             `;
         }
 
-        // Mobile bottom sheet class
-        const mobileClass = isMobileDevice ? 'mobile-bottom-sheet' : '';
+        // Mobile bottom sheet class (if enabled in settings)
+        const mobileClass = (isMobileDevice && CONFIG.styling.mobileBottomSheet) ? 'mobile-bottom-sheet' : '';
 
         // Build popup HTML
         overlay.innerHTML = `
@@ -438,8 +502,8 @@
                     align-items: center;
                     justify-content: center;
                     z-index: 999999;
-                    animation: fadeIn 0.4s ease;
-                    backdrop-filter: blur(4px);
+                    animation: fadeIn ${CONFIG.styling.animationDuration}ms ease;
+                    backdrop-filter: blur(${CONFIG.styling.backdropBlur}px);
                 }
 
                 @keyframes fadeIn {
@@ -461,7 +525,7 @@
                     padding: 3rem 2rem;
                     text-align: center;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-                    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    animation: slideUp ${CONFIG.styling.animationDuration}ms cubic-bezier(0.34, 1.56, 0.64, 1);
                 }
 
                 @keyframes slideUp {
@@ -487,7 +551,7 @@
                         border-radius: 20px 20px 0 0;
                         max-height: 85vh;
                         padding: 2rem 1.5rem 2.5rem;
-                        animation: slideUpMobile 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                        animation: slideUpMobile ${CONFIG.styling.animationDuration}ms cubic-bezier(0.34, 1.56, 0.64, 1);
                     }
 
                     @keyframes slideUpMobile {
@@ -808,8 +872,9 @@
         const overlay = document.getElementById('exitPopupOverlay');
         if (overlay) {
             // Fade out animation
-            overlay.style.animation = 'fadeOut 0.3s ease';
-            setTimeout(() => overlay.remove(), 300);
+            const fadeOutDuration = CONFIG.styling.animationDuration || 300;
+            overlay.style.animation = `fadeOut ${fadeOutDuration}ms ease`;
+            setTimeout(() => overlay.remove(), fadeOutDuration);
         }
 
         // Re-enable body scroll
