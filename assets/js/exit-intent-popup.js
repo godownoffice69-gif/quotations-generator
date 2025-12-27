@@ -124,49 +124,72 @@
      * Initialize exit intent popups
      */
     async function init() {
-        console.log('🎯 Initializing smart exit popup system...');
+        console.log('═══════════════════════════════════════════');
+        console.log('🎯 SMART EXIT POPUP - INITIALIZATION START');
+        console.log('═══════════════════════════════════════════');
 
         // Load settings from Firestore first
         await loadSettings();
+        console.log('📱 Device type:', isMobile() ? 'Mobile' : 'Desktop');
 
         // Check if user clicked "Don't show again"
         if (checkDontShowAgain()) {
-            console.log('⏭️ User opted out - popup disabled');
+            console.log('═══════════════════════════════════════════');
+            console.log('❌ POPUP BLOCKED: User opted out');
+            console.log('═══════════════════════════════════════════');
             return;
         }
 
         // Check frequency cap
-        if (!checkFrequencyCap()) {
-            console.log('⏱️ Frequency cap active - popup shown recently');
+        const frequencyOK = checkFrequencyCap();
+        if (!frequencyOK) {
+            const lastShown = localStorage.getItem(CONFIG.localStorage.popupShownKey);
+            const lastShownDate = new Date(lastShown);
+            const nextShowDate = new Date(lastShownDate.getTime() + CONFIG.frequencyCap.hours * 60 * 60 * 1000);
+            console.log(`🚫 POPUP BLOCKED: Frequency cap active`);
+            console.log(`   Last shown: ${lastShownDate.toLocaleString()}`);
+            console.log(`   Can show again: ${nextShowDate.toLocaleString()}`);
+            console.log('═══════════════════════════════════════════');
             return;
         }
+        console.log('✅ Frequency cap: OK');
 
         // Check if quotation check is enabled and user has created a quotation
-        if (CONFIG.triggersEnabled.checkQuotationCreated && hasCreatedQuotation()) {
-            console.log('✅ User already created quotation - no need to show popup');
-        console.log('🚀 Initializing exit intent popups...');
-        console.log('📱 Device type:', isMobile() ? 'Mobile' : 'Desktop');
+        if (CONFIG.triggersEnabled.checkQuotationCreated) {
+            const hasQuotation = hasCreatedQuotation();
+            if (hasQuotation) {
+                console.log('🚫 POPUP BLOCKED: User already created quotation');
+                console.log('   (quotationCreated flag found in localStorage)');
+                console.log('═══════════════════════════════════════════');
+                return;
+            }
+            console.log('✅ Quotation check: User has not created quotation yet');
+        }
 
-        // Check if popup was already shown in this session
-        const cookieExists = getCookie(CONFIG.cookieName);
-        console.log('🍪 Cookie check:', cookieExists ? 'Found (popup already shown)' : 'Not found (can show popup)');
-
-        if (cookieExists) {
-            console.log('⏸️ Exit popup already shown in this session - skipping');
+        // Check session flag
+        if (CONFIG.frequencyCap.session && hasShownPopup) {
+            console.log('🚫 POPUP BLOCKED: Already shown once this session');
+            console.log('═══════════════════════════════════════════');
             return;
         }
+        console.log('✅ Session check: OK (not shown yet this session)');
 
         // Load popups from Firebase
         await loadPopups();
 
         if (popups.length === 0) {
-            console.log('📭 No eligible popups found');
+            console.log('📭 No active popups found in Firestore');
+            console.log('═══════════════════════════════════════════');
             return;
         }
+        console.log(`✅ Loaded ${popups.length} active popup(s) from Firestore`);
 
         // Wait for minimum time on page before becoming eligible
+        console.log(`⏳ Waiting ${CONFIG.timeOnPage/1000}s before popup becomes eligible...`);
+        console.log('═══════════════════════════════════════════');
         setTimeout(() => {
-            console.log(`⏰ Time on page requirement met (${CONFIG.timeOnPage/1000}s) - popup now eligible`);
+            console.log('⏰ Time requirement met - popup now eligible!');
+            console.log('🎯 Setting up triggers...');
             setupTriggers();
         }, CONFIG.timeOnPage);
     }
@@ -182,17 +205,13 @@
         const now = new Date();
 
         if (now < expiryDate) {
+            console.log(`🚫 POPUP BLOCKED: "Don't show again" active until ${expiryDate.toLocaleString()}`);
             return true; // Still in "don't show" period
         } else {
             // Expired, clear it
+            console.log('✅ "Don\'t show again" period expired - cleared');
             localStorage.removeItem(CONFIG.localStorage.dontShowAgainKey);
             return false;
-            console.log(`⏱️ Setting up exit intent with ${delay / 1000}s delay...`);
-            setTimeout(() => {
-                setupExitIntent();
-            }, delay);
-        } else {
-            console.log('❌ No eligible popups found');
         }
     }
 
@@ -201,11 +220,17 @@
      */
     function checkFrequencyCap() {
         const lastShown = localStorage.getItem(CONFIG.localStorage.popupShownKey);
-        if (!lastShown) return true; // Never shown before
+        if (!lastShown) {
+            console.log('✅ First time visitor (no popup history)');
+            return true; // Never shown before
+        }
 
         const lastShownDate = new Date(lastShown);
         const now = new Date();
         const hoursSinceLastShown = (now - lastShownDate) / (1000 * 60 * 60);
+
+        console.log(`📊 Last popup shown: ${hoursSinceLastShown.toFixed(1)} hours ago`);
+        console.log(`📊 Required wait time: ${CONFIG.frequencyCap.hours} hours`);
 
         return hoursSinceLastShown >= CONFIG.frequencyCap.hours;
     }
@@ -376,11 +401,15 @@
      * Show the popup with smart messaging
      */
     function showPopup() {
-        console.log('🎬 showPopup() called');
+        console.log('═══════════════════════════════════════════');
+        console.log('🎬 SHOWING POPUP');
+        console.log('═══════════════════════════════════════════');
+        console.log('Trigger type:', triggerType);
         console.log('hasShownPopup:', hasShownPopup, 'popups.length:', popups.length);
 
         if (hasShownPopup || popups.length === 0) {
             console.log('⏸️ Popup blocked:', hasShownPopup ? 'Already shown' : 'No popups available');
+            console.log('═══════════════════════════════════════════');
             return;
         }
 
@@ -389,12 +418,15 @@
 
         // Record show timestamp
         localStorage.setItem(CONFIG.localStorage.popupShownKey, new Date().toISOString());
-        console.log('✅ Showing popup:', currentPopup.title);
+        console.log('✅ Selected popup:', currentPopup.title);
+        console.log('✅ Timestamp saved to localStorage');
 
         // Track view
         trackAnalytics('view');
+        console.log('✅ Analytics tracked');
 
         // Build and display popup
+        console.log('✅ Rendering popup HTML...');
         renderPopup();
     }
 
@@ -807,6 +839,10 @@
         `;
 
         document.body.appendChild(overlay);
+        console.log('✅ Popup added to DOM successfully!');
+        console.log('═══════════════════════════════════════════');
+        console.log('💡 Popup should now be visible on screen');
+        console.log('═══════════════════════════════════════════');
 
         // Start countdown if enabled
         if (popup.countdown && popup.countdown.enabled) {
