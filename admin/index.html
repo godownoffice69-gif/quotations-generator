@@ -1875,10 +1875,6 @@
                 <button class="nav-tab" data-tab="history">📚 History</button>
                 <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
                 <button class="nav-tab" data-tab="financials">💰 Financials</button>
-                <button class="nav-tab" data-tab="videos">🎥 Videos</button>
-                <button class="nav-tab" data-tab="advertisements">📢 Ads</button>
-                <button class="nav-tab" data-tab="packages">📦 Packages</button>
-                <button class="nav-tab" data-tab="leads">🎯 Leads</button>
                 <button class="nav-tab" data-tab="conversion">🚀 Marketing</button>
                 <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
             </div>
@@ -4451,7 +4447,7 @@ const OMS = {
 
                 // Update tabs
                 const tabs = document.querySelectorAll('.nav-tab');
-                const tabKeys = ['dashboard', 'orders', 'inventory', 'productPhotos', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'financials', 'videos', 'advertisements', 'packages', 'leads', 'conversion', 'settings'];
+                const tabKeys = ['dashboard', 'orders', 'inventory', 'productPhotos', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'financials', 'conversion', 'settings'];
                 tabs.forEach((tab, index) => {
                     if (tabKeys[index] && t[tabKeys[index]]) {
                         tab.textContent = t[tabKeys[index]];
@@ -9290,8 +9286,6 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'calendar') this.renderCalendarTab();
                     else if (tabName === 'history') this.renderHistory();
                     else if (tabName === 'analytics') this.renderAnalytics();
-                    else if (tabName === 'videos') this.renderVideos();
-                    else if (tabName === 'advertisements') this.renderAdvertisements();
                     else if (tabName === 'financials') this.renderFinancials();
                     else if (tabName === 'settings') this.renderSettings();
                     else if (tabName === 'orders') {
@@ -22756,58 +22750,13 @@ if (diffDays > 30) {
                 const { LeadsManager } = await import(`./js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
                 const { Conversion } = await import(`./js/features/conversion.js?v=${BUILD_TIMESTAMP}`);
 
-                console.log('✅ Package and Lead managers imported successfully');
+                console.log('✅ Marketing & Conversion module imported successfully');
 
-                // Initialize Package Manager
-                const packageManager = new PackageManager();
+                // Note: PackageManager and LeadsManager are now initialized
+                // from within the Marketing > Packages and Marketing > Leads sub-tabs
+                // (see conversion.js renderPackagesSection and renderLeadsSection)
 
-                // Initialize Leads Manager
-                const leadsManager = new LeadsManager();
-
-                // Initialize when respective tabs are opened
-                const packagesTab = document.querySelector('[data-tab="packages"]');
-                const leadsTab = document.querySelector('[data-tab="leads"]');
-
-                console.log('📦 Packages tab found:', !!packagesTab);
-                console.log('🎯 Leads tab found:', !!leadsTab);
-
-                let packagesInitialized = false;
-                let leadsInitialized = false;
-
-                packagesTab?.addEventListener('click', async () => {
-                    console.log('📦 Packages tab clicked, initialized:', packagesInitialized);
-                    if (!packagesInitialized) {
-                        try {
-                            console.log('🔄 Initializing Package Manager...');
-                            await packageManager.init();
-                            console.log('✅ Package Manager initialized successfully');
-
-                            // Populate inventory items dropdown
-                            const selectItem = document.getElementById('select-inventory-item');
-                            if (selectItem && packageManager.inventory.items) {
-                                packageManager.inventory.items.forEach(item => {
-                                    const option = document.createElement('option');
-                                    option.value = item.id;
-                                    option.textContent = item.name;
-                                    selectItem.appendChild(option);
-                                });
-                            }
-
-                            packagesInitialized = true;
-                        } catch (error) {
-                            console.error('❌ Failed to initialize Package Manager:', error);
-                        }
-                    }
-                });
-
-            leadsTab?.addEventListener('click', async () => {
-                if (!leadsInitialized) {
-                    await leadsManager.init();
-                    leadsInitialized = true;
-                }
-            });
-
-            // Initialize Marketing & Conversion tab
+                // Initialize Marketing & Conversion tab
             const conversionTab = document.querySelector('[data-tab="conversion"]');
             let conversionInitialized = false;
 
@@ -22825,15 +22774,13 @@ if (diffDays > 30) {
                 }
             });
 
-            // Make managers globally available
-            window.packageManager = packageManager;
-            window.leadsManager = leadsManager;
+            // Make Conversion module globally available
             window.Conversion = Conversion;
 
-            console.log('✅ Packages and Leads managers ready');
+            console.log('✅ Marketing & Conversion module ready');
 
             } catch (error) {
-                console.error('❌ Failed to initialize Packages/Leads managers:', error);
+                console.error('❌ Failed to initialize Marketing module:', error);
                 console.error('Error details:', error.message, error.stack);
             }
         });

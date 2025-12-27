@@ -63,6 +63,18 @@ export const Conversion = {
                         <button class="conversion-subnav-btn" data-section="availability">
                             📅 Availability
                         </button>
+                        <button class="conversion-subnav-btn" data-section="videos">
+                            🎥 Videos
+                        </button>
+                        <button class="conversion-subnav-btn" data-section="ads">
+                            📢 Ads
+                        </button>
+                        <button class="conversion-subnav-btn" data-section="packages">
+                            📦 Packages
+                        </button>
+                        <button class="conversion-subnav-btn" data-section="leads">
+                            🎯 Leads
+                        </button>
                     </div>
                 </div>
 
@@ -147,6 +159,18 @@ export const Conversion = {
                 break;
             case 'availability':
                 this.renderAvailabilitySection(oms, contentArea);
+                break;
+            case 'videos':
+                this.renderVideosSection(oms, contentArea);
+                break;
+            case 'ads':
+                this.renderAdsSection(oms, contentArea);
+                break;
+            case 'packages':
+                this.renderPackagesSection(oms, contentArea);
+                break;
+            case 'leads':
+                this.renderLeadsSection(oms, contentArea);
                 break;
             default:
                 contentArea.innerHTML = '<p>Section not found</p>';
@@ -1574,6 +1598,153 @@ export const Conversion = {
                 </div>
             </div>
         `;
+    },
+
+    /* =========================================
+       VIDEOS SECTION
+       ========================================= */
+    renderVideosSection(oms, container) {
+        // Create a temporary container for videos
+        container.innerHTML = '<div id="videos-temp"></div>';
+        const tempContainer = document.getElementById('videos-temp');
+
+        // Call the OMS renderVideos method which will populate this container
+        if (oms && typeof oms.renderVideos === 'function') {
+            // Temporarily override the target container
+            const originalContainer = document.getElementById('videos');
+            const videoContent = document.createElement('div');
+            videoContent.id = 'videos';
+            videoContent.style.display = 'none';
+            document.body.appendChild(videoContent);
+
+            oms.renderVideos();
+
+            // Copy the rendered content to our container
+            container.innerHTML = videoContent.innerHTML;
+
+            // Clean up
+            videoContent.remove();
+        } else {
+            container.innerHTML = '<p style="color: var(--text-gray);">Video management not available</p>';
+        }
+    },
+
+    /* =========================================
+       ADS SECTION
+       ========================================= */
+    renderAdsSection(oms, container) {
+        // Create a temporary container for ads
+        container.innerHTML = '<div id="advertisements-temp"></div>';
+
+        // Call the OMS renderAdvertisements method
+        if (oms && typeof oms.renderAdvertisements === 'function') {
+            // Temporarily override the target container
+            const originalContainer = document.getElementById('advertisements');
+            const adContent = document.createElement('div');
+            adContent.id = 'advertisements';
+            adContent.style.display = 'none';
+            document.body.appendChild(adContent);
+
+            oms.renderAdvertisements();
+
+            // Copy the rendered content to our container
+            container.innerHTML = adContent.innerHTML;
+
+            // Clean up
+            adContent.remove();
+        } else {
+            container.innerHTML = '<p style="color: var(--text-gray);">Ad management not available</p>';
+        }
+    },
+
+    /* =========================================
+       PACKAGES SECTION
+       ========================================= */
+    async renderPackagesSection(oms, container) {
+        // Create packages structure
+        container.innerHTML = `
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📦 Package Management</h2>
+                </div>
+                <div class="card-body">
+                    <div id="packages-container">
+                        <div style="text-align: center; padding: 3rem;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+                            <p>Loading packages...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Initialize PackageManager if not already done
+        if (!window.packageManager) {
+            try {
+                const BUILD_TIMESTAMP = Date.now();
+                const { PackageManager } = await import(`../packages/package-manager.js?v=${BUILD_TIMESTAMP}`);
+                window.packageManager = new PackageManager();
+            } catch (error) {
+                console.error('❌ Failed to load PackageManager:', error);
+                container.innerHTML = '<p style="color: var(--danger);">Failed to load package manager</p>';
+                return;
+            }
+        }
+
+        // Initialize and render
+        try {
+            await window.packageManager.init();
+        } catch (error) {
+            console.error('❌ Failed to initialize packages:', error);
+        }
+    },
+
+    /* =========================================
+       LEADS SECTION
+       ========================================= */
+    async renderLeadsSection(oms, container) {
+        // Create leads structure
+        container.innerHTML = `
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🎯 Lead Management</h2>
+                </div>
+                <div class="card-body">
+                    <!-- Filter Buttons -->
+                    <div id="leads-filter-buttons" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
+                        <!-- Filter buttons will be rendered here -->
+                    </div>
+
+                    <!-- Leads List -->
+                    <div id="leads-list-container">
+                        <div style="text-align: center; padding: 3rem;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+                            <p>Loading leads...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Initialize LeadsManager if not already done
+        if (!window.leadsManager) {
+            try {
+                const BUILD_TIMESTAMP = Date.now();
+                const { LeadsManager } = await import(`../leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
+                window.leadsManager = new LeadsManager();
+            } catch (error) {
+                console.error('❌ Failed to load LeadsManager:', error);
+                container.innerHTML = '<p style="color: var(--danger);">Failed to load leads manager</p>';
+                return;
+            }
+        }
+
+        // Initialize and render
+        try {
+            await window.leadsManager.init();
+        } catch (error) {
+            console.error('❌ Failed to initialize leads:', error);
+        }
     }
 };
 
