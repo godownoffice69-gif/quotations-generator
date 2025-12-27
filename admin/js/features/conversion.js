@@ -234,13 +234,19 @@ export const Conversion = {
         if (!this.exitPopupsListenerActive) {
             const db = window.db;
             if (db) {
+                console.log('🔧 Setting up real-time analytics listener for exit_intent_popups collection...');
                 db.collection('exit_intent_popups').onSnapshot(
                     (snapshot) => {
-                        console.log('📊 Popup analytics updated, refreshing display...');
+                        console.log('📊 Firestore snapshot received! Changes:', snapshot.docChanges().length);
+                        snapshot.docChanges().forEach(change => {
+                            console.log(`  - ${change.type}: ${change.doc.id}`, change.doc.data().analytics);
+                        });
+
                         // Reload popups and re-render without setting up another listener
                         this.loadExitIntentPopups(oms).then(updatedPopups => {
                             const grid = document.getElementById('exitPopupsGrid');
                             if (grid) {
+                                console.log('✅ Updating popup grid with', updatedPopups.length, 'popups');
                                 if (updatedPopups.length > 0) {
                                     grid.innerHTML = updatedPopups.map(popup => this.renderExitPopupCard(popup, oms)).join('');
                                 } else {
@@ -251,6 +257,8 @@ export const Conversion = {
                                         </div>
                                     `;
                                 }
+                            } else {
+                                console.warn('⚠️ exitPopupsGrid element not found');
                             }
                         }).catch(error => {
                             console.error('❌ Error reloading popups:', error);
@@ -261,8 +269,12 @@ export const Conversion = {
                     }
                 );
                 this.exitPopupsListenerActive = true;
-                console.log('✅ Real-time analytics listener activated');
+                console.log('✅ Real-time analytics listener activated for exit_intent_popups');
+            } else {
+                console.error('❌ Firebase DB not available - cannot set up real-time listener');
             }
+        } else {
+            console.log('ℹ️ Real-time listener already active, skipping setup');
         }
 
         container.innerHTML = `
@@ -273,9 +285,14 @@ export const Conversion = {
                         Show special offers when visitors try to leave your website
                     </p>
                 </div>
-                <button class="btn btn-primary" onclick="Conversion.showCreateExitPopupModal()">
-                    ➕ Create New Popup
-                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary" onclick="Conversion.refreshExitPopups()" title="Refresh analytics manually">
+                        🔄 Refresh
+                    </button>
+                    <button class="btn btn-primary" onclick="Conversion.showCreateExitPopupModal()">
+                        ➕ Create New Popup
+                    </button>
+                </div>
             </div>
 
             <!-- Stats Cards -->
@@ -1001,6 +1018,21 @@ export const Conversion = {
         } catch (error) {
             console.error('Error deleting popup:', error);
             alert('❌ Error deleting popup: ' + error.message);
+        }
+    },
+
+    async refreshExitPopups() {
+        console.log('🔄 Manual refresh requested...');
+        try {
+            const container = document.querySelector('#popups-exit-intent-container');
+            if (container) {
+                await this.renderExitIntentPopups(window.OMS, container);
+                console.log('✅ Popups refreshed successfully');
+            } else {
+                console.error('❌ Container not found for refresh');
+            }
+        } catch (error) {
+            console.error('❌ Error refreshing popups:', error);
         }
     },
 
