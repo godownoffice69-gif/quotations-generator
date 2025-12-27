@@ -37,6 +37,10 @@
             hours: 24,              // 24 hours between shows
             dontShowDays: 7         // 7 days if "Don't show again" clicked
         }
+        cookieName: 'exitPopupShown',
+        cookieDays: 0.04, // Don't show again for ~1 hour (0.04 days = 1 hour)
+        exitThreshold: 150, // Mouse must be within 150px of top (easier to trigger)
+        mobileEnabled: true // Show on mobile (on scroll up instead of mouse exit)
     };
 
     // State
@@ -69,6 +73,15 @@
         // Check if user has already created a quotation
         if (hasCreatedQuotation()) {
             console.log('✅ User already created quotation - no need to show popup');
+        console.log('🚀 Initializing exit intent popups...');
+        console.log('📱 Device type:', isMobile() ? 'Mobile' : 'Desktop');
+
+        // Check if popup was already shown in this session
+        const cookieExists = getCookie(CONFIG.cookieName);
+        console.log('🍪 Cookie check:', cookieExists ? 'Found (popup already shown)' : 'Not found (can show popup)');
+
+        if (cookieExists) {
+            console.log('⏸️ Exit popup already shown in this session - skipping');
             return;
         }
 
@@ -103,6 +116,12 @@
             // Expired, clear it
             localStorage.removeItem(CONFIG.localStorage.dontShowAgainKey);
             return false;
+            console.log(`⏱️ Setting up exit intent with ${delay / 1000}s delay...`);
+            setTimeout(() => {
+                setupExitIntent();
+            }, delay);
+        } else {
+            console.log('❌ No eligible popups found');
         }
     }
 
@@ -206,6 +225,24 @@
 
             // Exit intent
             document.addEventListener('mousemove', handleMouseMove);
+            console.log(`✅ Desktop exit intent enabled (trigger when mouse ≤ ${CONFIG.exitThreshold}px from top)`);
+        } else if (CONFIG.mobileEnabled) {
+            // Mobile: Scroll up detection (alternative for mobile)
+            let lastScrollY = window.scrollY;
+            let scrollUpCount = 0;
+
+            window.addEventListener('scroll', () => {
+                const currentScrollY = window.scrollY;
+
+                if (currentScrollY < lastScrollY) {
+                    scrollUpCount++;
+                    // Trigger after user scrolls up 3 times
+                    if (scrollUpCount >= 3 && !hasShownPopup) {
+                        showPopup();
+                    }
+                } else {
+                    scrollUpCount = 0; // Reset if scrolling down
+                }
 
             // Scroll depth
             window.addEventListener('scroll', handleScrollDepth);
@@ -231,6 +268,11 @@
         if (e.clientY <= CONFIG.exitThreshold) {
             triggerType = 'exit-intent';
             console.log('🎯 Exit intent detected! (mouse at top)');
+        // Check if mouse is in the top area of viewport (about to leave)
+        if (e.clientY <= CONFIG.exitThreshold && !hasShownPopup) {
+            // Remove listener after triggering once
+            document.removeEventListener('mousemove', handleMouseMove);
+            console.log(`🎯 Exit intent detected! (mouse at ${e.clientY}px, threshold: ${CONFIG.exitThreshold}px)`);
             showPopup();
         }
     }
@@ -263,13 +305,20 @@
      * Show the popup with smart messaging
      */
     function showPopup() {
-        if (hasShownPopup || popups.length === 0) return;
+        console.log('🎬 showPopup() called');
+        console.log('hasShownPopup:', hasShownPopup, 'popups.length:', popups.length);
+
+        if (hasShownPopup || popups.length === 0) {
+            console.log('⏸️ Popup blocked:', hasShownPopup ? 'Already shown' : 'No popups available');
+            return;
+        }
 
         hasShownPopup = true;
         currentPopup = popups[0]; // Show first eligible popup
 
         // Record show timestamp
         localStorage.setItem(CONFIG.localStorage.popupShownKey, new Date().toISOString());
+        console.log('✅ Showing popup:', currentPopup.title);
 
         // Track view
         trackAnalytics('view');
@@ -298,6 +347,10 @@
         };
 
         return messages[triggerType] || messages['scroll-depth'];
+        // Set cookie to prevent showing again
+        setCookie(CONFIG.cookieName, 'true', CONFIG.cookieDays);
+        const hours = (CONFIG.cookieDays * 24).toFixed(1);
+        console.log(`🍪 Cookie set for ${hours} hour(s) - popup won't show again until then`);
     }
 
     /**
@@ -854,10 +907,42 @@
             .replace(/'/g, "&#039;");
     }
 
+    /**
+     * Set cookie
+     */
+    function setCookie(name, value, days) {
+        const expires = new Date();
+        expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+        document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+    }
+
+    /**
+     * Get cookie
+     */
+    function getCookie(name) {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    /**
+     * Clear the exit popup cookie (for testing)
+     */
+    function clearCookie() {
+        document.cookie = `${CONFIG.cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        console.log('🗑️ Exit popup cookie cleared - popup can be shown again');
+    }
+
     // Public API
     window.ExitPopup = {
         close,
-        init
+        init,
+        clearCookie
     };
 
     /**

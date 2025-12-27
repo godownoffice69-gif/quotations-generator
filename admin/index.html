@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Version: 2024-12-21-OMSREADY-EVENT-v9-FINAL -->
-    <!-- TIMESTAMP: 1734748800 -->
-    <!-- FIXED: OMSReady event was never dispatched -->
+    <!-- Version: 2025-12-26-MARKETING-TAB-FIX-v14 -->
+    <!-- TIMESTAMP: 1735220400 -->
+    <!-- FIXED: Marketing tab name showing correctly + Analytics improvements -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0">
@@ -61,7 +61,7 @@
         .app-container { min-height: 100vh; display: flex; flex-direction: column; }
         
         .app-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: var(--white);
             padding: 1rem 0;
             box-shadow: var(--shadow-lg);
@@ -1874,9 +1874,9 @@
                 <button class="nav-tab" data-tab="calendar">🗓️ Calendar</button>
                 <button class="nav-tab" data-tab="history">📚 History</button>
                 <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
+                <button class="nav-tab" data-tab="financials">💰 Financials</button>
                 <button class="nav-tab" data-tab="videos">🎥 Videos</button>
                 <button class="nav-tab" data-tab="advertisements">📢 Ads</button>
-                <button class="nav-tab" data-tab="financials">💰 Financials</button>
                 <button class="nav-tab" data-tab="packages">📦 Packages</button>
                 <button class="nav-tab" data-tab="leads">🎯 Leads</button>
                 <button class="nav-tab" data-tab="conversion">🚀 Marketing</button>
@@ -2619,15 +2619,17 @@ debounce: (func, wait) => {
                 itemHistory: '📜 Item History',
                 preparation: '🍳 Preparation',
                 customers: '👥 Customers',
+                quotations: '📄 Quotations',
                 team: '👨‍💼 Team',
                 calendar: '📅 Calendar',
                 history: '🕒 History',
                 analytics: '📈 Analytics',
+                financials: '💰 Financials',
                 videos: '🎥 Videos',
                 advertisements: '📢 Ads',
-                financials: '💰 Financials',
                 packages: '📦 Packages',
                 leads: '🎯 Leads',
+                conversion: '🚀 Marketing',
                 settings: '⚙️ Settings',
 
                 // Common Buttons
@@ -2968,15 +2970,17 @@ debounce: (func, wait) => {
                 itemHistory: '📜 આઇટમ ઇતિહાસ',
                 preparation: '🍳 તૈયારી',
                 customers: '👥 ગ્રાહકો',
+                quotations: '📄 અવતરણ',
                 team: '👨‍💼 ટીમ',
                 calendar: '📅 કેલેન્ડર',
                 history: '🕒 ઇતિહાસ',
                 analytics: '📈 વિશ્લેષણ',
+                financials: '💰 નાણાકીય',
                 videos: '🎥 વિડિયો',
                 advertisements: '📢 જાહેરાત',
-                financials: '💰 નાણાકીય',
                 packages: '📦 પેકેજો',
                 leads: '🎯 લીડ્સ',
+                conversion: '🚀 માર્કેટિંગ',
                 settings: '⚙️ સેટિંગ્સ',
 
                 // Common Buttons
@@ -4447,7 +4451,7 @@ const OMS = {
 
                 // Update tabs
                 const tabs = document.querySelectorAll('.nav-tab');
-                const tabKeys = ['dashboard', 'orders', 'inventory', 'productPhotos', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'videos', 'advertisements', 'financials', 'packages', 'leads', 'settings'];
+                const tabKeys = ['dashboard', 'orders', 'inventory', 'productPhotos', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'financials', 'videos', 'advertisements', 'packages', 'leads', 'conversion', 'settings'];
                 tabs.forEach((tab, index) => {
                     if (tabKeys[index] && t[tabKeys[index]]) {
                         tab.textContent = t[tabKeys[index]];
@@ -9268,8 +9272,8 @@ convertToQuotationDateFormat(dateStr) {
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-                document.getElementById(tabName).classList.add('active');
+                document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('active');
+                document.getElementById(tabName)?.classList.add('active');
 
                 this.currentTab = tabName;
 
