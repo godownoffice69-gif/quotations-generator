@@ -1441,13 +1441,87 @@ export const Conversion = {
         }
     },
 
-    renderSocialProofNotifications(oms, container) {
+    async renderSocialProofNotifications(oms, container) {
+        // Load existing notifications
+        const notifications = await this.loadSocialProofNotifications(oms);
+
+        // Set up real-time listener for analytics updates (only once)
+        if (!this.socialProofListenerActive) {
+            const db = window.db;
+            if (db) {
+                console.log('🔧 Setting up real-time listener for social_proof_notifications...');
+                db.collection('social_proof_notifications').onSnapshot(
+                    (snapshot) => {
+                        console.log('📊 Social proof snapshot received! Changes:', snapshot.docChanges().length);
+                        this.loadSocialProofNotifications(oms).then(updated => {
+                            const grid = document.getElementById('socialProofGrid');
+                            if (grid) {
+                                console.log('✅ Updating social proof grid with', updated.length, 'notifications');
+                                if (updated.length > 0) {
+                                    grid.innerHTML = updated.map(notif => this.renderSocialProofCard(notif, oms)).join('');
+                                } else {
+                                    grid.innerHTML = `
+                                        <div class="empty-state">
+                                            <div style="font-size: 2rem; margin-bottom: 1rem;">📭</div>
+                                            <p>No notifications created yet</p>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        });
+                    },
+                    (error) => console.error('❌ Error in social proof listener:', error)
+                );
+                this.socialProofListenerActive = true;
+                console.log('✅ Real-time listener activated for social_proof_notifications');
+            }
+        }
+
         container.innerHTML = `
-            <div>
-                <h4>Social Proof Notifications</h4>
-                <p style="color: var(--text-gray);">
-                    Create "Rajesh just booked..." style notifications - COMING SOON
-                </p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                    <h4 style="margin: 0;">Social Proof Notifications</h4>
+                    <p style="margin: 0.25rem 0 0; color: var(--text-gray); font-size: 0.85rem;">
+                        Show "John from Mumbai just booked 2 tables" style notifications to build trust
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="Conversion.showCreateSocialProofModal()">
+                    ➕ Create Notification
+                </button>
+            </div>
+
+            <!-- Stats Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="stat-card">
+                    <div class="stat-value">${notifications.filter(n => n.status === 'active').length}</div>
+                    <div class="stat-label">Active Notifications</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${notifications.filter(n => n.status === 'inactive').length}</div>
+                    <div class="stat-label">Inactive</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${notifications.reduce((sum, n) => sum + (n.analytics?.views || 0), 0)}</div>
+                    <div class="stat-label">Total Views</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${notifications.reduce((sum, n) => sum + (n.analytics?.clicks || 0), 0)}</div>
+                    <div class="stat-label">Total Clicks</div>
+                </div>
+            </div>
+
+            <!-- Notifications Grid -->
+            <div id="socialProofGrid" class="popups-grid">
+                ${notifications.length === 0 ? `
+                    <div class="empty-state">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+                        <h3>No Social Proof Notifications Yet</h3>
+                        <p>Create notifications to show recent customer activity and build trust</p>
+                        <button class="btn btn-primary" onclick="Conversion.showCreateSocialProofModal()">
+                            Create Your First Notification
+                        </button>
+                    </div>
+                ` : notifications.map(notif => this.renderSocialProofCard(notif, oms)).join('')}
             </div>
         `;
     },
@@ -1461,6 +1535,387 @@ export const Conversion = {
                 </p>
             </div>
         `;
+    },
+
+    /* =========================================
+       SOCIAL PROOF NOTIFICATIONS - HELPER FUNCTIONS
+       ========================================= */
+
+    async loadSocialProofNotifications(oms) {
+        try {
+            const db = window.db;
+            if (!db) return [];
+
+            const snapshot = await db.collection('social_proof_notifications').get();
+            const notifications = [];
+
+            snapshot.forEach(doc => {
+                notifications.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            return notifications;
+        } catch (error) {
+            console.error('Error loading social proof notifications:', error);
+            return [];
+        }
+    },
+
+    renderSocialProofCard(notif, oms) {
+        const statusColor = notif.status === 'active' ? 'var(--success)' : 'var(--text-gray)';
+        const typeIcons = {
+            booking: '📅',
+            quotation: '📝',
+            purchase: '🛒',
+            signup: '✅',
+            custom: '💬'
+        };
+
+        return `
+            <div class="popup-card" data-notification-id="${notif.id}">
+                <div class="popup-card-body">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.5rem;">${typeIcons[notif.type] || '💬'}</span>
+                            <div>
+                                <h4 style="margin: 0; font-size: 0.95rem;">${notif.title}</h4>
+                                <span style="font-size: 0.75rem; color: var(--text-gray);">${notif.type}</span>
+                            </div>
+                        </div>
+                        <span class="status-badge" style="background: ${statusColor}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem;">
+                            ${notif.status}
+                        </span>
+                    </div>
+
+                    <div style="background: var(--bg-body); padding: 0.75rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.85rem;">
+                        <strong>${notif.customerName}</strong> from <strong>${notif.location}</strong><br>
+                        ${notif.message}
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 1rem; font-size: 0.85rem;">
+                        <div>
+                            <div style="color: var(--text-gray);">Position</div>
+                            <strong>${notif.position || 'bottom-left'}</strong>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-gray);">Duration</div>
+                            <strong>${notif.displayDuration || 5}s</strong>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-gray);">Delay</div>
+                            <strong>${notif.initialDelay || 5}s</strong>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-gray);">Loop</div>
+                            <strong>${notif.loopNotifications ? 'Yes' : 'No'}</strong>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; padding: 0.75rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: var(--radius); color: white; margin-bottom: 1rem;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold;">${notif.analytics?.views || 0}</div>
+                            <div style="font-size: 0.75rem; opacity: 0.9;">Views</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold;">${notif.analytics?.clicks || 0}</div>
+                            <div style="font-size: 0.75rem; opacity: 0.9;">Clicks</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-secondary" style="flex: 1;" onclick="Conversion.editSocialProof('${notif.id}')">
+                            ✏️ Edit
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="Conversion.deleteSocialProof('${notif.id}')">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    showCreateSocialProofModal(notificationId = null) {
+        const modalId = 'socialProofModal';
+        const isEdit = !!notificationId;
+
+        // Remove existing modal
+        const existing = document.getElementById(modalId);
+        if (existing) existing.remove();
+
+        // Default values for new notification
+        let notification = {
+            title: '',
+            type: 'booking',
+            customerName: '',
+            location: '',
+            message: '',
+            position: 'bottom-left',
+            displayDuration: 5,
+            initialDelay: 5,
+            delayBetween: 10,
+            loopNotifications: true,
+            showImage: false,
+            imageUrl: '',
+            link: '',
+            status: 'active'
+        };
+
+        // If editing, load existing data
+        if (isEdit) {
+            const db = window.db;
+            db.collection('social_proof_notifications').doc(notificationId).get().then(doc => {
+                if (doc.exists) {
+                    notification = { id: doc.id, ...doc.data() };
+                    this.renderSocialProofModalContent(modalId, notification, isEdit);
+                }
+            });
+        } else {
+            this.renderSocialProofModalContent(modalId, notification, isEdit);
+        }
+    },
+
+    renderSocialProofModalContent(modalId, notification, isEdit) {
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h2 class="modal-title">${isEdit ? '✏️ Edit' : '➕ Create'} Social Proof Notification</h2>
+                    <button class="modal-close" onclick="document.getElementById('${modalId}').remove()">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="socialProofForm">
+                        <!-- Title -->
+                        <div class="form-group">
+                            <label class="form-label">Notification Title</label>
+                            <input type="text" id="sp-title" class="form-input"
+                                   value="${notification.title}"
+                                   placeholder="e.g., Recent Booking" required>
+                        </div>
+
+                        <!-- Type -->
+                        <div class="form-group">
+                            <label class="form-label">Notification Type</label>
+                            <select id="sp-type" class="form-input">
+                                <option value="booking" ${notification.type === 'booking' ? 'selected' : ''}>📅 Booking</option>
+                                <option value="quotation" ${notification.type === 'quotation' ? 'selected' : ''}>📝 Quotation Created</option>
+                                <option value="purchase" ${notification.type === 'purchase' ? 'selected' : ''}>🛒 Purchase</option>
+                                <option value="signup" ${notification.type === 'signup' ? 'selected' : ''}>✅ Sign Up</option>
+                                <option value="custom" ${notification.type === 'custom' ? 'selected' : ''}>💬 Custom</option>
+                            </select>
+                        </div>
+
+                        <!-- Customer Name & Location -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Customer Name</label>
+                                <input type="text" id="sp-customer-name" class="form-input"
+                                       value="${notification.customerName}"
+                                       placeholder="e.g., Rajesh" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Location</label>
+                                <input type="text" id="sp-location" class="form-input"
+                                       value="${notification.location}"
+                                       placeholder="e.g., Mumbai" required>
+                            </div>
+                        </div>
+
+                        <!-- Message -->
+                        <div class="form-group">
+                            <label class="form-label">Message</label>
+                            <input type="text" id="sp-message" class="form-input"
+                                   value="${notification.message}"
+                                   placeholder="e.g., just booked 5 tables" required>
+                        </div>
+
+                        <!-- Position & Duration -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Position</label>
+                                <select id="sp-position" class="form-input">
+                                    <option value="bottom-left" ${notification.position === 'bottom-left' ? 'selected' : ''}>Bottom Left</option>
+                                    <option value="bottom-right" ${notification.position === 'bottom-right' ? 'selected' : ''}>Bottom Right</option>
+                                    <option value="top-left" ${notification.position === 'top-left' ? 'selected' : ''}>Top Left</option>
+                                    <option value="top-right" ${notification.position === 'top-right' ? 'selected' : ''}>Top Right</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Display Duration (seconds)</label>
+                                <input type="number" id="sp-display-duration" class="form-input"
+                                       value="${notification.displayDuration}" min="3" max="30" required>
+                            </div>
+                        </div>
+
+                        <!-- Timing Settings -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Initial Delay (seconds)</label>
+                                <input type="number" id="sp-initial-delay" class="form-input"
+                                       value="${notification.initialDelay}" min="0" max="60" required>
+                                <small style="color: var(--text-gray);">Wait before first notification</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Delay Between (seconds)</label>
+                                <input type="number" id="sp-delay-between" class="form-input"
+                                       value="${notification.delayBetween}" min="5" max="300" required>
+                                <small style="color: var(--text-gray);">Time between repeated notifications</small>
+                            </div>
+                        </div>
+
+                        <!-- Loop & Image Options -->
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="sp-loop" ${notification.loopNotifications ? 'checked' : ''}>
+                                <span>Loop notifications continuously</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="sp-show-image" ${notification.showImage ? 'checked' : ''}>
+                                <span>Show customer image/avatar</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group" id="image-url-group" style="display: ${notification.showImage ? 'block' : 'none'};">
+                            <label class="form-label">Image URL</label>
+                            <input type="url" id="sp-image-url" class="form-input"
+                                   value="${notification.imageUrl || ''}"
+                                   placeholder="https://example.com/avatar.jpg">
+                        </div>
+
+                        <!-- Link -->
+                        <div class="form-group">
+                            <label class="form-label">Link (optional)</label>
+                            <input type="url" id="sp-link" class="form-input"
+                                   value="${notification.link || ''}"
+                                   placeholder="https://example.com/page">
+                            <small style="color: var(--text-gray);">Where to redirect when clicked</small>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select id="sp-status" class="form-input">
+                                <option value="active" ${notification.status === 'active' ? 'selected' : ''}>✅ Active</option>
+                                <option value="inactive" ${notification.status === 'inactive' ? 'selected' : ''}>⏸️ Inactive</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="Conversion.saveSocialProof('${notification.id || ''}')">
+                        💾 Save Notification
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Show/hide image URL field based on checkbox
+        document.getElementById('sp-show-image').addEventListener('change', (e) => {
+            document.getElementById('image-url-group').style.display = e.target.checked ? 'block' : 'none';
+        });
+    },
+
+    async saveSocialProof(notificationId) {
+        try {
+            const db = window.db;
+            if (!db) {
+                alert('Firebase not initialized');
+                return;
+            }
+
+            // Get form values
+            const data = {
+                title: document.getElementById('sp-title').value.trim(),
+                type: document.getElementById('sp-type').value,
+                customerName: document.getElementById('sp-customer-name').value.trim(),
+                location: document.getElementById('sp-location').value.trim(),
+                message: document.getElementById('sp-message').value.trim(),
+                position: document.getElementById('sp-position').value,
+                displayDuration: parseInt(document.getElementById('sp-display-duration').value),
+                initialDelay: parseInt(document.getElementById('sp-initial-delay').value),
+                delayBetween: parseInt(document.getElementById('sp-delay-between').value),
+                loopNotifications: document.getElementById('sp-loop').checked,
+                showImage: document.getElementById('sp-show-image').checked,
+                imageUrl: document.getElementById('sp-image-url').value.trim(),
+                link: document.getElementById('sp-link').value.trim(),
+                status: document.getElementById('sp-status').value,
+                updatedAt: new Date().toISOString()
+            };
+
+            // Validate
+            if (!data.title || !data.customerName || !data.location || !data.message) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (notificationId) {
+                // Update existing
+                await db.collection('social_proof_notifications').doc(notificationId).update(data);
+                console.log('✅ Notification updated');
+            } else {
+                // Create new
+                data.analytics = { views: 0, clicks: 0 };
+                data.createdAt = new Date().toISOString();
+                await db.collection('social_proof_notifications').add(data);
+                console.log('✅ Notification created');
+            }
+
+            // Close modal
+            document.getElementById('socialProofModal').remove();
+
+            // Refresh list
+            const oms = window.OMS;
+            const container = document.getElementById('popupTypeContent');
+            if (container) {
+                this.renderSocialProofNotifications(oms, container);
+            }
+
+        } catch (error) {
+            console.error('Error saving notification:', error);
+            alert('Error saving notification: ' + error.message);
+        }
+    },
+
+    async editSocialProof(notificationId) {
+        this.showCreateSocialProofModal(notificationId);
+    },
+
+    async deleteSocialProof(notificationId) {
+        if (!confirm('Are you sure you want to delete this notification?')) {
+            return;
+        }
+
+        try {
+            const db = window.db;
+            await db.collection('social_proof_notifications').doc(notificationId).delete();
+            console.log('✅ Notification deleted');
+
+            // Refresh list
+            const oms = window.OMS;
+            const container = document.getElementById('popupTypeContent');
+            if (container) {
+                this.renderSocialProofNotifications(oms, container);
+            }
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+            alert('Error deleting notification: ' + error.message);
+        }
     },
 
     /* =========================================
