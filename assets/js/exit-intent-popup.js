@@ -62,10 +62,6 @@
             mobileBottomSheet: true,
             backgroundClickClose: true
         }
-        cookieName: 'exitPopupShown',
-        cookieDays: 0.04, // Don't show again for ~1 hour (0.04 days = 1 hour)
-        exitThreshold: 150, // Mouse must be within 150px of top (easier to trigger)
-        mobileEnabled: true // Show on mobile (on scroll up instead of mouse exit)
     };
 
     // State
