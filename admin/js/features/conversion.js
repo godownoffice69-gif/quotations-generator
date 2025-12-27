@@ -135,7 +135,7 @@ export const Conversion = {
      * @param {string} section - Section name
      * @param {Object} oms - Reference to OMS
      */
-    renderSection(section, oms) {
+    async renderSection(section, oms) {
         const contentArea = document.getElementById('conversionContent');
 
         switch(section) {
@@ -161,16 +161,16 @@ export const Conversion = {
                 this.renderAvailabilitySection(oms, contentArea);
                 break;
             case 'videos':
-                this.renderVideosSection(oms, contentArea);
+                await this.renderVideosSection(oms, contentArea);
                 break;
             case 'ads':
-                this.renderAdsSection(oms, contentArea);
+                await this.renderAdsSection(oms, contentArea);
                 break;
             case 'packages':
-                this.renderPackagesSection(oms, contentArea);
+                await this.renderPackagesSection(oms, contentArea);
                 break;
             case 'leads':
-                this.renderLeadsSection(oms, contentArea);
+                await this.renderLeadsSection(oms, contentArea);
                 break;
             default:
                 contentArea.innerHTML = '<p>Section not found</p>';
@@ -1603,27 +1603,16 @@ export const Conversion = {
     /* =========================================
        VIDEOS SECTION
        ========================================= */
-    renderVideosSection(oms, container) {
-        // Create a temporary container for videos
-        container.innerHTML = '<div id="videos-temp"></div>';
-        const tempContainer = document.getElementById('videos-temp');
+    async renderVideosSection(oms, container) {
+        // Create a wrapper div with id="videos" so OMS.renderVideos() can find it
+        container.innerHTML = '<div id="videos"></div>';
 
-        // Call the OMS renderVideos method which will populate this container
+        // Wait a tick for DOM to update
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // Call OMS renderVideos which will populate the #videos element
         if (oms && typeof oms.renderVideos === 'function') {
-            // Temporarily override the target container
-            const originalContainer = document.getElementById('videos');
-            const videoContent = document.createElement('div');
-            videoContent.id = 'videos';
-            videoContent.style.display = 'none';
-            document.body.appendChild(videoContent);
-
             oms.renderVideos();
-
-            // Copy the rendered content to our container
-            container.innerHTML = videoContent.innerHTML;
-
-            // Clean up
-            videoContent.remove();
         } else {
             container.innerHTML = '<p style="color: var(--text-gray);">Video management not available</p>';
         }
@@ -1632,26 +1621,16 @@ export const Conversion = {
     /* =========================================
        ADS SECTION
        ========================================= */
-    renderAdsSection(oms, container) {
-        // Create a temporary container for ads
-        container.innerHTML = '<div id="advertisements-temp"></div>';
+    async renderAdsSection(oms, container) {
+        // Create a wrapper div with id="advertisements" so OMS.renderAdvertisements() can find it
+        container.innerHTML = '<div id="advertisements"></div>';
 
-        // Call the OMS renderAdvertisements method
+        // Wait a tick for DOM to update
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // Call OMS renderAdvertisements which will populate the #advertisements element
         if (oms && typeof oms.renderAdvertisements === 'function') {
-            // Temporarily override the target container
-            const originalContainer = document.getElementById('advertisements');
-            const adContent = document.createElement('div');
-            adContent.id = 'advertisements';
-            adContent.style.display = 'none';
-            document.body.appendChild(adContent);
-
             oms.renderAdvertisements();
-
-            // Copy the rendered content to our container
-            container.innerHTML = adContent.innerHTML;
-
-            // Clean up
-            adContent.remove();
         } else {
             container.innerHTML = '<p style="color: var(--text-gray);">Ad management not available</p>';
         }
@@ -1661,8 +1640,21 @@ export const Conversion = {
        PACKAGES SECTION
        ========================================= */
     async renderPackagesSection(oms, container) {
-        // Create packages structure
-        container.innerHTML = `
+        // Create a wrapper div with id="packages" to match the original tab structure
+        container.innerHTML = '<div id="packages" style="display: block;"></div>';
+
+        // Wait a tick for DOM to update
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // Get the packages container
+        const packagesDiv = document.getElementById('packages');
+        if (!packagesDiv) {
+            console.error('❌ Failed to create packages container');
+            return;
+        }
+
+        // Create the inner structure that PackageManager expects
+        packagesDiv.innerHTML = `
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">📦 Package Management</h2>
@@ -1684,6 +1676,7 @@ export const Conversion = {
                 const BUILD_TIMESTAMP = Date.now();
                 const { PackageManager } = await import(`../packages/package-manager.js?v=${BUILD_TIMESTAMP}`);
                 window.packageManager = new PackageManager();
+                console.log('✅ PackageManager created');
             } catch (error) {
                 console.error('❌ Failed to load PackageManager:', error);
                 container.innerHTML = '<p style="color: var(--danger);">Failed to load package manager</p>';
@@ -1691,9 +1684,11 @@ export const Conversion = {
             }
         }
 
-        // Initialize and render
+        // Initialize and render (this will update the packages-container div)
         try {
+            console.log('🔄 Initializing PackageManager...');
             await window.packageManager.init();
+            console.log('✅ PackageManager initialized successfully');
         } catch (error) {
             console.error('❌ Failed to initialize packages:', error);
         }
@@ -1703,8 +1698,21 @@ export const Conversion = {
        LEADS SECTION
        ========================================= */
     async renderLeadsSection(oms, container) {
-        // Create leads structure
-        container.innerHTML = `
+        // Create a wrapper div with id="leads" to match the original tab structure
+        container.innerHTML = '<div id="leads" style="display: block;"></div>';
+
+        // Wait a tick for DOM to update
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // Get the leads container
+        const leadsDiv = document.getElementById('leads');
+        if (!leadsDiv) {
+            console.error('❌ Failed to create leads container');
+            return;
+        }
+
+        // Create the inner structure that LeadsManager expects
+        leadsDiv.innerHTML = `
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">🎯 Lead Management</h2>
@@ -1732,6 +1740,7 @@ export const Conversion = {
                 const BUILD_TIMESTAMP = Date.now();
                 const { LeadsManager } = await import(`../leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
                 window.leadsManager = new LeadsManager();
+                console.log('✅ LeadsManager created');
             } catch (error) {
                 console.error('❌ Failed to load LeadsManager:', error);
                 container.innerHTML = '<p style="color: var(--danger);">Failed to load leads manager</p>';
@@ -1739,9 +1748,11 @@ export const Conversion = {
             }
         }
 
-        // Initialize and render
+        // Initialize and render (this will update the filter buttons and leads list)
         try {
+            console.log('🔄 Initializing LeadsManager...');
             await window.leadsManager.init();
+            console.log('✅ LeadsManager initialized successfully');
         } catch (error) {
             console.error('❌ Failed to initialize leads:', error);
         }
