@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Version: 2025-12-28-MODULAR-ARCHITECTURE-v16 -->
-    <!-- TIMESTAMP: 1735410000 -->
-    <!-- DAY 1 MODERNIZATION: Core modules extracted, 444 lines removed -->
-    <!-- - Utils → js/core/utils.js (351 lines) -->
-    <!-- - Firebase → js/core/firebase.js (93 lines) -->
-    <!-- - Added ModuleLoader for lazy loading -->
-    <!-- - Added Bootstrap for app initialization -->
+    <!-- Version: 2025-12-28-LAZY-LOADING-v17 -->
+    <!-- TIMESTAMP: 1735411200 -->
+    <!-- DAY 2 OPTIMIZATION: Lazy loading system implemented -->
+    <!-- - Created lazy-loader.js for on-demand module loading -->
+    <!-- - Supports 12 feature modules (dashboard, inventory, etc.) -->
+    <!-- - Modules load only when tabs are clicked (not at startup) -->
+    <!-- - Preloads critical tabs after 2s delay -->
+    <!-- - Next: Remove duplicate code from index.html for speed gains -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0">
@@ -1572,6 +1573,9 @@
 
     <!-- Core Modules - Utils loaded synchronously (required by inline code) -->
     <script src="./js/core/utils-sync.js"></script>
+
+    <!-- Lazy Loading System - Load feature modules on demand -->
+    <script src="./js/core/lazy-loader.js"></script>
 
     <!-- Google Maps JavaScript API with Places Library -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAInxvvhevCHpLy9P5K5VvBNxDgbtZF-A4&libraries=places&loading=async&callback=initGoogleMaps" async defer></script>
