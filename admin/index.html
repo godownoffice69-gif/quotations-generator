@@ -8097,8 +8097,14 @@ convertToQuotationDateFormat(dateStr) {
                             `;
                         }
 
+                        // Calculate global order number
+                        let globalOrderNum = 1;
+                        for (let p = 0; p < pageNum; p++) {
+                            globalOrderNum += pages[p].length;
+                        }
+
                         pageOrders.forEach((order, i) => {
-                            html += this.buildOrderHTML(order, compactFontSize, colors, true, bgColor, textColor);
+                            html += this.buildOrderHTML(order, compactFontSize, colors, true, bgColor, textColor, globalOrderNum + i);
                             if (i < pageOrders.length - 1) {
                                 html += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
                             }
@@ -8353,7 +8359,7 @@ convertToQuotationDateFormat(dateStr) {
                 return result;
             },
 
-            buildOrderHTML(order, fontSize, colors, compact = false, bgColor = '#ffffff', textColor = '#000000') {
+            buildOrderHTML(order, fontSize, colors, compact = false, bgColor = '#ffffff', textColor = '#000000', orderNumber = null) {
                 const ts = this.data.settings.tableSettings;
                 const orderIdBg = colors.orderIdBg || '#667eea';
                 const orderIdText = colors.orderIdText || '#ffffff';
@@ -8377,7 +8383,8 @@ convertToQuotationDateFormat(dateStr) {
 
                         <!-- FP- Field at center/top -->
                         <div style="text-align: center; margin-bottom: ${compact ? '15px' : '25px'}; margin-top: ${compact ? '10px' : '0'};">
-                            <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: #000000; background: #ffeb3b;">
+                            ${orderNumber ? `<div style="display: inline-block; font-size: ${fontSize + 6}px; font-weight: bold; color: ${textColor}; margin-right: 15px; vertical-align: middle;">Order ${orderNumber}</div>` : ''}
+                            <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: #000000; background: #ffeb3b; vertical-align: middle;">
                                 FP-<span style="display: inline-block; min-width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px; white-space: nowrap;">${order.orderId && order.orderId.startsWith('FP') ? order.orderId.substring(2) : ''}</span>
                             </div>
                         </div>
@@ -14168,7 +14175,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     message += `🗺️ *Location:* ${venueMapLink}\n`;
                 }
                 message += `📅 *Date:* ${Utils.formatDate(date)}\n`;
-                message += `🕐 *Ready Time:* ${readyTime || 'TBD'}\n\n`;
+                message += `🕐 *Ready Time:* ${readyTime || ''}\n\n`;
                 message += `🎭 *Your Role:* ${role.toUpperCase()}\n\n`;
 
                 if (teamList) {
@@ -14242,7 +14249,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     message += `🗺️ *Location:* ${venueMapLink}\n`;
                 }
                 message += `📅 *Date:* ${Utils.formatDate(targetDate)}\n`;
-                message += `🕐 *Ready Time:* ${readyTime || 'TBD'}\n`;
+                message += `🕐 *Ready Time:* ${readyTime || ''}\n`;
                 message += `📊 *Status:* ${status || 'Pending'}\n\n`;
 
                 if (driverName || operatorName || helperNames) {
@@ -14372,7 +14379,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                     message += `\n`;
                 }
 
-                message += `Time: ${order.readyTime || 'TBD'}\n\n`;
+                message += `Time: ${order.readyTime || ''}\n\n`;
 
                 // Find specific day data for multi-day orders
                 let specificDayData = null;
@@ -14584,7 +14591,7 @@ Contact: 📱 98984 96111 / 76984 96111`;
                         message += `\n`;
                     }
 
-                    message += `Time: ${order.readyTime || 'TBD'}\n`;
+                    message += `Time: ${order.readyTime || ''}\n`;
 
                     // Functions and items (compact format - no "Items:" label)
                     if (specificDayData && specificDayData.functions) {
