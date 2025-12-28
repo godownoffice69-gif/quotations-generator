@@ -9761,6 +9761,35 @@ convertToQuotationDateFormat(dateStr) {
             // ============ PREPARATION MODULE ============
             // Loaded lazily from /admin/js/features/preparation.js
 
+            // Helper function used by Preparation module
+            getItemsFromOrder(order, startDate, endDate) {
+                const items = [];
+
+                if (order.isMultiDay && order.dayWiseData) {
+                    // Filter days that fall in the date range
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+
+                    order.dayWiseData.forEach(day => {
+                        const dayDate = new Date(day.date);
+                        if (dayDate >= start && dayDate <= end) {
+                            // Get items from all functions of this day
+                            if (day.functions) {
+                                day.functions.forEach(func => {
+                                    if (func.items) {
+                                        items.push(...func.items);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                } else if (order.items) {
+                    // Single-day order
+                    items.push(...order.items);
+                }
+
+                return items;
+            },
 
             renderCustomers() {
                 const container = document.getElementById('customers');
@@ -13698,6 +13727,202 @@ convertToQuotationDateFormat(dateStr) {
                     console.error('Error details:', error.message, error.code);
                     this.data.advertisements = [];
                 }
+            },
+
+            // ============ ITEM SEARCH & ORDER MANAGEMENT ============
+            initItemSearch() {
+                const itemSearch = document.getElementById('itemSearch');
+                const dropdown = document.getElementById('itemSearchDropdown');
+
+                if (!itemSearch || !dropdown) return;
+
+                // Prevent duplicate event listener registration
+                if (itemSearch.dataset.searchInitialized === 'true') return;
+                itemSearch.dataset.searchInitialized = 'true';
+
+                // Populate team member dropdowns
+                this.populateTeamDropdowns();
+
+                // Capture OMS context
+                const self = this;
+
+                const handleSearch = (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+
+                    if (query.length > 0) {
+                        const items = self.data.inventory.items.filter(i =>
+                            i.name.toLowerCase().includes(query)
+                        );
+
+                        if (items.length > 0) {
+                            dropdown.innerHTML = items.map(i => `
+                                <div class="search-item" onclick="OMS.addItemToOrder('${i.id}')">
+                                    <span>${i.name}</span>
+                                    <span>${i.quantity} in stock</span>
+                                </div>
+                            `).join('');
+                            dropdown.classList.add('show');
+                        } else {
+                            dropdown.classList.remove('show');
+                        }
+                    } else {
+                        dropdown.classList.remove('show');
+                    }
+                };
+
+                itemSearch.addEventListener('input', Utils.debounce(handleSearch, 300));
+
+                // Initialize client name search with autocomplete
+                this.initClientSearch();
+            },
+
+            initClientSearch() {
+                const clientInput = document.getElementById('clientName');
+                const dropdown = document.getElementById('clientSearchDropdown');
+
+                if (!clientInput || !dropdown) return;
+
+                // Prevent duplicate event listener registration
+                if (clientInput.dataset.searchInitialized === 'true') return;
+                clientInput.dataset.searchInitialized = 'true';
+
+                // Capture OMS context
+                const self = this;
+
+                const handleClientSearch = (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+
+                    if (query.length > 0) {
+                        const customers = self.data.customers.filter(c =>
+                            c.name.toLowerCase().includes(query)
+                        );
+
+                        if (customers.length > 0) {
+                            dropdown.innerHTML = customers.map(c => `
+                                <div class="search-item" onclick="OMS.selectCustomer('${c.id}')">
+                                    <span>${c.name}</span>
+                                    <span style="color: var(--text-gray);">${c.contact}</span>
+                                </div>
+                            `).join('');
+                            dropdown.classList.add('show');
+                        } else {
+                            dropdown.classList.remove('show');
+                        }
+                    } else {
+                        dropdown.classList.remove('show');
+                    }
+                };
+
+                clientInput.addEventListener('input', Utils.debounce(handleClientSearch, 300));
+
+                // Hide dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!clientInput.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.remove('show');
+                    }
+                });
+            },
+
+            selectCustomer(customerId) {
+                const customer = this.data.customers.find(c => c.id === customerId);
+                if (!customer) return;
+
+                // Auto-fill customer name and contact
+                Utils.set('clientName', customer.name);
+                Utils.set('contact', customer.contact);
+
+                // Hide dropdown
+                document.getElementById('clientSearchDropdown').classList.remove('show');
+                this.showToast(`Selected: ${customer.name}`, 'success');
+            },
+
+            addItemToOrder(itemId) {
+                const item = this.data.inventory.items.find(i => i.id === itemId);
+                if (!item) return;
+
+                const existing = this.currentOrderItems.find(oi => oi.itemId === itemId);
+                if (existing) {
+                    existing.quantity++;
+                } else {
+                    this.currentOrderItems.push({
+                        itemId: itemId,
+                        name: item.name,
+                        quantity: 1,
+                        remarks: ''
+                    });
+                }
+
+                this.updateOrderItemsTable();
+                document.getElementById('itemSearchDropdown').classList.remove('show');
+                Utils.set('itemSearch', '');
+            },
+
+            updateOrderItemsTable() {
+                const container = document.getElementById('orderItemsContainer');
+                if (!container) return;
+
+                if (this.currentOrderItems.length === 0) {
+                    container.innerHTML = '<table class="table"><tbody><tr><td colspan="5" class="text-center">No items added</td></tr></tbody></table>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr><th>Sr</th><th>Item</th><th>Pcs</th><th>Remarks</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            ${this.currentOrderItems.map((item, i) => `
+                                <tr>
+                                    <td>${i + 1}</td>
+                                    <td>${item.name}</td>
+                                    <td>
+                                        <div class="quantity-controls">
+                                            <button class="quantity-btn" onclick="OMS.adjustItemQty(${i}, -1)">-</button>
+                                            <input type="number" value="${item.quantity}" onchange="OMS.setItemQty(${i}, this.value)"
+                                                   style="width: 60px; text-align: center;" min="1">
+                                            <button class="quantity-btn" onclick="OMS.adjustItemQty(${i}, 1)">+</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-input" value="${item.remarks || ''}"
+                                               onchange="OMS.setItemRemarks(${i}, this.value)" placeholder="Remarks">
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger btn-small" onclick="OMS.removeOrderItem(${i})">🗑️</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            },
+
+            adjustItemQty(index, delta) {
+                const item = this.currentOrderItems[index];
+                if (item) {
+                    item.quantity = Math.max(1, item.quantity + delta);
+                    this.updateOrderItemsTable();
+                }
+            },
+
+            setItemQty(index, qty) {
+                const item = this.currentOrderItems[index];
+                if (item) {
+                    item.quantity = Math.max(1, parseInt(qty) || 1);
+                }
+            },
+
+            setItemRemarks(index, remarks) {
+                const item = this.currentOrderItems[index];
+                if (item) {
+                    item.remarks = remarks;
+                }
+            },
+
+            removeOrderItem(index) {
+                this.currentOrderItems.splice(index, 1);
+                this.updateOrderItemsTable();
             },
 
             closeModal(modalId = 'dynamicModal') {
