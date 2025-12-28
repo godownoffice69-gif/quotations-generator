@@ -163,9 +163,14 @@ function setupLazyTabLoading() {
             const renderFn = featureClass[TAB_MODULES[tabName].renderFn];
 
             if (renderFn && typeof renderFn === 'function') {
-                console.log(`🎨 Rendering ${tabName} with module...`);
-                // The module's render function will handle rendering
-                // This is just to ensure it's available
+                console.log(`🎨 Attaching ${tabName} render function to OMS...`);
+
+                // Attach the render function to OMS so switchTab can call it
+                if (window.OMS) {
+                    window.OMS[TAB_MODULES[tabName].renderFn] = function() {
+                        renderFn.call(featureClass, window.OMS);
+                    };
+                }
             } else {
                 console.log(`ℹ️ ${tabName} module loaded, using default rendering`);
             }
@@ -222,7 +227,11 @@ window.LazyLoader = {
     load: loadFeatureModule,
     setup: setupLazyTabLoading,
     preload: preloadCriticalTabs,
-    stats: getLoadStats
+    stats: getLoadStats,
+    // Helper to check if a tab needs lazy loading
+    needsLoading: (tabName) => TAB_MODULES.hasOwnProperty(tabName),
+    // Get list of lazy-loaded tabs
+    getLazyTabs: () => Object.keys(TAB_MODULES)
 };
 
 // Auto-setup when DOM is ready
