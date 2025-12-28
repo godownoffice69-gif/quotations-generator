@@ -7431,9 +7431,20 @@ convertToQuotationDateFormat(dateStr) {
                 console.log(`\n🎯 ========== GENERATE MULTI ORDER IMAGE CALLED ==========`);
                 console.log(`📅 Date: ${date}`);
                 console.log(`📦 Number of orders: ${orders.length}`);
+
+                // CRITICAL: Sort orders by original creation timestamp (earliest first)
+                // This ensures PDF shows orders in the order they were first created, not edited
+                orders = [...orders].sort((a, b) => {
+                    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    return timeA - timeB; // Ascending order (earliest first)
+                });
+
+                console.log(`🕐 Orders sorted by creation time (earliest first)`);
                 console.log(`📋 Orders:`, orders.map(o => ({
                     orderId: o.orderId,
                     clientName: o.clientName,
+                    createdAt: o.createdAt,
                     isMultiDay: o.isMultiDay,
                     hasDayWiseData: !!(o.dayWiseData && o.dayWiseData.length > 0),
                     dayWiseDataCount: o.dayWiseData ? o.dayWiseData.length : 0,
@@ -8160,10 +8171,10 @@ convertToQuotationDateFormat(dateStr) {
                             </h2>
                         </div>` : ''}
 
-                        <!-- FP- Field at center/top -->
+                        <!-- FP- Field at center/top (YELLOW BACKGROUND REMOVED) -->
                         <div style="text-align: center; margin-bottom: ${compact ? '15px' : '25px'}; margin-top: ${compact ? '10px' : '0'};">
                             ${orderNumber ? `<div style="display: inline-block; font-size: ${fontSize + 6}px; font-weight: bold; color: ${textColor}; margin-right: 15px; vertical-align: middle;">Order ${orderNumber}</div>` : ''}
-                            <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: #000000; background: #ffeb3b; vertical-align: middle;">
+                            <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: ${textColor}; vertical-align: middle;">
                                 FP-<span style="display: inline-block; min-width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px; white-space: nowrap;">${order.orderId && order.orderId.startsWith('FP') ? order.orderId.substring(2) : ''}</span>
                             </div>
                         </div>
@@ -9102,16 +9113,27 @@ convertToQuotationDateFormat(dateStr) {
                     <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
                 `);
 
-                // Top customer
+                // Top 10 customers
                 if (this.data.customers.length > 0) {
-                    const top = this.data.customers.reduce((prev, curr) =>
-                        (prev.totalOrders > curr.totalOrders) ? prev : curr
-                    );
+                    // Sort customers by total orders (descending) and take top 10
+                    const topCustomers = [...this.data.customers]
+                        .sort((a, b) => b.totalOrders - a.totalOrders)
+                        .slice(0, 10);
+
                     document.getElementById('topCustomerInfo').innerHTML = `
                         <div style="background: var(--light); padding: 1rem; border-radius: var(--radius);">
-                            <strong>${top.name}</strong><br>
-                            ${top.contact}<br>
-                            <strong>${top.totalOrders} ${this.t('ordersText')}</strong>
+                            ${topCustomers.map((customer, index) => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; ${index < topCustomers.length - 1 ? 'border-bottom: 1px solid #e0e0e0;' : ''}">
+                                    <div style="flex: 1;">
+                                        <strong>${index + 1}. ${customer.name}</strong><br>
+                                        <span style="font-size: 0.875rem; color: var(--text-gray);">${customer.contact}</span>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <strong style="color: var(--primary); font-size: 1.125rem;">${customer.totalOrders}</strong>
+                                        <span style="font-size: 0.875rem; color: var(--text-gray); display: block;">${this.t('ordersText')}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     `;
                 }
@@ -17277,6 +17299,25 @@ if (diffDays > 30) {
         </div>
     </div>
 
+    <!-- Edit Lead Modal -->
+    <div id="edit-lead-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header">
+                <h3>Edit Lead</h3>
+                <button class="modal-close" id="close-edit-lead-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div id="edit-lead-content">
+                    <!-- Edit form will be rendered here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="close-edit-lead-modal-btn" class="btn btn-secondary">Cancel</button>
+                <button id="save-lead-btn" class="btn btn-primary">💾 Save Lead</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Additional CSS for Packages and Leads -->
     <style>
         /* Package Admin Cards */
@@ -17503,6 +17544,23 @@ if (diffDays > 30) {
 
         .lead-details-section:last-child {
             border-bottom: none;
+        }
+
+        .lead-edit-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .lead-edit-section:last-child {
+            border-bottom: none;
+        }
+
+        .lead-edit-section h3 {
+            font-size: 1.25rem;
+            color: #1E293B;
+            margin-bottom: 1rem;
+            font-weight: 700;
         }
 
         .lead-details-section h3 {
