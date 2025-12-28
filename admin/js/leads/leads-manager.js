@@ -168,7 +168,7 @@ export class LeadsManager {
                     // Show notification if new leads arrived
                     if (this.leads.length > currentCount) {
                         const newLeadsCount = this.leads.length - currentCount;
-                        OMS?.showNotification(`${newLeadsCount} new lead(s) received!`, 'success');
+                        OMS?.showToast(`${newLeadsCount} new lead(s) received!`, 'success');
                     }
 
                     this.applyFilter();
@@ -628,11 +628,11 @@ export class LeadsManager {
             this.applyFilter();
             this.render();
 
-            OMS?.showNotification('Lead status updated successfully', 'success');
+            OMS?.showToast('Lead status updated successfully', 'success');
 
         } catch (error) {
             console.error('❌ Error updating lead status:', error);
-            OMS?.showNotification('Error updating lead status', 'error');
+            OMS?.showToast('Error updating lead status', 'error');
         }
     }
 
@@ -652,13 +652,13 @@ export class LeadsManager {
             // For now, just update the lead status to converted
             await this.updateLeadStatus(leadDocId, 'converted');
 
-            OMS?.showNotification('Lead converted to order successfully! (Feature coming soon)', 'success');
+            OMS?.showToast('Lead converted to order successfully! (Feature coming soon)', 'success');
 
             // TODO: Integrate with OMS.createOrderFromLead()
 
         } catch (error) {
             console.error('❌ Error converting lead to order:', error);
-            OMS?.showNotification('Error converting lead to order', 'error');
+            OMS?.showToast('Error converting lead to order', 'error');
         }
     }
 
@@ -931,7 +931,7 @@ export class LeadsManager {
 
             // Validate required fields
             if (!customerName || !customerPhone || !eventType || !eventDate || !eventTime || !venueName) {
-                OMS?.showNotification('Please fill in all required fields', 'error');
+                OMS?.showToast('Please fill in all required fields', 'error');
                 return;
             }
 
@@ -966,7 +966,7 @@ export class LeadsManager {
                 // Update existing lead
                 await db.collection('leads').doc(this.currentLead.docId).update(leadData);
                 console.log('✅ Lead updated:', this.currentLead.docId);
-                OMS?.showNotification('Lead updated successfully', 'success');
+                OMS?.showToast('Lead updated successfully', 'success');
             } else {
                 // Create new lead
                 leadData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -974,7 +974,7 @@ export class LeadsManager {
 
                 await db.collection('leads').add(leadData);
                 console.log('✅ New lead created');
-                OMS?.showNotification('Lead created successfully', 'success');
+                OMS?.showToast('Lead created successfully', 'success');
             }
 
             this.closeEditModal();
@@ -982,7 +982,7 @@ export class LeadsManager {
 
         } catch (error) {
             console.error('❌ Error saving lead:', error);
-            OMS?.showNotification('Error saving lead', 'error');
+            OMS?.showToast('Error saving lead', 'error');
         }
     }
 
@@ -1005,7 +1005,7 @@ export class LeadsManager {
 
             await db.collection('leads').doc(leadDocId).delete();
             console.log('✅ Lead deleted:', leadDocId);
-            OMS?.showNotification('Lead deleted successfully', 'success');
+            OMS?.showToast('Lead deleted successfully', 'success');
 
             // Remove from local array
             const index = this.leads.findIndex(l => l.docId === leadDocId);
@@ -1018,7 +1018,7 @@ export class LeadsManager {
 
         } catch (error) {
             console.error('❌ Error deleting lead:', error);
-            OMS?.showNotification('Error deleting lead', 'error');
+            OMS?.showToast('Error deleting lead', 'error');
         }
     }
 
