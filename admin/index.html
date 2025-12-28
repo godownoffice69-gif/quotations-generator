@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Version: 2025-12-28-DEAD-CODE-CLEANUP-v15 -->
-    <!-- TIMESTAMP: 1735408800 -->
-    <!-- REMOVED: Dead code functions + Team management system + Manager reports -->
+    <!-- Version: 2025-12-28-MODULAR-ARCHITECTURE-v16 -->
+    <!-- TIMESTAMP: 1735410000 -->
+    <!-- DAY 1 MODERNIZATION: Core modules extracted, 444 lines removed -->
+    <!-- - Utils → js/core/utils.js (351 lines) -->
+    <!-- - Firebase → js/core/firebase.js (93 lines) -->
+    <!-- - Added ModuleLoader for lazy loading -->
+    <!-- - Added Bootstrap for app initialization -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0">
@@ -1560,11 +1564,17 @@
         .mb-1 { margin-bottom: 0.5rem; }
 
     </style>
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs (loaded first, used by core modules) -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+    <!-- Core Modules (modular architecture) -->
+    <script type="module" src="./js/core/utils.js"></script>
+    <script type="module" src="./js/core/firebase.js"></script>
+    <script type="module" src="./js/core/module-loader.js"></script>
+    <script type="module" src="./js/core/bootstrap.js"></script>
 
     <!-- Google Maps JavaScript API with Places Library -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAInxvvhevCHpLy9P5K5VvBNxDgbtZF-A4&libraries=places&loading=async&callback=initGoogleMaps" async defer></script>
@@ -2250,357 +2260,8 @@
     <script>
         
         // ============ UTILITIES ============
-        const Utils = {
-            get: (id, defaultValue = '') => {
-                const el = document.getElementById(id);
-                return el ? (el.value || '').toString().trim() : defaultValue;
-            },
-
-            set: (id, value) => {
-                const el = document.getElementById(id);
-                if (el) el.value = value;
-            },
-
-            elem: (tag, props = {}, children = []) => {
-                const el = document.createElement(tag);
-                Object.entries(props).forEach(([key, val]) => {
-                    if (key === 'class') el.className = val;
-                    else if (key === 'style') Object.assign(el.style, val);
-                    else if (key.startsWith('on')) el.addEventListener(key.slice(2).toLowerCase(), val);
-                    else if (key.startsWith('data-')) el.dataset[key.slice(5)] = val;
-                    else el[key] = val;
-                });
-                children.filter(child => child != null).forEach(child => {
-                    el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
-                });
-                return el;
-            },
-
-            formatDate: (dateStr) => {
-    if (!dateStr) return 'N/A';
-    try {
-        const date = new Date(dateStr + 'T00:00:00');
-        return date.toLocaleDateString('en-GB');
-    } catch {
-        return dateStr;
-    }
-},
-
-convertDateFormat: (dateStr) => {
-    if (!dateStr) return '';
-    try {
-        // Convert DD/MM/YYYY to YYYY-MM-DD
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-            const day = parts[0].padStart(2, '0');
-            const month = parts[1].padStart(2, '0');
-            const year = parts[2];
-            return `${year}-${month}-${day}`;
-        }
-        return dateStr;
-    } catch {
-        return dateStr;
-    }
-},
-
-getLocalDate: (dateStr) => {
-    if (!dateStr) return new Date();
-    const [year, month, day] = dateStr.split('-').map(Number);
-    return new Date(year, month - 1, day);
-},
-
-toDateString: (date) => {
-    const d = date instanceof Date ? date : new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-},
-
-generateId: () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-
-debounce: (func, wait) => {
-    let timeout;
-    return function(...args) {
-        const context = this;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), wait);
-    };
-},
-
-            validateRequired: (fields) => {
-                const errors = [];
-                fields.forEach(field => {
-                    const value = Utils.get(field);
-                    if (!value) errors.push(field);
-                });
-                return errors;
-            },
-
-            // Mobile device detection
-            isMobileDevice: () => {
-                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            },
-
-            // Get device type for logging
-            getDeviceType: () => {
-                const ua = navigator.userAgent;
-                if (/iPad/i.test(ua)) return 'iPad';
-                if (/iPhone|iPod/i.test(ua)) return 'iPhone';
-                if (/Android/i.test(ua)) return 'Android';
-                return 'Desktop';
-            },
-
-            // Convert canvas.toBlob callback to Promise
-            canvasToBlobPromise: (canvas, type = 'image/png', quality = 0.95) => {
-                return new Promise((resolve, reject) => {
-                    try {
-                        canvas.toBlob(blob => {
-                            if (blob) {
-                                resolve(blob);
-                            } else {
-                                reject(new Error('Canvas toBlob returned null - image may be too large for device memory'));
-                            }
-                        }, type, quality);
-                    } catch (error) {
-                        reject(error);
-                    }
-                });
-            },
-
-            // Get optimal canvas scale for device
-            getOptimalCanvasScale: (baseScale) => {
-                const isMobile = Utils.isMobileDevice();
-                const deviceMemory = navigator.deviceMemory || 4; // Default to 4GB if not available
-
-                if (!isMobile) {
-                    return baseScale; // Desktop: use requested scale
-                }
-
-                // Mobile optimizations based on device memory
-                if (deviceMemory <= 2) {
-                    return Math.min(baseScale, 1); // Low memory: max scale 1
-                } else if (deviceMemory <= 4) {
-                    return Math.min(baseScale, 1.5); // Medium memory: max scale 1.5
-                } else {
-                    return Math.min(baseScale, 2); // Higher memory: max scale 2
-                }
-            },
-
-            // Validate canvas dimensions for device
-            validateCanvasDimensions: (width, height) => {
-                const maxDimension = Utils.isMobileDevice() ? 4096 : 32767; // Mobile: 4096, Desktop: 32767
-                const maxArea = Utils.isMobileDevice() ? 16777216 : 268435456; // Mobile: 16MP, Desktop: 256MP
-                const area = width * height;
-
-                if (width > maxDimension || height > maxDimension) {
-                    return {
-                        valid: false,
-                        reason: `Canvas dimension exceeds maximum (${maxDimension}px) for this device`
-                    };
-                }
-
-                if (area > maxArea) {
-                    return {
-                        valid: false,
-                        reason: `Canvas area (${area}px) exceeds maximum (${maxArea}px) for this device`
-                    };
-                }
-
-                return { valid: true };
-            },
-
-            // Weather API integration
-            getWeather: async (city = 'Delhi', apiKey = '') => {
-                try {
-                    // Check if API key is valid (not empty, not 'demo')
-                    if (!apiKey || apiKey === 'demo' || apiKey.trim() === '') {
-                        console.warn('⚠️ Weather API key not configured. Please add your API key in Settings.');
-                        return {
-                            temp: 'N/A',
-                            humidity: 'N/A',
-                            condition: 'N/A',
-                            description: 'Configure API key in Settings'
-                        };
-                    }
-
-                    // Using OpenWeatherMap free API
-                    // Get your free API key from: https://openweathermap.org/api
-                    const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`);
-
-                    if (!response.ok) {
-                        // Fallback to mock data if API fails
-                        console.error(`Weather API error: ${response.status} ${response.statusText}`);
-                        return {
-                            temp: 'N/A',
-                            humidity: 'N/A',
-                            condition: 'N/A',
-                            description: response.status === 401 ? 'Invalid API key' : 'Weather data unavailable'
-                        };
-                    }
-
-                    const data = await response.json();
-                    return {
-                        temp: Math.round(data.main.temp),
-                        humidity: data.main.humidity,
-                        condition: data.weather[0].main,
-                        description: data.weather[0].description,
-                        icon: data.weather[0].icon
-                    };
-                } catch (error) {
-                    console.error('Weather API error:', error);
-                    return {
-                        temp: 'N/A',
-                        humidity: 'N/A',
-                        condition: 'N/A',
-                        description: 'Weather data unavailable'
-                    };
-                }
-            },
-
-            // Get weather by coordinates
-            getWeatherByCoords: async (lat, lon, apiKey = '') => {
-                try {
-                    // Check if API key is valid (not empty, not 'demo')
-                    if (!apiKey || apiKey === 'demo' || apiKey.trim() === '') {
-                        console.warn('⚠️ Weather API key not configured. Please add your API key in Settings.');
-                        return {
-                            temp: 'N/A',
-                            humidity: 'N/A',
-                            condition: 'N/A',
-                            description: 'Configure API key in Settings'
-                        };
-                    }
-
-                    const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
-
-                    if (!response.ok) {
-                        console.error(`Weather API error: ${response.status} ${response.statusText}`);
-                        return {
-                            temp: 'N/A',
-                            humidity: 'N/A',
-                            condition: 'N/A',
-                            description: response.status === 401 ? 'Invalid API key' : 'Weather data unavailable'
-                        };
-                    }
-
-                    const data = await response.json();
-                    return {
-                        temp: Math.round(data.main.temp),
-                        humidity: data.main.humidity,
-                        condition: data.weather[0].main,
-                        description: data.weather[0].description,
-                        icon: data.weather[0].icon,
-                        city: data.name
-                    };
-                } catch (error) {
-                    console.error('Weather API error:', error);
-                    return {
-                        temp: 'N/A',
-                        humidity: 'N/A',
-                        condition: 'N/A',
-                        description: 'Weather data unavailable'
-                    };
-                }
-            },
-
-            // Get weather forecast for a specific date
-            getWeatherForecast: async (city = 'Delhi', targetDate, apiKey = '') => {
-                try {
-                    // Check if API key is valid (not empty, not 'demo')
-                    if (!apiKey || apiKey === 'demo' || apiKey.trim() === '') {
-                        console.warn('⚠️ Weather API key not configured. Please add your API key in Settings.');
-                        return {
-                            temp: 'N/A',
-                            humidity: 'N/A',
-                            condition: 'N/A',
-                            description: 'Configure API key in Settings'
-                        };
-                    }
-
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const target = new Date(targetDate);
-                    target.setHours(0, 0, 0, 0);
-
-                    // If target date is today, use current weather API
-                    if (target.getTime() === today.getTime()) {
-                        return await Utils.getWeather(city, apiKey);
-                    }
-
-                    // For future dates (up to 5 days), use forecast API
-                    const response = await fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`);
-
-                    if (!response.ok) {
-                        console.error(`Weather forecast API error: ${response.status} ${response.statusText}`);
-                        return {
-                            temp: 'N/A',
-                            humidity: 'N/A',
-                            condition: 'N/A',
-                            description: response.status === 401 ? 'Invalid API key' : 'Weather forecast unavailable'
-                        };
-                    }
-
-                    const data = await response.json();
-
-                    // Find forecast closest to noon on target date
-                    const targetTime = new Date(target);
-                    targetTime.setHours(12, 0, 0, 0);
-
-                    let closestForecast = null;
-                    let minDiff = Infinity;
-
-                    data.list.forEach(forecast => {
-                        const forecastTime = new Date(forecast.dt * 1000);
-                        const diff = Math.abs(forecastTime - targetTime);
-
-                        if (diff < minDiff) {
-                            minDiff = diff;
-                            closestForecast = forecast;
-                        }
-                    });
-
-                    if (!closestForecast) {
-                        return {
-                            temp: 'N/A',
-                            humidity: 'N/A',
-                            condition: 'N/A',
-                            description: 'Forecast not available for this date'
-                        };
-                    }
-
-                    return {
-                        temp: Math.round(closestForecast.main.temp),
-                        tempMin: Math.round(closestForecast.main.temp_min),
-                        tempMax: Math.round(closestForecast.main.temp_max),
-                        humidity: closestForecast.main.humidity,
-                        condition: closestForecast.weather[0].main,
-                        description: closestForecast.weather[0].description,
-                        icon: closestForecast.weather[0].icon
-                    };
-                } catch (error) {
-                    console.error('Weather forecast error:', error);
-                    return {
-                        temp: 'N/A',
-                        humidity: 'N/A',
-                        condition: 'N/A',
-                        description: 'Weather forecast unavailable'
-                    };
-                }
-            },
-
-            // Get weather icon emoji
-            getWeatherEmoji: (condition) => {
-                const conditionLower = condition.toLowerCase();
-                if (conditionLower.includes('clear') || conditionLower.includes('sun')) return '☀️';
-                if (conditionLower.includes('cloud')) return '☁️';
-                if (conditionLower.includes('rain') || conditionLower.includes('drizzle')) return '🌧️';
-                if (conditionLower.includes('thunder') || conditionLower.includes('storm')) return '⛈️';
-                if (conditionLower.includes('snow')) return '❄️';
-                if (conditionLower.includes('mist') || conditionLower.includes('fog') || conditionLower.includes('haze')) return '🌫️';
-                return '🌤️';
-            }
-        };
+        // Utils object now loaded from /js/core/utils.js module
+        // Available globally as window.Utils
 
         // ============ TRANSLATIONS ============
         const translations = {
@@ -21290,119 +20951,39 @@ if (diffDays > 30) {
        endDateInput.addEventListener('blur', calculateTotalDays);
        endDateInput.addEventListener('click', calculateTotalDays);
 }
-            // Initialize Firebase
-            const firebaseConfig = {
-                apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
-                authDomain: "firepowersfx-2558.firebaseapp.com",
-                projectId: "firepowersfx-2558",
-                storageBucket: "firepowersfx-2558.firebasestorage.app",
-                messagingSenderId: "723483292867",
-                appId: "1:723483292867:web:d6d83a79ba87cd2dee5e76"
-            };
+            // ============ FIREBASE INITIALIZATION ============
+            // Firebase now initialized via /js/core/firebase.js module
+            // Module sets window.auth and window.db globally
+            // Token monitoring is handled in the Firebase module
 
-            firebase.initializeApp(firebaseConfig);
-            window.auth = firebase.auth();
-            window.db = firebase.firestore();
-            console.log('✅ Firebase initialized successfully!');
+            // Initialize Firebase when page loads
+            import('./js/core/firebase.js').then(({ initializeFirebase, auth }) => {
+                const { auth: firebaseAuth, db } = initializeFirebase();
+                console.log('✅ Firebase module loaded and initialized');
 
-            // Track token refresh errors to prevent infinite loops
-            let tokenErrorCount = 0;
-            let lastTokenError = 0;
-            const TOKEN_ERROR_THRESHOLD = 3; // Sign out after 3 consecutive errors
-            const TOKEN_ERROR_WINDOW = 10000; // 10 seconds window
+                // Check if user is logged in (set up auth listener after Firebase is ready)
+                auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        // User is logged in
+                        console.log('✅ User logged in:', user.email);
+                        document.getElementById('loginScreen').style.display = 'none';
+                        document.querySelector('.app-container').style.display = 'flex';
+                        OMS.init().then(() => {
+                            OMS.updateAllDisplays();
 
-            // Monitor for token refresh errors
-            const originalFetch = window.fetch;
-            window.fetch = function(...args) {
-                return originalFetch.apply(this, args).catch(error => {
-                    // Check if this is a token refresh error
-                    if (args[0] && typeof args[0] === 'string' && args[0].includes('securetoken.googleapis.com')) {
-                        const now = Date.now();
-
-                        // Reset counter if errors are not consecutive (more than 10s apart)
-                        if (now - lastTokenError > TOKEN_ERROR_WINDOW) {
-                            tokenErrorCount = 0;
-                        }
-
-                        tokenErrorCount++;
-                        lastTokenError = now;
-
-                        console.warn(`⚠️ Firebase token refresh failed (${tokenErrorCount}/${TOKEN_ERROR_THRESHOLD})`);
-
-                        // If too many consecutive errors, sign out user to force fresh login
-                        if (tokenErrorCount >= TOKEN_ERROR_THRESHOLD) {
-                            console.error('❌ Multiple token refresh failures detected. Signing out to force fresh login...');
-                            tokenErrorCount = 0; // Reset counter
-
-                            // Sign out user
-                            if (window.auth && window.auth.currentUser) {
-                                window.auth.signOut().catch(err => {
-                                    console.error('Error during forced sign out:', err);
-                                });
-                            }
-                        }
-                    }
-                    throw error;
-                }).then(response => {
-                    // Check for 403 errors on token refresh
-                    if (args[0] && typeof args[0] === 'string' &&
-                        args[0].includes('securetoken.googleapis.com') &&
-                        response.status === 403) {
-
-                        const now = Date.now();
-
-                        // Reset counter if errors are not consecutive
-                        if (now - lastTokenError > TOKEN_ERROR_WINDOW) {
-                            tokenErrorCount = 0;
-                        }
-
-                        tokenErrorCount++;
-                        lastTokenError = now;
-
-                        console.warn(`⚠️ Firebase token refresh 403 error (${tokenErrorCount}/${TOKEN_ERROR_THRESHOLD})`);
-
-                        // If too many consecutive 403 errors, sign out user
-                        if (tokenErrorCount >= TOKEN_ERROR_THRESHOLD) {
-                            console.error('❌ Multiple 403 token errors detected. Signing out to force fresh login...');
-                            tokenErrorCount = 0;
-
-                            if (window.auth && window.auth.currentUser) {
-                                window.auth.signOut().catch(err => {
-                                    console.error('Error during forced sign out:', err);
-                                });
-                            }
-                        }
+                            // Dispatch OMSReady event for Package and Leads managers
+                            console.log('📢 Dispatching OMSReady event...');
+                            window.dispatchEvent(new CustomEvent('OMSReady'));
+                        });
                     } else {
-                        // Reset counter on successful non-token requests
-                        if (response.ok) {
-                            tokenErrorCount = 0;
-                        }
+                        // User is logged out
+                        console.log('❌ User not logged in');
+                        document.getElementById('loginScreen').style.display = 'flex';
+                        document.querySelector('.app-container').style.display = 'none';
                     }
-                    return response;
                 });
-            };
-
-            // Check if user is logged in
-            auth.onAuthStateChanged((user) => {
-                if (user) {
-                    // User is logged in
-                    console.log('✅ User logged in:', user.email);
-                    tokenErrorCount = 0; // Reset error counter on successful auth
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.querySelector('.app-container').style.display = 'flex';
-                    OMS.init().then(() => {
-                        OMS.updateAllDisplays();
-
-                        // Dispatch OMSReady event for Package and Leads managers
-                        console.log('📢 Dispatching OMSReady event...');
-                        window.dispatchEvent(new CustomEvent('OMSReady'));
-                    });
-                } else {
-                    // User is logged out
-                    console.log('❌ User not logged in');
-                    document.getElementById('loginScreen').style.display = 'flex';
-                    document.querySelector('.app-container').style.display = 'none';
-                }
+            }).catch(error => {
+                console.error('❌ Failed to initialize Firebase:', error);
             });
 
             // Handle login form
