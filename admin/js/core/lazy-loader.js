@@ -110,6 +110,19 @@ async function loadFeatureModule(tabName) {
             loadedModules.set(tabName, module);
             loadingModules.delete(tabName);
 
+            // **CRITICAL: Attach render function to OMS immediately**
+            if (window.OMS && module[config.export]) {
+                const featureClass = module[config.export];
+                const renderFn = featureClass[config.renderFn];
+
+                if (renderFn && typeof renderFn === 'function') {
+                    console.log(`🔗 Attaching ${config.renderFn} to OMS`);
+                    window.OMS[config.renderFn] = function() {
+                        return renderFn.call(featureClass, window.OMS);
+                    };
+                }
+            }
+
             return module;
         })
         .catch(error => {
@@ -143,38 +156,9 @@ function setupLazyTabLoading() {
         }
 
         try {
-            // Load the module
-            const module = await loadFeatureModule(tabName);
-
-            if (!module) {
-                console.warn(`⚠️ Module for ${tabName} not found`);
-                return;
-            }
-
-            // Get the export (Dashboard, Inventory, etc.)
-            const featureClass = module[TAB_MODULES[tabName].export];
-
-            if (!featureClass) {
-                console.error(`❌ Export "${TAB_MODULES[tabName].export}" not found in ${tabName} module`);
-                return;
-            }
-
-            // Get the render function
-            const renderFn = featureClass[TAB_MODULES[tabName].renderFn];
-
-            if (renderFn && typeof renderFn === 'function') {
-                console.log(`🎨 Attaching ${tabName} render function to OMS...`);
-
-                // Attach the render function to OMS so switchTab can call it
-                if (window.OMS) {
-                    window.OMS[TAB_MODULES[tabName].renderFn] = function() {
-                        renderFn.call(featureClass, window.OMS);
-                    };
-                }
-            } else {
-                console.log(`ℹ️ ${tabName} module loaded, using default rendering`);
-            }
-
+            // Load the module (function attachment happens automatically)
+            await loadFeatureModule(tabName);
+            console.log(`✓ ${tabName} module ready for switchTab`);
         } catch (error) {
             console.error(`❌ Error loading ${tabName} module:`, error);
             if (window.OMS && window.OMS.showToast) {
