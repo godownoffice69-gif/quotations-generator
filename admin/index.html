@@ -12960,6 +12960,879 @@ convertToQuotationDateFormat(dateStr) {
             // Loaded lazily from /admin/js/features/financials.js
 
 
+            renderAdvertisements() {
+                const container = document.getElementById('advertisements');
+                const ads = this.data.advertisements || [];
+
+                // Filter stats
+                const activeAds = ads.filter(ad => ad.status === 'active').length;
+                const scheduledAds = ads.filter(ad => ad.status === 'scheduled').length;
+                const inactiveAds = ads.filter(ad => ad.status === 'inactive').length;
+
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📢 Ad Manager</h2>
+                            <p style="color: var(--text-gray); margin-top: 0.5rem;">Manage advertisements displayed on your quotation website</p>
+                            <button class="btn btn-primary" onclick="OMS.showCreateAdModal()">➕ Create New Ad</button>
+                        </div>
+
+                        <!-- Stats Cards -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0;">
+                            <div class="stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1.5rem; border-radius: 12px;">
+                                <div style="font-size: 2rem; font-weight: bold;">${activeAds}</div>
+                                <div style="opacity: 0.9;">Active Ads</div>
+                            </div>
+                            <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 1.5rem; border-radius: 12px;">
+                                <div style="font-size: 2rem; font-weight: bold;">${scheduledAds}</div>
+                                <div style="opacity: 0.9;">Scheduled</div>
+                            </div>
+                            <div class="stat-card" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; padding: 1.5rem; border-radius: 12px;">
+                                <div style="font-size: 2rem; font-weight: bold;">${inactiveAds}</div>
+                                <div style="opacity: 0.9;">Inactive</div>
+                            </div>
+                            <div class="stat-card" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 1.5rem; border-radius: 12px;">
+                                <div style="font-size: 2rem; font-weight: bold;">${ads.length}</div>
+                                <div style="opacity: 0.9;">Total Ads</div>
+                            </div>
+                        </div>
+
+                        <!-- Ads List -->
+                        <div class="table-container">
+                            ${ads.length === 0 ? `
+                                <div style="text-align: center; padding: 3rem;">
+                                    <div style="font-size: 4rem; margin-bottom: 1rem;">📢</div>
+                                    <h3>No Advertisements Yet</h3>
+                                    <p style="color: var(--text-gray); margin-bottom: 1.5rem;">Create your first ad to display on your quotation website</p>
+                                    <button class="btn btn-primary" onclick="OMS.showCreateAdModal()">Create First Ad</button>
+                                </div>
+                            ` : `
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Type</th>
+                                            <th>Animation</th>
+                                            <th>Position</th>
+                                            <th>Status</th>
+                                            <th>Views</th>
+                                            <th>Clicks</th>
+                                            <th>CTR</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${ads.map((ad, index) => {
+                                            const views = ad.analytics?.views || 0;
+                                            const clicks = ad.analytics?.clicks || 0;
+                                            const ctr = views > 0 ? ((clicks / views) * 100).toFixed(1) : 0;
+                                            const statusColors = {
+                                                active: '#10b981',
+                                                scheduled: '#f59e0b',
+                                                inactive: '#6b7280'
+                                            };
+                                            const typeIcons = {
+                                                image: '🖼️',
+                                                text: '📝',
+                                                video: '🎥'
+                                            };
+
+                                            return `
+                                                <tr>
+                                                    <td><strong>${ad.title}</strong></td>
+                                                    <td>${typeIcons[ad.type]} ${ad.type.charAt(0).toUpperCase() + ad.type.slice(1)}</td>
+                                                    <td>${ad.type === 'text' && ad.content?.animation ? `<span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem;">✨ ${ad.content.animation}</span>` : '<span style="color: var(--text-gray);">—</span>'}</td>
+                                                    <td>${ad.placement?.position || 'header'}</td>
+                                                    <td>
+                                                        <span style="background: ${statusColors[ad.status]}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">
+                                                            ${ad.status.charAt(0).toUpperCase() + ad.status.slice(1)}
+                                                        </span>
+                                                    </td>
+                                                    <td>${views}</td>
+                                                    <td>${clicks}</td>
+                                                    <td>${ctr}%</td>
+                                                    <td>
+                                                        <button class="btn btn-sm" onclick="OMS.toggleAdStatus('${ad.id}', ${index})" style="background: ${ad.status === 'active' ? '#f59e0b' : '#10b981'}; color: white; margin-right: 0.5rem;">
+                                                            ${ad.status === 'active' ? '⏸️' : '▶️'}
+                                                        </button>
+                                                        <button class="btn btn-sm btn-secondary" onclick="OMS.editAd(${index})" style="margin-right: 0.5rem;">✏️</button>
+                                                        <button class="btn btn-sm" onclick="OMS.deleteAd('${ad.id}', ${index})" style="background: var(--danger); color: white;">🗑️</button>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            `}
+                        </div>
+                    </div>
+                `;
+            },
+
+            showCreateAdModal() {
+                const modalHtml = `
+                    <div class="modal-overlay" onclick="OMS.closeAdModal()"></div>
+                    <div class="modal-dialog" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                        <div class="modal-header">
+                            <h3>➕ Create New Advertisement</h3>
+                            <button class="modal-close" onclick="OMS.closeAdModal()">✕</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>Ad Type *</label>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem;">
+                                    <button type="button" class="type-btn active" data-type="image" onclick="OMS.selectAdType('image')" style="padding: 1rem; border: 2px solid var(--primary); background: var(--primary); color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                        🖼️ Image
+                                    </button>
+                                    <button type="button" class="type-btn" data-type="text" onclick="OMS.selectAdType('text')" style="padding: 1rem; border: 2px solid var(--border); background: white; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                        📝 Text
+                                    </button>
+                                    <button type="button" class="type-btn" data-type="video" onclick="OMS.selectAdType('video')" style="padding: 1rem; border: 2px solid var(--border); background: white; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                        🎥 Video
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Ad Title *</label>
+                                <input type="text" id="adTitle" class="form-control" placeholder="e.g., Summer Special Offer">
+                            </div>
+
+                            <!-- Image Ad Fields -->
+                            <div id="imageAdFields" class="ad-type-fields">
+                                <div class="form-group">
+                                    <label>Image URL *</label>
+                                    <input type="url" id="adImageUrl" class="form-control" placeholder="https://example.com/image.jpg">
+                                    <small style="color: var(--text-gray);">Enter the full URL of your image (must be publicly accessible)</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Link URL</label>
+                                    <input type="url" id="adImageLink" class="form-control" placeholder="https://example.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text</label>
+                                    <input type="text" id="adImageAlt" class="form-control" placeholder="Promotional banner">
+                                </div>
+
+                                <!-- Image Style Settings -->
+                                <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                                    <h4 style="margin-bottom: 1rem;">🎨 Image Style Settings</h4>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Max Width: <span id="imageWidthValue">100</span>%</label>
+                                            <input type="range" id="adImageWidth" class="form-control" min="50" max="100" step="5" value="100"
+                                                   oninput="document.getElementById('imageWidthValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Border Radius: <span id="imageBorderRadiusValue">12</span>px</label>
+                                            <input type="range" id="adImageBorderRadius" class="form-control" min="0" max="50" step="2" value="12"
+                                                   oninput="document.getElementById('imageBorderRadiusValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Opacity: <span id="imageOpacityValue">100</span>%</label>
+                                            <input type="range" id="adImageOpacity" class="form-control" min="50" max="100" step="5" value="100"
+                                                   oninput="document.getElementById('imageOpacityValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Shadow Intensity</label>
+                                            <select id="adImageShadow" class="form-control">
+                                                <option value="none">None</option>
+                                                <option value="sm">Small</option>
+                                                <option value="md" selected>Medium</option>
+                                                <option value="lg">Large</option>
+                                                <option value="xl">Extra Large</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <input type="checkbox" id="adImageHoverEffect" checked>
+                                            Enable Hover Effect (scale on hover)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Text Ad Fields -->
+                            <div id="textAdFields" class="ad-type-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label>Headline *</label>
+                                    <input type="text" id="adTextHeadline" class="form-control" placeholder="Get 20% Off!">
+                                </div>
+                                <div class="form-group">
+                                    <label>Description</label>
+                                    <textarea id="adTextDescription" class="form-control" rows="3" placeholder="Limited time offer..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Button Text</label>
+                                    <input type="text" id="adTextButton" class="form-control" placeholder="Learn More">
+                                </div>
+                                <div class="form-group">
+                                    <label>Button Link</label>
+                                    <input type="url" id="adTextLink" class="form-control" placeholder="https://example.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>🎨 Text Color (for all text elements)</label>
+                                    <input type="color" id="adTextColor" class="form-control" value="#ffffff">
+                                </div>
+                                <div class="form-group">
+                                    <label>✨ Animation Effect</label>
+                                    <select id="adTextAnimation" class="form-control">
+                                        <option value="none">None</option>
+                                        <optgroup label="🎨 Fade Effects">
+                                            <option value="fadeIn">Fade In</option>
+                                            <option value="fadeOut">Fade Out</option>
+                                        </optgroup>
+                                        <optgroup label="📊 Slide Effects">
+                                            <option value="slideInLeft">Slide In from Left</option>
+                                            <option value="slideInRight">Slide In from Right</option>
+                                            <option value="slideInTop">Slide In from Top</option>
+                                            <option value="slideInBottom">Slide In from Bottom</option>
+                                        </optgroup>
+                                        <optgroup label="🌟 Zoom Effects">
+                                            <option value="zoomIn">Zoom In</option>
+                                            <option value="zoomOut">Zoom Out</option>
+                                        </optgroup>
+                                        <optgroup label="🔄 Rotation Effects">
+                                            <option value="rotateIn">Rotate In</option>
+                                            <option value="swing">Swing</option>
+                                        </optgroup>
+                                        <optgroup label="💫 Motion Effects">
+                                            <option value="bounce">Bounce</option>
+                                            <option value="shake">Shake</option>
+                                            <option value="wave">Wave</option>
+                                            <option value="rubberBand">Rubber Band</option>
+                                        </optgroup>
+                                        <optgroup label="✨ Special Effects">
+                                            <option value="pulse">Pulse</option>
+                                            <option value="glow">Glow</option>
+                                            <option value="sparkle">Sparkle</option>
+                                            <option value="flipIn">Flip In</option>
+                                            <option value="flipX">Flip X</option>
+                                        </optgroup>
+                                    </select>
+                                    <small style="color: var(--text-gray); margin-top: 0.5rem; display: block;">Choose an animation effect for your text ad</small>
+                                </div>
+
+                                <!-- Typography Settings -->
+                                <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                                    <h4 style="margin-bottom: 1rem;">🔤 Typography Settings</h4>
+
+                                    <div class="form-group">
+                                        <label>Headline Font Size: <span id="headlineSizeValue">2</span>rem</label>
+                                        <input type="range" id="adTextHeadlineSize" class="form-control" min="1" max="6" step="0.1" value="2"
+                                               oninput="document.getElementById('headlineSizeValue').textContent = this.value"
+                                               style="width: 100%;">
+                                        <small style="color: var(--text-gray);">Adjust headline text size</small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Description Font Size: <span id="descSizeValue">1.1</span>rem</label>
+                                        <input type="range" id="adTextDescSize" class="form-control" min="0.5" max="3" step="0.1" value="1.1"
+                                               oninput="document.getElementById('descSizeValue').textContent = this.value"
+                                               style="width: 100%;">
+                                        <small style="color: var(--text-gray);">Adjust description text size</small>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Font Weight</label>
+                                            <select id="adTextFontWeight" class="form-control">
+                                                <option value="300">Light (300)</option>
+                                                <option value="400">Normal (400)</option>
+                                                <option value="500">Medium (500)</option>
+                                                <option value="600">Semi-Bold (600)</option>
+                                                <option value="700" selected>Bold (700)</option>
+                                                <option value="800">Extra-Bold (800)</option>
+                                                <option value="900">Black (900)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Text Alignment</label>
+                                            <select id="adTextAlign" class="form-control">
+                                                <option value="left">Left</option>
+                                                <option value="center" selected>Center</option>
+                                                <option value="right">Right</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Letter Spacing: <span id="letterSpaceValue">0</span>px</label>
+                                            <input type="range" id="adTextLetterSpacing" class="form-control" min="-2" max="10" step="0.5" value="0"
+                                                   oninput="document.getElementById('letterSpaceValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Line Height: <span id="lineHeightValue">1.5</span></label>
+                                            <input type="range" id="adTextLineHeight" class="form-control" min="1" max="3" step="0.1" value="1.5"
+                                                   oninput="document.getElementById('lineHeightValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <input type="checkbox" id="adTextShadow">
+                                            Add Text Shadow (improves readability)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Video Ad Fields -->
+                            <div id="videoAdFields" class="ad-type-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label>Video URL *</label>
+                                    <input type="url" id="adVideoUrl" class="form-control" placeholder="YouTube or Instagram URL">
+                                    <small style="color: var(--text-gray);">Paste a YouTube or Instagram video URL</small>
+                                </div>
+                                <div class="form-group">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" id="adVideoAutoplay" checked>
+                                        Autoplay video
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                                        <input type="checkbox" id="adVideoMuted" checked>
+                                        Muted by default
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                                        <input type="checkbox" id="adVideoLoop">
+                                        Loop video continuously
+                                    </label>
+                                </div>
+
+                                <!-- Video Style Settings -->
+                                <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                                    <h4 style="margin-bottom: 1rem;">🎬 Video Style Settings</h4>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Max Width: <span id="videoWidthValue">100</span>%</label>
+                                            <input type="range" id="adVideoWidth" class="form-control" min="50" max="100" step="5" value="100"
+                                                   oninput="document.getElementById('videoWidthValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Border Radius: <span id="videoBorderRadiusValue">12</span>px</label>
+                                            <input type="range" id="adVideoBorderRadius" class="form-control" min="0" max="50" step="2" value="12"
+                                                   oninput="document.getElementById('videoBorderRadiusValue').textContent = this.value"
+                                                   style="width: 100%;">
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Aspect Ratio</label>
+                                            <select id="adVideoAspectRatio" class="form-control">
+                                                <option value="16/9" selected>16:9 (Widescreen)</option>
+                                                <option value="9/16">9:16 (Vertical)</option>
+                                                <option value="4/3">4:3 (Standard)</option>
+                                                <option value="1/1">1:1 (Square)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Shadow Intensity</label>
+                                            <select id="adVideoShadow" class="form-control">
+                                                <option value="none">None</option>
+                                                <option value="sm">Small</option>
+                                                <option value="md" selected>Medium</option>
+                                                <option value="lg">Large</option>
+                                                <option value="xl">Extra Large</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Placement -->
+                            <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem;">
+                                <h4 style="margin-bottom: 1rem;">📍 Placement Settings</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="form-group">
+                                        <label>Position *</label>
+                                        <select id="adPosition" class="form-control">
+                                            <option value="header">Header Banner</option>
+                                            <option value="sidebar">Sidebar</option>
+                                            <option value="footer">Footer</option>
+                                            <option value="popup">Popup/Modal</option>
+                                            <option value="between-sections">Between Sections</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Display On *</label>
+                                        <select id="adPage" class="form-control">
+                                            <option value="all">All Pages</option>
+                                            <option value="home">Home Page Only</option>
+                                            <option value="quotation">Quotation Page Only</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Schedule -->
+                            <div style="background: var(--light); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                                <h4 style="margin-bottom: 1rem;">⏰ Schedule Settings</h4>
+                                <div class="form-group">
+                                    <label>Status *</label>
+                                    <select id="adStatus" class="form-control" onchange="OMS.toggleScheduleFields()">
+                                        <option value="active">Active Now</option>
+                                        <option value="scheduled">Schedule for Later</option>
+                                        <option value="inactive">Inactive (Draft)</option>
+                                    </select>
+                                </div>
+                                <div id="scheduleFields" style="display: none;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label>Start Date</label>
+                                            <input type="datetime-local" id="adStartDate" class="form-control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>End Date</label>
+                                            <input type="datetime-local" id="adEndDate" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="adVisible" checked>
+                                    Show ad on website
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="OMS.closeAdModal()">Cancel</button>
+                            <button class="btn btn-primary" onclick="OMS.saveAd()" id="saveAdBtn">Create Ad</button>
+                        </div>
+                    </div>
+                `;
+
+                const existing = document.querySelector('.modal-overlay');
+                if (existing) existing.remove();
+
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            },
+
+            selectAdType(type) {
+                document.querySelectorAll('.type-btn').forEach(btn => {
+                    if (btn.dataset.type === type) {
+                        btn.style.background = 'var(--primary)';
+                        btn.style.borderColor = 'var(--primary)';
+                        btn.style.color = 'white';
+                    } else {
+                        btn.style.background = 'white';
+                        btn.style.borderColor = 'var(--border)';
+                        btn.style.color = 'var(--text-dark)';
+                    }
+                });
+
+                document.getElementById('imageAdFields').style.display = type === 'image' ? 'block' : 'none';
+                document.getElementById('textAdFields').style.display = type === 'text' ? 'block' : 'none';
+                document.getElementById('videoAdFields').style.display = type === 'video' ? 'block' : 'none';
+            },
+
+            toggleScheduleFields() {
+                const status = document.getElementById('adStatus').value;
+                document.getElementById('scheduleFields').style.display = status === 'scheduled' ? 'block' : 'none';
+            },
+
+            closeAdModal() {
+                const overlay = document.querySelector('.modal-overlay');
+                const dialog = document.querySelector('.modal-dialog');
+                if (overlay) overlay.remove();
+                if (dialog) dialog.remove();
+            },
+
+            async saveAd() {
+                try {
+                    console.log('💾 saveAd() called');
+
+                    const activeTypeBtn = document.querySelector('.type-btn[style*="rgb(102, 126, 234)"], .type-btn[style*="#667eea"]') ||
+                                        document.querySelector('.type-btn[style*="--primary"]') ||
+                                        document.querySelector('.type-btn');
+                    const adType = activeTypeBtn?.dataset.type || 'image';
+
+                    console.log('📝 Ad type:', adType);
+
+                    const title = document.getElementById('adTitle').value.trim();
+                    if (!title) {
+                        alert('Please enter an ad title');
+                        return;
+                    }
+
+                    console.log('📝 Ad title:', title);
+
+                    let content = {};
+
+                    if (adType === 'image') {
+                        const imageUrl = document.getElementById('adImageUrl').value.trim();
+                        if (!imageUrl) {
+                            alert('Please enter an image URL');
+                            return;
+                        }
+                        content = {
+                            imageUrl,
+                            link: document.getElementById('adImageLink').value.trim(),
+                            altText: document.getElementById('adImageAlt').value.trim(),
+                            width: document.getElementById('adImageWidth').value,
+                            borderRadius: document.getElementById('adImageBorderRadius').value,
+                            opacity: document.getElementById('adImageOpacity').value,
+                            shadow: document.getElementById('adImageShadow').value,
+                            hoverEffect: document.getElementById('adImageHoverEffect').checked
+                        };
+                    } else if (adType === 'text') {
+                        const headline = document.getElementById('adTextHeadline').value.trim();
+                        if (!headline) {
+                            alert('Please enter a headline');
+                            return;
+                        }
+                        content = {
+                            headline,
+                            description: document.getElementById('adTextDescription').value.trim(),
+                            buttonText: document.getElementById('adTextButton').value.trim(),
+                            buttonLink: document.getElementById('adTextLink').value.trim(),
+                            backgroundColor: 'transparent',
+                            textColor: document.getElementById('adTextColor').value,
+                            animation: document.getElementById('adTextAnimation').value || 'none',
+                            headlineSize: document.getElementById('adTextHeadlineSize').value,
+                            descSize: document.getElementById('adTextDescSize').value,
+                            fontWeight: document.getElementById('adTextFontWeight').value,
+                            textAlign: document.getElementById('adTextAlign').value,
+                            letterSpacing: document.getElementById('adTextLetterSpacing').value,
+                            lineHeight: document.getElementById('adTextLineHeight').value,
+                            textShadow: document.getElementById('adTextShadow').checked
+                        };
+                    } else if (adType === 'video') {
+                        const videoUrl = document.getElementById('adVideoUrl').value.trim();
+                        if (!videoUrl) {
+                            alert('Please enter a video URL');
+                            return;
+                        }
+                        content = {
+                            videoUrl,
+                            platform: videoUrl.includes('youtube') ? 'youtube' : 'instagram',
+                            autoplay: document.getElementById('adVideoAutoplay').checked,
+                            muted: document.getElementById('adVideoMuted').checked,
+                            loop: document.getElementById('adVideoLoop').checked,
+                            width: document.getElementById('adVideoWidth').value,
+                            borderRadius: document.getElementById('adVideoBorderRadius').value,
+                            aspectRatio: document.getElementById('adVideoAspectRatio').value,
+                            shadow: document.getElementById('adVideoShadow').value
+                        };
+                    }
+
+                    console.log('📝 Ad content:', content);
+
+                    const status = document.getElementById('adStatus').value;
+                    const schedule = {};
+                    if (status === 'scheduled') {
+                        schedule.startDate = document.getElementById('adStartDate').value;
+                        schedule.endDate = document.getElementById('adEndDate').value;
+                    }
+
+                    const ad = {
+                        id: 'ad_' + Date.now(),
+                        type: adType,
+                        title,
+                        status,
+                        content,
+                        placement: {
+                            position: document.getElementById('adPosition').value,
+                            page: document.getElementById('adPage').value,
+                            displayOrder: 1
+                        },
+                        schedule,
+                        analytics: {
+                            views: 0,
+                            clicks: 0,
+                            impressions: 0
+                        },
+                        isVisible: document.getElementById('adVisible').checked,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        createdBy: this.currentUser?.email || 'admin'
+                    };
+
+                    console.log('📦 Complete ad object:', ad);
+
+                    if (!this.data.advertisements) {
+                        console.log('⚠️ Initializing advertisements array');
+                        this.data.advertisements = [];
+                    }
+
+                    console.log('📊 Current advertisements count:', this.data.advertisements.length);
+                    this.data.advertisements.push(ad);
+                    console.log('📊 New advertisements count:', this.data.advertisements.length);
+
+                    console.log('💾 Calling saveAdsToFirestore...');
+                    await this.saveAdsToFirestore();
+                    console.log('✅ Save completed successfully');
+
+                    this.closeAdModal();
+                    this.renderAdvertisements();
+                    this.showToast('✅ Advertisement created successfully!');
+                } catch (error) {
+                    console.error('❌ Error in saveAd():', error);
+                    console.error('Error stack:', error.stack);
+                    this.showToast('❌ Error creating advertisement. Check console for details.', 'error');
+                }
+            },
+
+            async editAd(index) {
+                const ad = this.data.advertisements[index];
+                this.showCreateAdModal();
+
+                setTimeout(() => {
+                    document.getElementById('adTitle').value = ad.title || '';
+                    document.getElementById('adStatus').value = ad.status || 'active';
+                    document.getElementById('adPosition').value = ad.placement?.position || 'header';
+                    document.getElementById('adPage').value = ad.placement?.page || 'all';
+                    document.getElementById('adVisible').checked = ad.isVisible !== false;
+
+                    this.selectAdType(ad.type);
+
+                    if (ad.type === 'image') {
+                        document.getElementById('adImageUrl').value = ad.content.imageUrl || '';
+                        document.getElementById('adImageLink').value = ad.content.link || '';
+                        document.getElementById('adImageAlt').value = ad.content.altText || '';
+                        document.getElementById('adImageWidth').value = ad.content.width || '100';
+                        document.getElementById('adImageBorderRadius').value = ad.content.borderRadius || '12';
+                        document.getElementById('adImageOpacity').value = ad.content.opacity || '100';
+                        document.getElementById('adImageShadow').value = ad.content.shadow || 'md';
+                        document.getElementById('adImageHoverEffect').checked = ad.content.hoverEffect !== false;
+                        // Update display values
+                        document.getElementById('imageWidthValue').textContent = ad.content.width || '100';
+                        document.getElementById('imageBorderRadiusValue').textContent = ad.content.borderRadius || '12';
+                        document.getElementById('imageOpacityValue').textContent = ad.content.opacity || '100';
+                    } else if (ad.type === 'text') {
+                        document.getElementById('adTextHeadline').value = ad.content.headline || '';
+                        document.getElementById('adTextDescription').value = ad.content.description || '';
+                        document.getElementById('adTextButton').value = ad.content.buttonText || '';
+                        document.getElementById('adTextLink').value = ad.content.buttonLink || '';
+                        document.getElementById('adTextColor').value = ad.content.textColor || '#ffffff';
+                        document.getElementById('adTextAnimation').value = ad.content.animation || 'none';
+                        document.getElementById('adTextHeadlineSize').value = ad.content.headlineSize || '2';
+                        document.getElementById('adTextDescSize').value = ad.content.descSize || '1.1';
+                        document.getElementById('adTextFontWeight').value = ad.content.fontWeight || '700';
+                        document.getElementById('adTextAlign').value = ad.content.textAlign || 'center';
+                        document.getElementById('adTextLetterSpacing').value = ad.content.letterSpacing || '0';
+                        document.getElementById('adTextLineHeight').value = ad.content.lineHeight || '1.5';
+                        document.getElementById('adTextShadow').checked = ad.content.textShadow || false;
+                        // Update display values
+                        document.getElementById('headlineSizeValue').textContent = ad.content.headlineSize || '2';
+                        document.getElementById('descSizeValue').textContent = ad.content.descSize || '1.1';
+                        document.getElementById('letterSpaceValue').textContent = ad.content.letterSpacing || '0';
+                        document.getElementById('lineHeightValue').textContent = ad.content.lineHeight || '1.5';
+                    } else if (ad.type === 'video') {
+                        document.getElementById('adVideoUrl').value = ad.content.videoUrl || '';
+                        document.getElementById('adVideoAutoplay').checked = ad.content.autoplay !== false;
+                        document.getElementById('adVideoMuted').checked = ad.content.muted !== false;
+                        document.getElementById('adVideoLoop').checked = ad.content.loop || false;
+                        document.getElementById('adVideoWidth').value = ad.content.width || '100';
+                        document.getElementById('adVideoBorderRadius').value = ad.content.borderRadius || '12';
+                        document.getElementById('adVideoAspectRatio').value = ad.content.aspectRatio || '16/9';
+                        document.getElementById('adVideoShadow').value = ad.content.shadow || 'md';
+                        // Update display values
+                        document.getElementById('videoWidthValue').textContent = ad.content.width || '100';
+                        document.getElementById('videoBorderRadiusValue').textContent = ad.content.borderRadius || '12';
+                    }
+
+                    if (ad.schedule?.startDate) {
+                        document.getElementById('adStartDate').value = ad.schedule.startDate;
+                    }
+                    if (ad.schedule?.endDate) {
+                        document.getElementById('adEndDate').value = ad.schedule.endDate;
+                    }
+
+                    this.toggleScheduleFields();
+
+                    const saveBtn = document.getElementById('saveAdBtn');
+                    saveBtn.textContent = 'Update Ad';
+                    saveBtn.onclick = () => this.updateAd(index);
+                }, 100);
+            },
+
+            async updateAd(index) {
+                try {
+                    const ad = this.data.advertisements[index];
+                    const activeTypeBtn = document.querySelector('.type-btn[style*="rgb(102, 126, 234)"], .type-btn[style*="#667eea"]') ||
+                                        document.querySelector('.type-btn[style*="--primary"]') ||
+                                        document.querySelector('.type-btn');
+                    const adType = activeTypeBtn?.dataset.type || ad.type;
+
+                    ad.title = document.getElementById('adTitle').value.trim();
+                    ad.status = document.getElementById('adStatus').value;
+                    ad.placement.position = document.getElementById('adPosition').value;
+                    ad.placement.page = document.getElementById('adPage').value;
+                    ad.isVisible = document.getElementById('adVisible').checked;
+                    ad.updatedAt = new Date().toISOString();
+
+                    if (ad.type === 'image') {
+                        ad.content.imageUrl = document.getElementById('adImageUrl').value.trim();
+                        ad.content.link = document.getElementById('adImageLink').value.trim();
+                        ad.content.altText = document.getElementById('adImageAlt').value.trim();
+                        ad.content.width = document.getElementById('adImageWidth').value;
+                        ad.content.borderRadius = document.getElementById('adImageBorderRadius').value;
+                        ad.content.opacity = document.getElementById('adImageOpacity').value;
+                        ad.content.shadow = document.getElementById('adImageShadow').value;
+                        ad.content.hoverEffect = document.getElementById('adImageHoverEffect').checked;
+                    } else if (ad.type === 'text') {
+                        ad.content.headline = document.getElementById('adTextHeadline').value.trim();
+                        ad.content.description = document.getElementById('adTextDescription').value.trim();
+                        ad.content.buttonText = document.getElementById('adTextButton').value.trim();
+                        ad.content.buttonLink = document.getElementById('adTextLink').value.trim();
+                        ad.content.backgroundColor = 'transparent';
+                        ad.content.textColor = document.getElementById('adTextColor').value;
+                        ad.content.animation = document.getElementById('adTextAnimation').value || 'none';
+                        ad.content.headlineSize = document.getElementById('adTextHeadlineSize').value;
+                        ad.content.descSize = document.getElementById('adTextDescSize').value;
+                        ad.content.fontWeight = document.getElementById('adTextFontWeight').value;
+                        ad.content.textAlign = document.getElementById('adTextAlign').value;
+                        ad.content.letterSpacing = document.getElementById('adTextLetterSpacing').value;
+                        ad.content.lineHeight = document.getElementById('adTextLineHeight').value;
+                        ad.content.textShadow = document.getElementById('adTextShadow').checked;
+                    } else if (ad.type === 'video') {
+                        ad.content.videoUrl = document.getElementById('adVideoUrl').value.trim();
+                        ad.content.autoplay = document.getElementById('adVideoAutoplay').checked;
+                        ad.content.muted = document.getElementById('adVideoMuted').checked;
+                        ad.content.loop = document.getElementById('adVideoLoop').checked;
+                        ad.content.width = document.getElementById('adVideoWidth').value;
+                        ad.content.borderRadius = document.getElementById('adVideoBorderRadius').value;
+                        ad.content.aspectRatio = document.getElementById('adVideoAspectRatio').value;
+                        ad.content.shadow = document.getElementById('adVideoShadow').value;
+                    }
+
+                    if (ad.status === 'scheduled') {
+                        ad.schedule = {
+                            startDate: document.getElementById('adStartDate').value,
+                            endDate: document.getElementById('adEndDate').value
+                        };
+                    }
+
+                    await this.saveAdsToFirestore();
+                    this.closeAdModal();
+                    this.renderAdvertisements();
+                    this.showToast('✅ Advertisement updated successfully!');
+                } catch (error) {
+                    console.error('Error updating ad:', error);
+                    this.showToast('❌ Error updating advertisement. Please try again.', 'error');
+                }
+            },
+
+            async toggleAdStatus(adId, index) {
+                try {
+                    const ad = this.data.advertisements[index];
+                    ad.status = ad.status === 'active' ? 'inactive' : 'active';
+                    ad.updatedAt = new Date().toISOString();
+
+                    await this.saveAdsToFirestore();
+                    this.renderAdvertisements();
+
+                    const statusText = ad.status === 'active' ? 'activated' : 'paused';
+                    this.showToast(`✅ Ad ${statusText} successfully!`);
+                } catch (error) {
+                    console.error('Error toggling ad status:', error);
+                    this.showToast('❌ Error updating ad status. Please try again.', 'error');
+                }
+            },
+
+            async deleteAd(adId, index) {
+                if (!confirm('Are you sure you want to delete this advertisement? This action cannot be undone.')) {
+                    return;
+                }
+
+                try {
+                    this.data.advertisements.splice(index, 1);
+                    await this.saveAdsToFirestore();
+                    this.renderAdvertisements();
+                    this.showToast('✅ Advertisement deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting ad:', error);
+                    this.showToast('❌ Error deleting advertisement. Please try again.', 'error');
+                }
+            },
+
+            async saveAdsToFirestore() {
+                const database = window.db || this.db;
+                if (!database) {
+                    console.error('❌ Database not initialized');
+                    console.error('window.db:', window.db);
+                    console.error('this.db:', this.db);
+                    return;
+                }
+
+                try {
+                    console.log('💾 Starting to save ads to Firestore...');
+                    console.log('✅ Using database:', database ? 'Connected' : 'Not connected');
+                    console.log('📊 Ads to save:', this.data.advertisements);
+
+                    const adsRef = database.collection('advertisements');
+
+                    // Delete all existing ads
+                    console.log('🗑️ Deleting existing ads...');
+                    const snapshot = await adsRef.get();
+                    console.log('📦 Found', snapshot.size, 'existing ads to delete');
+
+                    const batch = database.batch();
+                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                    console.log('✅ Existing ads deleted');
+
+                    // Add all current ads
+                    console.log('💾 Adding', this.data.advertisements.length, 'new ads...');
+                    const newBatch = database.batch();
+                    this.data.advertisements.forEach(ad => {
+                        console.log('📝 Adding ad:', ad.id, ad.title);
+                        const docRef = adsRef.doc(ad.id);
+                        newBatch.set(docRef, ad);
+                    });
+                    await newBatch.commit();
+
+                    console.log('✅ Advertisements saved to Firestore successfully!');
+                } catch (error) {
+                    console.error('❌ Error saving ads to Firestore:', error);
+                    console.error('Error details:', error.message, error.code);
+                    throw error;
+                }
+            },
+
+            async loadAdsFromFirestore() {
+                const database = window.db || this.db;
+                if (!database) {
+                    console.error('❌ Database not initialized for loading ads');
+                    return;
+                }
+
+                try {
+                    console.log('📥 Loading advertisements from Firestore...');
+                    const snapshot = await database.collection('advertisements').get();
+                    this.data.advertisements = snapshot.docs.map(doc => doc.data());
+                    console.log('✅ Advertisements loaded from Firestore:', this.data.advertisements.length);
+                    console.log('📋 Loaded ads:', this.data.advertisements);
+                } catch (error) {
+                    console.error('❌ Error loading ads from Firestore:', error);
+                    console.error('Error details:', error.message, error.code);
+                    this.data.advertisements = [];
+                }
+
+
             closeModal(modalId = 'dynamicModal') {
                 const modal = document.getElementById(modalId);
                 if (modal) {
