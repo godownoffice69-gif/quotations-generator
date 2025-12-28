@@ -83,9 +83,23 @@ function setupTokenMonitoring() {
                 if (!hasSignedOut && window.auth && window.auth.currentUser) {
                     hasSignedOut = true;
 
+                    // **CRITICAL: Save any unsaved work BEFORE signing out**
+                    try {
+                        // Save current order draft if user is working on one
+                        if (window.OMS && window.OMS.hasUnsavedChanges && window.OMS.hasUnsavedChanges()) {
+                            const draftData = window.OMS.collectFormData();
+                            draftData.savedAt = new Date().toISOString();
+                            draftData.reason = 'session_expired';
+                            localStorage.setItem('oms_draft', JSON.stringify(draftData));
+                            console.log('💾 Emergency draft saved before sign-out');
+                        }
+                    } catch (err) {
+                        console.warn('Could not save draft:', err);
+                    }
+
                     // Show user-friendly message
                     if (window.OMS && window.OMS.showToast) {
-                        window.OMS.showToast('Session expired. Please login again.', 'warning');
+                        window.OMS.showToast('Session expired. Your work has been saved. Please login again.', 'warning');
                     }
 
                     // Sign out user
@@ -118,6 +132,20 @@ function setupTokenMonitoring() {
 
             if (!hasSignedOut && window.auth && window.auth.currentUser) {
                 hasSignedOut = true;
+
+                // Save any unsaved work before sign-out
+                try {
+                    if (window.OMS && window.OMS.hasUnsavedChanges && window.OMS.hasUnsavedChanges()) {
+                        const draftData = window.OMS.collectFormData();
+                        draftData.savedAt = new Date().toISOString();
+                        draftData.reason = 'session_expired';
+                        localStorage.setItem('oms_draft', JSON.stringify(draftData));
+                        console.log('💾 Emergency draft saved (network error)');
+                    }
+                } catch (err) {
+                    // Silent fail - don't block sign-out
+                }
+
                 window.auth.signOut().catch(() => {});
             }
 
