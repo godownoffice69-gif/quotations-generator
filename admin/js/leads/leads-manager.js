@@ -101,6 +101,40 @@ export class LeadsManager {
             if (e.target.matches('#close-lead-details-btn')) {
                 this.closeLeadDetails();
             }
+
+            if (e.target.closest('.edit-lead-btn')) {
+                const btn = e.target.closest('.edit-lead-btn');
+                const leadDocId = btn.dataset.leadDocId;
+                this.editLead(leadDocId);
+            }
+
+            if (e.target.closest('.delete-lead-btn')) {
+                const btn = e.target.closest('.delete-lead-btn');
+                const leadDocId = btn.dataset.leadDocId;
+                this.deleteLead(leadDocId);
+            }
+
+            if (e.target.matches('#save-lead-btn')) {
+                this.saveLead();
+            }
+
+            if (e.target.matches('#close-edit-lead-modal-btn')) {
+                this.closeEditModal();
+            }
+
+            if (e.target.matches('#add-new-lead-btn')) {
+                this.createNewLead();
+            }
+
+            if (e.target.matches('#add-lead-item-btn')) {
+                this.addLeadItem();
+            }
+
+            if (e.target.closest('.remove-lead-item-btn')) {
+                const btn = e.target.closest('.remove-lead-item-btn');
+                const index = parseInt(btn.dataset.index);
+                this.removeLeadItem(index);
+            }
         });
 
         // Real-time updates listener
@@ -212,11 +246,20 @@ export class LeadsManager {
         const container = document.getElementById('leads-list-container');
         if (!container) return;
 
+        // Add "Create New Lead" button at the top
+        const addButtonHtml = `
+            <div style="margin-bottom: 1.5rem; text-align: right;">
+                <button id="add-new-lead-btn" class="btn btn-success">
+                    ➕ Create New Lead
+                </button>
+            </div>
+        `;
+
         if (this.filteredLeads.length === 0) {
             // Show error message if no leads loaded AND current filter is 'all'
             // (this likely means Firestore permissions issue)
             if (this.currentFilter === 'all' && this.leads.length === 0) {
-                container.innerHTML = `
+                container.innerHTML = addButtonHtml + `
                     <div style="text-align: center; padding: 3rem; color: #64748B;">
                         <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
                         <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">Unable to load leads</h3>
@@ -236,7 +279,7 @@ export class LeadsManager {
                     </div>
                 `;
             } else {
-                container.innerHTML = `
+                container.innerHTML = addButtonHtml + `
                     <div style="text-align: center; padding: 3rem; color: #64748B;">
                         <div style="font-size: 4rem; margin-bottom: 1rem;">🎯</div>
                         <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">No leads found</h3>
@@ -247,7 +290,7 @@ export class LeadsManager {
             return;
         }
 
-        let html = '<div class="leads-grid">';
+        let html = addButtonHtml + '<div class="leads-grid">';
 
         this.filteredLeads.forEach(lead => {
             html += this.renderLeadCard(lead);
@@ -375,6 +418,10 @@ export class LeadsManager {
                         👁️ View Details
                     </button>
 
+                    <button class="edit-lead-btn btn btn-info btn-small" data-lead-doc-id="${lead.docId}">
+                        ✏️ Edit
+                    </button>
+
                     ${lead.status === 'new' ? `
                         <button class="update-lead-status-btn btn btn-info btn-small" data-lead-doc-id="${lead.docId}" data-new-status="contacted">
                             📞 Mark Contacted
@@ -392,6 +439,10 @@ export class LeadsManager {
                             ✅ Convert to Order
                         </button>
                     ` : ''}
+
+                    <button class="delete-lead-btn btn btn-danger btn-small" data-lead-doc-id="${lead.docId}">
+                        🗑️ Delete
+                    </button>
                 </div>
             </div>
         `;
@@ -609,6 +660,378 @@ export class LeadsManager {
             console.error('❌ Error converting lead to order:', error);
             OMS?.showNotification('Error converting lead to order', 'error');
         }
+    }
+
+    /**
+     * Edit lead
+     */
+    editLead(leadDocId) {
+        const lead = this.leads.find(l => l.docId === leadDocId);
+        if (!lead) return;
+
+        this.currentLead = lead;
+        this.editingLeadItems = lead.items ? JSON.parse(JSON.stringify(lead.items)) : [];
+        this.renderEditModal(lead);
+    }
+
+    /**
+     * Create new lead
+     */
+    createNewLead() {
+        this.currentLead = {
+            docId: null,
+            leadId: '',
+            status: 'new',
+            customer: { name: '', phone: '', email: '', specialRequests: '' },
+            eventType: 'wedding',
+            eventDate: '',
+            eventTime: '',
+            venue: { name: '', address: '' },
+            packageType: 'custom',
+            selectedPackageName: '',
+            items: []
+        };
+        this.editingLeadItems = [];
+        this.renderEditModal(null);
+    }
+
+    /**
+     * Render edit modal
+     */
+    renderEditModal(lead) {
+        const modal = document.getElementById('edit-lead-modal');
+        if (!modal) return;
+
+        const isNew = !lead || !lead.docId;
+        const leadData = lead || this.currentLead;
+
+        const container = document.getElementById('edit-lead-content');
+        if (!container) return;
+
+        let html = `
+            <div class="lead-edit-section">
+                <h3>Customer Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Customer Name *</label>
+                        <input type="text" id="edit-customer-name" class="form-control" value="${leadData.customer?.name || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone *</label>
+                        <input type="tel" id="edit-customer-phone" class="form-control" value="${leadData.customer?.phone || ''}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="edit-customer-email" class="form-control" value="${leadData.customer?.email || ''}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Special Requests</label>
+                    <textarea id="edit-customer-requests" class="form-control" rows="2">${leadData.customer?.specialRequests || ''}</textarea>
+                </div>
+            </div>
+
+            <div class="lead-edit-section">
+                <h3>Event Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Event Type *</label>
+                        <select id="edit-event-type" class="form-control">
+                            <option value="wedding" ${leadData.eventType === 'wedding' ? 'selected' : ''}>💍 Wedding</option>
+                            <option value="corporate" ${leadData.eventType === 'corporate' ? 'selected' : ''}>🏢 Corporate</option>
+                            <option value="birthday" ${leadData.eventType === 'birthday' ? 'selected' : ''}>🎂 Birthday</option>
+                            <option value="anniversary" ${leadData.eventType === 'anniversary' ? 'selected' : ''}>🎊 Anniversary</option>
+                            <option value="other" ${leadData.eventType === 'other' ? 'selected' : ''}>🎉 Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="edit-lead-status" class="form-control">
+                            <option value="new" ${leadData.status === 'new' ? 'selected' : ''}>🆕 New</option>
+                            <option value="contacted" ${leadData.status === 'contacted' ? 'selected' : ''}>📞 Contacted</option>
+                            <option value="quoted" ${leadData.status === 'quoted' ? 'selected' : ''}>💰 Quoted</option>
+                            <option value="converted" ${leadData.status === 'converted' ? 'selected' : ''}>✅ Converted</option>
+                            <option value="lost" ${leadData.status === 'lost' ? 'selected' : ''}>❌ Lost</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Event Date *</label>
+                        <input type="date" id="edit-event-date" class="form-control" value="${leadData.eventDate || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Event Time *</label>
+                        <input type="time" id="edit-event-time" class="form-control" value="${leadData.eventTime || ''}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Venue Name *</label>
+                        <input type="text" id="edit-venue-name" class="form-control" value="${leadData.venue?.name || ''}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Venue Address</label>
+                    <textarea id="edit-venue-address" class="form-control" rows="2">${leadData.venue?.address || ''}</textarea>
+                </div>
+            </div>
+
+            <div class="lead-edit-section">
+                <h3>Package & Items</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Package Type</label>
+                        <select id="edit-package-type" class="form-control">
+                            <option value="custom" ${leadData.packageType === 'custom' ? 'selected' : ''}>Custom Package</option>
+                            <option value="premade" ${leadData.packageType === 'premade' ? 'selected' : ''}>Pre-made Package</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Selected Package Name</label>
+                        <input type="text" id="edit-package-name" class="form-control" value="${leadData.selectedPackageName || ''}" placeholder="e.g., Premium Wedding Package">
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <label style="margin: 0;">Items</label>
+                        <button type="button" id="add-lead-item-btn" class="btn btn-success btn-small">
+                            ➕ Add Item
+                        </button>
+                    </div>
+                    <div id="edit-items-list">
+                        ${this.renderEditItemsList()}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        modal.style.display = 'block';
+
+        // Update modal title
+        const modalTitle = modal.querySelector('.modal-header h3');
+        if (modalTitle) {
+            modalTitle.textContent = isNew ? 'Create New Lead' : `Edit Lead: ${leadData.leadId || 'N/A'}`;
+        }
+    }
+
+    /**
+     * Render edit items list
+     */
+    renderEditItemsList() {
+        if (!this.editingLeadItems || this.editingLeadItems.length === 0) {
+            return '<p style="color: #64748B; padding: 1rem; text-align: center; background: #F1F5F9; border-radius: 6px;">No items added yet. Click "Add Item" to get started.</p>';
+        }
+
+        return `
+            <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #E2E8F0; border-radius: 6px; overflow: hidden;">
+                <thead>
+                    <tr style="background: #F1F5F9; text-align: left;">
+                        <th style="padding: 0.75rem; width: 40%;">Item Name</th>
+                        <th style="padding: 0.75rem; width: 25%;">Category</th>
+                        <th style="padding: 0.75rem; width: 15%; text-align: center;">Quantity</th>
+                        <th style="padding: 0.75rem; width: 20%; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${this.editingLeadItems.map((item, index) => `
+                        <tr style="border-bottom: 1px solid #E2E8F0;">
+                            <td style="padding: 0.75rem;">
+                                <input type="text" class="form-control" value="${item.name || ''}"
+                                    onchange="window.leadsManager.updateLeadItem(${index}, 'name', this.value)"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #E2E8F0; border-radius: 4px;">
+                            </td>
+                            <td style="padding: 0.75rem;">
+                                <input type="text" class="form-control" value="${item.categoryName || ''}"
+                                    onchange="window.leadsManager.updateLeadItem(${index}, 'categoryName', this.value)"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #E2E8F0; border-radius: 4px;">
+                            </td>
+                            <td style="padding: 0.75rem; text-align: center;">
+                                <input type="number" min="1" class="form-control" value="${item.quantity || 1}"
+                                    onchange="window.leadsManager.updateLeadItem(${index}, 'quantity', parseInt(this.value))"
+                                    style="width: 80px; margin: 0 auto; padding: 0.5rem; border: 1px solid #E2E8F0; border-radius: 4px; text-align: center;">
+                            </td>
+                            <td style="padding: 0.75rem; text-align: center;">
+                                <button type="button" class="remove-lead-item-btn btn btn-danger btn-small" data-index="${index}">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    /**
+     * Add item to editing items list
+     */
+    addLeadItem() {
+        if (!this.editingLeadItems) {
+            this.editingLeadItems = [];
+        }
+
+        this.editingLeadItems.push({
+            name: '',
+            categoryName: '',
+            quantity: 1
+        });
+
+        // Re-render items list
+        const container = document.getElementById('edit-items-list');
+        if (container) {
+            container.innerHTML = this.renderEditItemsList();
+        }
+    }
+
+    /**
+     * Update lead item
+     */
+    updateLeadItem(index, field, value) {
+        if (!this.editingLeadItems || !this.editingLeadItems[index]) return;
+        this.editingLeadItems[index][field] = value;
+    }
+
+    /**
+     * Remove item from editing items list
+     */
+    removeLeadItem(index) {
+        if (!this.editingLeadItems) return;
+        this.editingLeadItems.splice(index, 1);
+
+        // Re-render items list
+        const container = document.getElementById('edit-items-list');
+        if (container) {
+            container.innerHTML = this.renderEditItemsList();
+        }
+    }
+
+    /**
+     * Save lead (create or update)
+     */
+    async saveLead() {
+        try {
+            // Collect form data
+            const customerName = document.getElementById('edit-customer-name')?.value.trim();
+            const customerPhone = document.getElementById('edit-customer-phone')?.value.trim();
+            const customerEmail = document.getElementById('edit-customer-email')?.value.trim();
+            const customerRequests = document.getElementById('edit-customer-requests')?.value.trim();
+            const eventType = document.getElementById('edit-event-type')?.value;
+            const eventDate = document.getElementById('edit-event-date')?.value;
+            const eventTime = document.getElementById('edit-event-time')?.value;
+            const venueName = document.getElementById('edit-venue-name')?.value.trim();
+            const venueAddress = document.getElementById('edit-venue-address')?.value.trim();
+            const packageType = document.getElementById('edit-package-type')?.value;
+            const packageName = document.getElementById('edit-package-name')?.value.trim();
+            const leadStatus = document.getElementById('edit-lead-status')?.value;
+
+            // Validate required fields
+            if (!customerName || !customerPhone || !eventType || !eventDate || !eventTime || !venueName) {
+                OMS?.showNotification('Please fill in all required fields', 'error');
+                return;
+            }
+
+            // Use the existing Firebase instance
+            const db = window.db;
+            if (!db) {
+                throw new Error('Firebase Firestore not initialized');
+            }
+
+            const leadData = {
+                customer: {
+                    name: customerName,
+                    phone: customerPhone,
+                    email: customerEmail,
+                    specialRequests: customerRequests
+                },
+                eventType: eventType,
+                eventDate: eventDate,
+                eventTime: eventTime,
+                venue: {
+                    name: venueName,
+                    address: venueAddress
+                },
+                packageType: packageType,
+                selectedPackageName: packageName,
+                status: leadStatus,
+                items: this.editingLeadItems || [],
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (this.currentLead && this.currentLead.docId) {
+                // Update existing lead
+                await db.collection('leads').doc(this.currentLead.docId).update(leadData);
+                console.log('✅ Lead updated:', this.currentLead.docId);
+                OMS?.showNotification('Lead updated successfully', 'success');
+            } else {
+                // Create new lead
+                leadData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                leadData.leadId = `LEAD-${Date.now()}`;
+
+                await db.collection('leads').add(leadData);
+                console.log('✅ New lead created');
+                OMS?.showNotification('Lead created successfully', 'success');
+            }
+
+            this.closeEditModal();
+            // Data will refresh automatically via realtime listener
+
+        } catch (error) {
+            console.error('❌ Error saving lead:', error);
+            OMS?.showNotification('Error saving lead', 'error');
+        }
+    }
+
+    /**
+     * Delete lead
+     */
+    async deleteLead(leadDocId) {
+        const lead = this.leads.find(l => l.docId === leadDocId);
+        if (!lead) return;
+
+        if (!confirm(`Are you sure you want to delete lead ${lead.leadId}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const db = window.db;
+            if (!db) {
+                throw new Error('Firebase Firestore not initialized');
+            }
+
+            await db.collection('leads').doc(leadDocId).delete();
+            console.log('✅ Lead deleted:', leadDocId);
+            OMS?.showNotification('Lead deleted successfully', 'success');
+
+            // Remove from local array
+            const index = this.leads.findIndex(l => l.docId === leadDocId);
+            if (index !== -1) {
+                this.leads.splice(index, 1);
+            }
+
+            this.applyFilter();
+            this.render();
+
+        } catch (error) {
+            console.error('❌ Error deleting lead:', error);
+            OMS?.showNotification('Error deleting lead', 'error');
+        }
+    }
+
+    /**
+     * Close edit modal
+     */
+    closeEditModal() {
+        const modal = document.getElementById('edit-lead-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        this.currentLead = null;
+        this.editingLeadItems = [];
     }
 
     /**
