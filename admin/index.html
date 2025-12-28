@@ -20957,12 +20957,12 @@ if (diffDays > 30) {
             // Token monitoring is handled in the Firebase module
 
             // Initialize Firebase when page loads
-            import('./js/core/firebase.js').then(({ initializeFirebase, auth }) => {
-                const { auth: firebaseAuth, db } = initializeFirebase();
+            import('./js/core/firebase.js').then(({ initializeFirebase }) => {
+                const { auth, db } = initializeFirebase();
                 console.log('✅ Firebase module loaded and initialized');
 
                 // Check if user is logged in (set up auth listener after Firebase is ready)
-                auth.onAuthStateChanged((user) => {
+                window.auth.onAuthStateChanged((user) => {
                     if (user) {
                         // User is logged in
                         console.log('✅ User logged in:', user.email);
@@ -20989,18 +20989,18 @@ if (diffDays > 30) {
             // Handle login form
             document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
+
                 const email = document.getElementById('loginEmail').value;
                 const password = document.getElementById('loginPassword').value;
                 const loginBtn = document.getElementById('loginBtn');
                 const loginError = document.getElementById('loginError');
-                
+
                 loginBtn.textContent = 'Logging in...';
                 loginBtn.disabled = true;
                 loginError.style.display = 'none';
-                
+
                 try {
-                    await auth.signInWithEmailAndPassword(email, password);
+                    await window.auth.signInWithEmailAndPassword(email, password);
                     console.log('✅ Login successful!');
 
                     // 🎆 FIREPOWER SFX LOGIN SUCCESS!
