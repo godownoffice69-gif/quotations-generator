@@ -7,62 +7,62 @@
 // Tab to module mapping
 const TAB_MODULES = {
     'dashboard': {
-        path: './js/features/dashboard.js',
+        path: '../features/dashboard.js',
         export: 'Dashboard',
         renderFn: 'renderDashboard'
     },
     'inventory': {
-        path: './js/features/inventory.js',
+        path: '../features/inventory.js',
         export: 'Inventory',
         renderFn: 'renderInventory'
     },
     'preparation': {
-        path: './js/features/preparation.js',
+        path: '../features/preparation.js',
         export: 'Preparation',
         renderFn: 'renderPreparation'
     },
     'calendar': {
-        path: './js/features/calendar.js',
+        path: '../features/calendar.js',
         export: 'Calendar',
         renderFn: 'renderCalendar'
     },
     'team': {
-        path: './js/features/team.js',
+        path: '../features/team.js',
         export: 'Team',
         renderFn: 'renderTeam'
     },
     'customers': {
-        path: './js/features/customers.js',
+        path: '../features/customers.js',
         export: 'Customers',
         renderFn: 'renderCustomers'
     },
     'financials': {
-        path: './js/features/financials.js',
+        path: '../features/financials.js',
         export: 'Financials',
         renderFn: 'renderFinancials'
     },
     'videos': {
-        path: './js/features/videos.js',
+        path: '../features/videos.js',
         export: 'Videos',
         renderFn: 'renderVideos'
     },
     'advertisements': {
-        path: './js/features/advertisements.js',
+        path: '../features/advertisements.js',
         export: 'Advertisements',
         renderFn: 'renderAdvertisements'
     },
     'analytics': {
-        path: './js/features/analytics.js',
+        path: '../features/analytics.js',
         export: 'Analytics',
         renderFn: 'renderAnalytics'
     },
     'conversion': {
-        path: './js/features/conversion.js',
+        path: '../features/conversion.js',
         export: 'Conversion',
         renderFn: 'renderConversion'
     },
     'settings': {
-        path: './js/features/settings.js',
+        path: '../features/settings.js',
         export: 'Settings',
         renderFn: 'renderSettings'
     }
