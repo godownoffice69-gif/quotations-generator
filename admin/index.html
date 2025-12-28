@@ -1577,6 +1577,15 @@
     <!-- Lazy Loading System - Load feature modules on demand -->
     <script src="./js/core/lazy-loader.js"></script>
 
+    <!-- Google Maps callback stub (real implementation defined later in page) -->
+    <script>
+        // Define stub early so Google Maps callback doesn't fail
+        // Real implementation will override this when page fully loads
+        window.initGoogleMaps = function() {
+            console.log('⏳ Google Maps loaded (waiting for full page init)');
+        };
+    </script>
+
     <!-- Google Maps JavaScript API with Places Library -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAInxvvhevCHpLy9P5K5VvBNxDgbtZF-A4&libraries=places&loading=async&callback=initGoogleMaps" async defer></script>
 
@@ -13831,7 +13840,7 @@ convertToQuotationDateFormat(dateStr) {
                     console.error('Error details:', error.message, error.code);
                     this.data.advertisements = [];
                 }
-
+            },
 
             closeModal(modalId = 'dynamicModal') {
                 const modal = document.getElementById(modalId);
