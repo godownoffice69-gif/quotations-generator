@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Version: 2025-12-26-MARKETING-TAB-FIX-v14 -->
-    <!-- TIMESTAMP: 1735220400 -->
-    <!-- FIXED: Marketing tab name showing correctly + Analytics improvements -->
+    <!-- Version: 2025-12-28-DEAD-CODE-CLEANUP-v15 -->
+    <!-- TIMESTAMP: 1735408800 -->
+    <!-- REMOVED: Dead code functions + Team management system + Manager reports -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0">
@@ -2690,8 +2690,6 @@ debounce: (func, wait) => {
                 sameDay: '📅 Same Day',
                 clearForm: '🗑️ Clear',
                 clearFormShortcut: '🗑️ Clear (Ctrl+D)',
-                notifyTeam: '📱 Notify Allocated Team',
-                sendReport: '📊 Send Manager Report',
 
                 // Settings
                 systemSettings: '⚙️ System Settings',
@@ -3041,8 +3039,6 @@ debounce: (func, wait) => {
                 sameDay: '📅 સમાન દિવસ',
                 clearForm: '🗑️ સાફ કરો',
                 clearFormShortcut: '🗑️ સાફ કરો (Ctrl+D)',
-                notifyTeam: '📱 ટીમને સૂચના',
-                sendReport: '📊 મેનેજર રિપોર્ટ મોકલો',
 
                 // Settings
                 systemSettings: '⚙️ સિસ્ટમ સેટિંગ્સ',
@@ -4533,8 +4529,6 @@ const OMS = {
                     else if (text.includes('Same Day')) btn.textContent = this.t('sameDay');
                     else if (text.includes('Clear') && text.includes('Ctrl')) btn.textContent = this.t('clearFormShortcut');
                     else if (text.includes('Preview')) btn.textContent = `👁️ ${this.t('preview')}`;
-                    else if (text.includes('Notify')) btn.textContent = this.t('notifyTeam');
-                    else if (text.includes('Send Manager')) btn.textContent = this.t('sendReport');
                 });
             },
 
@@ -12293,16 +12287,6 @@ convertToQuotationDateFormat(dateStr) {
                 return date.toISOString().split('T')[0];
             },
 
-            // REMOVED: WhatsApp features disabled per user request
-            // User will send PDFs directly via WhatsApp instead
-            /*
-            async saveAndSendQuotation() {
-                const quotation = await this.saveQuotation('sent');
-                if (quotation) {
-                    await this.sendQuotationWhatsApp(quotation.id);
-                }
-            },
-            */
 
             async editQuotation(quotationId) {
                 const quotation = this.data.quotations.find(q => q.id === quotationId);
@@ -12442,76 +12426,6 @@ convertToQuotationDateFormat(dateStr) {
                 await this.generatePDFFile(quotation);
             },
 
-            // REMOVED: WhatsApp features disabled per user request
-            // User will send PDFs directly via WhatsApp instead
-            /*
-            async sendPreviewWhatsApp() {
-                const quotation = this.previewQuotation;
-                if (!quotation) {
-                    this.showToast('No quotation data found', 'error');
-                    return;
-                }
-
-                // Build order type specific details
-                let orderTypeInfo = '';
-                if (!quotation.orderType || quotation.orderType === 'single') {
-                    const itemCount = (quotation.items || []).length;
-                    orderTypeInfo = `*Items:* ${itemCount} item${itemCount !== 1 ? 's' : ''}`;
-                } else if (quotation.orderType === 'multifunction') {
-                    const funcCount = (quotation.functions || []).length;
-                    orderTypeInfo = `*Order Type:* Multifunction (${funcCount} function${funcCount !== 1 ? 's' : ''})`;
-                } else if (quotation.orderType === 'multiday') {
-                    const dayCount = (quotation.days || []).length;
-                    orderTypeInfo = `*Order Type:* Multiday Event (${dayCount} day${dayCount !== 1 ? 's' : ''})`;
-                }
-
-                // Build financial summary
-                let financialDetails = `*Subtotal:* ₹${quotation.financials.subtotal.toLocaleString('en-IN')}`;
-                if (quotation.financials.discountAmount > 0) {
-                    financialDetails += `\n*Discount:* -₹${quotation.financials.discountAmount.toLocaleString('en-IN')}`;
-                }
-                financialDetails += `\n*Grand Total:* ₹${quotation.financials.grandTotal.toLocaleString('en-IN')}`;
-
-                const message = `Hi ${quotation.customer.name}!
-
-Thank you for your interest. Please find your quotation details:
-
-*Event Date:* ${Utils.formatDate(quotation.customer.eventDate)}
-${quotation.customer.eventVenue ? `*Venue:* ${quotation.customer.eventVenue}\n` : ''}${orderTypeInfo}
-
-*FINANCIAL SUMMARY:*
-${financialDetails}
-
-*PAYMENT SCHEDULE:*
-• Booking Amount (50%): ₹${(quotation.financials.grandTotal * 0.5).toLocaleString('en-IN')}
-• Before Event (50%): ₹${(quotation.financials.grandTotal * 0.5).toLocaleString('en-IN')}
-
-Valid until: ${Utils.formatDate(quotation.validUntil || this.calculateValidUntil())}
-
-For detailed quotation, please visit our office or request PDF.
-
-Contact: 📱 98984 96111 / 76984 96111`;
-
-                // Clean and validate phone number
-                let phoneNumber = quotation.customer.contact.replace(/\D/g, ''); // Remove all non-digits
-
-                // Remove country code if already present (91 or +91)
-                if (phoneNumber.startsWith('91') && phoneNumber.length > 10) {
-                    phoneNumber = phoneNumber.substring(2);
-                }
-
-                // Validate phone number length
-                if (phoneNumber.length !== 10) {
-                    this.showToast('Invalid phone number. Must be 10 digits.', 'error');
-                    return;
-                }
-
-                const whatsappURL = `https://wa.me/91${phoneNumber}?text=${encodeURIComponent(message)}`;
-                window.open(whatsappURL, '_blank');
-
-                this.showToast('✅ Opening WhatsApp...', 'success');
-            },
-            */
 
             async generatePDFFile(quotation) {
                 const loading = this.showLoading('Generating quotation PDF...');
@@ -13242,86 +13156,6 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 }
             },
 
-            // REMOVED: WhatsApp features disabled per user request
-            // User will send PDFs directly via WhatsApp instead
-            /*
-            async sendQuotationWhatsApp(quotationId) {
-                const quotation = this.data.quotations.find(q => q.id === quotationId);
-                if (!quotation) return;
-
-                // Build order type specific details
-                let orderTypeInfo = '';
-                if (!quotation.orderType || quotation.orderType === 'single') {
-                    const itemCount = (quotation.items || []).length;
-                    orderTypeInfo = `*Items:* ${itemCount} item${itemCount !== 1 ? 's' : ''}`;
-                } else if (quotation.orderType === 'multifunction') {
-                    const funcCount = (quotation.functions || []).length;
-                    orderTypeInfo = `*Order Type:* Multifunction (${funcCount} function${funcCount !== 1 ? 's' : ''})`;
-                } else if (quotation.orderType === 'multiday') {
-                    const dayCount = (quotation.days || []).length;
-                    orderTypeInfo = `*Order Type:* Multiday Event (${dayCount} day${dayCount !== 1 ? 's' : ''})`;
-                }
-
-                // Build financial summary
-                let financialDetails = `*Subtotal:* ₹${quotation.financials.subtotal.toLocaleString('en-IN')}`;
-                if (quotation.financials.discountAmount > 0) {
-                    financialDetails += `\n*Discount:* -₹${quotation.financials.discountAmount.toLocaleString('en-IN')}`;
-                }
-                financialDetails += `\n*Grand Total:* ₹${quotation.financials.grandTotal.toLocaleString('en-IN')}`;
-
-                const message = `Hi ${quotation.customer.name}!
-
-Thank you for your interest. Please find your quotation details:
-
-*Event Date:* ${Utils.formatDate(quotation.customer.eventDate)}
-${quotation.customer.eventVenue ? `*Venue:* ${quotation.customer.eventVenue}\n` : ''}${orderTypeInfo}
-
-*FINANCIAL SUMMARY:*
-${financialDetails}
-
-*PAYMENT SCHEDULE:*
-• Booking Amount (50%): ₹${(quotation.financials.grandTotal * 0.5).toLocaleString('en-IN')}
-• Before Event (50%): ₹${(quotation.financials.grandTotal * 0.5).toLocaleString('en-IN')}
-
-Valid until: ${Utils.formatDate(quotation.validUntil || this.calculateValidUntil())}
-
-For detailed quotation, please visit our office or request PDF.
-
-Contact: 📱 98984 96111 / 76984 96111`;
-
-                // Clean and validate phone number
-                let phoneNumber = quotation.customer.contact.replace(/\D/g, ''); // Remove all non-digits
-
-                // Remove country code if already present (91 or +91)
-                if (phoneNumber.startsWith('91') && phoneNumber.length > 10) {
-                    phoneNumber = phoneNumber.substring(2);
-                }
-
-                // Validate phone number length
-                if (phoneNumber.length !== 10) {
-                    this.showToast('Invalid phone number. Must be 10 digits.', 'error');
-                    return;
-                }
-
-                const whatsappURL = `https://wa.me/91${phoneNumber}?text=${encodeURIComponent(message)}`;
-                window.open(whatsappURL, '_blank');
-
-                // Update status to sent
-                if (quotation.status === 'draft') {
-                    await db.collection('quotations').doc(quotationId).update({
-                        status: 'sent',
-                        sentAt: new Date().toISOString()
-                    });
-
-                    await this.loadQuotationsFromFirestore();
-                    if (this.quotationViewMode === 'list') {
-                        this.renderQuotations();
-                    }
-                }
-
-                this.showToast('✅ Opening WhatsApp...', 'success');
-            },
-            */
 
             async convertQuotationToOrder(quotationId) {
                 const quotation = this.data.quotations.find(q => q.id === quotationId);
@@ -13922,258 +13756,6 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 });
             },
 
-            notifyAllocatedTeam() {
-                // Get current order form data
-                const driverName = Utils.get('driverName');
-                const operatorName = Utils.get('operator');
-
-                // Get multiple selected helpers from multi-select dropdown
-                const helperSelect = document.getElementById('helper');
-                const helperNames = helperSelect ? Array.from(helperSelect.selectedOptions).map(opt => opt.value).filter(v => v) : [];
-
-                // Get order details
-                const orderId = Utils.get('orderId') || 'NEW';
-                const clientName = Utils.get('clientName');
-                const venue = Utils.get('venue');
-                const venueMapLink = Utils.get('venueMapLink');
-                const date = Utils.get('orderDate');
-                const readyTime = Utils.get('readyTime');
-                const contact = Utils.get('contact');
-
-                if (!clientName || !venue || !date) {
-                    this.showToast('Please fill Order ID, Client Name, Venue, and Date first', 'error');
-                    return;
-                }
-
-                // Get items from current order
-                const items = this.currentOrderItems || [];
-
-                // Collect all team members to notify
-                const teamToNotify = [];
-
-                // Prepare team list for messages
-                const teamListForMessage = [
-                    driverName ? `Driver: ${driverName}` : null,
-                    operatorName ? `Operator: ${operatorName}` : null,
-                    helperNames.length > 0 ? `Helper(s): ${helperNames.join(', ')}` : null
-                ].filter(Boolean).join(', ');
-
-                // Add Driver
-                if (driverName) {
-                    const driver = this.data.team.find(m => m.name === driverName);
-                    if (driver && driver.whatsApp) {
-                        teamToNotify.push({ member: driver, role: 'Driver' });
-                    }
-                }
-
-                // Add Operator
-                if (operatorName) {
-                    const operator = this.data.team.find(m => m.name === operatorName);
-                    if (operator && operator.whatsApp) {
-                        teamToNotify.push({ member: operator, role: 'Operator' });
-                    }
-                }
-
-                // Add ALL Helpers
-                if (helperNames.length > 0) {
-                    helperNames.forEach(helperName => {
-                        const helper = this.data.team.find(m => m.name === helperName);
-                        if (helper && helper.whatsApp) {
-                            teamToNotify.push({ member: helper, role: 'Helper' });
-                        }
-                    });
-                }
-
-                if (teamToNotify.length === 0) {
-                    this.showToast('No team members selected or no WhatsApp numbers found', 'warning');
-                    return;
-                }
-
-                // Send notifications with delay to prevent popup blocking
-                teamToNotify.forEach((item, index) => {
-                    setTimeout(() => {
-                        this.sendTeamMemberNotification(item.member, item.role, {
-                            orderId, clientName, venue, venueMapLink, date, readyTime, contact, items,
-                            teamList: teamListForMessage
-                        });
-                    }, index * 500); // 500ms delay between each window
-                });
-
-                this.showToast(`Opening WhatsApp for ${teamToNotify.length} team member(s): ${teamToNotify.map(t => t.member.name).join(', ')}`, 'success');
-
-                // Log notification
-                const notification = {
-                    id: Utils.generateId(),
-                    type: 'team_allocation',
-                    orderId,
-                    recipients: teamToNotify.map(t => t.member.name),
-                    timestamp: new Date().toISOString()
-                };
-                this.data.notifications.push(notification);
-                this.saveToStorage();
-
-                // Save to Firestore
-                this.saveNotificationToFirestore(notification);
-            },
-
-            sendTeamMemberNotification(teamMember, role, orderDetails) {
-                const { orderId, clientName, venue, date, readyTime, contact, items, teamList, venueMapLink } = orderDetails;
-
-                // Format items list
-                const itemsList = items && items.length > 0
-                    ? items.map(item => `• ${item.name}: ${item.quantity}${item.remarks ? ' (' + item.remarks + ')' : ''}`).join('\n')
-                    : '• No items added yet';
-
-                // Create WhatsApp message
-                let message = `🎉 *NEW ORDER ASSIGNED TO YOU*\n\n`;
-                message += `📋 *Order ID:* ${orderId}\n`;
-                message += `👤 *Client:* ${clientName}\n`;
-                message += `📍 *Venue:* ${venue}\n`;
-                if (venueMapLink) {
-                    message += `🗺️ *Location:* ${venueMapLink}\n`;
-                }
-                message += `📅 *Date:* ${Utils.formatDate(date)}\n`;
-                message += `🕐 *Ready Time:* ${readyTime || ''}\n\n`;
-                message += `🎭 *Your Role:* ${role.toUpperCase()}\n\n`;
-
-                if (teamList) {
-                    message += `👷 *Team Members:*\n${teamList}\n\n`;
-                }
-
-                message += `📦 *Items Required:*\n${itemsList}\n\n`;
-
-                if (contact) {
-                    message += `📞 *Client Contact:* ${contact}\n\n`;
-                }
-
-                message += `⚡ Please confirm receipt by replying "OK"\n\n`;
-                message += `--\n_FirepowerSFX Order Management_`;
-
-                // Encode and open WhatsApp
-                const phoneNumber = teamMember.whatsApp.replace(/[^0-9]/g, '');
-                const encodedMessage = encodeURIComponent(message);
-                window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
-            },
-
-            sendManagerReport() {
-                // Get all managers
-                const managers = this.data.team.filter(m => m.roles.includes('Manager') && m.status === 'Active');
-
-                if (managers.length === 0) {
-                    this.showToast('No managers found in team. Add a team member with Manager role first.', 'warning');
-                    return;
-                }
-
-                // Get the current order data from the form
-                const currentOrderId = Utils.get('orderId');
-                const clientName = Utils.get('clientName');
-                const venue = Utils.get('venue');
-                const venueMapLink = Utils.get('venueMapLink');
-                const currentOrderDate = Utils.get('orderDate');
-                const currentStartDate = Utils.get('startDate');
-                const eventType = Utils.get('eventTypeSelect');
-                const isMultiDay = eventType === 'multi';
-                const readyTime = Utils.get('readyTime');
-                const status = Utils.get('orderStatus');
-                const driverName = Utils.get('driverName');
-                const operatorName = Utils.get('operator');
-
-                // Get helpers from text input (comma-separated)
-                const helperInput = document.getElementById('helper');
-                const helperNames = helperInput ? helperInput.value.trim() : '';
-
-                // Check if we have order data in the form
-                if (!clientName || !venue) {
-                    this.showToast('Please open/select an order first to send report', 'warning');
-                    return;
-                }
-
-                // Use the order date from the form
-                const targetDate = isMultiDay ? currentStartDate : currentOrderDate;
-
-                if (!targetDate) {
-                    this.showToast('Order date is missing', 'error');
-                    return;
-                }
-
-                // Build manager report for THIS SPECIFIC ORDER ONLY
-                let message = `📊 *ORDER REPORT*\n`;
-                message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-                message += `*ORDER ID:* ${currentOrderId || 'NEW'}\n`;
-                message += `👤 *Client:* ${clientName}\n`;
-                message += `📍 *Venue:* ${venue}\n`;
-                if (venueMapLink) {
-                    message += `🗺️ *Location:* ${venueMapLink}\n`;
-                }
-                message += `📅 *Date:* ${Utils.formatDate(targetDate)}\n`;
-                message += `🕐 *Ready Time:* ${readyTime || ''}\n`;
-                message += `📊 *Status:* ${status || 'Pending'}\n\n`;
-
-                if (driverName || operatorName || helperNames) {
-                    message += `👷 *Team Allocation:*\n`;
-                    if (driverName) message += `  • Driver: ${driverName}\n`;
-                    if (operatorName) message += `  • Operator: ${operatorName}\n`;
-                    if (helperNames) message += `  • Helper(s): ${helperNames}\n`;
-                } else {
-                    message += `⚠️ *Team Not Allocated Yet*\n`;
-                }
-
-                message += `\n`;
-
-                // Get items from current order
-                const items = this.currentOrderItems || [];
-                if (items.length > 0) {
-                    message += `📦 *Items Required:*\n`;
-                    items.forEach(item => {
-                        message += `  • ${item.name}: ${item.quantity}${item.remarks ? ' (' + item.remarks + ')' : ''}\n`;
-                    });
-                    message += `\n`;
-                }
-
-                message += `━━━━━━━━━━━━━━━━━━━━\n`;
-                message += `--\n_FirepowerSFX Admin_`;
-
-                // Filter managers with valid WhatsApp numbers
-                const managersWithWhatsApp = managers.filter(m => m.whatsApp && m.whatsApp.trim() !== '');
-
-                if (managersWithWhatsApp.length === 0) {
-                    this.showToast('No managers have WhatsApp numbers configured', 'warning');
-                    return;
-                }
-
-                // Send to all managers with delay to prevent popup blocking
-                const encodedMessage = encodeURIComponent(message);
-                const managerNames = [];
-
-                managersWithWhatsApp.forEach((manager, index) => {
-                    const phoneNumber = manager.whatsApp.replace(/[^0-9]/g, '');
-                    if (phoneNumber) {
-                        managerNames.push(manager.name);
-                        // Add delay between each window to prevent popup blocking
-                        setTimeout(() => {
-                            window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
-                        }, index * 500); // 500ms delay between each window
-                    }
-                });
-
-                // Log notification
-                const notification = {
-                    id: Utils.generateId(),
-                    type: 'manager_report',
-                    recipients: managerNames,
-                    orderId: currentOrderId,
-                    targetDate: targetDate,
-                    timestamp: new Date().toISOString()
-                };
-                this.data.notifications.push(notification);
-                this.saveToStorage();
-
-                // Save to Firestore
-                this.saveNotificationToFirestore(notification);
-
-                this.showToast(`Opening WhatsApp for ${managerNames.length} manager(s): ${managerNames.join(', ')}`, 'success');
-            },
 
             // WhatsApp Date Filter Methods
             filterOrdersByDate(selectedDate) {
@@ -14341,175 +13923,6 @@ Contact: 📱 98984 96111 / 76984 96111`;
                 return message;
             },
 
-            // OLD FUNCTION - Keep for reference but not used anymore
-            // This generated combined messages for all orders
-            generateWhatsAppOrdersMessage(orders, selectedDate) {
-                if (!orders || orders.length === 0) return '';
-
-                // Header with date (only once for entire message)
-                let message = `📅 ${Utils.formatDate(selectedDate)}\n`;
-                message += `Total Orders: ${orders.length}\n\n`;
-
-                // Collect special items for RAW MATERIAL calculations (like preparation tab)
-                let totalDryIceMachines = 0;
-                let totalFlowerShowerMachines = 0;
-                let totalElectricityKV = 0;
-
-                orders.forEach((order, index) => {
-                    // Collect all items from this order
-                    let orderItems = [];
-
-                    // Find specific day data for multi-day orders
-                    let specificDayData = null;
-                    if (order.isMultiDay && order.dayWiseData && order.dayWiseData.length > 0) {
-                        specificDayData = order.dayWiseData.find(dayData => dayData.date === selectedDate);
-                    }
-
-                    // Collect items from order
-                    if (specificDayData && specificDayData.functions) {
-                        specificDayData.functions.forEach(func => {
-                            if (func.items && func.items.length > 0) {
-                                orderItems = orderItems.concat(func.items);
-                            }
-                        });
-                    } else if (order.items && order.items.length > 0) {
-                        orderItems = order.items;
-                    }
-
-                    // Calculate dry ice machines (20kg per machine)
-                    orderItems.forEach(item => {
-                        const itemNameLower = item.name?.toLowerCase() || '';
-                        const qty = item.quantity || 0;
-
-                        // Dry ice machines
-                        if (itemNameLower.includes('dry ice')) {
-                            totalDryIceMachines += qty;
-                        }
-
-                        // Flower shower machines
-                        if ((itemNameLower.includes('flower') && itemNameLower.includes('shower')) ||
-                            itemNameLower.includes('flower shower machine')) {
-                            totalFlowerShowerMachines += qty;
-                        }
-
-                        // Electricity - 3KV machines
-                        const electricity3KV = ['showven sonic boom (co2 jet)', 'sonic boom', 'dry ice machine', '5 head flame'];
-                        if (electricity3KV.some(name => itemNameLower.includes(name))) {
-                            totalElectricityKV += qty * 3;
-                        }
-                        // Electricity - 1KV machines
-                        else {
-                            const electricity1KV = ['sparkular', 'spinner', 'cyclone', 'waver', 'circle flame', 'snow machine', 'fan wheel'];
-                            if (electricity1KV.some(name => itemNameLower.includes(name))) {
-                                totalElectricityKV += qty * 1;
-                            }
-                        }
-                    });
-
-                    // Order details (compact format)
-                    message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `${order.clientName || 'N/A'}\n`;
-                    message += `Contact: ${order.contact || 'N/A'}\n`;
-
-                    // Venue with location combined
-                    if (order.venue && order.venue !== 'N/A') {
-                        message += `Venue: ${order.venue}`;
-
-                        // DEBUG: Log venue location data
-                        console.log(`🗺️ Order ${order.orderId} venue data:`, {
-                            venue: order.venue,
-                            venueLocation: order.venueLocation,
-                            venueMapLink: order.venueMapLink
-                        });
-
-                        // Add Google Maps location link - check all possible sources
-                        let mapsUrl = null;
-
-                        // Priority 1: venueLocation with coordinates
-                        if (order.venueLocation && order.venueLocation.lat && order.venueLocation.lng) {
-                            if (order.venueLocation.place_id) {
-                                mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}&query_place_id=${order.venueLocation.place_id}`;
-                                console.log(`✅ Using place_id link for ${order.orderId}`);
-                            } else {
-                                mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.venue)}+${order.venueLocation.lat},${order.venueLocation.lng}`;
-                                console.log(`✅ Using lat/lng link for ${order.orderId}`);
-                            }
-                        }
-                        // Priority 2: venueMapLink (stored link)
-                        else if (order.venueMapLink && order.venueMapLink.trim()) {
-                            mapsUrl = order.venueMapLink;
-                            console.log(`✅ Using venueMapLink for ${order.orderId}`);
-                        } else {
-                            console.warn(`⚠️ No location data found for ${order.orderId}`);
-                        }
-
-                        if (mapsUrl) {
-                            message += `\n📍 ${mapsUrl}`;
-                        }
-                        message += `\n`;
-                    }
-
-                    message += `Time: ${order.readyTime || ''}\n`;
-
-                    // Functions and items (compact format - no "Items:" label)
-                    if (specificDayData && specificDayData.functions) {
-                        specificDayData.functions.forEach((func, funcIdx) => {
-                            if (func.items && func.items.length > 0) {
-                                // Function name
-                                if (func.functionType) {
-                                    message += `Function - ${func.functionType}`;
-                                    if (func.timeSlot) message += ` (${func.timeSlot})`;
-                                    message += `\n`;
-                                } else if (specificDayData.functions.length > 1) {
-                                    message += `Function ${funcIdx + 1}`;
-                                    if (func.timeSlot) message += ` (${func.timeSlot})`;
-                                    message += `\n`;
-                                }
-
-                                // Items directly (no "Items:" label)
-                                func.items.forEach(item => {
-                                    message += `${item.name} ${item.quantity}`;
-                                    if (item.remarks) message += ` (${item.remarks})`;
-                                    message += `\n`;
-                                });
-                            }
-                        });
-                    } else if (order.items && order.items.length > 0) {
-                        // Single-day order items
-                        order.items.forEach(item => {
-                            message += `${item.name} ${item.quantity}`;
-                            if (item.remarks) message += ` (${item.remarks})`;
-                            message += `\n`;
-                        });
-                    }
-
-                    message += `\n`;
-                });
-
-                // RAW MATERIALS GRAND TOTAL summary (calculated like preparation tab)
-                if (totalDryIceMachines > 0) {
-                    const dryIceNeeded = totalDryIceMachines * 20; // 20kg per machine
-                    message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `🧊 DRY ICE - GRAND TOTAL: ${dryIceNeeded}kg\n`;
-                    message += `(${totalDryIceMachines} machine${totalDryIceMachines !== 1 ? 's' : ''} × 20kg)\n\n`;
-                }
-
-                if (totalFlowerShowerMachines > 0) {
-                    const flowersNeeded = totalFlowerShowerMachines * 20; // 20kg per machine
-                    message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `🌸 FLOWERS - GRAND TOTAL: ${flowersNeeded}kg\n`;
-                    message += `(${totalFlowerShowerMachines} machine${totalFlowerShowerMachines !== 1 ? 's' : ''} × 20kg)\n\n`;
-                }
-
-                if (totalElectricityKV > 0) {
-                    message += `━━━━━━━━━━━━━━━━\n`;
-                    message += `⚡ ELECTRICITY - GRAND TOTAL: ${totalElectricityKV}KV\n\n`;
-                }
-
-                message += `FirepowerSFX Order Management`;
-
-                return message;
-            },
 
             updateWhatsAppDateFilter() {
                 const dateInput = document.getElementById('whatsappFilterDate');
