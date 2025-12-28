@@ -1570,11 +1570,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
-    <!-- Core Modules (modular architecture) -->
-    <script type="module" src="./js/core/utils.js"></script>
-    <script type="module" src="./js/core/firebase.js"></script>
-    <script type="module" src="./js/core/module-loader.js"></script>
-    <script type="module" src="./js/core/bootstrap.js"></script>
+    <!-- Core Modules - Utils loaded synchronously (required by inline code) -->
+    <script src="./js/core/utils-sync.js"></script>
 
     <!-- Google Maps JavaScript API with Places Library -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAInxvvhevCHpLy9P5K5VvBNxDgbtZF-A4&libraries=places&loading=async&callback=initGoogleMaps" async defer></script>

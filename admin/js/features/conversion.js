@@ -1018,15 +1018,41 @@ export const Conversion = {
     async refreshExitPopups() {
         console.log('🔄 Manual refresh requested...');
         try {
-            const container = document.querySelector('#popups-exit-intent-container');
+            // Find container by ID without '#' prefix
+            let container = document.getElementById('popups-exit-intent-container');
+
+            // If not found, try finding the parent conversion container
+            if (!container) {
+                console.log('🔍 Container not found, looking for conversion tab...');
+                const conversionTab = document.getElementById('conversion');
+                if (conversionTab) {
+                    // Find the exit-intent container within conversion tab
+                    container = conversionTab.querySelector('[id*="exit-intent"]') ||
+                               conversionTab.querySelector('.exit-popups-container');
+                }
+            }
+
             if (container) {
                 await this.renderExitIntentPopups(window.OMS, container);
                 console.log('✅ Popups refreshed successfully');
+                if (window.OMS && window.OMS.showToast) {
+                    window.OMS.showToast('Popups refreshed', 'success');
+                }
             } else {
                 console.error('❌ Container not found for refresh');
+                console.log('Available elements:', {
+                    conversion: !!document.getElementById('conversion'),
+                    exitIntentContainers: document.querySelectorAll('[id*="exit"]').length
+                });
+                if (window.OMS && window.OMS.showToast) {
+                    window.OMS.showToast('Please open Marketing tab first', 'warning');
+                }
             }
         } catch (error) {
             console.error('❌ Error refreshing popups:', error);
+            if (window.OMS && window.OMS.showToast) {
+                window.OMS.showToast('Refresh failed: ' + error.message, 'error');
+            }
         }
     },
 
