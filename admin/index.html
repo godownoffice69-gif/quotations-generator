@@ -14067,6 +14067,80 @@ convertToQuotationDateFormat(dateStr) {
                 this.updateOrderItemsTable();
             },
 
+            // ============ TEAM DROPDOWN POPULATION ============
+            populateTeamDropdowns() {
+                // Get active team members
+                const activeTeam = this.data.team.filter(m => m.status === 'Active');
+
+                // Populate Driver dropdown
+                const driverSelect = document.getElementById('driverName');
+                if (driverSelect) {
+                    const drivers = activeTeam.filter(m => m.roles.includes('Driver'));
+                    driverSelect.innerHTML = '<option value="">Select Driver</option>' +
+                        drivers.map(d => `<option value="${d.name}" data-id="${d.id}">🚗 ${d.name}</option>`).join('');
+                }
+
+                // Populate Driver 2 dropdown
+                const driver2Select = document.getElementById('driverName2');
+                if (driver2Select) {
+                    const drivers = activeTeam.filter(m => m.roles.includes('Driver'));
+                    driver2Select.innerHTML = '<option value="">Select Driver</option>' +
+                        drivers.map(d => `<option value="${d.name}" data-id="${d.id}">🚗 ${d.name}</option>`).join('');
+                }
+
+                // Populate Operator dropdown
+                const operatorSelect = document.getElementById('operator');
+                if (operatorSelect) {
+                    const operators = activeTeam.filter(m => m.roles.includes('Operator'));
+                    operatorSelect.innerHTML = '<option value="">Select Operator</option>' +
+                        operators.map(o => `<option value="${o.name}" data-id="${o.id}">⚙️ ${o.name}</option>`).join('');
+                }
+
+                // Helper field is now a text input - no population needed
+            },
+
+            populateFunctionTeamDropdowns(dayIndex, functionIndex) {
+                // Get active team members
+                const activeTeam = this.data.team.filter(m => m.status === 'Active');
+                const functionId = `day${dayIndex}func${functionIndex}`;
+
+                // Populate Driver multi-select for this function
+                const driverSelect = document.getElementById(`${functionId}Driver`);
+                if (driverSelect) {
+                    const drivers = activeTeam.filter(m => m.roles.includes('Driver'));
+                    const currentValues = Array.from(driverSelect.selectedOptions).map(opt => opt.value);
+                    driverSelect.innerHTML = drivers.map(d =>
+                        `<option value="${d.name}" data-id="${d.id}" ${currentValues.includes(d.name) ? 'selected' : ''}>🚗 ${d.name}</option>`
+                    ).join('');
+                }
+
+                // Populate Operator dropdown for this function
+                const operatorSelect = document.getElementById(`${functionId}Operator`);
+                if (operatorSelect) {
+                    const operators = activeTeam.filter(m => m.roles.includes('Operator'));
+                    const currentValue = operatorSelect.value;
+                    operatorSelect.innerHTML = '<option value="">Select Operator</option>' +
+                        operators.map(o => `<option value="${o.name}" data-id="${o.id}" ${o.name === currentValue ? 'selected' : ''}>⚙️ ${o.name}</option>`).join('');
+                }
+
+                // Helper field is now a text input - no population needed
+            },
+
+            updateTeamDropdowns() {
+                // Update single-day order form dropdowns
+                this.populateTeamDropdowns();
+
+                // Update multiday function dropdowns if they exist
+                const multidayData = this.data.multidayOrders || [];
+                multidayData.forEach((day, dayIndex) => {
+                    if (day.functions) {
+                        day.functions.forEach((func, functionIndex) => {
+                            this.populateFunctionTeamDropdowns(dayIndex, functionIndex);
+                        });
+                    }
+                });
+            },
+
             closeModal(modalId = 'dynamicModal') {
                 const modal = document.getElementById(modalId);
                 if (modal) {
