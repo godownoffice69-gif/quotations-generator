@@ -47,46 +47,82 @@ export function initializeFirebase() {
 
 /**
  * Monitor for token refresh errors
- * Signs out user after consecutive failures to force fresh login
+ * Immediately signs out user on 403 to prevent console spam
  */
 function setupTokenMonitoring() {
-    let tokenErrorCount = 0;
-    let lastTokenError = 0;
-    const TOKEN_ERROR_THRESHOLD = 3; // Sign out after 3 consecutive errors
-    const TOKEN_ERROR_WINDOW = 10000; // 10 seconds window
+    let tokenErrorLogged = false; // Only log once
+    let hasSignedOut = false; // Prevent multiple sign-out attempts
+
+    // Listen for auth state changes to detect when user is signed out
+    if (auth) {
+        auth.onAuthStateChanged((user) => {
+            if (!user && hasSignedOut) {
+                // User was signed out due to token error - reload to show login
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+        });
+    }
 
     // Intercept fetch to catch token refresh errors
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
-        return originalFetch.apply(this, args).catch(error => {
-            // Check if this is a token refresh error
-            if (args[0] && typeof args[0] === 'string' && args[0].includes('securetoken.googleapis.com')) {
-                const now = Date.now();
+        return originalFetch.apply(this, args).then(response => {
+            // Check if this is a 403 token refresh error
+            if (args[0] && typeof args[0] === 'string' &&
+                args[0].includes('securetoken.googleapis.com') &&
+                response.status === 403) {
 
-                // Reset counter if errors are not consecutive (more than 10s apart)
-                if (now - lastTokenError > TOKEN_ERROR_WINDOW) {
-                    tokenErrorCount = 0;
+                if (!tokenErrorLogged) {
+                    console.warn('⚠️ Firebase token expired or invalid. Signing out...');
+                    tokenErrorLogged = true;
                 }
 
-                tokenErrorCount++;
-                lastTokenError = now;
+                // Sign out immediately on first 403 to prevent spam
+                if (!hasSignedOut && window.auth && window.auth.currentUser) {
+                    hasSignedOut = true;
 
-                console.warn(`⚠️ Firebase token refresh failed (${tokenErrorCount}/${TOKEN_ERROR_THRESHOLD})`);
-
-                // If too many consecutive errors, sign out user to force fresh login
-                if (tokenErrorCount >= TOKEN_ERROR_THRESHOLD) {
-                    console.error('❌ Multiple token refresh failures detected. Signing out to force fresh login...');
-                    tokenErrorCount = 0; // Reset counter
+                    // Show user-friendly message
+                    if (window.OMS && window.OMS.showToast) {
+                        window.OMS.showToast('Session expired. Please login again.', 'warning');
+                    }
 
                     // Sign out user
-                    if (window.auth && window.auth.currentUser) {
-                        window.auth.signOut().catch(err => {
-                            console.error('Sign out error:', err);
-                        });
-                    }
+                    window.auth.signOut().then(() => {
+                        console.log('✅ Signed out successfully');
+                        // Page will reload via onAuthStateChanged
+                    }).catch(err => {
+                        console.error('Sign out error:', err);
+                        // Force reload anyway
+                        window.location.reload();
+                    });
                 }
+
+                // Return the response without throwing to suppress console spam
+                return response;
             }
-            throw error;
+
+            return response;
+        }).catch(error => {
+            // For actual network errors (not 403), still throw
+            if (!args[0] || !args[0].includes('securetoken.googleapis.com')) {
+                throw error;
+            }
+
+            // Suppress token refresh errors to prevent console spam
+            if (!tokenErrorLogged) {
+                console.warn('⚠️ Token refresh network error. Signing out...');
+                tokenErrorLogged = true;
+            }
+
+            if (!hasSignedOut && window.auth && window.auth.currentUser) {
+                hasSignedOut = true;
+                window.auth.signOut().catch(() => {});
+            }
+
+            // Don't re-throw to suppress console spam
+            return Promise.reject(error);
         });
     };
 }
