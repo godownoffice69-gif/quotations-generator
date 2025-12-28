@@ -4792,16 +4792,48 @@ const OMS = {
             // ============ AUTO-SAVE ============
             setupAutoSave() {
                 setInterval(() => {
-                    const form = document.getElementById('orderForm');
-                    if (form && this.hasUnsavedChanges()) {
-                        localStorage.setItem('oms_draft', JSON.stringify(this.collectFormData()));
-                        console.log('📝 Draft auto-saved');
+                    if (this.hasUnsavedChanges()) {
+                        let draftData = null;
+
+                        // Check if working on order
+                        const orderForm = document.getElementById('orderForm');
+                        if (orderForm && (Utils.get('clientName') || this.currentOrderItems.length > 0)) {
+                            draftData = this.collectFormData();
+                            draftData.workType = 'order';
+                        }
+                        // Check if working on quotation
+                        else if (this.currentQuotation && (
+                            this.currentQuotation.customer?.name ||
+                            (this.currentQuotation.days && this.currentQuotation.days.length > 0)
+                        )) {
+                            draftData = {
+                                workType: 'quotation',
+                                editMode: this.editingQuotationId ? true : false,
+                                editingQuotationId: this.editingQuotationId || null,
+                                quotationData: JSON.parse(JSON.stringify(this.currentQuotation)),
+                                createdAt: new Date().toISOString()
+                            };
+                        }
+
+                        if (draftData) {
+                            localStorage.setItem('oms_draft', JSON.stringify(draftData));
+                            console.log(`📝 ${draftData.workType} draft auto-saved`);
+                        }
                     }
                 }, 2000); // Auto-save every 2 seconds
             },
 
             hasUnsavedChanges() {
-                return Utils.get('clientName') || this.currentOrderItems.length > 0;
+                // Check for unsaved order work
+                const hasOrderWork = Utils.get('clientName') || this.currentOrderItems.length > 0;
+
+                // Check for unsaved quotation work
+                const hasQuotationWork = this.currentQuotation && (
+                    this.currentQuotation.customer?.name ||
+                    (this.currentQuotation.days && this.currentQuotation.days.length > 0)
+                );
+
+                return hasOrderWork || hasQuotationWork;
             },
 
             checkForDraft() {
@@ -4845,62 +4877,97 @@ const OMS = {
 
             restoreDraft() {
                 const draft = localStorage.getItem('oms_draft');
-                if (draft) {
-                    try {
-                        const draftData = JSON.parse(draft);
-                        console.log('📋 Restoring draft:', draftData);
+                if (!draft) return;
 
-                        // Switch to orders tab
-                        this.switchTab('orders');
+                try {
+                    const draftData = JSON.parse(draft);
+                    console.log('📋 Restoring draft:', draftData);
 
-                        // Wait for tab to be visible
+                    // Handle QUOTATION drafts
+                    if (draftData.workType === 'quotation') {
+                        this.switchTab('quotations');
+
                         setTimeout(() => {
-                            // Populate form fields
-                            if (draftData.clientName) Utils.set('clientName', draftData.clientName);
-                            if (draftData.contact) Utils.set('contact', draftData.contact);
-                            if (draftData.venue) Utils.set('venue', draftData.venue);
-                            if (draftData.eventType) Utils.set('eventType', draftData.eventType);
-                            if (draftData.date) Utils.set('orderDate', draftData.date);
-                            if (draftData.readyTime) Utils.set('readyTime', draftData.readyTime);
-                            if (draftData.transport) Utils.set('transport', draftData.transport);
-                            if (draftData.driverName) Utils.set('driverName', draftData.driverName);
-                            if (draftData.operator) Utils.set('operator', draftData.operator);
-                            if (draftData.status) Utils.set('orderStatus', draftData.status);
-                            if (draftData.notes) Utils.set('notes', draftData.notes);
-
-                            // Restore multiday data if exists
-                            if (draftData.isMultiDay) {
-                                Utils.set('eventTypeSelect', 'multi');
-                                if (draftData.startDate) Utils.set('startDate', draftData.startDate);
-                                if (draftData.endDate) Utils.set('endDate', draftData.endDate);
-
-                                // Trigger multiday form generation
-                                const event = new Event('change');
-                                document.getElementById('eventTypeSelect')?.dispatchEvent(event);
-
-                                // Restore day-wise data after form is generated
-                                if (draftData.dayWiseData) {
-                                    setTimeout(() => {
-                                        window.dayFunctionsData = draftData.dayWiseData;
-                                        console.log('📅 Restored multiday data with items');
-                                    }, 500);
-                                }
+                            if (draftData.editMode && draftData.editingQuotationId) {
+                                // Editing existing quotation
+                                console.log('✏️ Restoring quotation edit mode for ID:', draftData.editingQuotationId);
+                                this.editingQuotationId = draftData.editingQuotationId;
                             } else {
-                                // Restore items for single-day events only
-                                if (draftData.items && Array.isArray(draftData.items) && draftData.items.length > 0) {
-                                    console.log('📦 Restoring items:', draftData.items);
-                                    this.currentOrderItems = [...draftData.items];
-                                    this.updateOrderItemsList();
-                                }
+                                // Creating new quotation
+                                console.log('📝 Restoring new quotation draft');
+                                this.editingQuotationId = null;
                             }
 
-                            this.showToast('✅ Draft restored successfully!', 'success');
+                            // Restore quotation data
+                            this.currentQuotation = draftData.quotationData;
+                            this.renderQuotationForm();
+                            this.showToast('✅ Quotation draft restored!', 'success');
                         }, 100);
-
-                    } catch (error) {
-                        console.error('Error restoring draft:', error);
-                        this.showToast('❌ Error restoring draft', 'error');
+                        return;
                     }
+
+                    // Handle ORDER drafts (workType === 'order' or undefined for backward compatibility)
+                    this.switchTab('orders');
+
+                    setTimeout(() => {
+                        // Set edit mode flags if editing existing order
+                        if (draftData.editMode) {
+                            console.log('✏️ Restoring order edit mode for:', draftData.editingOrderId);
+                            this.editingOrderId = draftData.editingOrderId;
+                            this.editingDocId = draftData.editingDocId;
+                        } else {
+                            // Clear edit flags for new order
+                            this.editingOrderId = null;
+                            this.editingDocId = null;
+                        }
+
+                        // Populate form fields
+                        if (draftData.orderId) Utils.set('orderId', draftData.orderId);
+                        if (draftData.clientName) Utils.set('clientName', draftData.clientName);
+                        if (draftData.contact) Utils.set('contact', draftData.contact);
+                        if (draftData.venue) Utils.set('venue', draftData.venue);
+                        if (draftData.eventType) Utils.set('eventType', draftData.eventType);
+                        if (draftData.date) Utils.set('orderDate', draftData.date);
+                        if (draftData.readyTime) Utils.set('readyTime', draftData.readyTime);
+                        if (draftData.transport) Utils.set('transport', draftData.transport);
+                        if (draftData.driverName) Utils.set('driverName', draftData.driverName);
+                        if (draftData.operator) Utils.set('operator', draftData.operator);
+                        if (draftData.status) Utils.set('orderStatus', draftData.status);
+                        if (draftData.notes) Utils.set('orderNotes', draftData.notes);
+
+                        // Restore multiday data if exists
+                        if (draftData.isMultiDay) {
+                            Utils.set('eventTypeSelect', 'multi');
+                            if (draftData.startDate) Utils.set('startDate', draftData.startDate);
+                            if (draftData.endDate) Utils.set('endDate', draftData.endDate);
+
+                            // Trigger multiday form generation
+                            const event = new Event('change');
+                            document.getElementById('eventTypeSelect')?.dispatchEvent(event);
+
+                            // Restore day-wise data after form is generated
+                            if (draftData.dayWiseData) {
+                                setTimeout(() => {
+                                    window.dayFunctionsData = draftData.dayWiseData;
+                                    console.log('📅 Restored multiday data');
+                                }, 500);
+                            }
+                        } else {
+                            // Restore items for single-day events
+                            if (draftData.items && Array.isArray(draftData.items) && draftData.items.length > 0) {
+                                console.log('📦 Restoring items:', draftData.items);
+                                this.currentOrderItems = [...draftData.items];
+                                this.updateOrderItemsTable();
+                            }
+                        }
+
+                        const editLabel = draftData.editMode ? ' (editing existing order)' : '';
+                        this.showToast(`✅ Order draft restored${editLabel}!`, 'success');
+                    }, 100);
+
+                } catch (error) {
+                    console.error('Error restoring draft:', error);
+                    this.showToast('❌ Error restoring draft', 'error');
                 }
             },
 
@@ -5520,6 +5587,13 @@ async refreshOrderId() {
         }
 
         return {
+            // Draft metadata
+            workType: 'order', // Track what user is working on
+            editMode: this.editingOrderId ? true : false, // Are we editing existing order?
+            editingOrderId: this.editingOrderId || null, // Which order ID is being edited
+            editingDocId: this.editingDocId || null, // Firestore document ID being edited
+
+            // Order data
             orderId: Utils.get('orderId'),
             isMultiDay: isMultiDay,
             date: isMultiDay ? null : Utils.get('orderDate'),
