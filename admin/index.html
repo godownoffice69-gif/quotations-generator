@@ -14506,7 +14506,7 @@ convertToQuotationDateFormat(dateStr) {
             this.loadItemHistoryFromFirestore(),
             this.loadNotificationsFromFirestore(),
             this.loadSettingsFromFirestore(),
-            Quotations.loadQuotationsFromFirestore(this)
+            this.loadQuotationsFromFirestore()
         ];
 
         // Only load financial data if user has permission
