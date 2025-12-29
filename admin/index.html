@@ -14301,6 +14301,13 @@ convertToQuotationDateFormat(dateStr) {
                 });
             },
 
+            renderTeamTable() {
+                // Team data is managed in Firestore and used in dropdowns
+                // No separate team table UI needed - team members appear in order form dropdowns
+                // This function is called by real-time listeners to maintain compatibility
+                console.log('👷 Team data updated - dropdowns will auto-refresh on next form load');
+            },
+
             closeModal(modalId = 'dynamicModal') {
                 const modal = document.getElementById(modalId);
                 if (modal) {
