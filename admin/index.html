@@ -9000,7 +9000,7 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'inventory') Inventory.renderInventory(this);
                     else if (tabName === 'productPhotos') Inventory.renderProductPhotos(this);
                     else if (tabName === 'itemHistory') Inventory.renderItemHistory(this);
-                    else if (tabName === 'preparation') this.renderPreparation();
+                    else if (tabName === 'preparation') Preparation.renderPreparation(this);
                     else if (tabName === 'customers') this.renderCustomers();
                     else if (tabName === 'quotations') Quotations.renderQuotations(this);
                     else if (tabName === 'team') this.renderTeam();
@@ -17969,13 +17969,15 @@ if (diffDays > 30) {
                 const { Orders } = await import(`./js/features/orders.js?v=${BUILD_TIMESTAMP}`);
                 const { Quotations } = await import(`./js/features/quotations.js?v=${BUILD_TIMESTAMP}`);
                 const { Inventory } = await import(`./js/features/inventory.js?v=${BUILD_TIMESTAMP}`);
+                const { Preparation } = await import(`./js/features/preparation.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
                 window.Quotations = Quotations;
                 window.Inventory = Inventory;
+                window.Preparation = Preparation;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
