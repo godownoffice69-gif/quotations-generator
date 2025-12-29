@@ -8996,17 +8996,17 @@ convertToQuotationDateFormat(dateStr) {
                         // Module loaded and render function attached to OMS by lazy-loader
                     }
 
-                    if (tabName === 'dashboard') this.renderDashboard();
+                    if (tabName === 'dashboard') Dashboard.render(this);
                     else if (tabName === 'inventory') Inventory.renderInventory(this);
                     else if (tabName === 'productPhotos') Inventory.renderProductPhotos(this);
                     else if (tabName === 'itemHistory') Inventory.renderItemHistory(this);
                     else if (tabName === 'preparation') Preparation.renderPreparation(this);
-                    else if (tabName === 'customers') this.renderCustomers();
+                    else if (tabName === 'customers') Customers.render(this);
                     else if (tabName === 'quotations') Quotations.renderQuotations(this);
-                    else if (tabName === 'team') this.renderTeam();
+                    else if (tabName === 'team') Team.renderTeam(this);
                     else if (tabName === 'calendar') this.renderCalendarTab();
                     else if (tabName === 'history') this.renderHistory();
-                    else if (tabName === 'analytics') this.renderAnalytics();
+                    else if (tabName === 'analytics') Analytics.renderAnalytics(this);
                     else if (tabName === 'financials') this.renderFinancials();
                     else if (tabName === 'settings') this.renderSettings();
                     else if (tabName === 'orders') {
@@ -10073,7 +10073,7 @@ convertToQuotationDateFormat(dateStr) {
                     this.updateCustomerDatabase(order);
                 });
                 this.saveToStorage();
-                this.renderCustomers();
+                Customers.render(this);
                 this.showToast('Customer database refreshed!');
             },
 
@@ -15152,7 +15152,7 @@ setupAllRealtimeListeners() {
                     console.log('👷 Team member updated:', teamMember.name);
                 }
                 // Update UI in real-time - always render when data changes
-                this.renderTeamTable();
+                Team.renderTeamTable(this);
                 // Also update dropdowns in order form
                 this.updateTeamDropdowns();
             } else if (change.type === 'removed') {
@@ -15161,7 +15161,7 @@ setupAllRealtimeListeners() {
                     this.data.team.splice(index, 1);
                     console.log('👷 Team member removed:', teamMember.name);
                     // Update UI in real-time
-                    this.renderTeamTable();
+                    Team.renderTeamTable(this);
                     this.updateTeamDropdowns();
                 }
             }
@@ -15293,7 +15293,7 @@ setupAllRealtimeListeners() {
                 this.updateInventoryDisplay();
             } else if (this.currentTab === 'dashboard') {
                 // Update dashboard in real-time when inventory changes (for low stock count)
-                this.renderDashboard();
+                Dashboard.render(this);
             }
             this.saveToStorage();
         });
@@ -15464,7 +15464,7 @@ setupRealtimeListeners() {
                         this.updateAllDisplays();
                         // Update dashboard statistics in real-time
                         if (this.currentTab === 'dashboard') {
-                            this.renderDashboard();
+                            Dashboard.render(this);
                         }
                         this.showToast(`🆕 New order: ${newOrder.clientName}`, 'success');
                     }
@@ -15501,7 +15501,7 @@ if (change.type === 'modified') {
 
         // Force update all tabs in real-time
         if (this.currentTab === 'dashboard') {
-            this.renderDashboard();
+            Dashboard.render(this);
         } else if (this.currentTab === 'history') {
             this.renderHistory();
         } else if (this.currentTab === 'calendar') {
@@ -15581,7 +15581,7 @@ if (change.type === 'modified') {
 
                     // Update dashboard in real-time when order is deleted
                     if (this.currentTab === 'dashboard') {
-                        this.renderDashboard();
+                        Dashboard.render(this);
                     }
 
                     this.showToast(`🗑️ Order deleted: ${deleted.orderId}`, 'success');
@@ -15660,12 +15660,12 @@ loadDemoData() {
 },
 
 updateAllDisplays() {
-        if (this.currentTab === 'dashboard') this.renderDashboard();
+        if (this.currentTab === 'dashboard') Dashboard.render(this);
         else if (this.currentTab === 'inventory') Inventory.updateInventoryDisplay(this);
-        else if (this.currentTab === 'customers') this.renderCustomers();
+        else if (this.currentTab === 'customers') Customers.render(this);
         else if (this.currentTab === 'calendar') this.renderCalendarTab();
         else if (this.currentTab === 'history') this.renderHistory();
-        else if (this.currentTab === 'analytics') this.renderAnalytics();
+        else if (this.currentTab === 'analytics') Analytics.renderAnalytics(this);
         else if (this.currentTab === 'financials') this.renderFinancials();
 
         // Always update notifications
@@ -17970,14 +17970,22 @@ if (diffDays > 30) {
                 const { Quotations } = await import(`./js/features/quotations.js?v=${BUILD_TIMESTAMP}`);
                 const { Inventory } = await import(`./js/features/inventory.js?v=${BUILD_TIMESTAMP}`);
                 const { Preparation } = await import(`./js/features/preparation.js?v=${BUILD_TIMESTAMP}`);
+                const { Customers } = await import(`./js/features/customers.js?v=${BUILD_TIMESTAMP}`);
+                const { Team } = await import(`./js/features/team.js?v=${BUILD_TIMESTAMP}`);
+                const { Analytics } = await import(`./js/features/analytics.js?v=${BUILD_TIMESTAMP}`);
+                const { Dashboard } = await import(`./js/features/dashboard.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
                 window.Quotations = Quotations;
                 window.Inventory = Inventory;
                 window.Preparation = Preparation;
+                window.Customers = Customers;
+                window.Team = Team;
+                window.Analytics = Analytics;
+                window.Dashboard = Dashboard;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
