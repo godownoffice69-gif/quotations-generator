@@ -1467,6 +1467,603 @@ export const Orders = {
 
     // ============ PDF GENERATION ============
 
+    async generateMultiOrderImage(oms, orders, date) {
+        console.log(`\n🎯 ========== GENERATE MULTI ORDER IMAGE CALLED ==========`);
+        console.log(`📅 Date: ${date}`);
+        console.log(`📦 Number of orders: ${orders.length}`);
+
+        // CRITICAL: Sort orders by original creation timestamp (earliest first)
+        // This ensures PDF shows orders in the order they were first created, not edited
+        orders = [...orders].sort((a, b) => {
+            const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return timeA - timeB; // Ascending order (earliest first)
+        });
+
+        console.log(`🕐 Orders sorted by creation time (earliest first)`);
+        console.log(`📋 Orders:`, orders.map(o => ({
+            orderId: o.orderId,
+            clientName: o.clientName,
+            createdAt: o.createdAt,
+            isMultiDay: o.isMultiDay,
+            hasDayWiseData: !!(o.dayWiseData && o.dayWiseData.length > 0),
+            dayWiseDataCount: o.dayWiseData ? o.dayWiseData.length : 0,
+            hasItems: !!(o.items && o.items.length > 0),
+            itemsCount: o.items ? o.items.length : 0
+        })));
+        console.log(`========================================\n`);
+
+        const isMobile = Utils.isMobileDevice();
+        const deviceType = Utils.getDeviceType();
+        const loading = oms.showLoading(isMobile ? `Generating PDF (mobile mode, ${orders.length} orders)...` : 'Generating multi-page PDF...');
+
+        try {
+            const template = document.getElementById('printTemplate');
+            const colors = oms.data.settings.printColors;
+            const fontSize = oms.data.settings.printFontSize || 26;
+            const bgColor = oms.data.settings.printBgColor || '#ffffff';
+            const textColor = oms.data.settings.printTextColor || '#000000';
+
+            // Get paper dimensions based on settings
+            const paperDimensions = this.getPaperDimensions(oms);
+
+            // Apply left margin from settings (convert mm to pixels: 1mm = 11.811px at 300 DPI)
+            const leftMarginMm = oms.data.settings.tableSettings?.leftMargin || 50;
+            const leftMarginPx = Math.round(leftMarginMm * 11.811);
+            template.style.paddingLeft = leftMarginPx + 'px';
+
+            // Set template width to match paper dimensions
+            template.style.width = paperDimensions.width + 'px';
+            template.style.paddingRight = '80px';
+
+            // Smart quality adjustment for multi-order images to prevent memory issues
+            let baseQualityScale = oms.data.settings.imageQuality || 2;
+
+            // Apply mobile optimizations first
+            let qualityScale = Utils.getOptimalCanvasScale(baseQualityScale);
+
+            // Further reduce quality based on number of orders
+            if (orders.length > 5) {
+                qualityScale = Math.min(qualityScale, 2); // Limit to scale 2 for more than 5 orders
+                console.log('⚠️ Quality reduced to scale 2 due to multiple orders to prevent memory issues');
+            }
+            if (orders.length > 10) {
+                qualityScale = Math.min(qualityScale, 1.5); // Further reduce for very large sets
+                console.log('⚠️ Quality further reduced to scale 1.5 for large order set');
+            }
+
+            // Extra reduction for mobile with many orders
+            if (isMobile) {
+                if (orders.length > 3) {
+                    qualityScale = Math.min(qualityScale, 1);
+                    console.log(`📱 Mobile with ${orders.length} orders: Quality capped at scale 1`);
+                }
+                if (orders.length > 10) {
+                    oms.hideLoading(loading);
+                    oms.showToast(`⚠️ ${orders.length} orders may be too many for mobile device. Consider downloading fewer orders at once.`, 'error');
+                    return;
+                }
+            }
+
+            if (isMobile && qualityScale < baseQualityScale) {
+                console.log(`📱 ${deviceType}: Quality auto-adjusted from ${baseQualityScale} to ${qualityScale}`);
+            }
+
+            // Use fontSize from settings, but slightly smaller for compact multi-order view
+            const compactFontSize = Math.max(16, fontSize - 6);
+
+            console.log(`🚀 Starting PDF generation for ${orders.length} orders`);
+
+            // Calculate grand totals for all orders (needed early for page height calculations)
+            let grandTotalDryIce = 0;
+            let grandTotalFlowers = 0;
+            let grandTotalElectricity = 0;
+            let grandTotalDryMachines = 0;
+            let grandTotalFlowerMachines = 0;
+
+            orders.forEach(order => {
+                const requirements = this.calculateOrderRequirements(order);
+                console.log(`  → Order ${order.orderId} requirements:`, requirements);
+                grandTotalDryIce += requirements.dryIceNeeded;
+                grandTotalFlowers += requirements.flowersNeeded;
+                grandTotalElectricity += requirements.totalElectricityKV;
+                grandTotalDryMachines += requirements.dryMachines;
+                grandTotalFlowerMachines += requirements.flowerShowerMachines;
+            });
+
+            console.log(`\n📊 Grand Totals Calculated: DryIce=${grandTotalDryIce}kg, Flowers=${grandTotalFlowers}kg, Electricity=${grandTotalElectricity}KV, DryMachines=${grandTotalDryMachines}, FlowerMachines=${grandTotalFlowerMachines}\n`);
+
+            // NEW ALGORITHM: Dynamic page building with actual measurements
+            // This ensures ALL orders are included and pages are packed optimally
+
+            // CRITICAL: Use 'static' positioning for accurate measurements
+            // Using 'absolute' causes grid/flexbox layouts to collapse and gives wrong scrollHeight
+            template.style.height = 'auto';
+            template.style.minHeight = '0';
+            template.style.maxHeight = 'none';
+            template.style.overflow = 'visible';
+            template.style.display = 'block';
+            template.style.visibility = 'hidden'; // Hidden but still in document flow
+            template.style.position = 'static'; // Keep in document flow for accurate measurement
+            template.style.opacity = '0'; // Extra insurance it's not visible
+
+            const headerHeight = 75; // Header height for date (reduced for better space utilization)
+            const separatorHeight = 15; // Space between orders (reduced for better space utilization)
+            const bottomMargin = 10; // Bottom margin for page (optimized for space utilization)
+            const safetyMargin = 15; // Safety buffer for rendering differences (optimized for maximum space usage)
+
+            // Measure the actual grand total summary height instead of estimating
+            const hasGrandTotalSummary = (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0);
+            let grandTotalSummaryHeight = 0;
+
+            if (hasGrandTotalSummary) {
+                // Render the actual summary to measure its real height
+                const summaryHtml = `
+                    <div style="background: white; color: black; padding: 5px; margin-bottom: 8px; border: 2px solid #000; border-radius: 4px;">
+                        <h3 style="margin: 0 0 4px 0; font-size: 13px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
+                            ${grandTotalDryIce > 0 ? `
+                            <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                    <div style="font-size: 40px;">❄️</div>
+                                    <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                </div>
+                                <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                            </div>
+                            ` : ''}
+                            ${grandTotalFlowers > 0 ? `
+                            <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                    <div style="font-size: 40px;">🌸</div>
+                                    <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                </div>
+                                <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                            </div>
+                            ` : ''}
+                            ${grandTotalElectricity > 0 ? `
+                            <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                    <div style="font-size: 40px;">⚡</div>
+                                    <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                </div>
+                                <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">Total power needed</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+
+                // Temporarily render to measure (use static positioning for accurate height)
+                template.innerHTML = summaryHtml;
+                template.style.display = 'block';
+                template.style.visibility = 'hidden';
+                template.style.position = 'static';
+                template.style.opacity = '0';
+                await new Promise(r => setTimeout(r, 100)); // Increased wait for layout calculation
+                grandTotalSummaryHeight = template.scrollHeight;
+                console.log(`📊 Measured grand total summary height: ${grandTotalSummaryHeight}px`);
+                template.style.display = 'none';
+                template.style.opacity = '1';
+            }
+
+            const maxContentHeightFirstPage = paperDimensions.height - headerHeight - bottomMargin - safetyMargin - grandTotalSummaryHeight;
+            const maxContentHeightOtherPages = paperDimensions.height - headerHeight - bottomMargin - safetyMargin;
+
+            console.log(`📐 Page constraints: Paper=${paperDimensions.height}px, Header=${headerHeight}px, Margins=${bottomMargin + safetyMargin}px, GrandTotal=${grandTotalSummaryHeight}px`);
+            console.log(`📊 Max content: First page=${maxContentHeightFirstPage}px, Other pages=${maxContentHeightOtherPages}px`);
+
+            const pages = [];
+            let processedOrders = new Set(); // Track which orders we've added
+
+            // Helper function to check if a single order fits on a page
+            // NOTE: We DON'T include the header here because maxHeight already accounts for it
+            const checkSingleOrderFits = async (order, maxHeight) => {
+                const testHtml = this.buildOrderHTML(oms, order, compactFontSize, colors, true, bgColor, textColor);
+                template.innerHTML = testHtml;
+                // Ensure template is visible for measurement (but hidden from user)
+                template.style.display = 'block';
+                template.style.visibility = 'hidden';
+                template.style.position = 'static';
+                template.style.opacity = '0';
+                await new Promise(r => setTimeout(r, 100)); // Wait for layout
+                const height = template.scrollHeight;
+                return { fits: height <= maxHeight, height: height };
+            };
+
+            // Helper function to measure multiple orders together
+            // NOTE: We DON'T include the header here because maxHeight already accounts for it
+            const measureOrdersHeight = async (ordersList) => {
+                let testHtml = '';
+                ordersList.forEach((o, idx) => {
+                    testHtml += this.buildOrderHTML(oms, o, compactFontSize, colors, true, bgColor, textColor);
+                    if (idx < ordersList.length - 1) {
+                        testHtml += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
+                    }
+                });
+                template.innerHTML = testHtml;
+                template.style.display = 'block';
+                template.style.visibility = 'hidden';
+                template.style.position = 'static';
+                template.style.opacity = '0';
+                await new Promise(r => setTimeout(r, 100));
+                return template.scrollHeight;
+            };
+
+            // STEP 1: Measure all orders individually first
+            console.log('📏 Measuring all orders for optimal packing...');
+            const orderHeights = [];
+            for (let i = 0; i < orders.length; i++) {
+                const check = await checkSingleOrderFits(orders[i], maxContentHeightOtherPages);
+                orderHeights.push({
+                    order: orders[i],
+                    height: check.height,
+                    originalIndex: i
+                });
+            }
+
+            // STEP 2: Sort orders by height (descending) - First Fit Decreasing algorithm
+            orderHeights.sort((a, b) => b.height - a.height);
+            console.log('📊 Order heights (sorted descending):', orderHeights.map(oh => `${oh.order.clientName || oh.order.orderId}: ${oh.height}px`).join(', '));
+
+            // STEP 3: Use First Fit Decreasing bin-packing algorithm
+            for (let i = 0; i < orderHeights.length; i++) {
+                const { order, height, originalIndex } = orderHeights[i];
+
+                // Check if this single order is too large for any page by itself
+                const fitsOnFirstPage = height <= maxContentHeightFirstPage;
+                const fitsOnOtherPage = height <= maxContentHeightOtherPages;
+
+                // If order doesn't fit on any page by itself, handle special case
+                if (!fitsOnOtherPage) {
+                    // Check if this is a multifunction/multiday order that can be split
+                    if (order.dayWiseData && order.dayWiseData.length > 0) {
+                        // Try to split by function groups
+                        let remainingFunctions = [];
+                        order.dayWiseData.forEach(day => {
+                            if (day.functions && day.functions.length > 0) {
+                                day.functions.forEach((func, funcIdx) => {
+                                    remainingFunctions.push({
+                                        dayNumber: day.dayNumber,
+                                        date: day.date,
+                                        function: func,
+                                        functionIndex: funcIdx
+                                    });
+                                });
+                            }
+                        });
+
+                        // Split functions across multiple pages
+                        while (remainingFunctions.length > 0) {
+                            let currentFunctionSet = [];
+
+                            for (let f = 0; f < remainingFunctions.length; f++) {
+                                const testFunctions = [...currentFunctionSet, remainingFunctions[f]];
+
+                                // Create a partial order with only these functions
+                                const partialOrder = {
+                                    ...order,
+                                    dayWiseData: testFunctions.map(tf => ({
+                                        dayNumber: tf.dayNumber,
+                                        date: tf.date,
+                                        functions: [tf.function]
+                                    }))
+                                };
+
+                                // Test if it fits
+                                const partialCheck = await checkSingleOrderFits(partialOrder, maxContentHeightOtherPages);
+
+                                if (partialCheck.fits) {
+                                    currentFunctionSet.push(remainingFunctions[f]);
+                                } else {
+                                    // Can't add more functions, save current set
+                                    break;
+                                }
+                            }
+
+                            // If we couldn't fit even one function, we need to add it anyway
+                            if (currentFunctionSet.length === 0 && remainingFunctions.length > 0) {
+                                currentFunctionSet.push(remainingFunctions[0]);
+                            }
+
+                            // Create page with current function set
+                            const pageOrder = {
+                                ...order,
+                                orderId: `${order.orderId} (Part ${pages.length + 1})`,
+                                dayWiseData: currentFunctionSet.map(tf => ({
+                                    dayNumber: tf.dayNumber,
+                                    date: tf.date,
+                                    functions: [tf.function]
+                                }))
+                            };
+
+                            pages.push([pageOrder]);
+
+                            // Remove processed functions
+                            remainingFunctions = remainingFunctions.slice(currentFunctionSet.length);
+                        }
+
+                        processedOrders.add(originalIndex);
+                        continue;
+                    } else {
+                        // Not a multifunction order, add it anyway and let it scale or overflow
+                        pages.push([order]);
+                        processedOrders.add(originalIndex);
+                        continue;
+                    }
+                }
+
+                // FIRST FIT: Try to fit this order in existing pages
+                let placed = false;
+                for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
+                    const pageOrders = pages[pageIdx];
+                    const isFirstPage = pageIdx === 0;
+                    const maxHeight = isFirstPage ? maxContentHeightFirstPage : maxContentHeightOtherPages;
+
+                    // Measure current page content
+                    const currentHeight = pageOrders.length > 0 ? await measureOrdersHeight(pageOrders) : 0;
+                    const availableSpace = maxHeight - currentHeight;
+
+                    // Try adding this order to this page
+                    const testOrders = [...pageOrders, order];
+                    const testHeight = await measureOrdersHeight(testOrders);
+                    const willFit = testHeight <= maxHeight;
+
+                    console.log(`📏 Page ${pageIdx + 1} (${isFirstPage ? 'FIRST' : 'other'}): has ${pageOrders.length} order(s), used ${currentHeight}px, available ${availableSpace}px/${maxHeight}px`);
+                    console.log(`   → Testing "${order.clientName || order.orderId}" (${height}px): total would be ${testHeight}px, fits = ${willFit}`);
+
+                    if (willFit) {
+                        // Fits! Add to this page
+                        pages[pageIdx].push(order);
+                        processedOrders.add(originalIndex);
+                        placed = true;
+                        console.log(`✅ Placed order "${order.clientName || order.orderId}" on page ${pageIdx + 1}`);
+                        break;
+                    }
+                }
+
+                // If didn't fit in any existing page, create a new page
+                if (!placed) {
+                    pages.push([order]);
+                    processedOrders.add(originalIndex);
+                    console.log(`📄 Created new page ${pages.length} for order "${order.clientName || order.orderId}"`);
+                }
+            }
+
+            // Reset template to normal state
+            template.style.display = 'none';
+            template.style.visibility = 'visible';
+            template.style.position = 'static';
+            template.style.opacity = '1';
+
+            // VERIFICATION: Check all orders were processed
+            // Note: totalOrdersInPages may be > orders.length due to split multifunction orders
+            if (processedOrders.size !== orders.length) {
+                throw new Error(`Missing orders in PDF! Expected ${orders.length}, but only ${processedOrders.size} were processed.`);
+            }
+
+            const totalPages = pages.length;
+            console.log(`✅ Generated ${totalPages} pages for ${orders.length} orders`);
+
+            // STEP 3: Generate multi-page PDF
+            this.updateLoadingMessage(loading, 'Creating PDF document...');
+
+            // Initialize jsPDF with exact dimensions matching our measurements (300 DPI)
+            const { jsPDF } = window.jspdf;
+
+            // CRITICAL FIX: Use the same paperDimensions we used for measurement
+            // This ensures content measured to fit will actually fit in the PDF
+            const pdf = new jsPDF({
+                orientation: 'p', // We handle orientation in paperDimensions
+                unit: 'px',
+                format: [paperDimensions.width, paperDimensions.height], // Use exact dimensions at 300 DPI
+                compress: true
+            });
+
+            // Get PDF page dimensions (should match paperDimensions)
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+
+            console.log(`📏 PDF dimensions: ${pdfWidth} x ${pdfHeight} px (should match measurement dimensions)`);
+            console.log(`📐 Paper dimensions used for measurement: ${paperDimensions.width} x ${paperDimensions.height} px`);
+
+            // Generate each page and add to PDF
+            for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+                this.updateLoadingMessage(loading, `Adding page ${pageNum + 1} of ${totalPages} to PDF...`);
+
+                const pageOrders = pages[pageNum];
+
+                // Build HTML for this page
+                let html = `
+                    <div style="text-align: center; margin-bottom: 15px; padding: 8px 0;">
+                        <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 10px; margin: 0; font-size: 24px;">
+                            Orders for <span style="font-size: 60px;">${Utils.formatDate(date)}</span> - Page ${pageNum + 1} of ${totalPages}
+                        </h1>
+                    </div>
+                `;
+
+                // Add summary section on first page only
+                console.log(`🔍 Page ${pageNum}: Checking grand total condition - DryIce=${grandTotalDryIce}, Flowers=${grandTotalFlowers}, Electricity=${grandTotalElectricity}`);
+                if (pageNum === 0 && (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0)) {
+                    console.log(`✅ Adding grand total summary to first page`);
+                    html += `
+                        <div style="background: white; color: black; padding: 5px; margin-bottom: 8px; border: 2px solid #000; border-radius: 4px;">
+                            <h3 style="margin: 0 0 4px 0; font-size: 13px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
+                                ${grandTotalDryIce > 0 ? `
+                                <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                    <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                        <div style="font-size: 40px;">❄️</div>
+                                        <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                    </div>
+                                    <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                </div>
+                                ` : ''}
+                                ${grandTotalFlowers > 0 ? `
+                                <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                    <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                        <div style="font-size: 40px;">🌸</div>
+                                        <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                    </div>
+                                    <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                </div>
+                                ` : ''}
+                                ${grandTotalElectricity > 0 ? `
+                                <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                    <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                        <div style="font-size: 40px;">⚡</div>
+                                        <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                    </div>
+                                    <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">Total power needed</div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Calculate global order number
+                let globalOrderNum = 1;
+                for (let p = 0; p < pageNum; p++) {
+                    globalOrderNum += pages[p].length;
+                }
+
+                pageOrders.forEach((order, i) => {
+                    html += this.buildOrderHTML(oms, order, compactFontSize, colors, true, bgColor, textColor, globalOrderNum + i);
+                    if (i < pageOrders.length - 1) {
+                        html += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
+                    }
+                });
+
+                template.innerHTML = html;
+                template.style.display = 'block';
+                template.style.visibility = 'visible';
+                template.style.position = 'static';
+                template.style.height = 'auto';
+
+                // Increased wait time for mobile devices
+                await new Promise(r => setTimeout(r, isMobile ? 500 : 200));
+
+                // Validate canvas dimensions before creation
+                const expectedWidth = Math.round(paperDimensions.width * qualityScale);
+                const expectedHeight = Math.round(paperDimensions.height * qualityScale);
+                const validation = Utils.validateCanvasDimensions(expectedWidth, expectedHeight);
+
+                if (!validation.valid) {
+                    throw new Error(`Page ${pageNum + 1}: ${validation.reason}`);
+                }
+
+                // Convert HTML to canvas with error handling
+                let canvas;
+                try {
+                    canvas = await html2canvas(template, {
+                        scale: qualityScale,
+                        backgroundColor: bgColor,
+                        width: paperDimensions.width,
+                        logging: false,
+                        useCORS: true,
+                        allowTaint: false,
+                        removeContainer: true,
+                        imageTimeout: isMobile ? 30000 : 15000
+                    });
+                } catch (canvasError) {
+                    console.error('Canvas generation failed, retrying with lower quality:', canvasError);
+
+                    // Retry with lower quality scale
+                    const retryScale = isMobile ? 0.75 : 1;
+                    console.log(`⚠️ Retrying page ${pageNum + 1} with scale ${retryScale}...`);
+
+                    canvas = await html2canvas(template, {
+                        scale: retryScale,
+                        backgroundColor: bgColor,
+                        width: paperDimensions.width,
+                        logging: false,
+                        useCORS: true,
+                        allowTaint: false,
+                        removeContainer: true,
+                        imageTimeout: isMobile ? 30000 : 15000
+                    });
+                }
+
+                template.style.display = 'none';
+
+                // Convert canvas to image and add to PDF with error handling
+                let imgData;
+                try {
+                    imgData = canvas.toDataURL('image/png', 0.92);
+                } catch (pngError) {
+                    console.error('PNG conversion failed, retrying with JPEG:', pngError);
+                    // Fallback to JPEG if PNG fails
+                    try {
+                        imgData = canvas.toDataURL('image/jpeg', 0.85);
+                    } catch (jpegError) {
+                        console.error('JPEG conversion also failed:', jpegError);
+                        if (isMobile) {
+                            throw new Error('Canvas conversion failed on mobile device. Try reducing image quality or downloading fewer orders.');
+                        } else {
+                            throw jpegError;
+                        }
+                    }
+                }
+
+                // Check data URL size for mobile
+                if (isMobile && imgData.length > 10 * 1024 * 1024) {
+                    console.warn(`⚠️ Page ${pageNum + 1} is large (${(imgData.length / 1024 / 1024).toFixed(2)} MB)`);
+                }
+
+                let imgWidth = pdfWidth;
+                let imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                // Add new page if not first page
+                if (pageNum > 0) {
+                    pdf.addPage();
+                }
+
+                // Check if image is too tall - if so, add it without scaling to preserve quality
+                // The content should have been properly split in the page allocation phase
+                if (imgHeight > pdfHeight) {
+                    console.warn(`⚠️ Page ${pageNum + 1} image height (${imgHeight}px) exceeds PDF height (${pdfHeight}px)`);
+                    console.warn(`   This should not happen - the page allocation should have split the content properly`);
+
+                    // Calculate scale factor needed
+                    const scaleFactor = pdfHeight / imgHeight;
+                    console.warn(`   Content will be scaled down to ${(scaleFactor * 100).toFixed(1)}% to fit the page`);
+
+                    // Scale to fit as last resort
+                    imgHeight = pdfHeight;
+                    imgWidth = (canvas.width * pdfHeight) / canvas.height;
+                }
+
+                // Add image to PDF page (centered if scaled down)
+                const xOffset = (pdfWidth - imgWidth) / 2;
+                pdf.addImage(imgData, 'PNG', xOffset, 0, imgWidth, imgHeight, undefined, 'FAST');
+            }
+
+            // Save the PDF
+            this.updateLoadingMessage(loading, 'Saving PDF...');
+            pdf.save(`Orders_${date}.pdf`);
+
+            oms.hideLoading(loading);
+            oms.showToast(`✅ PDF generated with ${totalPages} page(s)! (${orders.length} orders)`);
+
+        } catch (error) {
+            oms.hideLoading(loading);
+            console.error('Error generating multi-order images:', error);
+
+            // Mobile-friendly error messages
+            if (isMobile) {
+                oms.showToast(`❌ Failed on ${deviceType}: ${error.message}. Try reducing quality in settings or downloading fewer orders.`, 'error');
+            } else {
+                oms.showToast('❌ Error: ' + error.message, 'error');
+            }
+        }
+    },
+
     async generateSingleOrderImage(oms, order) {
         const isMobile = Utils.isMobileDevice();
         const deviceType = Utils.getDeviceType();
