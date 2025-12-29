@@ -183,8 +183,7 @@ html {
 .video-wrapper {
   position: relative;
   width: 100%;
-  min-height: 400px;
-  max-height: 800px;
+  /* Let aspect-ratio determine height naturally - NO min/max-height */
   aspect-ratio: 16 / 9; /* Default 16:9, but flexible */
   overflow: hidden;
   border-radius: 20px;
@@ -259,7 +258,7 @@ html {
 .video-card-preview {
   position: relative;
   width: 100%;
-  min-height: 300px;
+  /* Let aspect-ratio determine height naturally - NO min-height */
   aspect-ratio: 16 / 9; /* Default 16:9, but flexible */
   background: #000;
   overflow: hidden;
@@ -471,33 +470,45 @@ html {
   transform: scale(1.05);
 }
 
-/* Video Gallery Styles */
+/* ═══════════════════════════════════════════════════════════════════
+   VIDEO GALLERY STYLES - FREE HEIGHT (No Constraints!)
+   ═══════════════════════════════════════════════════════════════════ */
+
 .gallery-video-item {
-  /* Override .gallery-item's aspect-ratio: 1 */
-  aspect-ratio: auto !important;
+  /* REMOVE ALL CONSTRAINTS - Let videos be FREE! */
+  position: relative;
+  width: 100%;
+  aspect-ratio: unset !important; /* Remove square constraint from .gallery-item */
+  height: auto !important; /* Free height - let child decide */
   background: #000;
-  max-width: 100%;
-  margin: 0 auto;
-  min-height: 400px; /* Ensure videos have minimum height */
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gallery-video-item:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
 }
 
 .gallery-video-wrapper {
   position: relative;
   width: 100%;
-  height: auto;
-  overflow: hidden;
-  border-radius: 12px;
+  height: 0; /* Start with 0 height */
+  /* padding-bottom set by JavaScript creates the actual height */
   background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
 }
 
 .gallery-video-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   border: none;
-  display: block;
 }
 
 .video-platform-badge {
@@ -1042,7 +1053,32 @@ html {
 
   .gallery-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 2rem;
+  }
+
+  /* Mobile Video Styles - FREE HEIGHT (No Constraints!) */
+  .gallery-video-item {
+    width: 100%;
+    aspect-ratio: unset !important; /* Ensure no square constraint on mobile */
+    height: auto !important; /* Free height on mobile too */
+    margin-bottom: 1.5rem;
+  }
+
+  .gallery-video-wrapper {
+    border-radius: 12px;
+  }
+
+  .video-platform-badge {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .gallery-overlay h3 {
+    font-size: 1.1rem;
+  }
+
+  .gallery-overlay p {
+    font-size: 0.9rem;
   }
 
   .services-grid,
@@ -1077,6 +1113,75 @@ html {
   .btn {
     padding: 0.9rem 2rem;
     font-size: 1rem;
+  }
+
+  /* Mobile text optimization */
+  .section-title {
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+  }
+
+  .section-subtitle {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Problem section mobile */
+  .problem-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .problem-item {
+    padding: 1.5rem;
+  }
+
+  /* Solution box mobile */
+  .solution-box {
+    padding: 2rem 1.5rem;
+  }
+
+  .solution-box h3 {
+    font-size: 1.5rem;
+  }
+
+  .solution-box p {
+    font-size: 1rem;
+  }
+
+  /* Gallery filters mobile */
+  .gallery-filters {
+    gap: 0.5rem;
+  }
+
+  .filter-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  /* FAQ mobile */
+  .faq-question {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .faq-answer p {
+    padding: 0 1.5rem 1rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* Tablet breakpoint for better iPad experience */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  /* Videos use natural aspect-ratio - no height constraints */
+
+  .services-grid,
+  .testimonials-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

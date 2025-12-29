@@ -376,6 +376,10 @@ export class WizardCore {
                 console.log('🗑️ Popup offer cleared from storage');
             }
 
+            // Mark that user has created a quotation (prevents popup from showing again)
+            localStorage.setItem('quotationCreated', 'true');
+            console.log('✅ Quotation created flag set - popup will not show again');
+
             // Track submission
             await this.trackLeadSubmission(leadId, popupOffer);
 

@@ -192,13 +192,52 @@ service cloud.firestore {
     // Exit Intent Popups - displays popups when visitors try to leave
     match /exit_intent_popups/{popupId} {
       allow read: if true;  // Public read for website display
-      allow write: if isAuthenticated();  // Authenticated users can manage
+
+      // Authenticated users can fully manage popups
+      allow create, delete: if isAuthenticated();
+      allow update: if isAuthenticated();
+
+      // Public users can ONLY update analytics fields (views, conversions, dismissals)
+      // This allows the popup to track engagement from the public website
+      // Uses field mask to check which specific fields are being updated
+      allow update: if !isAuthenticated() &&
+                       (
+                         // Allow incrementing analytics.views
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['analytics']) &&
+                         (
+                           request.resource.data.analytics.diff(resource.data.analytics).affectedKeys().hasOnly(['views']) ||
+                           request.resource.data.analytics.diff(resource.data.analytics).affectedKeys().hasOnly(['conversions']) ||
+                           request.resource.data.analytics.diff(resource.data.analytics).affectedKeys().hasOnly(['dismissals'])
+                         )
+                       );
+    }
+
+    // Popup Settings - global configuration for exit intent popup behavior
+    match /popup_settings/{document=**} {
+      allow read: if true;  // Public read for website to load settings
+      allow write: if isAuthenticated();  // Authenticated users can manage settings
     }
 
     // Social Proof Notifications - "X just booked..." notifications
     match /social_proof_notifications/{notificationId} {
       allow read: if true;  // Public read for website display
-      allow write: if isAuthenticated();  // Authenticated users can manage
+
+      // Authenticated users can fully manage notifications
+      allow create, delete: if isAuthenticated();
+      allow update: if isAuthenticated();
+
+      // Public users can ONLY update analytics fields (views, clicks)
+      // This allows notifications to track engagement from the public website
+      allow update: if !isAuthenticated() &&
+                       (
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['analytics']) &&
+                         (
+                           request.resource.data.analytics.diff(resource.data.analytics).affectedKeys().hasOnly(['views']) ||
+                           request.resource.data.analytics.diff(resource.data.analytics).affectedKeys().hasOnly(['clicks'])
+                         )
+                       );
     }
 
     // Sticky Bars - top/bottom announcement bars

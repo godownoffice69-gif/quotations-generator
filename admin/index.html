@@ -1895,10 +1895,6 @@
                 <button class="nav-tab" data-tab="history">📚 History</button>
                 <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
                 <button class="nav-tab" data-tab="financials">💰 Financials</button>
-                <button class="nav-tab" data-tab="videos">🎥 Videos</button>
-                <button class="nav-tab" data-tab="advertisements">📢 Ads</button>
-                <button class="nav-tab" data-tab="packages">📦 Packages</button>
-                <button class="nav-tab" data-tab="leads">🎯 Leads</button>
                 <button class="nav-tab" data-tab="conversion">🚀 Marketing</button>
                 <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
             </div>
@@ -2178,51 +2174,9 @@
             <div id="calendar" class="tab-content"></div>
             <div id="history" class="tab-content"></div>
             <div id="analytics" class="tab-content"></div>
-            <div id="videos" class="tab-content"></div>
-            <div id="advertisements" class="tab-content"></div>
             <div id="financials" class="tab-content"></div>
 
-            <!-- Packages Tab -->
-            <div id="packages" class="tab-content">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📦 Package Management</h2>
-                    </div>
-                    <div class="card-body">
-                        <div id="packages-container">
-                            <div style="text-align: center; padding: 3rem;">
-                                <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
-                                <p>Loading packages...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Leads Tab -->
-            <div id="leads" class="tab-content">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">🎯 Lead Management</h2>
-                    </div>
-                    <div class="card-body">
-                        <!-- Filter Buttons -->
-                        <div id="leads-filter-buttons" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
-                            <!-- Filter buttons will be rendered here -->
-                        </div>
-
-                        <!-- Leads List -->
-                        <div id="leads-list-container">
-                            <div style="text-align: center; padding: 3rem;">
-                                <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
-                                <p>Loading leads...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Marketing & Conversion Tab -->
+            <!-- Marketing & Conversion Tab (includes Videos, Ads, Packages, Leads as sub-tabs) -->
             <div id="conversion" class="tab-content"></div>
 
             <!-- Settings Tab -->
@@ -4118,7 +4072,7 @@ const OMS = {
 
                 // Update tabs
                 const tabs = document.querySelectorAll('.nav-tab');
-                const tabKeys = ['dashboard', 'orders', 'inventory', 'productPhotos', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'financials', 'videos', 'advertisements', 'packages', 'leads', 'conversion', 'settings'];
+                const tabKeys = ['dashboard', 'orders', 'inventory', 'productPhotos', 'itemHistory', 'preparation', 'customers', 'quotations', 'team', 'calendar', 'history', 'analytics', 'financials', 'conversion', 'settings'];
                 tabs.forEach((tab, index) => {
                     if (tabKeys[index] && t[tabKeys[index]]) {
                         tab.textContent = t[tabKeys[index]];
@@ -4270,8 +4224,14 @@ const OMS = {
 
         if (!startDate || !endDate) {
             container.innerHTML = '';
+            // CRITICAL FIX: Clear function data when dates are cleared
+            window.dayFunctionsData = {};
             return;
         }
+
+        // CRITICAL FIX: Reset function data before regenerating days
+        // This prevents duplicate functions when generateDayWiseFunctions() is called multiple times
+        window.dayFunctionsData = {};
 
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -9047,8 +9007,6 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'calendar') this.renderCalendarTab();
                     else if (tabName === 'history') this.renderHistory();
                     else if (tabName === 'analytics') this.renderAnalytics();
-                    else if (tabName === 'videos') this.renderVideos();
-                    else if (tabName === 'advertisements') this.renderAdvertisements();
                     else if (tabName === 'financials') this.renderFinancials();
                     else if (tabName === 'settings') this.renderSettings();
                     else if (tabName === 'orders') {
@@ -10517,8 +10475,8 @@ convertToQuotationDateFormat(dateStr) {
                                     </datalist>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label required">Contact Number</label>
-                                    <input type="tel" id="quotCustomerContact" class="form-input" value="${q.customer.contact || ''}" required placeholder="Enter contact number">
+                                    <label class="form-label">Contact Number (Optional)</label>
+                                    <input type="tel" id="quotCustomerContact" class="form-input" value="${q.customer.contact || ''}" placeholder="Enter contact number (optional)">
                                 </div>
                             </div>
                             <div class="form-row">
@@ -10687,12 +10645,13 @@ convertToQuotationDateFormat(dateStr) {
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th style="width: 5%;">#</th>
-                                    <th style="width: 35%;">Item Name</th>
-                                    <th style="width: 15%;">Quantity</th>
-                                    <th style="width: 20%;">Rate (₹)</th>
-                                    <th style="width: 20%;">Subtotal</th>
-                                    <th style="width: 5%;"></th>
+                                    <th style="width: 4%;">#</th>
+                                    <th style="width: 20%;">Item Name</th>
+                                    <th style="width: 25%;">Notes/Description</th>
+                                    <th style="width: 10%;">Quantity</th>
+                                    <th style="width: 15%;">Rate (₹)</th>
+                                    <th style="width: 15%;">Subtotal</th>
+                                    <th style="width: 4%;"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -10701,6 +10660,9 @@ convertToQuotationDateFormat(dateStr) {
                                         <td>${index + 1}</td>
                                         <td>
                                             <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationItem(${index}, 'name', this.value)" style="width: 100%;">
+                                        </td>
+                                        <td>
+                                            <textarea class="form-input" onchange="OMS.updateQuotationItem(${index}, 'notes', this.value)" placeholder="Add description..." style="width: 100%; min-height: 60px; resize: vertical;">${item.notes || ''}</textarea>
                                         </td>
                                         <td>
                                             <input type="number" class="form-input" value="${item.quantity}" min="1" onchange="OMS.updateQuotationItem(${index}, 'quantity', this.value)" style="width: 100%;">
@@ -11120,8 +11082,57 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            // CRITICAL FIX: Helper to save customer data from form fields before re-rendering
+            saveQuotationCustomerData() {
+                if (!this.currentQuotation) {
+                    console.warn('⚠️ saveQuotationCustomerData: No currentQuotation');
+                    return;
+                }
+
+                console.log('💾 saveQuotationCustomerData: Reading form fields...');
+
+                const customerName = Utils.get('quotCustomerName');
+                const customerContact = Utils.get('quotCustomerContact');
+                const customerEmail = Utils.get('quotCustomerEmail');
+                const eventDate = Utils.get('quotEventDate');
+                const eventVenue = Utils.get('quotEventVenue');
+                const notes = Utils.get('quotNotes');
+
+                console.log('📝 Form field values:');
+                console.log('  - Name:', customerName);
+                console.log('  - Contact:', customerContact);
+                console.log('  - Email:', customerEmail);
+                console.log('  - Date:', eventDate);
+                console.log('  - Venue:', eventVenue);
+                console.log('  - Notes:', notes);
+
+                // Initialize customer object if it doesn't exist
+                if (!this.currentQuotation.customer) {
+                    console.log('⚙️ Initializing customer object');
+                    this.currentQuotation.customer = {};
+                }
+
+                // Update customer data from form fields
+                this.currentQuotation.customer = {
+                    ...this.currentQuotation.customer,
+                    name: customerName || this.currentQuotation.customer.name || '',
+                    contact: customerContact || this.currentQuotation.customer.contact || '',
+                    email: customerEmail || this.currentQuotation.customer.email || '',
+                    eventDate: eventDate || this.currentQuotation.customer.eventDate || '',
+                    eventVenue: eventVenue || this.currentQuotation.customer.eventVenue || ''
+                };
+
+                this.currentQuotation.notes = notes || this.currentQuotation.notes || '';
+
+                console.log('✅ Updated customer data:', this.currentQuotation.customer);
+            },
+
             setQuotationOrderType(type) {
                 if (!this.currentQuotation) return;
+
+                // Save customer data BEFORE re-rendering to prevent data loss
+                this.saveQuotationCustomerData();
+
                 this.currentQuotation.orderType = type;
 
                 // Initialize appropriate data structures
@@ -11174,8 +11185,9 @@ convertToQuotationDateFormat(dateStr) {
                                 ${items.map((item, itemIdx) => {
                                     const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
                                     return `
-                                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
+                                    <div style="display: grid; grid-template-columns: 1.5fr 2fr 0.8fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: start;">
                                         <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'name', this.value)" placeholder="Item name">
+                                        <textarea class="form-input" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'notes', this.value)" placeholder="Add notes/description..." style="min-height: 50px; resize: vertical;">${item.notes || ''}</textarea>
                                         <input type="number" class="form-input" value="${item.quantity}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
                                         <input type="number" class="form-input" value="${item.price}" onchange="OMS.updateQuotationFunctionItem(${index}, ${itemIdx}, 'price', this.value)" placeholder="Price">
                                         <div style="font-weight: 600; color: #2196F3;">₹${subtotal.toLocaleString('en-IN')}</div>
@@ -11234,8 +11246,9 @@ convertToQuotationDateFormat(dateStr) {
                                         ${(func.items || []).map((item, itemIdx) => {
                                             const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
                                             return `
-                                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
+                                            <div style="display: grid; grid-template-columns: 1.5fr 2fr 0.8fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: start;">
                                                 <input type="text" class="form-input" value="${item.name}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'name', this.value)" placeholder="Item">
+                                                <textarea class="form-input" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'notes', this.value)" placeholder="Add notes/description..." style="min-height: 50px; resize: vertical;">${item.notes || ''}</textarea>
                                                 <input type="number" class="form-input" value="${item.quantity}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
                                                 <input type="number" class="form-input" value="${item.price}" onchange="OMS.updateQuotationDayFunctionItem(${dayIndex}, ${funcIdx}, ${itemIdx}, 'price', this.value)" placeholder="Price">
                                                 <div style="font-weight: 600; color: #2196F3;">₹${subtotal.toLocaleString('en-IN')}</div>
@@ -11255,12 +11268,14 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             addQuotationFunction() {
+                this.saveQuotationCustomerData(); // Preserve customer data
                 if (!this.currentQuotation.functions) this.currentQuotation.functions = [];
                 this.currentQuotation.functions.push({ name: '', items: [] });
                 this.renderQuotations();
             },
 
             addQuotationDay() {
+                this.saveQuotationCustomerData(); // Preserve customer data
                 if (!this.currentQuotation.days) this.currentQuotation.days = [];
                 this.currentQuotation.days.push({ date: '', functions: [] });
                 this.renderQuotations();
@@ -11268,6 +11283,7 @@ convertToQuotationDateFormat(dateStr) {
 
             removeQuotationFunction(index) {
                 if (confirm('Remove this function?')) {
+                    this.saveQuotationCustomerData(); // Preserve customer data
                     this.currentQuotation.functions.splice(index, 1);
                     this.renderQuotations();
                 }
@@ -11275,6 +11291,7 @@ convertToQuotationDateFormat(dateStr) {
 
             removeQuotationDay(index) {
                 if (confirm('Remove this day?')) {
+                    this.saveQuotationCustomerData(); // Preserve customer data
                     this.currentQuotation.days.splice(index, 1);
                     this.renderQuotations();
                 }
@@ -11406,18 +11423,35 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             async saveQuotation(status = 'draft') {
+                console.log('🔍 DEBUG: saveQuotation called with status:', status);
+
                 const q = this.currentQuotation;
-                if (!q) return;
-
-                // Validate
-                const customerName = Utils.get('quotCustomerName');
-                const customerContact = Utils.get('quotCustomerContact');
-                const eventDate = Utils.get('quotEventDate');
-
-                if (!customerName || !customerContact || !eventDate) {
-                    this.showToast('Please fill customer name, contact, and event date', 'error');
+                if (!q) {
+                    console.error('❌ No currentQuotation object');
                     return;
                 }
+
+                console.log('📋 Current quotation object:', q);
+
+                // CRITICAL: Save customer data from form fields FIRST before validation
+                this.saveQuotationCustomerData();
+                console.log('✅ Saved customer data, updated quotation:', this.currentQuotation);
+
+                // Validate - ONLY customer name and event date required (contact is optional)
+                const customerName = this.currentQuotation.customer.name;
+                const eventDate = this.currentQuotation.customer.eventDate;
+
+                console.log('🔍 Validation check:');
+                console.log('  - Customer Name:', customerName);
+                console.log('  - Event Date:', eventDate);
+
+                if (!customerName || !eventDate) {
+                    console.error('❌ Validation failed - missing required fields');
+                    this.showToast('Please fill customer name and event date', 'error');
+                    return;
+                }
+
+                console.log('✅ Customer validation passed');
 
                 // Validate items based on order type
                 let hasItems = false;
@@ -11425,10 +11459,12 @@ convertToQuotationDateFormat(dateStr) {
                 if (!q.orderType || q.orderType === 'single') {
                     // Single function - check q.items
                     hasItems = q.items && q.items.length > 0;
+                    console.log('📦 Single order type - items count:', q.items?.length || 0);
                 } else if (q.orderType === 'multifunction') {
                     // Multifunction - check if any function has items
                     hasItems = q.functions && q.functions.length > 0 &&
                                q.functions.some(func => func.items && func.items.length > 0);
+                    console.log('📋 Multifunction order type - functions count:', q.functions?.length || 0);
                 } else if (q.orderType === 'multiday') {
                     // Multiday - check if any day has functions with items
                     hasItems = q.days && q.days.length > 0 &&
@@ -11436,32 +11472,40 @@ convertToQuotationDateFormat(dateStr) {
                                    day.functions && day.functions.length > 0 &&
                                    day.functions.some(func => func.items && func.items.length > 0)
                                );
+                    console.log('📅 Multiday order type - days count:', q.days?.length || 0);
                 }
 
+                console.log('🔍 Has items?', hasItems);
+
                 if (!hasItems) {
+                    console.error('❌ No items found');
                     this.showToast('Please add at least one item to save quotation', 'error');
                     return;
                 }
 
-                // Gather data
+                console.log('✅ Items validation passed');
+
+                // Gather data - use the already saved customer data
                 q.customer = {
                     name: customerName,
-                    contact: customerContact,
-                    email: Utils.get('quotCustomerEmail'),
+                    contact: this.currentQuotation.customer.contact || '', // Optional - can be empty
+                    email: this.currentQuotation.customer.email || Utils.get('quotCustomerEmail'),
                     eventDate: eventDate,
-                    eventVenue: Utils.get('quotEventVenue'),
+                    eventVenue: this.currentQuotation.customer.eventVenue || Utils.get('quotEventVenue'),
                     eventVenueName: q.customer?.eventVenueName || '',
                     eventVenueCoordinates: q.customer?.eventVenueCoordinates || null
                 };
 
                 // Add notes field
-                q.notes = Utils.get('quotNotes') || '';
+                q.notes = this.currentQuotation.notes || Utils.get('quotNotes') || '';
 
                 const quotationData = {
                     ...q,
                     status: status,
                     updatedAt: new Date().toISOString()
                 };
+
+                console.log('💾 About to save quotation data:', quotationData);
 
                 try {
                     if (this.editingQuotationId) {
@@ -11472,6 +11516,7 @@ convertToQuotationDateFormat(dateStr) {
 
                         await db.collection('quotations').doc(this.editingQuotationId).update(quotationData);
                         this.showToast('✅ Quotation updated!', 'success');
+                        console.log('✅ Updated existing quotation:', this.editingQuotationId);
                     } else {
                         // Create new
                         quotationData.quotationNumber = await this.generateQuotationNumber();
@@ -11483,6 +11528,7 @@ convertToQuotationDateFormat(dateStr) {
                         quotationData.id = docRef.id;
 
                         this.showToast('✅ Quotation saved!', 'success');
+                        console.log('✅ Created new quotation:', docRef.id);
                     }
 
                     // Reload quotations
@@ -11494,7 +11540,7 @@ convertToQuotationDateFormat(dateStr) {
 
                     return quotationData;
                 } catch (error) {
-                    console.error('Error saving quotation:', error);
+                    console.error('❌ Error saving quotation:', error);
                     this.showToast('Error: ' + error.message, 'error');
                 }
             },
@@ -11927,11 +11973,12 @@ convertToQuotationDateFormat(dateStr) {
                                 <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
                                     <thead>
                                         <tr style="background: #f5f5f5; border: 1px solid #000;">
-                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
-                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
-                                            <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
-                                            <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
-                                            <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 50px;">Sr.</th>
+                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 25%;">Product</th>
+                                            <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 30%;">Notes/Description</th>
+                                            <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 80px;">Qty</th>
+                                            <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 100px;">Rate</th>
+                                            <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 110px;">Price</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -11939,13 +11986,14 @@ convertToQuotationDateFormat(dateStr) {
                                             <tr style="border: 1px solid #000;">
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: center;">${index + 1}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                <td style="padding: 10px; border: 1px solid #000; color: #666; font-size: 11px; line-height: 1.4;">${item.notes ? item.notes.replace(/\n/g, '<br>') : '-'}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.rate || item.price || 0).toLocaleString('en-IN')}</td>
                                                 <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                             </tr>
                                         `).join('')}
                                         <tr style="border: 1px solid #000; background: #f5f5f5;">
-                                            <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Total</td>
+                                            <td colspan="5" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Total</td>
                                             <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${q.financials.grandTotal.toLocaleString('en-IN')}/-</td>
                                         </tr>
                                     </tbody>
@@ -11970,11 +12018,12 @@ convertToQuotationDateFormat(dateStr) {
                                     <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
                                         <thead>
                                             <tr style="background: #f5f5f5; border: 1px solid #000;">
-                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
-                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
-                                                <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
-                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
-                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 50px;">Sr.</th>
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 25%;">Product</th>
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 30%;">Notes/Description</th>
+                                                <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 80px;">Qty</th>
+                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 100px;">Rate</th>
+                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 110px;">Price</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -11982,13 +12031,14 @@ convertToQuotationDateFormat(dateStr) {
                                                 <tr style="border: 1px solid #000;">
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; color: #666; font-size: 11px; line-height: 1.4;">${item.notes ? item.notes.replace(/\n/g, '<br>') : '-'}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
                                                     <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                                 </tr>
                                             `).join('')}
                                             <tr style="border: 1px solid #000; background: #f5f5f5;">
-                                                <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
+                                                <td colspan="5" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
                                                 <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
                                             </tr>
                                         </tbody>
@@ -12029,11 +12079,12 @@ convertToQuotationDateFormat(dateStr) {
                                             <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
                                                 <thead>
                                                     <tr style="background: #f5f5f5; border: 1px solid #000;">
-                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
-                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
-                                                        <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
-                                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
-                                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 50px;">Sr.</th>
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 25%;">Product</th>
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 30%;">Notes/Description</th>
+                                                        <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 80px;">Qty</th>
+                                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 100px;">Rate</th>
+                                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 110px;">Price</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -12041,13 +12092,14 @@ convertToQuotationDateFormat(dateStr) {
                                                         <tr style="border: 1px solid #000;">
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                            <td style="padding: 10px; border: 1px solid #000; color: #666; font-size: 11px; line-height: 1.4;">${item.notes ? item.notes.replace(/\n/g, '<br>') : '-'}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
                                                             <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                                         </tr>
                                                     `).join('')}
                                                     <tr style="border: 1px solid #000; background: #f5f5f5;">
-                                                        <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
+                                                        <td colspan="5" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
                                                         <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
                                                     </tr>
                                                 </tbody>
@@ -12224,64 +12276,154 @@ convertToQuotationDateFormat(dateStr) {
                     yPos += 8; // Reduced from 10
 
                     // === ITEMS TABLE ===
-                    const colWidths = [15, 20, 80, 30, 35];
+                    const colWidths = [12, 35, 50, 20, 25, 30]; // Sr, Product, Notes, Qty, Rate, Price
                     const startX = margin;
                     let currentX = startX;
 
                     // Table header
                     doc.setFillColor(245, 245, 245);
-                    doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'FD'); // Reduced from 10 to 8
+                    doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'FD');
 
-                    doc.setFontSize(10); // Reduced from 11
+                    doc.setFontSize(9);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...black);
 
-                    doc.text('Sr.', currentX + 2, yPos + 5.5); // Adjusted for smaller header
+                    doc.text('Sr.', currentX + 2, yPos + 5.5);
                     currentX += colWidths[0];
                     doc.text('Product', currentX + 2, yPos + 5.5);
+                    currentX += colWidths[1];
+                    doc.text('Notes', currentX + 2, yPos + 5.5);
                     currentX += colWidths[2];
-                    doc.text('Quantity', currentX + 2, yPos + 5.5);
+                    doc.text('Qty', currentX + 2, yPos + 5.5);
                     currentX += colWidths[3];
                     doc.text('Rate', currentX + 2, yPos + 5.5);
                     currentX += colWidths[4];
                     doc.text('Price', currentX + 2, yPos + 5.5);
 
-                    yPos += 8; // Reduced from 10
+                    yPos += 8;
 
-                    // Table rows
-                    doc.setFontSize(9.5); // Reduced from 10
-                    (quotation.items || []).forEach((item, index) => {
+                    // Table rows - Handle all quotation types
+                    doc.setFontSize(8);
+                    let itemIndex = 0;
+
+                    // Helper function to render an item row with notes
+                    const renderItemRow = (item, index) => {
                         currentX = startX;
+
+                        // Calculate row height based on notes (if present)
+                        const notes = item.notes || '';
+                        const notesLines = notes ? doc.splitTextToSize(notes, colWidths[2] - 4) : [];
+                        const rowHeight = Math.max(7, notesLines.length * 4 + 3);
+
+                        // Check if we need a new page
+                        if (yPos + rowHeight > pageHeight - 20) {
+                            doc.addPage();
+                            yPos = margin;
+                        }
 
                         // Draw row border
                         doc.setDrawColor(...black);
-                        doc.rect(margin, yPos, pageWidth - 2 * margin, 7, 'S'); // Reduced from 8 to 7
+                        doc.rect(margin, yPos, pageWidth - 2 * margin, rowHeight, 'S');
 
+                        // Serial number
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(...black);
                         doc.text((index + 1).toString(), currentX + 2, yPos + 5);
                         currentX += colWidths[0];
 
+                        // Product name
                         doc.setTextColor(...blue);
                         doc.setFont('helvetica', 'bold');
-                        const itemName = item.name.length > 45 ? item.name.substring(0, 42) + '...' : item.name;
+                        const itemName = item.name.length > 20 ? item.name.substring(0, 18) + '...' : item.name;
                         doc.text(itemName, currentX + 2, yPos + 5);
+                        currentX += colWidths[1];
+
+                        // Notes (multi-line support)
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(7);
+                        doc.setTextColor(80, 80, 80);
+                        if (notesLines.length > 0) {
+                            notesLines.forEach((line, idx) => {
+                                doc.text(line, currentX + 2, yPos + 4 + (idx * 3.5));
+                            });
+                        }
+                        doc.setFontSize(8);
                         currentX += colWidths[2];
 
+                        // Quantity
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(...black);
                         doc.text(Math.round(item.quantity).toString(), currentX + 2, yPos + 5);
                         currentX += colWidths[3];
 
+                        // Rate
                         doc.text(`₹${(item.rate || item.price || 0).toLocaleString('en-IN')}`, currentX + 2, yPos + 5);
                         currentX += colWidths[4];
 
+                        // Subtotal/Price
                         doc.setFont('helvetica', 'bold');
                         doc.setTextColor(...red);
                         doc.text(`₹${item.subtotal.toLocaleString('en-IN')}`, currentX + 2, yPos + 5);
 
-                        yPos += 7; // Reduced from 8
-                    });
+                        yPos += rowHeight;
+                    };
+
+                    // Helper function to render section header (for multifunction/multiday)
+                    const renderSectionHeader = (title) => {
+                        // Check if we need a new page
+                        if (yPos + 8 > pageHeight - 20) {
+                            doc.addPage();
+                            yPos = margin;
+                        }
+
+                        doc.setFillColor(240, 248, 255); // Light blue background
+                        doc.rect(margin, yPos, pageWidth - 2 * margin, 7, 'FD');
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(...blue);
+                        doc.text(title, margin + 3, yPos + 5);
+                        yPos += 7;
+                    };
+
+                    // Process items based on quotation type
+                    if (!quotation.orderType || quotation.orderType === 'single') {
+                        // Single-day quotation
+                        (quotation.items || []).forEach((item, index) => {
+                            renderItemRow(item, itemIndex);
+                            itemIndex++;
+                        });
+                    } else if (quotation.orderType === 'multifunction') {
+                        // Multifunction quotation (same day, multiple functions)
+                        (quotation.functions || []).forEach((func, funcIdx) => {
+                            // Render function header
+                            renderSectionHeader(`Function ${funcIdx + 1}: ${func.name || 'Unnamed Function'}`);
+
+                            // Render items for this function
+                            (func.items || []).forEach((item) => {
+                                renderItemRow(item, itemIndex);
+                                itemIndex++;
+                            });
+                        });
+                    } else if (quotation.orderType === 'multiday') {
+                        // Multiday quotation (multiple days, multiple functions per day)
+                        (quotation.days || []).forEach((day, dayIdx) => {
+                            // Render day header
+                            const dayDate = day.date ? Utils.formatDate(day.date) : `Day ${dayIdx + 1}`;
+                            renderSectionHeader(`📅 ${dayDate}`);
+
+                            // Render functions for this day
+                            (day.functions || []).forEach((func, funcIdx) => {
+                                // Render function header (indented under day)
+                                renderSectionHeader(`  Function ${funcIdx + 1}: ${func.name || 'Unnamed Function'}`);
+
+                                // Render items for this function
+                                (func.items || []).forEach((item) => {
+                                    renderItemRow(item, itemIndex);
+                                    itemIndex++;
+                                });
+                            });
+                        });
+                    }
 
                     // Total row
                     doc.setFillColor(245, 245, 245);
@@ -17840,44 +17982,13 @@ if (diffDays > 30) {
 
                 console.log('📦 Packages tab found:', !!packagesTab);
                 console.log('🎯 Leads tab found:', !!leadsTab);
+                console.log('✅ Marketing & Conversion module imported successfully');
 
-                let packagesInitialized = false;
-                let leadsInitialized = false;
+                // Note: PackageManager and LeadsManager are now initialized
+                // from within the Marketing > Packages and Marketing > Leads sub-tabs
+                // (see conversion.js renderPackagesSection and renderLeadsSection)
 
-                packagesTab?.addEventListener('click', async () => {
-                    console.log('📦 Packages tab clicked, initialized:', packagesInitialized);
-                    if (!packagesInitialized) {
-                        try {
-                            console.log('🔄 Initializing Package Manager...');
-                            await packageManager.init();
-                            console.log('✅ Package Manager initialized successfully');
-
-                            // Populate inventory items dropdown
-                            const selectItem = document.getElementById('select-inventory-item');
-                            if (selectItem && packageManager.inventory.items) {
-                                packageManager.inventory.items.forEach(item => {
-                                    const option = document.createElement('option');
-                                    option.value = item.id;
-                                    option.textContent = item.name;
-                                    selectItem.appendChild(option);
-                                });
-                            }
-
-                            packagesInitialized = true;
-                        } catch (error) {
-                            console.error('❌ Failed to initialize Package Manager:', error);
-                        }
-                    }
-                });
-
-            leadsTab?.addEventListener('click', async () => {
-                if (!leadsInitialized) {
-                    await leadsManager.init();
-                    leadsInitialized = true;
-                }
-            });
-
-            // Initialize Marketing & Conversion tab
+                // Initialize Marketing & Conversion tab
             const conversionTab = document.querySelector('[data-tab="conversion"]');
             let conversionInitialized = false;
 
@@ -17895,15 +18006,13 @@ if (diffDays > 30) {
                 }
             });
 
-            // Make managers globally available
-            window.packageManager = packageManager;
-            window.leadsManager = leadsManager;
+            // Make Conversion module globally available
             window.Conversion = Conversion;
 
-            console.log('✅ Packages and Leads managers ready');
+            console.log('✅ Marketing & Conversion module ready');
 
             } catch (error) {
-                console.error('❌ Failed to initialize Packages/Leads managers:', error);
+                console.error('❌ Failed to initialize Marketing module:', error);
                 console.error('Error details:', error.message, error.stack);
             }
         });

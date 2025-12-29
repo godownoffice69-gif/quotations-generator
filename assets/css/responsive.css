@@ -1,0 +1,205 @@
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE.CSS - Mobile & Tablet Media Queries
+   All responsive breakpoints and device-specific overrides
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIDEO GRID - MOBILE
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .videos-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PROCESS STEPS - MOBILE (Hide arrows)
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .step-arrow {
+    display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MAIN MOBILE BREAKPOINT (max-width: 768px)
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Container & Spacing */
+  .container {
+    padding: 0 1rem;
+  }
+
+  /* Grid Layouts */
+  .trust-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .gallery-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .services-grid,
+  .testimonials-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .process-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .problem-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  /* Video Styles - FREE HEIGHT (No Constraints!) */
+  .gallery-video-item {
+    width: 100%;
+    aspect-ratio: unset !important; /* Ensure no square constraint on mobile */
+    height: auto !important; /* Free height on mobile too */
+    margin-bottom: 1.5rem;
+  }
+
+  .gallery-video-wrapper {
+    border-radius: 12px;
+  }
+
+  .video-platform-badge {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .gallery-overlay h3 {
+    font-size: 1.1rem;
+  }
+
+  .gallery-overlay p {
+    font-size: 0.9rem;
+  }
+
+  /* Footer */
+  .footer-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .social-links {
+    justify-content: center;
+  }
+
+  /* Preview & Solution Boxes */
+  .preview-box {
+    padding: 2rem 1rem;
+  }
+
+  .solution-box {
+    padding: 2rem 1.5rem;
+  }
+
+  .solution-box h3 {
+    font-size: 1.5rem;
+  }
+
+  .solution-box p {
+    font-size: 1rem;
+  }
+
+  /* WhatsApp Float */
+  .whatsapp-float {
+    bottom: 20px;
+    right: 20px;
+    width: 55px;
+    height: 55px;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 0.9rem 2rem;
+    font-size: 1rem;
+  }
+
+  /* Typography - Mobile Optimization */
+  .section-title {
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+  }
+
+  .section-subtitle {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Problem Cards */
+  .problem-item {
+    padding: 1.5rem;
+  }
+
+  /* Gallery Filters */
+  .gallery-filters {
+    gap: 0.5rem;
+  }
+
+  .filter-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  /* FAQ */
+  .faq-question {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .faq-answer p {
+    padding: 0 1.5rem 1rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TABLET BREAKPOINT (769px - 1024px)
+   Better iPad/tablet experience
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* 2-column layouts for tablets */
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  /* Videos use natural aspect-ratio - no height constraints */
+
+  .services-grid,
+  .testimonials-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UTILITY CLASSES FOR RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Fade-in animation classes for scroll triggers */
+.fade-in {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Smooth section appearance on scroll */
+section {
+  opacity: 0;
+  animation: fadeIn 0.8s ease forwards;
+}

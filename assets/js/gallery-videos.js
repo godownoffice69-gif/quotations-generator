@@ -148,14 +148,20 @@
         console.log(`  ↳ Platform: ${platform}`);
         console.log(`  ↳ Aspect Ratio: ${aspectRatio}`);
 
-        // Use CSS aspect-ratio property for better video display
-        // 9/16 for vertical (Instagram Reels), 16/9 for horizontal, 1/1 for square
-        const aspectRatioStyle = aspectRatio;
+        // Calculate padding-bottom percentage for aspect-ratio
+        let paddingBottom;
+        if (aspectRatio === '9/16') {
+            paddingBottom = '177.78%'; // 16/9 * 100 = 177.78% (tall)
+        } else if (aspectRatio === '16/9') {
+            paddingBottom = '56.25%'; // 9/16 * 100 = 56.25% (wide)
+        } else {
+            paddingBottom = '100%'; // 1/1 = 100% (square)
+        }
 
-        console.log(`  ↳ Aspect Ratio: ${aspectRatioStyle}`);
+        console.log(`  ↳ Padding Bottom: ${paddingBottom}`);
 
         item.innerHTML = `
-            <div class="gallery-video-wrapper" style="aspect-ratio: ${aspectRatioStyle};">
+            <div class="gallery-video-wrapper" style="padding-bottom: ${paddingBottom};">
                 <iframe
                     src="${embedUrl}"
                     frameborder="0"

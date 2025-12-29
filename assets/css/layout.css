@@ -1,0 +1,162 @@
+/* ═══════════════════════════════════════════════════════════════════
+   LAYOUT - Page Structure & Grid Systems
+   Container, sections, grids, and page-level layout
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Global Layout */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-primary);
+  color: var(--dark);
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Section Spacing */
+section {
+  opacity: 0;
+  animation: fadeIn 0.8s ease forwards;
+}
+
+/* Common Section Styles */
+.problem-section,
+.trust-indicators,
+.video-showcase,
+.gallery,
+.testimonials,
+.services,
+.how-it-works,
+.package-preview,
+.faq {
+  padding: 6rem 0;
+}
+
+/* Alternating Backgrounds */
+.problem-section {
+  background: var(--white);
+}
+
+.trust-indicators {
+  background: var(--gray-light);
+}
+
+.video-showcase {
+  background: var(--white);
+}
+
+.gallery {
+  background: var(--gray-light);
+}
+
+.testimonials {
+  background: var(--white);
+}
+
+.services {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.how-it-works {
+  background: var(--white);
+}
+
+.package-preview {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: var(--white);
+}
+
+.faq {
+  background: var(--gray-light);
+}
+
+/* Grid Layouts */
+.problem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.trust-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 2rem;
+  text-align: center;
+}
+
+.videos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2.5rem;
+  margin-bottom: 3rem;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.process-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto 3rem;
+}
+
+/* Video Container */
+.video-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Solution Box Layout */
+.solution-box {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Preview Box Layout */
+.preview-box {
+  max-width: 700px;
+  margin: 0 auto 2rem;
+}
+
+/* FAQ Container */
+.faq-container {
+  max-width: 800px;
+  margin: 0 auto 3rem;
+}
+
+/* Center CTA */
+.cta-center {
+  text-align: center;
+  margin-top: 3rem;
+}
