@@ -385,10 +385,11 @@ export const Quotations = {
                     <thead>
                         <tr>
                             <th style="width: 5%;">#</th>
-                            <th style="width: 35%;">Item Name</th>
-                            <th style="width: 15%;">Quantity</th>
-                            <th style="width: 20%;">Rate (₹)</th>
-                            <th style="width: 20%;">Subtotal</th>
+                            <th style="width: 25%;">Item Name</th>
+                            <th style="width: 10%;">Quantity</th>
+                            <th style="width: 15%;">Rate (₹)</th>
+                            <th style="width: 25%;">Notes/Remarks</th>
+                            <th style="width: 15%;">Subtotal</th>
                             <th style="width: 5%;"></th>
                         </tr>
                     </thead>
@@ -404,6 +405,9 @@ export const Quotations = {
                                 </td>
                                 <td>
                                     <input type="number" class="form-input" value="${item.rate}" min="0" step="0.01" onchange="Quotations.updateQuotationItem(window.OMS, ${index}, 'rate', this.value)" style="width: 100%;">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-input" value="${item.notes || ''}" onchange="Quotations.updateQuotationItem(window.OMS, ${index}, 'notes', this.value)" style="width: 100%;" placeholder="Optional notes">
                                 </td>
                                 <td><strong>₹${item.subtotal.toLocaleString('en-IN')}</strong></td>
                                 <td>
@@ -648,10 +652,11 @@ export const Quotations = {
                         ${items.map((item, itemIdx) => {
                             const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
                             return `
-                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 2fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
                                 <input type="text" class="form-input" value="${item.name}" onchange="Quotations.updateQuotationFunctionItem(window.OMS, ${index}, ${itemIdx}, 'name', this.value)" placeholder="Item name">
                                 <input type="number" class="form-input" value="${item.quantity}" onchange="Quotations.updateQuotationFunctionItem(window.OMS, ${index}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
                                 <input type="number" class="form-input" value="${item.price}" onchange="Quotations.updateQuotationFunctionItem(window.OMS, ${index}, ${itemIdx}, 'price', this.value)" placeholder="Price">
+                                <input type="text" class="form-input" value="${item.notes || ''}" onchange="Quotations.updateQuotationFunctionItem(window.OMS, ${index}, ${itemIdx}, 'notes', this.value)" placeholder="Notes (optional)">
                                 <div style="font-weight: 600; color: #2196F3;">₹${subtotal.toLocaleString('en-IN')}</div>
                                 <button type="button" class="btn btn-danger btn-small" onclick="Quotations.removeQuotationFunctionItem(window.OMS, ${index}, ${itemIdx})">×</button>
                             </div>
@@ -709,10 +714,11 @@ export const Quotations = {
                                 ${(func.items || []).map((item, itemIdx) => {
                                     const subtotal = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0);
                                     return `
-                                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
+                                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 2fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
                                         <input type="text" class="form-input" value="${item.name}" onchange="Quotations.updateQuotationDayFunctionItem(window.OMS, ${dayIndex}, ${funcIdx}, ${itemIdx}, 'name', this.value)" placeholder="Item">
                                         <input type="number" class="form-input" value="${item.quantity}" onchange="Quotations.updateQuotationDayFunctionItem(window.OMS, ${dayIndex}, ${funcIdx}, ${itemIdx}, 'quantity', this.value)" placeholder="Qty">
                                         <input type="number" class="form-input" value="${item.price}" onchange="Quotations.updateQuotationDayFunctionItem(window.OMS, ${dayIndex}, ${funcIdx}, ${itemIdx}, 'price', this.value)" placeholder="Price">
+                                        <input type="text" class="form-input" value="${item.notes || ''}" onchange="Quotations.updateQuotationDayFunctionItem(window.OMS, ${dayIndex}, ${funcIdx}, ${itemIdx}, 'notes', this.value)" placeholder="Notes (optional)">
                                         <div style="font-weight: 600; color: #2196F3;">₹${subtotal.toLocaleString('en-IN')}</div>
                                         <button type="button" class="btn btn-danger btn-small" onclick="Quotations.removeQuotationDayFunctionItem(window.OMS, ${dayIndex}, ${funcIdx}, ${itemIdx})">×</button>
                                     </div>
@@ -1609,28 +1615,42 @@ export const Quotations = {
                 <!-- Items Table -->
                 <div style="padding: 15px; margin-bottom: 20px;">
                     ${!q.orderType || q.orderType === 'single' ? `
-                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
+                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 11px;">
                             <thead>
                                 <tr style="background: #f5f5f5; border: 1px solid #000;">
-                                    <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
-                                    <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
-                                    <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
-                                    <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
-                                    <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                    <th style="padding: 8px; text-align: left; border: 1px solid #000; font-weight: bold; width: 40px;">Sr.</th>
+                                    <th style="padding: 8px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
+                                    <th style="padding: 8px; text-align: left; border: 1px solid #000; font-weight: bold;">Notes</th>
+                                    <th style="padding: 8px; text-align: center; border: 1px solid #000; font-weight: bold; width: 60px;">Qty</th>
+                                    <th style="padding: 8px; text-align: right; border: 1px solid #000; font-weight: bold; width: 80px;">Rate</th>
+                                    <th style="padding: 8px; text-align: right; border: 1px solid #000; font-weight: bold; width: 100px;">Price</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${(q.items || []).map((item, index) => `
                                     <tr style="border: 1px solid #000;">
-                                        <td style="padding: 10px; border: 1px solid #000; text-align: center;">${index + 1}</td>
-                                        <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
-                                        <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
-                                        <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.rate || item.price || 0).toLocaleString('en-IN')}</td>
-                                        <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                        <td style="padding: 8px; border: 1px solid #000; text-align: center;">${index + 1}</td>
+                                        <td style="padding: 8px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                        <td style="padding: 8px; border: 1px solid #000; color: #666; font-size: 10px;">${item.notes || '-'}</td>
+                                        <td style="padding: 8px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
+                                        <td style="padding: 8px; border: 1px solid #000; text-align: right;">₹${(item.rate || item.price || 0).toLocaleString('en-IN')}</td>
+                                        <td style="padding: 8px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                     </tr>
                                 `).join('')}
+                                <tr style="border: 1px solid #000; background: #f9f9f9;">
+                                    <td colspan="5" style="padding: 10px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 13px;">Subtotal</td>
+                                    <td style="padding: 10px; border: 1px solid #000; text-align: right; font-weight: bold; color: #000; font-size: 13px;">₹${q.financials.subtotal.toLocaleString('en-IN')}</td>
+                                </tr>
+                                ${q.discount && q.discount.value > 0 ? `
+                                <tr style="border: 1px solid #000; background: #fff3cd;">
+                                    <td colspan="5" style="padding: 10px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 12px; color: #856404;">
+                                        Discount (${q.discount.type === 'percentage' ? q.discount.value + '%' : 'Fixed'})
+                                    </td>
+                                    <td style="padding: 10px; border: 1px solid #000; text-align: right; font-weight: bold; color: #856404; font-size: 12px;">- ₹${q.financials.discountAmount.toLocaleString('en-IN')}</td>
+                                </tr>
+                                ` : ''}
                                 <tr style="border: 1px solid #000; background: #f5f5f5;">
-                                    <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Total</td>
+                                    <td colspan="5" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Grand Total</td>
                                     <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${q.financials.grandTotal.toLocaleString('en-IN')}/-</td>
                                 </tr>
                             </tbody>
@@ -1652,28 +1672,30 @@ export const Quotations = {
                                 <strong style="color: #F57C00;">📝 Notes:</strong> ${func.notes.replace(/\n/g, '<br>')}
                             </div>
                             ` : ''}
-                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
+                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 11px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
                                 <thead>
                                     <tr style="background: #f5f5f5; border: 1px solid #000;">
-                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
-                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
-                                        <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
-                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
-                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #000; font-weight: bold; width: 40px;">Sr.</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #000; font-weight: bold;">Notes</th>
+                                        <th style="padding: 8px; text-align: center; border: 1px solid #000; font-weight: bold; width: 60px;">Qty</th>
+                                        <th style="padding: 8px; text-align: right; border: 1px solid #000; font-weight: bold; width: 80px;">Rate</th>
+                                        <th style="padding: 8px; text-align: right; border: 1px solid #000; font-weight: bold; width: 100px;">Price</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${(func.items || []).map((item, itemIdx) => `
                                         <tr style="border: 1px solid #000;">
-                                            <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
-                                            <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
-                                            <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
-                                            <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
-                                            <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                            <td style="padding: 8px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
+                                            <td style="padding: 8px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                            <td style="padding: 8px; border: 1px solid #000; color: #666; font-size: 10px;">${item.notes || '-'}</td>
+                                            <td style="padding: 8px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
+                                            <td style="padding: 8px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
+                                            <td style="padding: 8px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                         </tr>
                                     `).join('')}
                                     <tr style="border: 1px solid #000; background: #f5f5f5;">
-                                        <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
+                                        <td colspan="5" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
                                         <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
                                     </tr>
                                 </tbody>
@@ -1682,10 +1704,25 @@ export const Quotations = {
                     `).join('') : ''}
 
                     ${q.orderType === 'multifunction' && (q.functions || []).length > 0 ? `
-                        <div style="margin-top: 20px; padding: 15px; border: 2px solid #000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: right;">
-                            <div style="font-size: 18px; font-weight: bold; color: white;">
-                                GRAND TOTAL: ₹${q.financials.grandTotal.toLocaleString('en-IN')}/-
-                            </div>
+                        <div style="margin-top: 20px; border: 2px solid #000;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <tr style="background: #f9f9f9;">
+                                    <td style="padding: 12px; text-align: right; font-weight: bold;">Subtotal</td>
+                                    <td style="padding: 12px; text-align: right; font-weight: bold; width: 180px;">₹${q.financials.subtotal.toLocaleString('en-IN')}</td>
+                                </tr>
+                                ${q.discount && q.discount.value > 0 ? `
+                                <tr style="background: #fff3cd;">
+                                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #856404;">
+                                        Discount (${q.discount.type === 'percentage' ? q.discount.value + '%' : 'Fixed'})
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #856404;">- ₹${q.financials.discountAmount.toLocaleString('en-IN')}</td>
+                                </tr>
+                                ` : ''}
+                                <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; font-size: 16px; color: white;">GRAND TOTAL</td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; font-size: 18px; color: white;">₹${q.financials.grandTotal.toLocaleString('en-IN')}/-</td>
+                                </tr>
+                            </table>
                         </div>
                     ` : ''}
 
@@ -1710,28 +1747,30 @@ export const Quotations = {
                                         <strong style="color: #F57C00;">📝 Notes:</strong> ${func.notes.replace(/\n/g, '<br>')}
                                     </div>
                                     ` : ''}
-                                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
+                                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 11px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
                                         <thead>
                                             <tr style="background: #f5f5f5; border: 1px solid #000;">
-                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
-                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
-                                                <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
-                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
-                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                                <th style="padding: 8px; text-align: left; border: 1px solid #000; font-weight: bold; width: 40px;">Sr.</th>
+                                                <th style="padding: 8px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
+                                                <th style="padding: 8px; text-align: left; border: 1px solid #000; font-weight: bold;">Notes</th>
+                                                <th style="padding: 8px; text-align: center; border: 1px solid #000; font-weight: bold; width: 60px;">Qty</th>
+                                                <th style="padding: 8px; text-align: right; border: 1px solid #000; font-weight: bold; width: 80px;">Rate</th>
+                                                <th style="padding: 8px; text-align: right; border: 1px solid #000; font-weight: bold; width: 100px;">Price</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             ${(func.items || []).map((item, itemIdx) => `
                                                 <tr style="border: 1px solid #000;">
-                                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
-                                                    <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
-                                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
-                                                    <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
-                                                    <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                                    <td style="padding: 8px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
+                                                    <td style="padding: 8px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                    <td style="padding: 8px; border: 1px solid #000; color: #666; font-size: 10px;">${item.notes || '-'}</td>
+                                                    <td style="padding: 8px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
+                                                    <td style="padding: 8px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
+                                                    <td style="padding: 8px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
                                                 </tr>
                                             `).join('')}
                                             <tr style="border: 1px solid #000; background: #f5f5f5;">
-                                                <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
+                                                <td colspan="5" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
                                                 <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
                                             </tr>
                                         </tbody>
@@ -1746,10 +1785,25 @@ export const Quotations = {
                     `).join('') : ''}
 
                     ${q.orderType === 'multiday' && (q.days || []).length > 0 ? `
-                        <div style="margin-top: 20px; padding: 15px; border: 2px solid #000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: right;">
-                            <div style="font-size: 18px; font-weight: bold; color: white;">
-                                GRAND TOTAL: ₹${q.financials.grandTotal.toLocaleString('en-IN')}/-
-                            </div>
+                        <div style="margin-top: 20px; border: 2px solid #000;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <tr style="background: #f9f9f9;">
+                                    <td style="padding: 12px; text-align: right; font-weight: bold;">Subtotal</td>
+                                    <td style="padding: 12px; text-align: right; font-weight: bold; width: 180px;">₹${q.financials.subtotal.toLocaleString('en-IN')}</td>
+                                </tr>
+                                ${q.discount && q.discount.value > 0 ? `
+                                <tr style="background: #fff3cd;">
+                                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #856404;">
+                                        Discount (${q.discount.type === 'percentage' ? q.discount.value + '%' : 'Fixed'})
+                                    </td>
+                                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #856404;">- ₹${q.financials.discountAmount.toLocaleString('en-IN')}</td>
+                                </tr>
+                                ` : ''}
+                                <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; font-size: 16px; color: white;">GRAND TOTAL</td>
+                                    <td style="padding: 15px; text-align: right; font-weight: bold; font-size: 18px; color: white;">₹${q.financials.grandTotal.toLocaleString('en-IN')}/-</td>
+                                </tr>
+                            </table>
                         </div>
                     ` : ''}
                 </div>
