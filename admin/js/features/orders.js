@@ -453,6 +453,201 @@ export const Orders = {
             }
             return false;
         });
+    },
+
+    // ============ FORM MANAGEMENT ============
+
+    clearForm(oms, skipConfirmation = false) {
+        oms.editingOrderId = null;
+        oms.editingDocId = null;
+
+        if (!skipConfirmation && oms.hasUnsavedChanges && oms.hasUnsavedChanges() && !confirm('Clear all data?')) {
+            return;
+        }
+
+        const orderForm = document.getElementById('orderForm');
+        if (orderForm) orderForm.reset();
+
+        oms.currentOrderItems = [];
+        if (typeof oms.updateOrderItemsTable === 'function') {
+            oms.updateOrderItemsTable();
+        }
+
+        const originalOrdersContainer = document.getElementById('originalOrdersContainer');
+        if (originalOrdersContainer) {
+            originalOrdersContainer.innerHTML = '';
+        }
+
+        this.refreshOrderId(oms);
+        Utils.set('orderDate', Utils.toDateString(new Date()));
+
+        const customTransportGroup = document.getElementById('customTransportGroup');
+        const customTransport2Group = document.getElementById('customTransport2Group');
+        if (customTransportGroup) customTransportGroup.classList.add('hidden');
+        if (customTransport2Group) customTransport2Group.classList.add('hidden');
+
+        window.selectedPlaceData = null;
+
+        if (window.dayFunctionsData) {
+            window.dayFunctionsData = {};
+        }
+
+        Utils.set('eventTypeSelect', 'single');
+        const singleDayFields = document.getElementById('singleDayFields');
+        const multiDayFields = document.getElementById('multiDayFields');
+        if (singleDayFields) singleDayFields.style.display = 'grid';
+        if (multiDayFields) multiDayFields.style.display = 'none';
+
+        const eventTypeSelect = document.getElementById('eventTypeSelect');
+        if (eventTypeSelect) {
+            const event = new Event('change');
+            eventTypeSelect.dispatchEvent(event);
+        }
+
+        const multiDayContainer = document.getElementById('multiDayContainer');
+        if (multiDayContainer) {
+            multiDayContainer.innerHTML = '';
+        }
+
+        const functionsContainer = document.getElementById('functionsContainer');
+        if (functionsContainer) {
+            functionsContainer.innerHTML = '';
+        }
+
+        const dayWiseFunctions = document.getElementById('dayWiseFunctions');
+        if (dayWiseFunctions) {
+            dayWiseFunctions.style.display = 'none';
+        }
+
+        if (typeof oms.showToast === 'function') {
+            oms.showToast('Form cleared');
+        }
+    },
+
+    duplicateOrder(oms, identifier) {
+        const order = oms.data.orders.find(o =>
+            o.orderId === identifier || o.docId === identifier
+        );
+
+        if (!order) {
+            oms.showToast('Order not found', 'error');
+            return;
+        }
+
+        if (confirm(`Duplicate order for "${order.clientName}"?\n\nThis will create a new order with the same details.`)) {
+            oms.editingOrderId = null;
+            oms.editingDocId = null;
+
+            Object.entries({
+                orderId: '',
+                clientName: order.clientName,
+                contact: order.contact,
+                venue: order.venue,
+                orderDate: Utils.toDateString(new Date()),
+                readyTime: order.readyTime,
+                eventType: order.eventType,
+                transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
+                customTransport: !['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : '',
+                driverName: order.driverName || '',
+                operator: order.operator || '',
+                helper: order.helper || '',
+                orderStatus: 'Pending',
+                orderNotes: order.notes ? `[DUPLICATED] ${order.notes}` : '[DUPLICATED ORDER]'
+            }).forEach(([key, value]) => Utils.set(key, value));
+
+            oms.currentOrderItems = order.items ? order.items.map(item => ({...item})) : [];
+            if (typeof oms.updateOrderItemsTable === 'function') {
+                oms.updateOrderItemsTable();
+            }
+
+            if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
+                const customTransportGroup = document.getElementById('customTransportGroup');
+                if (customTransportGroup) customTransportGroup.classList.remove('hidden');
+            }
+
+            if (typeof oms.switchTab === 'function') {
+                oms.switchTab('orders');
+            }
+            oms.showToast(`✅ Order duplicated! Review and save.`, 'success');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    },
+
+    // ============ INVENTORY INTEGRATION ============
+
+    deductInventory(oms, items, orderId) {
+        if (!items || items.length === 0) return;
+
+        items.forEach(orderItem => {
+            const inventoryItem = oms.data.inventory.items.find(i =>
+                i.name.toLowerCase() === orderItem.name.toLowerCase()
+            );
+
+            if (inventoryItem) {
+                const previousQty = inventoryItem.quantity;
+                inventoryItem.quantity -= orderItem.quantity;
+
+                console.log(`📦 Deducted ${orderItem.quantity} ${orderItem.name} from inventory (${previousQty} → ${inventoryItem.quantity})`);
+
+                if (inventoryItem.quantity <= oms.data.settings.lowStockThreshold) {
+                    oms.showToast(`⚠️ LOW STOCK: ${inventoryItem.name} (${inventoryItem.quantity} left)`, 'warning');
+                }
+
+                if (inventoryItem.quantity < 0) {
+                    oms.showToast(`🚨 CRITICAL: ${inventoryItem.name} stock is NEGATIVE!`, 'error');
+                }
+            }
+        });
+
+        if (typeof oms.saveToStorage === 'function') {
+            oms.saveToStorage();
+        }
+    },
+
+    async recordItemHistory(oms, items, orderData, specificDate = null, functionType = null) {
+        if (!items || items.length === 0) return;
+
+        console.log(`📜 Recording item history for order ${orderData.orderId}`);
+
+        const usedAt = new Date().toISOString();
+        const eventDate = specificDate || orderData.date || orderData.startDate;
+
+        for (const item of items) {
+            const historyRecord = {
+                itemName: item.name,
+                quantity: item.quantity,
+                orderId: orderData.orderId,
+                clientName: orderData.clientName,
+                venue: orderData.venue,
+                eventDate: eventDate,
+                functionType: functionType || orderData.eventType || '',
+                usedAt: usedAt,
+                remarks: item.remarks || ''
+            };
+
+            oms.data.itemHistory.push(historyRecord);
+
+            try {
+                await db.collection('itemHistory').add(historyRecord);
+                console.log(`✅ Saved item history: ${item.name} x${item.quantity} for order ${orderData.orderId}`);
+            } catch (error) {
+                console.error('❌ Error saving item history to Firestore:', error);
+            }
+        }
+
+        if (typeof oms.saveToStorage === 'function') {
+            oms.saveToStorage();
+        }
+    },
+
+    convertToQuotationDateFormat(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateStr;
     }
 };
 
