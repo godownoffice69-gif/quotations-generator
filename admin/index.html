@@ -8997,9 +8997,9 @@ convertToQuotationDateFormat(dateStr) {
                     }
 
                     if (tabName === 'dashboard') this.renderDashboard();
-                    else if (tabName === 'inventory') this.renderInventory();
-                    else if (tabName === 'productPhotos') this.renderProductPhotos();
-                    else if (tabName === 'itemHistory') this.renderItemHistory();
+                    else if (tabName === 'inventory') Inventory.renderInventory(this);
+                    else if (tabName === 'productPhotos') Inventory.renderProductPhotos(this);
+                    else if (tabName === 'itemHistory') Inventory.renderItemHistory(this);
                     else if (tabName === 'preparation') this.renderPreparation();
                     else if (tabName === 'customers') this.renderCustomers();
                     else if (tabName === 'quotations') Quotations.renderQuotations(this);
@@ -15661,7 +15661,7 @@ loadDemoData() {
 
 updateAllDisplays() {
         if (this.currentTab === 'dashboard') this.renderDashboard();
-        else if (this.currentTab === 'inventory') this.updateInventoryDisplay();
+        else if (this.currentTab === 'inventory') Inventory.updateInventoryDisplay(this);
         else if (this.currentTab === 'customers') this.renderCustomers();
         else if (this.currentTab === 'calendar') this.renderCalendarTab();
         else if (this.currentTab === 'history') this.renderHistory();
@@ -17968,8 +17968,9 @@ if (diffDays > 30) {
                 const { Conversion } = await import(`./js/features/conversion.js?v=${BUILD_TIMESTAMP}`);
                 const { Orders } = await import(`./js/features/orders.js?v=${BUILD_TIMESTAMP}`);
                 const { Quotations } = await import(`./js/features/quotations.js?v=${BUILD_TIMESTAMP}`);
+                const { Inventory } = await import(`./js/features/inventory.js?v=${BUILD_TIMESTAMP}`);
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
