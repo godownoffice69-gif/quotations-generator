@@ -4747,9 +4747,9 @@ const OMS = {
                 document.addEventListener('keydown', (e) => {
                     if (e.ctrlKey || e.metaKey) {
                         const shortcuts = {
-                            's': () => { e.preventDefault(); this.saveOrder(); },
-                            'n': () => { e.preventDefault(); this.switchTab('orders'); this.clearForm(); },
-                            'd': () => { e.preventDefault(); this.clearForm(); },
+                            's': () => { e.preventDefault(); Orders.saveOrder(this); },
+                            'n': () => { e.preventDefault(); this.switchTab('orders'); Orders.clearForm(this); },
+                            'd': () => { e.preventDefault(); Orders.clearForm(this); },
                             'k': () => { e.preventDefault(); document.getElementById('globalSearch').focus(); },
                             '/': () => { e.preventDefault(); this.showShortcuts(); },
                             'z': () => { e.preventDefault(); this.undo(); }
@@ -5393,7 +5393,7 @@ async editItem(type, id) {
                         console.log('✅ Found order:', order ? order.orderId + ' - ' + order.clientName : 'NOT FOUND');
                         if (!order) return;
                         this.switchTab('orders');
-                        this.loadOrderToForm(order);
+                        Orders.loadOrderToForm(this, order);
                     },
                     task: () => {
                         const task = this.data.tasks.find(t => t.id === id);
@@ -5878,7 +5878,7 @@ if (localIndex !== -1) {
         this.showToast(`Order upgraded: ${oldOrderId || '[No ID]'} → ${finalOrderId} ✅`);
 
         // Auto-clear form after upgrade
-        this.clearForm(true);
+        Orders.clearForm(this, true);
     } else {
         // Same status - just update existing doc
         await db.collection('orders').doc(docId).update(firestoreData);
@@ -5923,7 +5923,7 @@ if (localIndex !== -1) {
         this.showToast('Order updated! ✏️');
 
         // Auto-clear form after update
-        this.clearForm(true);
+        Orders.clearForm(this, true);
     }
 
     // Save new custom events to the list
@@ -6012,7 +6012,7 @@ if (!localExists) {
                 this.showToast(`Order ${displayId} saved to Firestore! 🆕`);
 
                 // Auto-clear form after save
-                this.clearForm(true);
+                Orders.clearForm(this, true);
                 this.refreshOrderId();
 
                 // Save new custom events to the list
@@ -6819,7 +6819,7 @@ convertToQuotationDateFormat(dateStr) {
                     // Reload the current merged order
                     const currentOrder = this.data.orders.find(o => o.docId === this.editingDocId);
                     if (currentOrder) {
-                        this.loadOrderToForm(currentOrder);
+                        Orders.loadOrderToForm(this, currentOrder);
                     }
 
                 } catch (error) {
@@ -6949,7 +6949,7 @@ convertToQuotationDateFormat(dateStr) {
                 }
                 
                 const lastOrder = this.data.orders[this.data.orders.length - 1];
-                this.loadOrderToForm(lastOrder);
+                Orders.loadOrderToForm(this, lastOrder);
                 this.refreshOrderId();
                 this.showToast('Last order duplicated');
             },
@@ -7255,7 +7255,7 @@ convertToQuotationDateFormat(dateStr) {
                 console.log(`📅 Found ${filteredOrders.length} orders for ${date}:`, filteredOrders.map(o => o.orderId || o.clientName));
                 console.log(`💡 To rate this filter result, use: AdminUtils.rateLastFilter() in console`);
 
-                this.generateMultiOrderImage(filteredOrders, date);
+                Orders.generateMultiOrderImage(this, filteredOrders, date);
             },
 
             downloadOrderImage(orderId) {
@@ -7265,7 +7265,7 @@ convertToQuotationDateFormat(dateStr) {
                     this.showToast('Order not found', 'error');
                     return;
                 }
-                this.generateSingleOrderImage(order);
+                Orders.generateSingleOrderImage(this, order);
             },
 
             // ============ IMAGE GENERATION ============
@@ -7312,7 +7312,7 @@ convertToQuotationDateFormat(dateStr) {
                     template.style.width = paperDimensions.width + 'px';
                     template.style.paddingRight = '80px';
 
-                    template.innerHTML = this.buildOrderHTML(order, fontSize, colors, false, bgColor, textColor);
+                    template.innerHTML = Orders.buildOrderHTML(this, order, fontSize, colors, false, bgColor, textColor);
                     template.style.display = 'block';
 
                     // Increased wait time for mobile devices (they need more time for DOM to settle)
@@ -7522,7 +7522,7 @@ convertToQuotationDateFormat(dateStr) {
                     let grandTotalFlowerMachines = 0;
 
                     orders.forEach(order => {
-                        const requirements = this.calculateOrderRequirements(order);
+                        const requirements = Orders.calculateOrderRequirements(order);
                         console.log(`  → Order ${order.orderId} requirements:`, requirements);
                         grandTotalDryIce += requirements.dryIceNeeded;
                         grandTotalFlowers += requirements.flowersNeeded;
@@ -7621,7 +7621,7 @@ convertToQuotationDateFormat(dateStr) {
                     // Helper function to check if a single order fits on a page
                     // NOTE: We DON'T include the header here because maxHeight already accounts for it
                     const checkSingleOrderFits = async (order, maxHeight) => {
-                        const testHtml = this.buildOrderHTML(order, compactFontSize, colors, true, bgColor, textColor);
+                        const testHtml = Orders.buildOrderHTML(this, order, compactFontSize, colors, true, bgColor, textColor);
                         template.innerHTML = testHtml;
                         // Ensure template is visible for measurement (but hidden from user)
                         template.style.display = 'block';
@@ -7638,7 +7638,7 @@ convertToQuotationDateFormat(dateStr) {
                     const measureOrdersHeight = async (ordersList) => {
                         let testHtml = '';
                         ordersList.forEach((o, idx) => {
-                            testHtml += this.buildOrderHTML(o, compactFontSize, colors, true, bgColor, textColor);
+                            testHtml += Orders.buildOrderHTML(this, o, compactFontSize, colors, true, bgColor, textColor);
                             if (idx < ordersList.length - 1) {
                                 testHtml += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
                             }
@@ -7894,7 +7894,7 @@ convertToQuotationDateFormat(dateStr) {
                         }
 
                         pageOrders.forEach((order, i) => {
-                            html += this.buildOrderHTML(order, compactFontSize, colors, true, bgColor, textColor, globalOrderNum + i);
+                            html += Orders.buildOrderHTML(this, order, compactFontSize, colors, true, bgColor, textColor, globalOrderNum + i);
                             if (i < pageOrders.length - 1) {
                                 html += `<div style="margin: ${separatorHeight}px 0; border-top: 2px dashed #ddd;"></div>`;
                             }
@@ -8156,7 +8156,7 @@ convertToQuotationDateFormat(dateStr) {
                 const functionColor = this.data.settings.functionColor || '#667eea';
 
                 // Calculate requirements for this order
-                const requirements = this.calculateOrderRequirements(order);
+                const requirements = Orders.calculateOrderRequirements(order);
 
                 return `
                     <div style="margin-bottom: ${compact ? '25px' : '60px'}; ${compact ? 'border: 3px solid #CC8800; box-shadow: inset 0 0 0 3px #CC0000; padding: 15px;' : ''}; color: ${textColor}; background: ${bgColor};">
@@ -9922,7 +9922,7 @@ convertToQuotationDateFormat(dateStr) {
                 let totalFlowerMachines = 0;
 
                 ordersInRange.forEach(order => {
-                    const requirements = this.calculateOrderRequirements(order);
+                    const requirements = Orders.calculateOrderRequirements(order);
                     totalDryIce += requirements.dryIceNeeded;
                     totalFlowers += requirements.flowersNeeded;
                     totalElectricity += requirements.totalElectricityKV;
@@ -12625,7 +12625,7 @@ convertToQuotationDateFormat(dateStr) {
                 }
 
                 const selectedDate = dateInput.value;
-                const filteredOrders = this.filterOrdersByDate(selectedDate);
+                const filteredOrders = Orders.filterOrdersByDate(this, selectedDate);
 
                 if (filteredOrders.length === 0) {
                     previewDiv.style.display = 'none';
@@ -12643,7 +12643,7 @@ convertToQuotationDateFormat(dateStr) {
 
                 filteredOrders.forEach((order, index) => {
                     const orderNumber = index + 1;
-                    const message = this.generateWhatsAppSingleOrderMessage(order, orderNumber, selectedDate);
+                    const message = Orders.generateWhatsAppSingleOrderMessage(this, order, orderNumber, selectedDate);
 
                     // Create card for this order
                     const orderCard = document.createElement('div');
@@ -12677,7 +12677,7 @@ convertToQuotationDateFormat(dateStr) {
             copyOrderMessage(orderIndex) {
                 const order = this.whatsappCurrentOrders[orderIndex];
                 const orderNumber = orderIndex + 1;
-                const message = this.generateWhatsAppSingleOrderMessage(order, orderNumber, this.whatsappCurrentDate);
+                const message = Orders.generateWhatsAppSingleOrderMessage(this, order, orderNumber, this.whatsappCurrentDate);
 
                 // Copy to clipboard
                 navigator.clipboard.writeText(message).then(() => {
@@ -12691,7 +12691,7 @@ convertToQuotationDateFormat(dateStr) {
             sendSingleOrderWhatsApp(orderIndex) {
                 const order = this.whatsappCurrentOrders[orderIndex];
                 const orderNumber = orderIndex + 1;
-                const message = this.generateWhatsAppSingleOrderMessage(order, orderNumber, this.whatsappCurrentDate);
+                const message = Orders.generateWhatsAppSingleOrderMessage(this, order, orderNumber, this.whatsappCurrentDate);
 
                 // Encode and open WhatsApp
                 const encodedMessage = encodeURIComponent(message);
@@ -12863,7 +12863,7 @@ convertToQuotationDateFormat(dateStr) {
                                             // Switch to orders tab
                                             this.switchTab('orders');
                                             // Load order into form for editing
-                                            this.loadOrderToForm(order);
+                                            Orders.loadOrderToForm(this, order);
                                             // Clear search
                                             searchInput.value = '';
                                             searchResults.style.display = 'none';
@@ -15602,7 +15602,7 @@ updateAllDisplays() {
         }
 
         if (confirm(`Mark "${order.clientName}" order as completed?\n\nIMPORTANT: You'll need to provide an FP ID!`)) {
-            this.loadOrderToForm(order);
+            Orders.loadOrderToForm(this, order);
             document.getElementById('orderStatus').value = 'Completed';
             this.switchTab('orders');
             this.showToast('Please enter FP ID and save the order', 'info');
@@ -17824,8 +17824,9 @@ if (diffDays > 30) {
                 const { PackageManager } = await import(`./js/packages/package-manager.js?v=${BUILD_TIMESTAMP}`);
                 const { LeadsManager } = await import(`./js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
                 const { Conversion } = await import(`./js/features/conversion.js?v=${BUILD_TIMESTAMP}`);
+                const { Orders } = await import(`./js/features/orders.js?v=${BUILD_TIMESTAMP}`);
 
-                console.log('✅ Package and Lead managers imported successfully');
+                console.log('✅ Package, Lead managers, and Orders module imported successfully');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
