@@ -453,6 +453,514 @@ export const Orders = {
             }
             return false;
         });
+    },
+
+    // ============ CRUD OPERATIONS ============
+
+    async saveOrder(oms) {
+        const eventType = Utils.get('eventTypeSelect');
+        const isMultiDay = eventType === 'multi';
+
+        let requiredFields = ['clientName', 'orderStatus'];
+
+        if (isMultiDay) {
+            requiredFields.push('startDate', 'endDate');
+        } else {
+            requiredFields.push('orderDate');
+        }
+
+        const errors = Utils.validateRequired(requiredFields);
+        if (errors.length > 0) {
+            oms.showToast('Please fill all required fields', 'error');
+            return;
+        }
+
+        const orderData = this.collectFormData(oms);
+        const status = orderData.status.toLowerCase();
+        const manualOrderId = Utils.get('orderId').trim();
+
+        let finalOrderId;
+
+        if (status === 'completed') {
+            if (manualOrderId && manualOrderId.startsWith('FP')) {
+                finalOrderId = manualOrderId;
+                console.log('✅ Using manual FP ID:', finalOrderId);
+            } else {
+                oms.showToast('⚠️ Completed orders require a manual FP ID (e.g., FP001)', 'error');
+                return;
+            }
+        } else {
+            finalOrderId = '';
+            console.log('⏳ Order saved without ID (status: ' + status + ')');
+        }
+
+        orderData.orderId = finalOrderId;
+
+        try {
+            console.log('💾 Saving order:', orderData.orderId);
+
+            let existingSnapshot;
+
+            if (oms.editingOrderId || oms.editingDocId) {
+                if (oms.editingDocId) {
+                    const doc = await db.collection('orders').doc(oms.editingDocId).get();
+                    existingSnapshot = doc.exists ? { empty: false, docs: [doc] } : { empty: true };
+                    console.log('✏️ Editing existing order by docId:', oms.editingDocId);
+                } else {
+                    existingSnapshot = await db.collection('orders')
+                        .where('orderId', '==', oms.editingOrderId)
+                        .get();
+                    console.log('✏️ Editing existing order:', oms.editingOrderId);
+                }
+            } else if (finalOrderId) {
+                existingSnapshot = await db.collection('orders')
+                    .where('orderId', '==', finalOrderId)
+                    .get();
+            } else {
+                existingSnapshot = { empty: true };
+            }
+
+            const totalAmount = orderData.isMultiDay
+                ? (orderData.dayWiseData || []).reduce((sum, day) => {
+                    const dayTotal = (day.functions || []).reduce((daySum, func) => {
+                        const funcTotal = (func.items || []).reduce((itemSum, item) => {
+                            return itemSum + ((item.price || 0) * (item.quantity || 0));
+                        }, 0);
+                        return daySum + funcTotal;
+                    }, 0);
+                    return sum + dayTotal;
+                }, 0)
+                : (orderData.items || []).reduce((sum, item) => {
+                    return sum + ((item.price || 0) * (item.quantity || 0));
+                }, 0);
+
+            console.log('💰 Calculated total amount:', totalAmount);
+
+            let weatherData = null;
+            try {
+                const weatherApiKey = oms.data.settings?.weatherApiKey || '';
+                const defaultCity = oms.data.settings?.defaultCity || 'Delhi';
+                weatherData = await Utils.getWeather(defaultCity, weatherApiKey);
+                console.log('🌤️ Weather data fetched:', weatherData);
+            } catch (error) {
+                console.warn('⚠️ Could not fetch weather data:', error);
+            }
+
+            orderData.weather = weatherData;
+
+            const firestoreData = {
+                orderId: finalOrderId,
+                isMultiDay: orderData.isMultiDay || false,
+                startDate: orderData.startDate || null,
+                endDate: orderData.endDate || null,
+                dayWiseData: orderData.dayWiseData || [],
+                customer: {
+                    name: orderData.clientName,
+                    phone: orderData.contact,
+                    venue: orderData.venue,
+                    dates: orderData.isMultiDay
+                        ? `${Utils.formatDate(orderData.startDate)} to ${Utils.formatDate(orderData.endDate)}`
+                        : this.convertToQuotationDateFormat(orderData.date),
+                    timeSlot: orderData.readyTime || '',
+                    functionType: orderData.eventType || '',
+                    location: ''
+                },
+                functionType: orderData.eventType || '',
+                items: orderData.isMultiDay ? [] : (orderData.items || []).map(item => ({
+                    name: item.name,
+                    qty: item.quantity,
+                    desc: item.remarks || '',
+                    price: item.price || 0
+                })),
+                totalAmount: totalAmount,
+                clientName: orderData.clientName,
+                contact: orderData.contact,
+                venue: orderData.venue,
+                venueMapLink: orderData.venueMapLink || null,
+                venueLocation: orderData.venueLocation || null,
+                date: orderData.date || '',
+                readyTime: orderData.readyTime || '',
+                eventType: orderData.eventType || '',
+                transport: orderData.transport || '',
+                driverName: orderData.driverName || '',
+                transport2: orderData.transport2 || '',
+                driverName2: orderData.driverName2 || '',
+                operator: orderData.operator || '',
+                helper: orderData.helper || '',
+                status: orderData.status.toLowerCase(),
+                notes: orderData.notes || '',
+                weather: weatherData,
+                createdAt: orderData.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            if (!existingSnapshot.empty) {
+                const docId = existingSnapshot.docs[0].id;
+                const oldData = existingSnapshot.docs[0].data();
+                const oldOrderId = oldData.orderId || '';
+
+                console.log('✏️ Updating order, old ID:', oldOrderId || '[blank]', 'new ID:', finalOrderId || '[blank]');
+
+                if (oldOrderId !== finalOrderId && finalOrderId) {
+                    console.log('🔄 Status upgraded - assigning FP ID to order');
+
+                    await db.collection('orders').doc(docId).delete();
+                    console.log('🗑️ Deleted old doc (ID: ' + (oldOrderId || docId) + ')');
+
+                    await db.collection('orders').doc(finalOrderId).set(firestoreData);
+                    console.log('✅ Created new doc with FP ID:', finalOrderId);
+                    orderData.docId = finalOrderId;
+
+                    const completeOrderData = {
+                        ...orderData,
+                        isMultiDay: orderData.isMultiDay || false,
+                        startDate: orderData.startDate || null,
+                        endDate: orderData.endDate || null,
+                        dayWiseData: orderData.dayWiseData || [],
+                        totalAmount: totalAmount
+                    };
+
+                    const localIndex = oms.data.orders.findIndex(o =>
+                        (o.orderId && o.orderId === oldOrderId) ||
+                        (o.docId && o.docId === docId)
+                    );
+                    if (localIndex !== -1) {
+                        oms.data.orders[localIndex] = completeOrderData;
+                    }
+
+                    oms.showToast(`Order upgraded: ${oldOrderId || '[No ID]'} → ${finalOrderId} ✅`);
+                    this.clearForm(oms, true);
+                } else {
+                    await db.collection('orders').doc(docId).update(firestoreData);
+                    console.log('✅ Updated order:', finalOrderId || docId);
+                    orderData.docId = docId;
+
+                    const completeOrderData = {
+                        ...orderData,
+                        isMultiDay: orderData.isMultiDay || false,
+                        startDate: orderData.startDate || null,
+                        endDate: orderData.endDate || null,
+                        dayWiseData: orderData.dayWiseData || [],
+                        totalAmount: totalAmount
+                    };
+
+                    const localIndex = oms.data.orders.findIndex(o =>
+                        (o.orderId && o.orderId === finalOrderId) ||
+                        (o.docId && o.docId === docId)
+                    );
+                    if (localIndex !== -1) {
+                        oms.data.orders[localIndex] = completeOrderData;
+                    }
+
+                    if (status === 'completed') {
+                        if (orderData.items && orderData.items.length > 0) {
+                            this.recordItemHistory(oms, orderData.items, orderData);
+                        }
+
+                        if (orderData.isMultiDay && orderData.dayWiseData) {
+                            orderData.dayWiseData.forEach(day => {
+                                day.functions.forEach(func => {
+                                    if (func.items && func.items.length > 0) {
+                                        this.recordItemHistory(oms, func.items, orderData, day.date, func.functionType);
+                                    }
+                                });
+                            });
+                        }
+                    }
+
+                    oms.showToast('Order updated! ✏️');
+                    this.clearForm(oms, true);
+                }
+
+                await this.addCustomEventsToList(oms, orderData);
+
+                oms.editingOrderId = null;
+                oms.editingDocId = null;
+
+            } else {
+                console.log('🆕 Creating new order');
+
+                console.log('💾 Saving to Firestore - venue data:', {
+                    venue: firestoreData.venue,
+                    venueLocation: firestoreData.venueLocation,
+                    venueMapLink: firestoreData.venueMapLink
+                });
+
+                let docRef;
+                if (finalOrderId) {
+                    docRef = await db.collection('orders').doc(finalOrderId).set(firestoreData);
+                    orderData.docId = finalOrderId;
+                    console.log('✅ Saved with FP ID:', finalOrderId);
+                } else {
+                    docRef = await db.collection('orders').add(firestoreData);
+                    orderData.docId = docRef.id;
+                    console.log('✅ Saved with auto ID:', docRef.id);
+                }
+
+                console.log('✅ venueLocation saved:', !!firestoreData.venueLocation, firestoreData.venueLocation);
+                console.log('✅ venueMapLink saved:', !!firestoreData.venueMapLink, firestoreData.venueMapLink);
+
+                const completeOrderData = {
+                    ...orderData,
+                    isMultiDay: orderData.isMultiDay || false,
+                    startDate: orderData.startDate || null,
+                    endDate: orderData.endDate || null,
+                    dayWiseData: orderData.dayWiseData || [],
+                    totalAmount: totalAmount
+                };
+
+                const localExists = oms.data.orders.some(o =>
+                    (o.orderId && o.orderId === finalOrderId) ||
+                    (o.docId && o.docId === orderData.docId)
+                );
+                if (!localExists) {
+                    oms.data.orders.push(completeOrderData);
+                    console.log('✅ Order added to local array with totalAmount:', totalAmount);
+                }
+
+                const displayId = finalOrderId || `[${status.toUpperCase()}]`;
+
+                if (status === 'completed') {
+                    if (orderData.items && orderData.items.length > 0) {
+                        this.deductInventory(oms, orderData.items, orderData.orderId);
+                        this.recordItemHistory(oms, orderData.items, orderData);
+                    }
+
+                    if (orderData.isMultiDay && orderData.dayWiseData) {
+                        orderData.dayWiseData.forEach(day => {
+                            day.functions.forEach(func => {
+                                if (func.items && func.items.length > 0) {
+                                    this.recordItemHistory(oms, func.items, orderData, day.date, func.functionType);
+                                }
+                            });
+                        });
+                    }
+                }
+
+                if (typeof oms.addAuditEntry === 'function') {
+                    oms.addAuditEntry(orderData.orderId || orderData.docId, {
+                        action: 'created',
+                        user: (await oms.getCurrentUser())?.name || 'Admin',
+                        timestamp: new Date().toISOString(),
+                        details: `Order created with status: ${status}`
+                    });
+                }
+
+                oms.showToast(`Order ${displayId} saved to Firestore! 🆕`);
+
+                this.clearForm(oms, true);
+                this.refreshOrderId(oms);
+
+                await this.addCustomEventsToList(oms, orderData);
+
+                if (typeof oms.saveToStorage === 'function') {
+                    oms.saveToStorage();
+                }
+                if (typeof oms.updateAllDisplays === 'function') {
+                    oms.updateAllDisplays();
+                }
+                localStorage.removeItem('oms_draft');
+            }
+
+        } catch (error) {
+            console.error('❌ Error saving to Firestore:', error);
+            oms.showToast('Error saving order: ' + error.message, 'error');
+        }
+    },
+
+    // ============ FORM MANAGEMENT ============
+
+    clearForm(oms, skipConfirmation = false) {
+        oms.editingOrderId = null;
+        oms.editingDocId = null;
+
+        if (!skipConfirmation && oms.hasUnsavedChanges && oms.hasUnsavedChanges() && !confirm('Clear all data?')) {
+            return;
+        }
+
+        const orderForm = document.getElementById('orderForm');
+        if (orderForm) orderForm.reset();
+
+        oms.currentOrderItems = [];
+        if (typeof oms.updateOrderItemsTable === 'function') {
+            oms.updateOrderItemsTable();
+        }
+
+        const originalOrdersContainer = document.getElementById('originalOrdersContainer');
+        if (originalOrdersContainer) {
+            originalOrdersContainer.innerHTML = '';
+        }
+
+        this.refreshOrderId(oms);
+        Utils.set('orderDate', Utils.toDateString(new Date()));
+
+        const customTransportGroup = document.getElementById('customTransportGroup');
+        const customTransport2Group = document.getElementById('customTransport2Group');
+        if (customTransportGroup) customTransportGroup.classList.add('hidden');
+        if (customTransport2Group) customTransport2Group.classList.add('hidden');
+
+        window.selectedPlaceData = null;
+
+        if (window.dayFunctionsData) {
+            window.dayFunctionsData = {};
+        }
+
+        Utils.set('eventTypeSelect', 'single');
+        const singleDayFields = document.getElementById('singleDayFields');
+        const multiDayFields = document.getElementById('multiDayFields');
+        if (singleDayFields) singleDayFields.style.display = 'grid';
+        if (multiDayFields) multiDayFields.style.display = 'none';
+
+        const eventTypeSelect = document.getElementById('eventTypeSelect');
+        if (eventTypeSelect) {
+            const event = new Event('change');
+            eventTypeSelect.dispatchEvent(event);
+        }
+
+        const multiDayContainer = document.getElementById('multiDayContainer');
+        if (multiDayContainer) {
+            multiDayContainer.innerHTML = '';
+        }
+
+        const functionsContainer = document.getElementById('functionsContainer');
+        if (functionsContainer) {
+            functionsContainer.innerHTML = '';
+        }
+
+        const dayWiseFunctions = document.getElementById('dayWiseFunctions');
+        if (dayWiseFunctions) {
+            dayWiseFunctions.style.display = 'none';
+        }
+
+        if (typeof oms.showToast === 'function') {
+            oms.showToast('Form cleared');
+        }
+    },
+
+    duplicateOrder(oms, identifier) {
+        const order = oms.data.orders.find(o =>
+            o.orderId === identifier || o.docId === identifier
+        );
+
+        if (!order) {
+            oms.showToast('Order not found', 'error');
+            return;
+        }
+
+        if (confirm(`Duplicate order for "${order.clientName}"?\n\nThis will create a new order with the same details.`)) {
+            oms.editingOrderId = null;
+            oms.editingDocId = null;
+
+            Object.entries({
+                orderId: '',
+                clientName: order.clientName,
+                contact: order.contact,
+                venue: order.venue,
+                orderDate: Utils.toDateString(new Date()),
+                readyTime: order.readyTime,
+                eventType: order.eventType,
+                transport: ['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : 'Other',
+                customTransport: !['Bolero', 'Isuzu', 'Porter'].includes(order.transport) ? order.transport : '',
+                driverName: order.driverName || '',
+                operator: order.operator || '',
+                helper: order.helper || '',
+                orderStatus: 'Pending',
+                orderNotes: order.notes ? `[DUPLICATED] ${order.notes}` : '[DUPLICATED ORDER]'
+            }).forEach(([key, value]) => Utils.set(key, value));
+
+            oms.currentOrderItems = order.items ? order.items.map(item => ({...item})) : [];
+            if (typeof oms.updateOrderItemsTable === 'function') {
+                oms.updateOrderItemsTable();
+            }
+
+            if (!['Bolero', 'Isuzu', 'Porter'].includes(order.transport)) {
+                const customTransportGroup = document.getElementById('customTransportGroup');
+                if (customTransportGroup) customTransportGroup.classList.remove('hidden');
+            }
+
+            if (typeof oms.switchTab === 'function') {
+                oms.switchTab('orders');
+            }
+            oms.showToast(`✅ Order duplicated! Review and save.`, 'success');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    },
+
+    // ============ INVENTORY INTEGRATION ============
+
+    deductInventory(oms, items, orderId) {
+        if (!items || items.length === 0) return;
+
+        items.forEach(orderItem => {
+            const inventoryItem = oms.data.inventory.items.find(i =>
+                i.name.toLowerCase() === orderItem.name.toLowerCase()
+            );
+
+            if (inventoryItem) {
+                const previousQty = inventoryItem.quantity;
+                inventoryItem.quantity -= orderItem.quantity;
+
+                console.log(`📦 Deducted ${orderItem.quantity} ${orderItem.name} from inventory (${previousQty} → ${inventoryItem.quantity})`);
+
+                if (inventoryItem.quantity <= oms.data.settings.lowStockThreshold) {
+                    oms.showToast(`⚠️ LOW STOCK: ${inventoryItem.name} (${inventoryItem.quantity} left)`, 'warning');
+                }
+
+                if (inventoryItem.quantity < 0) {
+                    oms.showToast(`🚨 CRITICAL: ${inventoryItem.name} stock is NEGATIVE!`, 'error');
+                }
+            }
+        });
+
+        if (typeof oms.saveToStorage === 'function') {
+            oms.saveToStorage();
+        }
+    },
+
+    async recordItemHistory(oms, items, orderData, specificDate = null, functionType = null) {
+        if (!items || items.length === 0) return;
+
+        console.log(`📜 Recording item history for order ${orderData.orderId}`);
+
+        const usedAt = new Date().toISOString();
+        const eventDate = specificDate || orderData.date || orderData.startDate;
+
+        for (const item of items) {
+            const historyRecord = {
+                itemName: item.name,
+                quantity: item.quantity,
+                orderId: orderData.orderId,
+                clientName: orderData.clientName,
+                venue: orderData.venue,
+                eventDate: eventDate,
+                functionType: functionType || orderData.eventType || '',
+                usedAt: usedAt,
+                remarks: item.remarks || ''
+            };
+
+            oms.data.itemHistory.push(historyRecord);
+
+            try {
+                await db.collection('itemHistory').add(historyRecord);
+                console.log(`✅ Saved item history: ${item.name} x${item.quantity} for order ${orderData.orderId}`);
+            } catch (error) {
+                console.error('❌ Error saving item history to Firestore:', error);
+            }
+        }
+
+        if (typeof oms.saveToStorage === 'function') {
+            oms.saveToStorage();
+        }
+    },
+
+    convertToQuotationDateFormat(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateStr;
     }
 };
 
