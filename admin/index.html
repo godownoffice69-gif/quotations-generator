@@ -9845,6 +9845,17 @@ convertToQuotationDateFormat(dateStr) {
                 return items;
             },
 
+            // Quick forecast wrapper function used by Preparation module
+            quickForecast(period) {
+                // Lazy load preparation module if not already loaded
+                if (window.Preparation && typeof window.Preparation.quickForecast === 'function') {
+                    window.Preparation.quickForecast(this, period);
+                } else {
+                    console.error('Preparation module not loaded yet');
+                    this.showToast('Loading preparation module, please try again', 'warning');
+                }
+            },
+
             renderCustomers() {
                 const container = document.getElementById('customers');
                 container.innerHTML = `
