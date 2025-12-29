@@ -9021,79 +9021,12 @@ convertToQuotationDateFormat(dateStr) {
 
             // ============ TAB RENDERERS ============
             renderDashboard() {
-                // Filter out merged orders (original orders that were merged into another order)
-                const activeOrders = this.data.orders.filter(o => !o.isMerged);
-                const todayDate = Utils.toDateString(new Date());
-
-                const stats = [
-                    { label: this.t('totalOrders'), value: activeOrders.length, class: '' },
-                    { label: this.t('confirmedOrders'), value: activeOrders.filter(o => o.status && o.status.toLowerCase() === 'confirmed').length, class: 'success' },
-                    { label: this.t('completedOrders'), value: activeOrders.filter(o => o.status && o.status.toLowerCase() === 'completed').length, class: 'info' },
-                    { label: this.t('customers'), value: this.data.customers.length, class: '' },
-                    { label: this.t('lowStock'), value: this.data.inventory.items.filter(i => i.quantity <= this.data.settings.lowStockThreshold).length, class: 'warning' },
-                    { label: this.t('today'), value: activeOrders.filter(o => {
-                        // For single day orders, check date field
-                        if (!o.isMultiDay && o.date === todayDate) return true;
-                        // For multiday orders, check if today falls within the date range
-                        if (o.isMultiDay && o.startDate && o.endDate) {
-                            return todayDate >= o.startDate && todayDate <= o.endDate;
-                        }
-                        return false;
-                    }).length, class: 'danger' }
-                ];
-
-                document.getElementById('dashboardStats').innerHTML = stats.map(s => `
-                    <div class="stat-card ${s.class}">
-                        <div class="stat-value">${s.value}</div>
-                        <div class="stat-label">${s.label}</div>
-                    </div>
-                `).join('');
-
-                // Render all analytics charts
-                this.renderAnalyticsCharts();
-
-                // Show recent orders (excluding merged orders)
-                const recentOrders = activeOrders.slice(-5).reverse();
-                this.renderTable('recentOrdersContainer', [
-                    { key: 'orderId', label: this.t('orderId'), render: o => `<span class="order-id-highlight">${o.orderId}</span>` },
-                    { key: 'clientName', label: this.t('client') },
-                    { key: 'eventType', label: this.t('event'), render: o => o.eventType || this.t('na') },
-                    { key: 'date', label: this.t('date'), render: o => {
-                        if (o.isMultiDay) {
-                            return `${Utils.formatDate(o.startDate)} ${this.t('to')} ${Utils.formatDate(o.endDate)}`;
-                        }
-                        return Utils.formatDate(o.date);
-                    }},
-                    { key: 'status', label: this.t('status'), render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span>` }
-                ], recentOrders, (row) => `
-                    <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.docId || row.orderId}">${this.t('view')}</button>
-                    <button class="btn btn-info btn-small" onclick="OMS.duplicateOrder('${row.docId || row.orderId}')">📋 ${this.t('duplicate')}</button>
-                    <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
-                `);
-
-                // Top 10 customers
-                if (this.data.customers.length > 0) {
-                    // Sort customers by total orders (descending) and take top 10
-                    const topCustomers = [...this.data.customers]
-                        .sort((a, b) => b.totalOrders - a.totalOrders)
-                        .slice(0, 10);
-
-                    document.getElementById('topCustomerInfo').innerHTML = `
-                        <div style="background: var(--light); padding: 1rem; border-radius: var(--radius);">
-                            ${topCustomers.map((customer, index) => `
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; ${index < topCustomers.length - 1 ? 'border-bottom: 1px solid #e0e0e0;' : ''}">
-                                    <div style="flex: 1;">
-                                        <strong>${index + 1}. ${customer.name}</strong><br>
-                                        <span style="font-size: 0.875rem; color: var(--text-gray);">${customer.contact}</span>
-                                    </div>
-                                    <div style="text-align: right;">
-                                        <strong style="color: var(--primary); font-size: 1.125rem;">${customer.totalOrders}</strong>
-                                        <span style="font-size: 0.875rem; color: var(--text-gray); display: block;">${this.t('ordersText')}</span>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
+                // Wrapper function - delegates to Dashboard module if loaded
+                if (window.Dashboard && typeof window.Dashboard.render === 'function') {
+                    window.Dashboard.render(this);
+                } else {
+                    // Module not loaded yet - skip or show placeholder
+                    console.log('Dashboard module not loaded yet');
                 }
             },
 
@@ -10012,32 +9945,13 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             renderCustomers() {
-                const container = document.getElementById('customers');
-                container.innerHTML = `
-                    <div class="card">
-                        <div class="card-header">
-                            <h2 class="card-title">${this.t('customers')}</h2>
-                        </div>
-                        <div class="form-row">
-                            <input type="text" id="customerSearch" class="form-input" placeholder="${this.t('searchPlaceholder')}">
-                            <button class="btn btn-primary" onclick="OMS.refreshCustomerDatabase()">🔄 ${this.t('reset')}</button>
-                        </div>
-                        <div id="customersContainer"></div>
-                    </div>
-                `;
-
-                // Initial render with all customers
-                this.filterAndDisplayCustomers('');
-
-                // Add real-time search listener (only once)
-                setTimeout(() => {
-                    const searchInput = document.getElementById('customerSearch');
-                    if (searchInput) {
-                        searchInput.addEventListener('input', (e) => {
-                            this.filterAndDisplayCustomers(e.target.value);
-                        });
-                    }
-                }, 100);
+                // Wrapper function - delegates to Customers module if loaded
+                if (window.Customers && typeof window.Customers.render === 'function') {
+                    window.Customers.render(this);
+                } else {
+                    // Module not loaded yet - skip
+                    console.log('Customers module not loaded yet');
+                }
             },
 
             filterAndDisplayCustomers(searchQuery) {
@@ -14444,10 +14358,13 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             renderTeamTable() {
-                // Team data is managed in Firestore and used in dropdowns
-                // No separate team table UI needed - team members appear in order form dropdowns
-                // This function is called by real-time listeners to maintain compatibility
-                console.log('👷 Team data updated - dropdowns will auto-refresh on next form load');
+                // Wrapper function - delegates to Team module if loaded
+                if (window.Team && typeof window.Team.renderTeamTable === 'function') {
+                    window.Team.renderTeamTable(this);
+                } else {
+                    // Module not loaded yet - skip
+                    console.log('Team module not loaded yet');
+                }
             },
 
             closeModal(modalId = 'dynamicModal') {
