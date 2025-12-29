@@ -9023,7 +9023,7 @@ convertToQuotationDateFormat(dateStr) {
             renderDashboard() {
                 // Wrapper function - delegates to Dashboard module if loaded
                 if (window.Dashboard && typeof window.Dashboard.render === 'function') {
-                    window.this.renderDashboard();
+                    window.Dashboard.render(this);
                 } else {
                     // Module not loaded yet - skip or show placeholder
                     console.log('Dashboard module not loaded yet');
@@ -9947,7 +9947,7 @@ convertToQuotationDateFormat(dateStr) {
             renderCustomers() {
                 // Wrapper function - delegates to Customers module if loaded
                 if (window.Customers && typeof window.Customers.render === 'function') {
-                    window.this.renderCustomers();
+                    window.Customers.render(this);
                 } else {
                     // Module not loaded yet - skip
                     console.log('Customers module not loaded yet');
@@ -9957,7 +9957,7 @@ convertToQuotationDateFormat(dateStr) {
             renderAnalytics() {
                 // Wrapper function - delegates to Analytics module if loaded
                 if (window.Analytics && typeof window.Analytics.renderAnalytics === 'function') {
-                    window.this.renderAnalytics();
+                    window.Analytics.renderAnalytics(this);
                 } else {
                     // Module not loaded yet - skip
                     console.log('Analytics module not loaded yet');
