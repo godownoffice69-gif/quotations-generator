@@ -1275,11 +1275,576 @@ export const Quotations = {
         }
     },
 
-    // Placeholder functions for later phases (PDF & Conversion)
-    viewQuotationPDF(oms, quotationId) { console.warn('viewQuotationPDF - to be extracted in Phase 3F'); },
-    previewQuotationPDF(oms) { console.warn('previewQuotationPDF - to be extracted in Phase 3F'); },
-    downloadQuotationPDF(oms, quotationId) { console.warn('downloadQuotationPDF - to be extracted in Phase 3F'); },
-    convertQuotationToOrder(oms, quotationId) { console.warn('convertQuotationToOrder - to be extracted in Phase 3G'); },
+    // ============ PHASE 3F: PDF GENERATION FUNCTIONS ============
+
+    async viewQuotationPDF(oms, quotationId) {
+        const quotation = oms.data.quotations.find(q => q.id === quotationId);
+        if (!quotation) return;
+
+        this.generateAndShowPDF(oms, quotation);
+    },
+
+    async previewQuotationPDF(oms) {
+        const q = oms.currentQuotation;
+
+        // Validate that quotation has items based on order type
+        if (!q) {
+            oms.showToast('No quotation found', 'error');
+            return;
+        }
+
+        let hasItems = false;
+
+        if (!q.orderType || q.orderType === 'single') {
+            hasItems = q.items && q.items.length > 0;
+        } else if (q.orderType === 'multifunction') {
+            hasItems = q.functions && q.functions.length > 0 &&
+                       q.functions.some(func => func.items && func.items.length > 0);
+        } else if (q.orderType === 'multiday') {
+            hasItems = q.days && q.days.length > 0 &&
+                       q.days.some(day =>
+                           day.functions && day.functions.length > 0 &&
+                           day.functions.some(func => func.items && func.items.length > 0)
+                       );
+        }
+
+        if (!hasItems) {
+            oms.showToast('Add items first to preview quotation', 'error');
+            return;
+        }
+
+        // Create temporary quotation object for preview
+        const tempQuotation = {
+            ...q,
+            customer: {
+                name: Utils.get('quotCustomerName') || 'Customer Name',
+                contact: Utils.get('quotCustomerContact') || '0000000000',
+                email: Utils.get('quotCustomerEmail') || '',
+                eventDate: Utils.get('quotEventDate') || '',
+                eventVenue: Utils.get('quotEventVenue') || ''
+            },
+            quotationDate: new Date().toISOString().split('T')[0],
+            validUntil: this.calculateValidUntil()
+        };
+
+        // Store temp quotation for preview actions
+        oms.previewQuotation = tempQuotation;
+
+        this.generateAndShowPDF(oms, tempQuotation);
+    },
+
+    generateAndShowPDF(oms, quotation) {
+        // Store quotation for download/actions
+        oms.previewQuotation = quotation;
+
+        // Show preview in modal
+        const modalHTML = `
+            <div class="modal show" id="pdfPreviewModal" onclick="if(event.target === this) window.OMS.closeModal('pdfPreviewModal')" style="z-index: 10000;">
+                <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                    <button class="modal-close" onclick="window.OMS.closeModal('pdfPreviewModal')">×</button>
+                    <h2>📄 Quotation Preview</h2>
+
+                    ${this.renderQuotationPDFContent(oms, quotation)}
+
+                    <div style="margin-top: 2rem; text-align: center;">
+                        <button class="btn btn-primary" onclick="Quotations.downloadPreviewPDF(window.OMS)">📥 Download PDF</button>
+                        <button class="btn btn-secondary" onclick="window.OMS.closeModal('pdfPreviewModal')">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('modalsContainer').innerHTML = modalHTML;
+    },
+
+    async downloadPreviewPDF(oms) {
+        const quotation = oms.previewQuotation;
+        if (!quotation) {
+            oms.showToast('No quotation data found', 'error');
+            return;
+        }
+
+        // Use the existing generatePDFFile logic
+        await this.generatePDFFile(oms, quotation);
+    },
+
+    async generatePDFFile(oms, quotation) {
+        const loading = oms.showLoading('Generating quotation PDF...');
+
+        try {
+            const element = document.getElementById('quotationPDFContent');
+            if (!element) {
+                oms.hideLoading(loading);
+                oms.showToast('PDF content not found', 'error');
+                return;
+            }
+
+            // Check if jsPDF is available
+            if (typeof window.jspdf === 'undefined') {
+                oms.hideLoading(loading);
+                oms.showToast('PDF library not loaded', 'error');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+
+            // Use A4 dimensions
+            const pageWidth = 794;
+            const pageHeight = 1123;
+            const margin = 40;
+            const maxContentHeight = pageHeight - (margin * 2) - 60;
+
+            // Set element to fixed width
+            element.style.width = (pageWidth - margin * 2) + 'px';
+            element.style.maxWidth = (pageWidth - margin * 2) + 'px';
+            element.style.display = 'block';
+            element.style.visibility = 'hidden';
+            element.style.position = 'static';
+            element.style.opacity = '0';
+
+            // Wait for layout
+            await new Promise(r => setTimeout(r, 300));
+
+            const totalHeight = element.scrollHeight;
+            console.log(`📏 Total quotation content height: ${totalHeight}px, max per page: ${maxContentHeight}px`);
+
+            const numPages = Math.ceil(totalHeight / maxContentHeight);
+            console.log(`📄 Will generate ${numPages} page(s) for quotation`);
+
+            // Initialize PDF
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [pageWidth, pageHeight],
+                compress: true
+            });
+
+            // Generate each page
+            for (let pageNum = 0; pageNum < numPages; pageNum++) {
+                oms.updateLoadingMessage(loading, `Generating page ${pageNum + 1} of ${numPages}...`);
+
+                const scrollY = pageNum * maxContentHeight;
+
+                // Create temporary container
+                const pageContainer = document.createElement('div');
+                pageContainer.style.width = (pageWidth - margin * 2) + 'px';
+                pageContainer.style.height = maxContentHeight + 'px';
+                pageContainer.style.overflow = 'hidden';
+                pageContainer.style.position = 'absolute';
+                pageContainer.style.top = '-10000px';
+                pageContainer.style.left = '-10000px';
+                pageContainer.style.background = 'white';
+
+                // Clone the content
+                const clonedElement = element.cloneNode(true);
+                clonedElement.style.position = 'relative';
+                clonedElement.style.top = (-scrollY) + 'px';
+                clonedElement.style.display = 'block';
+                clonedElement.style.visibility = 'visible';
+                clonedElement.style.opacity = '1';
+
+                pageContainer.appendChild(clonedElement);
+                document.body.appendChild(pageContainer);
+
+                await new Promise(r => setTimeout(r, 200));
+
+                // Convert to canvas
+                const canvas = await html2canvas(pageContainer, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: false,
+                    backgroundColor: '#ffffff',
+                    width: pageWidth - margin * 2,
+                    height: maxContentHeight,
+                    windowWidth: pageWidth - margin * 2,
+                    windowHeight: maxContentHeight,
+                    x: 0,
+                    y: 0
+                });
+
+                document.body.removeChild(pageContainer);
+
+                const imgData = canvas.toDataURL('image/png', 0.95);
+
+                if (pageNum > 0) {
+                    pdf.addPage();
+                }
+
+                pdf.addImage(
+                    imgData,
+                    'PNG',
+                    margin,
+                    margin,
+                    pageWidth - margin * 2,
+                    maxContentHeight,
+                    '',
+                    'FAST'
+                );
+
+                // Add page number footer
+                if (numPages > 1) {
+                    pdf.setFontSize(9);
+                    pdf.setTextColor(128, 128, 128);
+                    pdf.text(
+                        `Page ${pageNum + 1} of ${numPages}`,
+                        pageWidth / 2,
+                        pageHeight - 20,
+                        { align: 'center' }
+                    );
+                }
+
+                console.log(`✅ Added page ${pageNum + 1} of ${numPages} to PDF`);
+            }
+
+            // Reset element styles
+            element.style.display = 'none';
+            element.style.visibility = 'visible';
+            element.style.position = 'static';
+            element.style.opacity = '1';
+            element.style.width = '';
+            element.style.maxWidth = '';
+
+            // Save PDF
+            oms.updateLoadingMessage(loading, 'Saving PDF...');
+            const filename = `Quotation_${quotation.customer.name.replace(/[^a-z0-9]/gi, '_')}_${quotation.quotationDate}.pdf`;
+            pdf.save(filename);
+
+            oms.hideLoading(loading);
+            oms.showToast(`✅ PDF downloaded successfully! (${numPages} page${numPages > 1 ? 's' : ''})`, 'success');
+
+        } catch (error) {
+            oms.hideLoading(loading);
+            console.error('Error generating PDF:', error);
+            oms.showToast('Error generating PDF: ' + error.message, 'error');
+        }
+    },
+
+    renderQuotationPDFContent(oms, q) {
+        // Calculate statistics
+        let totalItems = 0;
+        if (q.orderType === 'single' || !q.orderType) {
+            totalItems = (q.items || []).length;
+        } else if (q.orderType === 'multifunction') {
+            totalItems = (q.functions || []).reduce((sum, f) => sum + (f.items?.length || 0), 0);
+        } else if (q.orderType === 'multiday') {
+            totalItems = (q.days || []).reduce((sum, d) => {
+                return sum + (d.functions || []).reduce((s, f) => s + (f.items?.length || 0), 0);
+            }, 0);
+        }
+
+        return `
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                #quotationPDFContent * {
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
+                #quotationPDFContent table {
+                    page-break-inside: auto;
+                    break-inside: auto;
+                }
+                #quotationPDFContent tr {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+                #quotationPDFContent td, #quotationPDFContent th {
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                    word-break: break-word;
+                }
+                #quotationPDFContent > div {
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
+            </style>
+
+            <div id="quotationPDFContent" style="background: white; padding: 0; font-family: Arial, sans-serif; max-width: 100%; margin: 0; border: 2px solid #000;">
+                <!-- Header -->
+                <div style="padding: 16px; border-bottom: 2px solid #000;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <div style="font-size: 11px; color: #000; line-height: 1.6; font-weight: 600;">
+                                <div><strong>Date:</strong> ${Utils.formatDate(q.quotationDate || new Date().toISOString().split('T')[0])}</div>
+                                <div><strong>Valid Until:</strong> ${Utils.formatDate(q.validUntil || this.calculateValidUntil())}</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="background: linear-gradient(135deg, #E1306C 0%, #C13584 50%, #833AB4 100%); padding: 12px 50px; display: inline-block; border-radius: 10px; font-size: 32px; font-weight: bold; color: white; font-family: Arial, Helvetica, sans-serif;">
+                                QUOTATION
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Details -->
+                <div style="padding: 15px; border-bottom: 1px solid #ddd;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-weight: 600; color: #000;">
+                        <tr>
+                            <td style="padding: 4px 0; width: 25%; vertical-align: top;"><strong>TO</strong></td>
+                            <td style="padding: 4px 0; width: 75%; vertical-align: top;">${q.customer.name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0; vertical-align: top;"><strong>Mobile No.</strong></td>
+                            <td style="padding: 4px 0; vertical-align: top;">: ${q.customer.contact}</td>
+                        </tr>
+                        ${q.customer.email ? `
+                        <tr>
+                            <td style="padding: 4px 0; vertical-align: top;"><strong>Email</strong></td>
+                            <td style="padding: 4px 0; vertical-align: top;">: ${q.customer.email}</td>
+                        </tr>
+                        ` : ''}
+                        <tr>
+                            <td style="padding: 4px 0; vertical-align: top;"><strong>Event Date</strong></td>
+                            <td style="padding: 4px 0; vertical-align: top;">: ${Utils.formatDate(q.customer.eventDate)}</td>
+                        </tr>
+                        ${q.customer.eventVenue ? `
+                        <tr>
+                            <td style="padding: 4px 0; vertical-align: top;"><strong>Venue</strong></td>
+                            <td style="padding: 4px 0; vertical-align: top;">: ${q.customer.eventVenue}</td>
+                        </tr>
+                        ` : ''}
+                    </table>
+                </div>
+
+                <!-- Items Table -->
+                <div style="padding: 15px; margin-bottom: 20px;">
+                    ${!q.orderType || q.orderType === 'single' ? `
+                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
+                            <thead>
+                                <tr style="background: #f5f5f5; border: 1px solid #000;">
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
+                                    <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
+                                    <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
+                                    <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(q.items || []).map((item, index) => `
+                                    <tr style="border: 1px solid #000;">
+                                        <td style="padding: 10px; border: 1px solid #000; text-align: center;">${index + 1}</td>
+                                        <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                        <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
+                                        <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.rate || item.price || 0).toLocaleString('en-IN')}</td>
+                                        <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                    </tr>
+                                `).join('')}
+                                <tr style="border: 1px solid #000; background: #f5f5f5;">
+                                    <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Total</td>
+                                    <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${q.financials.grandTotal.toLocaleString('en-IN')}/-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    ` : ''}
+
+                    ${q.orderType === 'multifunction' ? (q.functions || []).map((func, funcIdx) => `
+                        <div style="margin-bottom: 25px; margin-top: 15px;">
+                            <div style="background: #f5f5f5; padding: 12px; border: 1px solid #000; font-weight: bold; font-size: 13px; color: #1976D2;">
+                                Function ${funcIdx + 1}: ${func.name || 'Unnamed'}
+                            </div>
+                            ${func.venue ? `
+                            <div style="padding: 10px; border-left: 1px solid #000; border-right: 1px solid #000; background: #fff; font-size: 11px;">
+                                <strong style="color: #1976D2;">📍 Venue:</strong> ${func.venue}
+                            </div>
+                            ` : ''}
+                            ${func.notes ? `
+                            <div style="padding: 10px; border-left: 1px solid #000; border-right: 1px solid #000; background: #fffbf0; font-size: 11px; border-top: ${func.venue ? '0' : '1px solid #ddd'};">
+                                <strong style="color: #F57C00;">📝 Notes:</strong> ${func.notes.replace(/\n/g, '<br>')}
+                            </div>
+                            ` : ''}
+                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
+                                <thead>
+                                    <tr style="background: #f5f5f5; border: 1px solid #000;">
+                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
+                                        <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
+                                        <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
+                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
+                                        <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${(func.items || []).map((item, itemIdx) => `
+                                        <tr style="border: 1px solid #000;">
+                                            <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
+                                            <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                            <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
+                                            <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
+                                            <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr style="border: 1px solid #000; background: #f5f5f5;">
+                                        <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
+                                        <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `).join('') : ''}
+
+                    ${q.orderType === 'multifunction' && (q.functions || []).length > 0 ? `
+                        <div style="margin-top: 20px; padding: 15px; border: 2px solid #000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: right;">
+                            <div style="font-size: 18px; font-weight: bold; color: white;">
+                                GRAND TOTAL: ₹${q.financials.grandTotal.toLocaleString('en-IN')}/-
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${q.orderType === 'multiday' ? (q.days || []).map((day, dayIdx) => `
+                        <div style="margin-bottom: 35px; margin-top: 20px;">
+                            <div style="background: #e3f2fd; padding: 14px; border: 1px solid #000; font-weight: bold; font-size: 14px; color: #0d47a1; margin-bottom: 15px;">
+                                Day ${dayIdx + 1}: ${day.date ? Utils.formatDate(day.date) : 'No date set'}
+                            </div>
+
+                            ${(day.functions || []).map((func, funcIdx) => `
+                                <div style="margin-bottom: 20px; margin-top: 10px;">
+                                    <div style="background: #f5f5f5; padding: 10px; border: 1px solid #000; font-weight: bold; font-size: 12px; color: #1976D2;">
+                                        ${func.name || 'Unnamed Function'}
+                                    </div>
+                                    ${func.venue ? `
+                                    <div style="padding: 10px; border-left: 1px solid #000; border-right: 1px solid #000; background: #fff; font-size: 11px;">
+                                        <strong style="color: #1976D2;">📍 Venue:</strong> ${func.venue}
+                                    </div>
+                                    ` : ''}
+                                    ${func.notes ? `
+                                    <div style="padding: 10px; border-left: 1px solid #000; border-right: 1px solid #000; background: #fffbf0; font-size: 11px; border-top: ${func.venue ? '0' : '1px solid #ddd'};">
+                                        <strong style="color: #F57C00;">📝 Notes:</strong> ${func.notes.replace(/\n/g, '<br>')}
+                                    </div>
+                                    ` : ''}
+                                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; ${func.venue || func.notes ? 'border-top: 0;' : ''}"
+                                        <thead>
+                                            <tr style="background: #f5f5f5; border: 1px solid #000;">
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold; width: 60px;">Sr.</th>
+                                                <th style="padding: 10px; text-align: left; border: 1px solid #000; font-weight: bold;">Product</th>
+                                                <th style="padding: 10px; text-align: center; border: 1px solid #000; font-weight: bold; width: 100px;">Quantity</th>
+                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 120px;">Rate</th>
+                                                <th style="padding: 10px; text-align: right; border: 1px solid #000; font-weight: bold; width: 140px;">Price</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(func.items || []).map((item, itemIdx) => `
+                                                <tr style="border: 1px solid #000;">
+                                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${itemIdx + 1}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; color: #1976D2; font-weight: 500;">${item.name}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${Math.round(item.quantity)}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; text-align: right;">₹${(item.price || 0).toLocaleString('en-IN')}</td>
+                                                    <td style="padding: 10px; border: 1px solid #000; text-align: right; color: #D84315; font-weight: 600;">₹${(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                                                </tr>
+                                            `).join('')}
+                                            <tr style="border: 1px solid #000; background: #f5f5f5;">
+                                                <td colspan="4" style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; font-size: 14px;">Function Total</td>
+                                                <td style="padding: 12px; border: 1px solid #000; text-align: right; font-weight: bold; color: #D84315; font-size: 15px;">₹${(func.subtotal || 0).toLocaleString('en-IN')}/-</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `).join('')}
+
+                            <div style="background: #e3f2fd; padding: 14px; border: 1px solid #000; text-align: right; font-weight: bold; color: #0d47a1; font-size: 15px; margin-top: 10px;">
+                                Day ${dayIdx + 1} Total: ₹${(day.subtotal || 0).toLocaleString('en-IN')}/-
+                            </div>
+                        </div>
+                    `).join('') : ''}
+
+                    ${q.orderType === 'multiday' && (q.days || []).length > 0 ? `
+                        <div style="margin-top: 20px; padding: 15px; border: 2px solid #000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: right;">
+                            <div style="font-size: 18px; font-weight: bold; color: white;">
+                                GRAND TOTAL: ₹${q.financials.grandTotal.toLocaleString('en-IN')}/-
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${q.notes ? `
+                <div style="padding: 15px; border-top: 2px solid #000; margin-top: 25px;">
+                    <div style="font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #000;">📝 Notes:</div>
+                    <div style="font-size: 11px; line-height: 1.7; color: #000; background: #fffbf0; padding: 12px; border-left: 4px solid #F57C00; border-radius: 4px;">
+                        ${q.notes.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Terms & Conditions -->
+                <div style="padding: 15px; border-top: 2px solid #000; margin-top: 25px;">
+                    <div style="font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #000;">Terms & Conditions:</div>
+                    <div style="font-size: 11px; line-height: 1.7; color: #000; font-weight: 500;">
+                        <div style="margin-bottom: 5px;"><strong style="color: #1976D2;">Payment Terms:</strong></div>
+                        <div style="margin-bottom: 3px; padding-left: 20px;">• 50% booking required to confirm</div>
+                        <div style="margin-bottom: 8px; padding-left: 20px;">• 50% before event starts</div>
+
+                        <div style="margin-bottom: 5px;"><strong style="color: #2E7D32;">Inclusions:</strong></div>
+                        <div style="margin-bottom: 8px; padding-left: 20px;">• Generator for electricity provision</div>
+
+                        <div style="margin-bottom: 5px;"><strong style="color: #D84315;">Customer Responsibilities:</strong></div>
+                        <div style="margin-bottom: 3px; padding-left: 20px;">• Fire safety permissions & Fire NOC</div>
+                        <div style="margin-bottom: 3px; padding-left: 20px;">• Venue/ground permissions</div>
+                        <div style="margin-bottom: 3px; padding-left: 20px;">• AMC permissions</div>
+                        <div style="margin-bottom: 3px; padding-left: 20px;">• First aid provision</div>
+                        <div style="margin-bottom: 3px; padding-left: 20px;">• Resource manager approval</div>
+                        <div style="margin-bottom: 3px; padding-left: 20px;">• Contractor competence proof</div>
+                        <div style="margin-bottom: 8px; padding-left: 20px;">• Security clearance for restricted materials</div>
+
+                        <div style="margin-top: 10px; padding: 10px; background: #fff9c4; border-left: 4px solid #F57C00; font-weight: bold; color: #e65100;">
+                            ⚠️ IMPORTANT: Quotation valid for 15 days from quotation date
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div style="text-align: center; padding: 15px; border-top: 1px solid #ddd; background: #f9f9f9; font-size: 11px; color: #666;">
+                    Thank you for choosing our services! We look forward to making your event spectacular. ✨
+                </div>
+            </div>
+        `;
+    },
+
+    async downloadQuotationPDF(oms, quotationId) {
+        const quotation = oms.data.quotations.find(q => q.id === quotationId);
+        if (!quotation) return;
+
+        // Alternative: Use jsPDF directly for simpler single-page quotations
+        // This function is kept as an alternative approach but uses generatePDFFile for consistency
+        await this.generatePDFFile(oms, quotation);
+    },
+
+    // ============ PHASE 3G: ORDER CONVERSION ============
+
+    async convertQuotationToOrder(oms, quotationId) {
+        const quotation = oms.data.quotations.find(q => q.id === quotationId);
+        if (!quotation) return;
+
+        if (!confirm(`Convert quotation to order for ${quotation.customer.name}?`)) return;
+
+        // Switch to orders tab and prefill with quotation data
+        oms.switchTab('orders');
+
+        setTimeout(() => {
+            // Fill customer details
+            Utils.set('clientName', quotation.customer.name);
+            Utils.set('contact', quotation.customer.contact);
+            if (quotation.customer.eventVenue) Utils.set('venue', quotation.customer.eventVenue);
+            if (quotation.customer.eventDate) {
+                Utils.set('date', quotation.customer.eventDate);
+                Utils.set('startDate', quotation.customer.eventDate);
+            }
+
+            // TODO: Add items to order (requires integration with order form)
+            // For now, just navigate to orders tab with customer info prefilled
+
+            oms.showToast('✅ Order form prefilled with quotation data', 'success');
+        }, 200);
+
+        // Mark quotation as converted
+        try {
+            await db.collection('quotations').doc(quotationId).update({
+                status: 'converted',
+                convertedAt: new Date().toISOString()
+            });
+
+            await this.loadQuotationsFromFirestore(oms);
+        } catch (error) {
+            console.error('Error updating quotation status:', error);
+        }
+    },
 };
 
 // Export to window for backward compatibility

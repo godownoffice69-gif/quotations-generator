@@ -9002,7 +9002,7 @@ convertToQuotationDateFormat(dateStr) {
                     else if (tabName === 'itemHistory') this.renderItemHistory();
                     else if (tabName === 'preparation') this.renderPreparation();
                     else if (tabName === 'customers') this.renderCustomers();
-                    else if (tabName === 'quotations') this.renderQuotations();
+                    else if (tabName === 'quotations') Quotations.renderQuotations(this);
                     else if (tabName === 'team') this.renderTeam();
                     else if (tabName === 'calendar') this.renderCalendarTab();
                     else if (tabName === 'history') this.renderHistory();
@@ -10418,7 +10418,7 @@ convertToQuotationDateFormat(dateStr) {
                     financials: { subtotal: 0, discountAmount: 0, grandTotal: 0 }
                 };
                 this.quotationViewMode = 'create';
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             renderQuotationForm() {
@@ -10830,7 +10830,7 @@ convertToQuotationDateFormat(dateStr) {
                     quantity: 1,
                     price: price || 0
                 });
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             selectQuotationDayFunctionItem(dayIndex, funcIndex, itemName, price) {
@@ -10842,7 +10842,7 @@ convertToQuotationDateFormat(dateStr) {
                     quantity: 1,
                     price: price || 0
                 });
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             selectQuotationItem(itemName, price) {
@@ -11144,7 +11144,7 @@ convertToQuotationDateFormat(dateStr) {
                     if (!this.currentQuotation.days) this.currentQuotation.days = [];
                 }
 
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             renderQuotationFunction(func, index) {
@@ -11271,21 +11271,21 @@ convertToQuotationDateFormat(dateStr) {
                 this.saveQuotationCustomerData(); // Preserve customer data
                 if (!this.currentQuotation.functions) this.currentQuotation.functions = [];
                 this.currentQuotation.functions.push({ name: '', items: [] });
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             addQuotationDay() {
                 this.saveQuotationCustomerData(); // Preserve customer data
                 if (!this.currentQuotation.days) this.currentQuotation.days = [];
                 this.currentQuotation.days.push({ date: '', functions: [] });
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             removeQuotationFunction(index) {
                 if (confirm('Remove this function?')) {
                     this.saveQuotationCustomerData(); // Preserve customer data
                     this.currentQuotation.functions.splice(index, 1);
-                    this.renderQuotations();
+                    Quotations.renderQuotations(this);
                 }
             },
 
@@ -11293,7 +11293,7 @@ convertToQuotationDateFormat(dateStr) {
                 if (confirm('Remove this day?')) {
                     this.saveQuotationCustomerData(); // Preserve customer data
                     this.currentQuotation.days.splice(index, 1);
-                    this.renderQuotations();
+                    Quotations.renderQuotations(this);
                 }
             },
 
@@ -11312,12 +11312,12 @@ convertToQuotationDateFormat(dateStr) {
                     this.currentQuotation.functions[funcIndex].items = [];
                 }
                 this.currentQuotation.functions[funcIndex].items.push({ name: '', quantity: 1, price: 0 });
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             removeQuotationFunctionItem(funcIndex, itemIndex) {
                 this.currentQuotation.functions[funcIndex].items.splice(itemIndex, 1);
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             updateQuotationFunctionItem(funcIndex, itemIndex, field, value) {
@@ -11345,7 +11345,7 @@ convertToQuotationDateFormat(dateStr) {
                 }
 
                 this.recalculateQuotation();
-                this.renderQuotations(); // Re-render to show updated subtotals
+                Quotations.renderQuotations(this); // Re-render to show updated subtotals
             },
 
             updateQuotationDayDate(dayIndex, value) {
@@ -11357,12 +11357,12 @@ convertToQuotationDateFormat(dateStr) {
                     this.currentQuotation.days[dayIndex].functions = [];
                 }
                 this.currentQuotation.days[dayIndex].functions.push({ name: '', items: [] });
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             removeQuotationDayFunction(dayIndex, funcIndex) {
                 this.currentQuotation.days[dayIndex].functions.splice(funcIndex, 1);
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             updateQuotationDayFunctionName(dayIndex, funcIndex, value) {
@@ -11379,12 +11379,12 @@ convertToQuotationDateFormat(dateStr) {
                     this.currentQuotation.days[dayIndex].functions[funcIndex].items = [];
                 }
                 this.currentQuotation.days[dayIndex].functions[funcIndex].items.push({ name: '', quantity: 1, price: 0 });
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             removeQuotationDayFunctionItem(dayIndex, funcIndex, itemIndex) {
                 this.currentQuotation.days[dayIndex].functions[funcIndex].items.splice(itemIndex, 1);
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             updateQuotationDayFunctionItem(dayIndex, funcIndex, itemIndex, field, value) {
@@ -11412,14 +11412,14 @@ convertToQuotationDateFormat(dateStr) {
                 }
 
                 this.recalculateQuotation();
-                this.renderQuotations(); // Re-render to show updated subtotals
+                Quotations.renderQuotations(this); // Re-render to show updated subtotals
             },
 
             cancelQuotationEdit() {
                 this.quotationViewMode = 'list';
                 this.editingQuotationId = null;
                 this.currentQuotation = null;
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             async saveQuotation(status = 'draft') {
@@ -11532,11 +11532,11 @@ convertToQuotationDateFormat(dateStr) {
                     }
 
                     // Reload quotations
-                    await this.loadQuotationsFromFirestore();
+                    await Quotations.loadQuotationsFromFirestore(this);
 
                     // Return to list
                     this.quotationViewMode = 'list';
-                    this.renderQuotations();
+                    Quotations.renderQuotations(this);
 
                     return quotationData;
                 } catch (error) {
@@ -11573,7 +11573,7 @@ convertToQuotationDateFormat(dateStr) {
                 this.editingQuotationId = quotationId;
                 this.currentQuotation = JSON.parse(JSON.stringify(quotation)); // Deep copy
                 this.quotationViewMode = 'edit';
-                this.renderQuotations();
+                Quotations.renderQuotations(this);
             },
 
             async deleteQuotation(quotationId) {
@@ -11583,8 +11583,8 @@ convertToQuotationDateFormat(dateStr) {
                     await db.collection('quotations').doc(quotationId).delete();
                     this.showToast('✅ Quotation deleted', 'success');
 
-                    await this.loadQuotationsFromFirestore();
-                    this.renderQuotations();
+                    await Quotations.loadQuotationsFromFirestore(this);
+                    Quotations.renderQuotations(this);
                 } catch (error) {
                     console.error('Error deleting quotation:', error);
                     this.showToast('Error: ' + error.message, 'error');
@@ -12560,7 +12560,7 @@ convertToQuotationDateFormat(dateStr) {
                         convertedAt: new Date().toISOString()
                     });
 
-                    await this.loadQuotationsFromFirestore();
+                    await Quotations.loadQuotationsFromFirestore(this);
                 } catch (error) {
                     console.error('Error updating quotation status:', error);
                 }
@@ -14506,7 +14506,7 @@ convertToQuotationDateFormat(dateStr) {
             this.loadItemHistoryFromFirestore(),
             this.loadNotificationsFromFirestore(),
             this.loadSettingsFromFirestore(),
-            this.loadQuotationsFromFirestore()
+            Quotations.loadQuotationsFromFirestore(this)
         ];
 
         // Only load financial data if user has permission
@@ -17967,8 +17967,9 @@ if (diffDays > 30) {
                 const { LeadsManager } = await import(`./js/leads/leads-manager.js?v=${BUILD_TIMESTAMP}`);
                 const { Conversion } = await import(`./js/features/conversion.js?v=${BUILD_TIMESTAMP}`);
                 const { Orders } = await import(`./js/features/orders.js?v=${BUILD_TIMESTAMP}`);
+                const { Quotations } = await import(`./js/features/quotations.js?v=${BUILD_TIMESTAMP}`);
 
-                console.log('✅ Package, Lead managers, and Orders module imported successfully');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
