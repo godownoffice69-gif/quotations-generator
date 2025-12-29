@@ -8159,7 +8159,7 @@ convertToQuotationDateFormat(dateStr) {
                 const requirements = this.calculateOrderRequirements(order);
 
                 return `
-                    <div style="margin-bottom: ${compact ? '25px' : '60px'}; ${compact ? 'border: 3px solid #6B21A8; padding: 15px;' : ''}; color: ${textColor}; background: ${bgColor};">
+                    <div style="margin-bottom: ${compact ? '25px' : '60px'}; ${compact ? 'border: 3px solid #CC8800; box-shadow: inset 0 0 0 3px #CC0000; padding: 15px;' : ''}; color: ${textColor}; background: ${bgColor};">
                         ${!compact ? `<div style="text-align: center; margin-bottom: 40px;">
                             <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px;">
                                 Order Management
@@ -12404,6 +12404,46 @@ convertToQuotationDateFormat(dateStr) {
                 return message;
             },
 
+            filterOrdersByDate(date) {
+                // Filter orders that match the given date
+                return this.data.orders.filter(o => {
+                    // Case 1: Single-day order with matching date
+                    if (!o.isMultiDay && o.date) {
+                        // Compare dates (handle different formats)
+                        const orderDate = new Date(o.date).toISOString().split('T')[0];
+                        const targetDate = new Date(date).toISOString().split('T')[0];
+                        if (orderDate === targetDate) {
+                            return true;
+                        }
+                    }
+
+                    // Case 2: Multi-day order WITH dayWiseData - check specific day functions
+                    if (o.isMultiDay && o.dayWiseData && Array.isArray(o.dayWiseData) && o.dayWiseData.length > 0) {
+                        const hasMatch = o.dayWiseData.some(day => {
+                            const dayDate = new Date(day.date).toISOString().split('T')[0];
+                            const targetDate = new Date(date).toISOString().split('T')[0];
+                            return dayDate === targetDate;
+                        });
+                        if (hasMatch) {
+                            return true;
+                        }
+                        // If order has dayWiseData but no match, skip it
+                        return false;
+                    }
+
+                    // Case 3: Multi-day order WITHOUT dayWiseData - fallback to range check
+                    if (o.isMultiDay && o.startDate && o.endDate) {
+                        const targetDate = new Date(date);
+                        const start = new Date(o.startDate);
+                        const end = new Date(o.endDate);
+                        if (targetDate >= start && targetDate <= end) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                });
+            },
 
             updateWhatsAppDateFilter() {
                 const dateInput = document.getElementById('whatsappFilterDate');
