@@ -17970,6 +17970,11 @@ if (diffDays > 30) {
                 const { Quotations } = await import(`./js/features/quotations.js?v=${BUILD_TIMESTAMP}`);
                 const { Inventory } = await import(`./js/features/inventory.js?v=${BUILD_TIMESTAMP}`);
 
+                // Expose modules globally for onclick handlers
+                window.Orders = Orders;
+                window.Quotations = Quotations;
+                window.Inventory = Inventory;
+
                 console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory)');
 
                 // Initialize Package Manager
