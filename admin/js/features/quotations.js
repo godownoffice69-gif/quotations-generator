@@ -729,41 +729,557 @@ export const Quotations = {
         `;
     },
 
-    // Placeholder functions for later phases (to be extracted in subsequent phases)
-    cancelQuotationEdit(oms) { console.warn('cancelQuotationEdit - to be extracted in later phase'); },
-    addQuotationItemByName(oms, itemName) { console.warn('addQuotationItemByName - to be extracted in later phase'); },
-    addCustomQuotationItem(oms) { console.warn('addCustomQuotationItem - to be extracted in later phase'); },
-    updateQuotationItem(oms, index, field, value) { console.warn('updateQuotationItem - to be extracted in later phase'); },
-    removeQuotationItem(oms, index) { console.warn('removeQuotationItem - to be extracted in later phase'); },
-    updateQuotationDiscount(oms) { console.warn('updateQuotationDiscount - to be extracted in later phase'); },
-    recalculateQuotation(oms) { console.warn('recalculateQuotation - to be extracted in later phase'); },
-    autoFillQuotationCustomer(oms, customerName) { console.warn('autoFillQuotationCustomer - to be extracted in later phase'); },
-    setQuotationOrderType(oms, type) { console.warn('setQuotationOrderType - to be extracted in later phase'); },
-    addQuotationFunction(oms) { console.warn('addQuotationFunction - to be extracted in later phase'); },
-    addQuotationDay(oms) { console.warn('addQuotationDay - to be extracted in later phase'); },
-    removeQuotationFunction(oms, index) { console.warn('removeQuotationFunction - to be extracted in later phase'); },
-    removeQuotationDay(oms, index) { console.warn('removeQuotationDay - to be extracted in later phase'); },
-    updateQuotationFunctionName(oms, funcIndex, value) { console.warn('updateQuotationFunctionName - to be extracted in later phase'); },
-    updateQuotationFunctionField(oms, funcIndex, field, value) { console.warn('updateQuotationFunctionField - to be extracted in later phase'); },
-    addQuotationFunctionItem(oms, funcIndex) { console.warn('addQuotationFunctionItem - to be extracted in later phase'); },
-    removeQuotationFunctionItem(oms, funcIndex, itemIndex) { console.warn('removeQuotationFunctionItem - to be extracted in later phase'); },
-    updateQuotationFunctionItem(oms, funcIndex, itemIndex, field, value) { console.warn('updateQuotationFunctionItem - to be extracted in later phase'); },
-    updateQuotationDayDate(oms, dayIndex, value) { console.warn('updateQuotationDayDate - to be extracted in later phase'); },
-    addQuotationDayFunction(oms, dayIndex) { console.warn('addQuotationDayFunction - to be extracted in later phase'); },
-    removeQuotationDayFunction(oms, dayIndex, funcIndex) { console.warn('removeQuotationDayFunction - to be extracted in later phase'); },
-    updateQuotationDayFunctionName(oms, dayIndex, funcIndex, value) { console.warn('updateQuotationDayFunctionName - to be extracted in later phase'); },
-    updateQuotationDayFunctionField(oms, dayIndex, funcIndex, field, value) { console.warn('updateQuotationDayFunctionField - to be extracted in later phase'); },
-    addQuotationDayFunctionItem(oms, dayIndex, funcIndex) { console.warn('addQuotationDayFunctionItem - to be extracted in later phase'); },
-    removeQuotationDayFunctionItem(oms, dayIndex, funcIndex, itemIndex) { console.warn('removeQuotationDayFunctionItem - to be extracted in later phase'); },
-    updateQuotationDayFunctionItem(oms, dayIndex, funcIndex, itemIndex, field, value) { console.warn('updateQuotationDayFunctionItem - to be extracted in later phase'); },
-    saveQuotation(oms, status) { console.warn('saveQuotation - to be extracted in later phase'); },
-    editQuotation(oms, quotationId) { console.warn('editQuotation - to be extracted in later phase'); },
-    deleteQuotation(oms, quotationId) { console.warn('deleteQuotation - to be extracted in later phase'); },
-    loadQuotationsFromFirestore(oms) { console.warn('loadQuotationsFromFirestore - to be extracted in later phase'); },
-    viewQuotationPDF(oms, quotationId) { console.warn('viewQuotationPDF - to be extracted in later phase'); },
-    previewQuotationPDF(oms) { console.warn('previewQuotationPDF - to be extracted in later phase'); },
-    downloadQuotationPDF(oms, quotationId) { console.warn('downloadQuotationPDF - to be extracted in later phase'); },
-    convertQuotationToOrder(oms, quotationId) { console.warn('convertQuotationToOrder - to be extracted in later phase'); },
+    // ============ PHASE 3B-3E: ITEM MANAGEMENT, STRUCTURE, CALCULATIONS & CRUD ============
+
+    // Phase 3B: Item Management Functions
+
+    addQuotationItemByName(oms, itemName) {
+        // Search in inventory first
+        const inventoryItem = oms.data.inventory?.items?.find(i =>
+            i.name.toLowerCase() === itemName.toLowerCase()
+        );
+
+        const newItem = {
+            name: itemName,
+            quantity: 1,
+            rate: inventoryItem?.defaultPrice || 0,
+            subtotal: inventoryItem?.defaultPrice || 0
+        };
+
+        oms.currentQuotation.items.push(newItem);
+        this.updateQuotationDisplay(oms);
+    },
+
+    addCustomQuotationItem(oms) {
+        const itemName = prompt('Enter item name:');
+        if (!itemName) return;
+
+        const newItem = {
+            name: itemName,
+            quantity: 1,
+            rate: 0,
+            subtotal: 0
+        };
+
+        oms.currentQuotation.items.push(newItem);
+        this.updateQuotationDisplay(oms);
+    },
+
+    updateQuotationItem(oms, index, field, value) {
+        if (!oms.currentQuotation.items[index]) return;
+
+        // Validation for price and quantity fields
+        if (field === 'quantity' || field === 'rate') {
+            const numValue = parseFloat(value) || 0;
+
+            // Prevent negative values
+            if (numValue < 0) {
+                oms.showToast(`${field === 'quantity' ? 'Quantity' : 'Price'} cannot be negative`, 'error');
+                return;
+            }
+
+            // Warn about very large values
+            if (numValue > 10000000) { // 1 crore
+                if (!confirm(`${field === 'quantity' ? 'Quantity' : 'Price'} is very large (${numValue.toLocaleString('en-IN')}). Continue?`)) {
+                    return;
+                }
+            }
+
+            oms.currentQuotation.items[index][field] = numValue;
+        } else {
+            // Name field - trim whitespace
+            oms.currentQuotation.items[index][field] = value.trim();
+        }
+
+        // Recalculate subtotal
+        const item = oms.currentQuotation.items[index];
+        item.subtotal = item.quantity * item.rate;
+
+        this.recalculateQuotation(oms);
+        this.updateQuotationDisplay(oms);
+    },
+
+    removeQuotationItem(oms, index) {
+        oms.currentQuotation.items.splice(index, 1);
+        this.updateQuotationDisplay(oms);
+    },
+
+    updateQuotationDisplay(oms) {
+        const container = document.getElementById('quotationItemsContainer');
+        if (container && oms.currentQuotation) {
+            container.innerHTML = oms.currentQuotation.items.length === 0 ?
+                `<div style="text-align: center; padding: 2rem; color: #999;"><p>No items added yet. Search and add items above.</p></div>` :
+                this.renderQuotationItems(oms, oms.currentQuotation.items);
+        }
+        this.recalculateQuotation(oms);
+    },
+
+    // Phase 3C: Order Type & Structure Management Functions
+
+    autoFillQuotationCustomer(oms, customerName) {
+        // Find customer by name and auto-fill contact
+        const customer = oms.data.customers.find(c => c.name === customerName);
+        if (customer) {
+            document.getElementById('quotCustomerContact').value = customer.contact || '';
+            if (customer.email) {
+                document.getElementById('quotCustomerEmail').value = customer.email;
+            }
+        }
+    },
+
+    setQuotationOrderType(oms, type) {
+        if (!oms.currentQuotation) return;
+        oms.currentQuotation.orderType = type;
+
+        // Initialize appropriate data structures
+        if (type === 'single') {
+            if (!oms.currentQuotation.items) oms.currentQuotation.items = [];
+        } else if (type === 'multifunction') {
+            if (!oms.currentQuotation.functions) oms.currentQuotation.functions = [];
+        } else if (type === 'multiday') {
+            if (!oms.currentQuotation.days) oms.currentQuotation.days = [];
+        }
+
+        this.renderQuotations(oms);
+    },
+
+    addQuotationFunction(oms) {
+        if (!oms.currentQuotation.functions) oms.currentQuotation.functions = [];
+        oms.currentQuotation.functions.push({ name: '', items: [] });
+        this.renderQuotations(oms);
+    },
+
+    addQuotationDay(oms) {
+        if (!oms.currentQuotation.days) oms.currentQuotation.days = [];
+        oms.currentQuotation.days.push({ date: '', functions: [] });
+        this.renderQuotations(oms);
+    },
+
+    removeQuotationFunction(oms, index) {
+        if (confirm('Remove this function?')) {
+            oms.currentQuotation.functions.splice(index, 1);
+            this.renderQuotations(oms);
+        }
+    },
+
+    removeQuotationDay(oms, index) {
+        if (confirm('Remove this day?')) {
+            oms.currentQuotation.days.splice(index, 1);
+            this.renderQuotations(oms);
+        }
+    },
+
+    updateQuotationFunctionName(oms, funcIndex, value) {
+        oms.currentQuotation.functions[funcIndex].name = value;
+        this.recalculateQuotation(oms);
+    },
+
+    updateQuotationFunctionField(oms, funcIndex, field, value) {
+        oms.currentQuotation.functions[funcIndex][field] = value;
+        // No need to recalculate for notes/venue fields
+    },
+
+    addQuotationFunctionItem(oms, funcIndex) {
+        if (!oms.currentQuotation.functions[funcIndex].items) {
+            oms.currentQuotation.functions[funcIndex].items = [];
+        }
+        oms.currentQuotation.functions[funcIndex].items.push({ name: '', quantity: 1, price: 0 });
+        this.renderQuotations(oms);
+    },
+
+    removeQuotationFunctionItem(oms, funcIndex, itemIndex) {
+        oms.currentQuotation.functions[funcIndex].items.splice(itemIndex, 1);
+        this.renderQuotations(oms);
+    },
+
+    updateQuotationFunctionItem(oms, funcIndex, itemIndex, field, value) {
+        // Validation for price and quantity fields
+        if (field === 'quantity' || field === 'price') {
+            const numValue = parseFloat(value) || 0;
+
+            // Prevent negative values
+            if (numValue < 0) {
+                oms.showToast(`${field === 'quantity' ? 'Quantity' : 'Price'} cannot be negative`, 'error');
+                return;
+            }
+
+            // Warn about very large values
+            if (numValue > 10000000) { // 1 crore
+                if (!confirm(`${field === 'quantity' ? 'Quantity' : 'Price'} is very large (${numValue.toLocaleString('en-IN')}). Continue?`)) {
+                    return;
+                }
+            }
+
+            oms.currentQuotation.functions[funcIndex].items[itemIndex][field] = numValue;
+        } else {
+            // Name field - trim whitespace
+            oms.currentQuotation.functions[funcIndex].items[itemIndex][field] = value.trim();
+        }
+
+        this.recalculateQuotation(oms);
+        this.renderQuotations(oms); // Re-render to show updated subtotals
+    },
+
+    updateQuotationDayDate(oms, dayIndex, value) {
+        oms.currentQuotation.days[dayIndex].date = value;
+    },
+
+    addQuotationDayFunction(oms, dayIndex) {
+        if (!oms.currentQuotation.days[dayIndex].functions) {
+            oms.currentQuotation.days[dayIndex].functions = [];
+        }
+        oms.currentQuotation.days[dayIndex].functions.push({ name: '', items: [] });
+        this.renderQuotations(oms);
+    },
+
+    removeQuotationDayFunction(oms, dayIndex, funcIndex) {
+        oms.currentQuotation.days[dayIndex].functions.splice(funcIndex, 1);
+        this.renderQuotations(oms);
+    },
+
+    updateQuotationDayFunctionName(oms, dayIndex, funcIndex, value) {
+        oms.currentQuotation.days[dayIndex].functions[funcIndex].name = value;
+    },
+
+    updateQuotationDayFunctionField(oms, dayIndex, funcIndex, field, value) {
+        oms.currentQuotation.days[dayIndex].functions[funcIndex][field] = value;
+        // No need to recalculate for notes/venue fields
+    },
+
+    addQuotationDayFunctionItem(oms, dayIndex, funcIndex) {
+        if (!oms.currentQuotation.days[dayIndex].functions[funcIndex].items) {
+            oms.currentQuotation.days[dayIndex].functions[funcIndex].items = [];
+        }
+        oms.currentQuotation.days[dayIndex].functions[funcIndex].items.push({ name: '', quantity: 1, price: 0 });
+        this.renderQuotations(oms);
+    },
+
+    removeQuotationDayFunctionItem(oms, dayIndex, funcIndex, itemIndex) {
+        oms.currentQuotation.days[dayIndex].functions[funcIndex].items.splice(itemIndex, 1);
+        this.renderQuotations(oms);
+    },
+
+    updateQuotationDayFunctionItem(oms, dayIndex, funcIndex, itemIndex, field, value) {
+        // Validation for price and quantity fields
+        if (field === 'quantity' || field === 'price') {
+            const numValue = parseFloat(value) || 0;
+
+            // Prevent negative values
+            if (numValue < 0) {
+                oms.showToast(`${field === 'quantity' ? 'Quantity' : 'Price'} cannot be negative`, 'error');
+                return;
+            }
+
+            // Warn about very large values
+            if (numValue > 10000000) { // 1 crore
+                if (!confirm(`${field === 'quantity' ? 'Quantity' : 'Price'} is very large (${numValue.toLocaleString('en-IN')}). Continue?`)) {
+                    return;
+                }
+            }
+
+            oms.currentQuotation.days[dayIndex].functions[funcIndex].items[itemIndex][field] = numValue;
+        } else {
+            // Name field - trim whitespace
+            oms.currentQuotation.days[dayIndex].functions[funcIndex].items[itemIndex][field] = value.trim();
+        }
+
+        this.recalculateQuotation(oms);
+        this.renderQuotations(oms); // Re-render to show updated subtotals
+    },
+
+    // Phase 3D: Calculation & Business Logic
+
+    updateQuotationDiscount(oms) {
+        const type = Utils.get('quotDiscountType');
+        let value = parseFloat(Utils.get('quotDiscountValue')) || 0;
+
+        // Validate discount value
+        if (value < 0) {
+            oms.showToast('Discount cannot be negative', 'error');
+            Utils.set('quotDiscountValue', 0);
+            return;
+        }
+
+        // Prevent percentage discount > 100%
+        if (type === 'percentage' && value > 100) {
+            oms.showToast('Discount percentage cannot exceed 100%', 'error');
+            Utils.set('quotDiscountValue', 100);
+            value = 100;
+        }
+
+        // Warn if fixed discount exceeds subtotal
+        if (type === 'fixed' && value > oms.currentQuotation.financials.subtotal) {
+            oms.showToast('Warning: Discount exceeds subtotal. Grand total will be ₹0.', 'warning');
+        }
+
+        oms.currentQuotation.discount = { type, value, amount: 0 };
+        this.recalculateQuotation(oms);
+    },
+
+    recalculateQuotation(oms) {
+        const q = oms.currentQuotation;
+        if (!q) return;
+
+        let totalSubtotal = 0;
+
+        // Calculate based on order type
+        if (!q.orderType || q.orderType === 'single') {
+            // Single function order - calculate from q.items
+            if (q.items && q.items.length > 0) {
+                q.items.forEach(item => {
+                    const price = parseFloat(item.rate || item.price) || 0;
+                    const quantity = parseFloat(item.quantity) || 0;
+                    item.subtotal = price * quantity;
+                    totalSubtotal += item.subtotal;
+                });
+            }
+        } else if (q.orderType === 'multifunction') {
+            // Multifunction order - calculate from q.functions
+            if (q.functions && q.functions.length > 0) {
+                q.functions.forEach(func => {
+                    let functionSubtotal = 0;
+                    if (func.items && func.items.length > 0) {
+                        func.items.forEach(item => {
+                            const price = parseFloat(item.price) || 0;
+                            const quantity = parseFloat(item.quantity) || 0;
+                            item.subtotal = price * quantity;
+                            functionSubtotal += item.subtotal;
+                        });
+                    }
+                    func.subtotal = functionSubtotal;
+                    totalSubtotal += functionSubtotal;
+                });
+            }
+        } else if (q.orderType === 'multiday') {
+            // Multiday order - calculate from q.days
+            if (q.days && q.days.length > 0) {
+                q.days.forEach(day => {
+                    let daySubtotal = 0;
+                    if (day.functions && day.functions.length > 0) {
+                        day.functions.forEach(func => {
+                            let functionSubtotal = 0;
+                            if (func.items && func.items.length > 0) {
+                                func.items.forEach(item => {
+                                    const price = parseFloat(item.price) || 0;
+                                    const quantity = parseFloat(item.quantity) || 0;
+                                    item.subtotal = price * quantity;
+                                    functionSubtotal += item.subtotal;
+                                });
+                            }
+                            func.subtotal = functionSubtotal;
+                            daySubtotal += functionSubtotal;
+                        });
+                    }
+                    day.subtotal = daySubtotal;
+                    totalSubtotal += daySubtotal;
+                });
+            }
+        }
+
+        // Update quotation financials
+        q.financials.subtotal = totalSubtotal;
+
+        // Calculate discount
+        if (q.discount.type === 'percentage') {
+            q.financials.discountAmount = (q.financials.subtotal * q.discount.value) / 100;
+        } else {
+            q.financials.discountAmount = parseFloat(q.discount.value) || 0;
+        }
+
+        // Calculate grand total
+        q.financials.grandTotal = Math.max(0, q.financials.subtotal - q.financials.discountAmount);
+
+        // Calculate payment schedule (50/50 split)
+        q.financials.booking50 = (q.financials.grandTotal * 0.5).toFixed(2);
+        q.financials.beforeEvent50 = (q.financials.grandTotal * 0.5).toFixed(2);
+
+        // Update display
+        this.updateFinancialDisplay(oms);
+    },
+
+    updateFinancialDisplay(oms) {
+        const q = oms.currentQuotation;
+        if (!q) return;
+
+        const subtotalEl = document.getElementById('quotSubtotal');
+        const discountEl = document.getElementById('quotDiscountAmount');
+        const grandTotalEl = document.getElementById('quotGrandTotal');
+        const booking50El = document.getElementById('quotBooking50');
+        const beforeEvent50El = document.getElementById('quotBeforeEvent50');
+
+        if (subtotalEl) subtotalEl.textContent = `₹${q.financials.subtotal.toLocaleString('en-IN')}`;
+        if (discountEl) discountEl.textContent = `- ₹${q.financials.discountAmount.toLocaleString('en-IN')}`;
+        if (grandTotalEl) grandTotalEl.textContent = `₹${q.financials.grandTotal.toLocaleString('en-IN')}`;
+        if (booking50El) booking50El.textContent = `₹${parseFloat(q.financials.booking50).toLocaleString('en-IN')}`;
+        if (beforeEvent50El) beforeEvent50El.textContent = `₹${parseFloat(q.financials.beforeEvent50).toLocaleString('en-IN')}`;
+    },
+
+    // Phase 3E: CRUD Operations
+
+    cancelQuotationEdit(oms) {
+        oms.quotationViewMode = 'list';
+        oms.editingQuotationId = null;
+        oms.currentQuotation = null;
+        this.renderQuotations(oms);
+    },
+
+    async saveQuotation(oms, status = 'draft') {
+        const q = oms.currentQuotation;
+        if (!q) return;
+
+        // Validate
+        const customerName = Utils.get('quotCustomerName');
+        const customerContact = Utils.get('quotCustomerContact');
+        const eventDate = Utils.get('quotEventDate');
+
+        if (!customerName || !customerContact || !eventDate) {
+            oms.showToast('Please fill customer name, contact, and event date', 'error');
+            return;
+        }
+
+        // Validate items based on order type
+        let hasItems = false;
+
+        if (!q.orderType || q.orderType === 'single') {
+            hasItems = q.items && q.items.length > 0;
+        } else if (q.orderType === 'multifunction') {
+            hasItems = q.functions && q.functions.length > 0 &&
+                       q.functions.some(func => func.items && func.items.length > 0);
+        } else if (q.orderType === 'multiday') {
+            hasItems = q.days && q.days.length > 0 &&
+                       q.days.some(day =>
+                           day.functions && day.functions.length > 0 &&
+                           day.functions.some(func => func.items && func.items.length > 0)
+                       );
+        }
+
+        if (!hasItems) {
+            oms.showToast('Please add at least one item to save quotation', 'error');
+            return;
+        }
+
+        // Gather data
+        q.customer = {
+            name: customerName,
+            contact: customerContact,
+            email: Utils.get('quotCustomerEmail'),
+            eventDate: eventDate,
+            eventVenue: Utils.get('quotEventVenue'),
+            eventVenueName: q.customer?.eventVenueName || '',
+            eventVenueCoordinates: q.customer?.eventVenueCoordinates || null
+        };
+
+        // Add notes field
+        q.notes = Utils.get('quotNotes') || '';
+
+        const quotationData = {
+            ...q,
+            status: status,
+            updatedAt: new Date().toISOString()
+        };
+
+        try {
+            if (oms.editingQuotationId) {
+                // Update existing
+                quotationData.id = oms.editingQuotationId;
+                quotationData.quotationNumber = q.quotationNumber;
+                quotationData.createdAt = q.createdAt;
+
+                await db.collection('quotations').doc(oms.editingQuotationId).update(quotationData);
+                oms.showToast('✅ Quotation updated!', 'success');
+            } else {
+                // Create new
+                quotationData.quotationNumber = await this.generateQuotationNumber(oms);
+                quotationData.createdAt = new Date().toISOString();
+                quotationData.quotationDate = new Date().toISOString().split('T')[0];
+                quotationData.validUntil = this.calculateValidUntil();
+
+                const docRef = await db.collection('quotations').add(quotationData);
+                quotationData.id = docRef.id;
+
+                oms.showToast('✅ Quotation saved!', 'success');
+            }
+
+            // Reload quotations
+            await this.loadQuotationsFromFirestore(oms);
+
+            // Return to list
+            oms.quotationViewMode = 'list';
+            this.renderQuotations(oms);
+
+            return quotationData;
+        } catch (error) {
+            console.error('Error saving quotation:', error);
+            oms.showToast('Error: ' + error.message, 'error');
+        }
+    },
+
+    async generateQuotationNumber(oms) {
+        const year = new Date().getFullYear();
+        const quotations = oms.data.quotations || [];
+        const thisYearQuotations = quotations.filter(q =>
+            q.quotationNumber && q.quotationNumber.startsWith(`QT-${year}`)
+        );
+
+        const nextNumber = thisYearQuotations.length + 1;
+        return `QT-${year}-${String(nextNumber).padStart(3, '0')}`;
+    },
+
+    calculateValidUntil() {
+        const date = new Date();
+        date.setDate(date.getDate() + 15); // Valid for 15 days
+        return date.toISOString().split('T')[0];
+    },
+
+    async editQuotation(oms, quotationId) {
+        const quotation = oms.data.quotations.find(q => q.id === quotationId);
+        if (!quotation) {
+            oms.showToast('Quotation not found', 'error');
+            return;
+        }
+
+        oms.editingQuotationId = quotationId;
+        oms.currentQuotation = JSON.parse(JSON.stringify(quotation)); // Deep copy
+        oms.quotationViewMode = 'edit';
+        this.renderQuotations(oms);
+    },
+
+    async deleteQuotation(oms, quotationId) {
+        if (!confirm('Delete this quotation?')) return;
+
+        try {
+            await db.collection('quotations').doc(quotationId).delete();
+            oms.showToast('✅ Quotation deleted', 'success');
+
+            await this.loadQuotationsFromFirestore(oms);
+            this.renderQuotations(oms);
+        } catch (error) {
+            console.error('Error deleting quotation:', error);
+            oms.showToast('Error: ' + error.message, 'error');
+        }
+    },
+
+    async loadQuotationsFromFirestore(oms) {
+        try {
+            const snapshot = await db.collection('quotations').orderBy('createdAt', 'desc').get();
+            const quotations = [];
+
+            snapshot.forEach(doc => {
+                quotations.push({ id: doc.id, ...doc.data() });
+            });
+
+            oms.data.quotations = quotations;
+            console.log(`✅ Loaded ${quotations.length} quotations`);
+        } catch (error) {
+            console.error('Error loading quotations:', error);
+        }
+    },
+
+    // Placeholder functions for later phases (PDF & Conversion)
+    viewQuotationPDF(oms, quotationId) { console.warn('viewQuotationPDF - to be extracted in Phase 3F'); },
+    previewQuotationPDF(oms) { console.warn('previewQuotationPDF - to be extracted in Phase 3F'); },
+    downloadQuotationPDF(oms, quotationId) { console.warn('downloadQuotationPDF - to be extracted in Phase 3F'); },
+    convertQuotationToOrder(oms, quotationId) { console.warn('convertQuotationToOrder - to be extracted in Phase 3G'); },
 };
 
 // Export to window for backward compatibility
