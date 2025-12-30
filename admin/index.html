@@ -12784,6 +12784,16 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             async renderHistory() {
+                // Wrapper function - delegates to History module if loaded
+                if (window.History && typeof window.History.renderHistory === 'function') {
+                    await window.History.renderHistory(this);
+                } else {
+                    // Module not loaded yet - skip
+                    console.log('History module not loaded yet');
+                }
+            },
+
+            async _oldRenderHistory_REMOVE() {
                 const container = document.getElementById('history');
                 container.innerHTML = `
                     <div class="card">
@@ -17918,6 +17928,7 @@ if (diffDays > 30) {
                 const { Team } = await import(`./js/features/team.js?v=${BUILD_TIMESTAMP}`);
                 const { Analytics } = await import(`./js/features/analytics.js?v=${BUILD_TIMESTAMP}`);
                 const { Dashboard } = await import(`./js/features/dashboard.js?v=${BUILD_TIMESTAMP}`);
+                const { History } = await import(`./js/features/history.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
@@ -17928,8 +17939,9 @@ if (diffDays > 30) {
                 window.Team = Team;
                 window.Analytics = Analytics;
                 window.Dashboard = Dashboard;
+                window.History = History;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
