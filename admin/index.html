@@ -7219,13 +7219,12 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             downloadOrderImage(orderId) {
-                // Search by docId first (always unique), then orderId as fallback
-                const order = this.data.orders.find(o => o.docId === orderId || o.orderId === orderId);
-                if (!order) {
-                    this.showToast('Order not found', 'error');
-                    return;
+                // Wrapper function - delegates to Print module if loaded
+                if (window.Print && typeof window.Print.downloadOrderImage === 'function') {
+                    window.Print.downloadOrderImage(this, orderId);
+                } else {
+                    console.log('Print module not loaded yet');
                 }
-                Orders.generateSingleOrderImage(this, order);
             },
 
             // ============ IMAGE GENERATION ============
@@ -17985,6 +17984,7 @@ if (diffDays > 30) {
                 const { Calendar } = await import(`./js/features/calendar.js?v=${BUILD_TIMESTAMP}`);
                 const { Financials } = await import(`./js/features/financials.js?v=${BUILD_TIMESTAMP}`);
                 const { Settings } = await import(`./js/features/settings.js?v=${BUILD_TIMESTAMP}`);
+                const { Print } = await import(`./js/features/print.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
@@ -17999,8 +17999,9 @@ if (diffDays > 30) {
                 window.Calendar = Calendar;
                 window.Financials = Financials;
                 window.Settings = Settings;
+                window.Print = Print;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar, Financials, Settings)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar, Financials, Settings, Print)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
