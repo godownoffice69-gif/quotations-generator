@@ -7219,13 +7219,12 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             downloadOrderImage(orderId) {
-                // Search by docId first (always unique), then orderId as fallback
-                const order = this.data.orders.find(o => o.docId === orderId || o.orderId === orderId);
-                if (!order) {
-                    this.showToast('Order not found', 'error');
-                    return;
+                // Wrapper function - delegates to Print module if loaded
+                if (window.Print && typeof window.Print.downloadOrderImage === 'function') {
+                    window.Print.downloadOrderImage(this, orderId);
+                } else {
+                    console.log('Print module not loaded yet');
                 }
-                Orders.generateSingleOrderImage(this, order);
             },
 
             // ============ IMAGE GENERATION ============
@@ -12799,6 +12798,53 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            async renderFinancials() {
+                // Wrapper function - delegates to Financials module if loaded
+                if (window.Financials && typeof window.Financials.renderFinancials === 'function') {
+                    await window.Financials.renderFinancials(this);
+                } else {
+                    // Module not loaded yet - skip
+                    console.log('Financials module not loaded yet');
+                }
+            },
+
+            renderSettings() {
+                // Wrapper function - delegates to Settings module if loaded
+                if (window.Settings && typeof window.Settings.renderSettings === 'function') {
+                    window.Settings.renderSettings(this);
+                } else {
+                    // Module not loaded yet - skip
+                    console.log('Settings module not loaded yet');
+                }
+            },
+
+            async saveSettings() {
+                // Wrapper function - delegates to Settings module if loaded
+                if (window.Settings && typeof window.Settings.saveSettings === 'function') {
+                    await window.Settings.saveSettings(this);
+                } else {
+                    console.log('Settings module not loaded yet');
+                }
+            },
+
+            resetSettings() {
+                // Wrapper function - delegates to Settings module if loaded
+                if (window.Settings && typeof window.Settings.resetSettings === 'function') {
+                    window.Settings.resetSettings(this);
+                } else {
+                    console.log('Settings module not loaded yet');
+                }
+            },
+
+            resetAllData() {
+                // Wrapper function - delegates to Settings module if loaded
+                if (window.Settings && typeof window.Settings.resetAllData === 'function') {
+                    window.Settings.resetAllData(this);
+                } else {
+                    console.log('Settings module not loaded yet');
+                }
+            },
+
             async _oldRenderHistory_REMOVE() {
                 const container = document.getElementById('history');
                 container.innerHTML = `
@@ -17936,6 +17982,12 @@ if (diffDays > 30) {
                 const { Dashboard } = await import(`./js/features/dashboard.js?v=${BUILD_TIMESTAMP}`);
                 const { History } = await import(`./js/features/history.js?v=${BUILD_TIMESTAMP}`);
                 const { Calendar } = await import(`./js/features/calendar.js?v=${BUILD_TIMESTAMP}`);
+                const { Financials } = await import(`./js/features/financials.js?v=${BUILD_TIMESTAMP}`);
+                const { Settings } = await import(`./js/features/settings.js?v=${BUILD_TIMESTAMP}`);
+                const { Print } = await import(`./js/features/print.js?v=${BUILD_TIMESTAMP}`);
+                const { Videos } = await import(`./js/features/videos.js?v=${BUILD_TIMESTAMP}`);
+                const { Advertisements } = await import(`./js/features/advertisements.js?v=${BUILD_TIMESTAMP}`);
+                const { GlobalSearch } = await import(`./js/features/search.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
@@ -17948,8 +18000,14 @@ if (diffDays > 30) {
                 window.Dashboard = Dashboard;
                 window.History = History;
                 window.Calendar = Calendar;
+                window.Financials = Financials;
+                window.Settings = Settings;
+                window.Print = Print;
+                window.Videos = Videos;
+                window.Advertisements = Advertisements;
+                window.GlobalSearch = GlobalSearch;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar, Financials, Settings, Print, Videos, Advertisements, GlobalSearch)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
