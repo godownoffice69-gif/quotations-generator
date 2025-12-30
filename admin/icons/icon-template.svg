@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#667eea" rx="64"/>
+
+  <!-- OMS Icon - Document with checkmark -->
+  <g transform="translate(96, 64)">
+    <!-- Document/Order sheet -->
+    <rect x="40" y="40" width="240" height="320" fill="#ffffff" rx="12" stroke="#764ba2" stroke-width="4"/>
+
+    <!-- Document lines (representing order details) -->
+    <line x1="70" y1="80" x2="250" y2="80" stroke="#667eea" stroke-width="6" stroke-linecap="round"/>
+    <line x1="70" y1="120" x2="250" y2="120" stroke="#667eea" stroke-width="6" stroke-linecap="round"/>
+    <line x1="70" y1="160" x2="200" y2="160" stroke="#667eea" stroke-width="6" stroke-linecap="round"/>
+
+    <!-- Checkmark circle (order confirmed) -->
+    <circle cx="160" cy="250" r="70" fill="#4caf50" stroke="#2e7d32" stroke-width="4"/>
+
+    <!-- Checkmark -->
+    <path d="M 130 250 L 150 270 L 190 220"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="12"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+  </g>
+
+  <!-- App name badge -->
+  <rect x="64" y="420" width="384" height="60" fill="rgba(255,255,255,0.95)" rx="30"/>
+  <text x="256" y="460"
+        font-family="Arial, sans-serif"
+        font-size="32"
+        font-weight="bold"
+        fill="#667eea"
+        text-anchor="middle">OMS</text>
+</svg>

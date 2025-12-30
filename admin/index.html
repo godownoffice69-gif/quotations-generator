@@ -18,6 +18,18 @@
     <title>Order Management System [v9-PACKAGES-WORKING]</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="shortcut icon" type="image/png" href="logo.png">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OMS">
+    <meta name="theme-color" content="#667eea">
+    <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="msapplication-TileImage" content="/admin/icons/icon-144x144.png">
+    <link rel="apple-touch-icon" href="/admin/icons/icon-192x192.png">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -8108,130 +8120,6 @@ convertToQuotationDateFormat(dateStr) {
                 return result;
             },
 
-            buildOrderHTML(order, fontSize, colors, compact = false, bgColor = '#ffffff', textColor = '#000000', orderNumber = null) {
-                const ts = this.data.settings.tableSettings;
-                const orderIdBg = colors.orderIdBg || '#667eea';
-                const orderIdText = colors.orderIdText || '#ffffff';
-                const functionColor = this.data.settings.functionColor || '#667eea';
-
-                // Calculate requirements for this order
-                const requirements = Orders.calculateOrderRequirements(order);
-
-                return `
-                    <div style="margin-bottom: ${compact ? '25px' : '60px'}; ${compact ? 'border: 3px solid #CC8800; box-shadow: inset 0 0 0 3px #CC0000; padding: 15px;' : ''}; color: ${textColor}; background: ${bgColor};">
-                        ${!compact ? `<div style="text-align: center; margin-bottom: 40px;">
-                            <h1 style="color: ${colors.headerText}; background: ${colors.headerBg}; padding: 20px;">
-                                Order Management
-                            </h1>
-                            <h2 style="margin-top: 20px; color: ${textColor};">
-                                <span style="background: ${orderIdBg}; color: ${orderIdText}; padding: 10px 20px; border-radius: 8px;">
-                                    ${order.orderId}
-                                </span>
-                            </h2>
-                        </div>` : ''}
-
-                        <!-- FP- Field at center/top (YELLOW BACKGROUND REMOVED) -->
-                        <div style="text-align: center; margin-bottom: ${compact ? '15px' : '25px'}; margin-top: ${compact ? '10px' : '0'};">
-                            ${orderNumber ? `<div style="display: inline-block; font-size: ${fontSize + 6}px; font-weight: bold; color: ${textColor}; margin-right: 15px; vertical-align: middle;">Order ${orderNumber}</div>` : ''}
-                            <div style="display: inline-block; border: 2px solid ${textColor}; padding: 8px 25px; font-size: ${fontSize + 4}px; font-weight: bold; color: ${textColor}; vertical-align: middle;">
-                                FP-<span style="display: inline-block; min-width: 150px; border-bottom: 2px solid ${textColor}; margin-left: 10px; white-space: nowrap;">${order.orderId && order.orderId.startsWith('FP') ? order.orderId.substring(2) : ''}</span>
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: ${compact ? '12px' : '20px'}; font-size: ${fontSize}px; margin-bottom: ${compact ? '12px' : '20px'}; color: ${textColor};">
-                            <div>
-                                ${order.isMultiDay ? `
-                                    <strong style="color: ${textColor};">Start Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.startDate) || 'N/A'}</span><br>
-                                    <strong style="color: ${textColor};">End Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.endDate) || 'N/A'}</span><br>
-                                ` : `
-                                    <strong style="color: ${textColor};">Date:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${Utils.formatDate(order.date) || 'N/A'}</span><br>
-                                    <strong style="color: ${textColor};">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">${order.readyTime || '-'}</span><br>
-                                `}
-                                <strong style="color: ${textColor};">Client:</strong> ${order.clientName || '-'}<br>
-                                <strong style="color: ${textColor};">Contact:</strong> ${order.contact || '-'}<br>
-                                <strong style="color: ${textColor};">Venue:</strong> ${order.venue || '-'}
-                            </div>
-                            <div>
-                                <div style="font-size: 50px; font-weight: bold; color: ${textColor};">Dry Ice: ${requirements.dryIceNeeded > 0 ? requirements.dryIceNeeded + ' kg (' + requirements.dryMachines + ' machine' + (requirements.dryMachines !== 1 ? 's' : '') + ')' : ''}</div>
-                                <div style="font-size: 50px; font-weight: bold; color: ${textColor};">Flowers: ${requirements.flowersNeeded > 0 ? requirements.flowersNeeded + ' kg (' + requirements.flowerShowerMachines + ' machine' + (requirements.flowerShowerMachines !== 1 ? 's' : '') + ')' : ''}</div>
-                                <div style="font-size: 50px; font-weight: bold; color: ${textColor};">Electricity: ${requirements.totalElectricityKV > 0 ? requirements.totalElectricityKV + ' KV' : ''}</div>
-                                <strong style="color: ${textColor};">Transport:</strong> ${order.transport || '-'}<br>
-                                <strong style="color: ${textColor};">Driver:</strong> ${order.driverName || '-'}<br>
-                                ${order.transport2 ? `<strong style="color: ${textColor};">Transport 2:</strong> ${order.transport2}<br>` : ''}
-                                ${order.driverName2 ? `<strong style="color: ${textColor};">Driver 2:</strong> ${order.driverName2}<br>` : ''}
-                            </div>
-                            <div>
-                                <strong style="color: ${textColor};">Event:</strong> ${order.eventType || '-'}<br>
-                                <strong style="color: ${textColor};">Operator:</strong> ${order.operator || '-'}<br>
-                                <strong style="color: ${textColor};">Helper(s):</strong> ${order.helper || '-'}
-                            </div>
-                        </div>
-
-                        <!-- Dividing line between top info and items -->
-                        <div style="border-top: 3px solid ${textColor}; margin: ${compact ? '15px' : '25px'} 0;"></div>
-
-                            ${order.dayWiseData && order.dayWiseData.length > 0 ?
-                            '<div style="margin-top: ' + (compact ? '15px' : '30px') + ';">' +
-                                '<h3 style="color: ' + colors.headerText + '; background: ' + colors.headerBg + '; padding: ' + (compact ? '10px' : '15px') + '; text-align: center;">Day-wise Details</h3>' +
-                                order.dayWiseData.map((day, idx) =>
-                                    '<div style="margin-top: ' + (compact ? '12px' : '25px') + '; border: 2px solid ' + colors.tableBorder + '; padding: ' + (compact ? '10px' : '15px') + '; background: rgba(102, 126, 234, 0.05);">' +
-                                        '<h4 style="color: ' + orderIdBg + '; margin-bottom: ' + (compact ? '8px' : '15px') + ';">Day ' + day.dayNumber + ' - <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + Utils.formatDate(day.date) + '</span></h4>' +
-                                        (day.functions && day.functions.length > 0 ?
-                                            day.functions.map((func, funcIdx) =>
-                                                '<div style="background: ' + bgColor + '; padding: ' + (compact ? '10px' : '15px') + '; border: 1px solid ' + colors.tableBorder + '; border-radius: 6px; margin-top: ' + (funcIdx > 0 ? (compact ? '8px' : '15px') : '0') + '; color: ' + textColor + ';">' +
-                                                    '<h5 style="color: ' + functionColor + '; margin-bottom: ' + (compact ? '6px' : '10px') + '; font-size: ' + (fontSize - 2) + 'px;">Function ' + (funcIdx + 1) + '</h5>' +
-                                                    '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: ' + (compact ? '8px' : '12px') + '; font-size: ' + fontSize + 'px; margin-bottom: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';">' +
-                                                        '<div>' +
-                                                            '<strong style="color: ' + textColor + ';">Type:</strong> ' + (func.functionType || '-') + '<br>' +
-                                                            '<strong style="color: ' + textColor + ';">Time:</strong> <span style="background: #ffeb3b; color: #000000; padding: 2px 4px;">' + (func.timeSlot || '-') + '</span>' +
-                                                        '</div>' +
-                                                        '<div>' +
-                                                            '<strong style="color: ' + textColor + ';">Driver:</strong> ' + (func.driver || '-') + '<br>' +
-                                                            '<strong style="color: ' + textColor + ';">Operator:</strong> ' + (func.operator || '-') +
-                                                        '</div>' +
-                                                        '<div>' +
-                                                            '<strong style="color: ' + textColor + ';">Helper:</strong> ' + (func.helper || '-') +
-                                                        '</div>' +
-                                                    '</div>' +
-                                                    (func.notes ? '<div style="font-size: ' + fontSize + 'px; margin-bottom: ' + (compact ? '6px' : '10px') + '; color: ' + textColor + ';"><strong style="color: ' + textColor + ';">Notes:</strong> ' + func.notes + '</div>' : '') +
-                                                    (func.items && func.items.length > 0 ?
-                                                        '<div style="font-size: ' + (fontSize - 4) + 'px; color: ' + textColor + '; margin-top: ' + (compact ? '8px' : '12px') + ';">' +
-                                                            func.items.map((item, i) =>
-                                                                '<div style="padding: ' + (compact ? '4px' : '6px') + ' 0; color: ' + textColor + ';">' +
-                                                                    '<span style="color: ' + textColor + ';">' + (i + 1) + '. ' + item.name + ' - ' + item.quantity + (item.quantity == 1 ? ' Pc' : ' Pcs') + (item.remarks ? ' - Remarks: ' + item.remarks : '') + '</span>' +
-                                                                '</div>'
-                                                            ).join('') +
-                                                        '</div>'
-                                                    : '<p style="text-align: center; color: #666; font-style: italic; margin-top: ' + (compact ? '6px' : '10px') + ';">No items for this function</p>') +
-                                                '</div>'
-                                            ).join('')
-                                        : '<p style="text-align: center; color: #666; font-style: italic; margin-top: 10px;">No functions for this day</p>') +
-                                    '</div>'
-                                ).join('') +
-                            '</div>'
-                        : ''}
-                        
-                        ${!order.isMultiDay && order.items && order.items.length > 0 ? `
-                            <div style="font-size: ${fontSize - 4}px; margin-top: ${compact ? '12px' : '20px'}; color: ${textColor};">
-                                ${order.items.map((item, i) => `
-                                    <div style="padding: ${compact ? '4px' : '6px'} 0; color: ${textColor};">
-                                        <span style="color: ${textColor};">${i + 1}. ${item.name} - ${item.quantity} ${item.quantity == 1 ? 'Pc' : 'Pcs'}${item.remarks ? ' - Remarks: ' + item.remarks : ''}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : (!order.isMultiDay ? '<p style="text-align: center; color: #666; font-style: italic; margin-top: ' + (compact ? '12px' : '20px') + ';">No items added</p>' : '')}
-
-                        ${order.notes ? `
-                            <div style="margin-top: ${compact ? '10px' : '20px'}; font-size: ${fontSize}px; color: ${textColor};">
-                                <strong style="color: ${textColor};">Notes:</strong><br>
-                                <div style="background: ${colors.notesBg}; padding: ${compact ? '10px' : '15px'}; border: 1px solid ${colors.tableBorder}; color: ${textColor};">
-                                    ${order.notes}
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            },
 
             // ============ CUSTOMER MANAGEMENT ============
             updateCustomerDatabase(orderData) {
@@ -12845,447 +12733,6 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
-            async _oldRenderHistory_REMOVE() {
-                const container = document.getElementById('history');
-                container.innerHTML = `
-                    <div class="card">
-                        <div class="card-header">
-                            <h2 class="card-title">${this.t('orderHistory')}</h2>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-success" data-action="exportData">${this.t('export')}</button>
-                        </div>
-                        <!-- Floating Merge Button -->
-                        <button class="btn btn-primary" id="mergeSelectedBtn"
-                            style="display: none; position: fixed; bottom: 30px; right: 30px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); padding: 15px 25px; font-size: 16px;"
-                            onclick="OMS.showMergeModal()">
-                            🔗 Merge Selected Orders (<span id="mergeCount">0</span>)
-                        </button>
-                        <div class="form-group" style="margin: 20px 0; position: relative;">
-                            <label class="form-label">🔍 Search Orders</label>
-                            <input type="text" id="historySearch" class="form-input" placeholder="Search by client name, order ID, date, or venue...">
-                            <div id="historySearchResults" class="search-dropdown"></div>
-                        </div>
-                        <div id="historyContainer"></div>
-                    </div>
-                `;
-
-                // Add search functionality
-                this.setupHistorySearch();
-
-                // Initialize selected orders array
-                this.selectedOrdersForMerge = [];
-
-                // Check if user can manage financials
-                const canManageFinancials = await this.canViewFinancials();
-
-                // IMPORTANT: Filter out orders that have been merged into other orders
-                // Only show orders that are NOT marked as isMerged
-                const visibleOrders = this.data.orders.filter(o => !o.isMerged);
-                console.log(`📋 History: Showing ${visibleOrders.length} orders (filtered out ${this.data.orders.length - visibleOrders.length} merged orders)`);
-
-                this.renderTable('historyContainer', [
-                    { key: 'select', label: '☑️', render: o => {
-                        const isMergedOrder = o.mergedFrom && o.mergedFrom.length > 0;
-                        return `<input type="checkbox" class="order-select-checkbox" data-order-id="${o.docId || o.orderId}" ${isMergedOrder ? 'disabled' : ''} onchange="OMS.toggleOrderSelection('${o.docId || o.orderId}')">`;
-                    }},
-                    { key: 'orderId', label: this.t('orderId'), render: o => {
-                        const mergeStatus = o.mergedFrom && o.mergedFrom.length > 0
-                            ? `<span style="color: #667eea; font-weight: bold;">🔗 MERGED (${o.mergedFrom.length} orders)</span>`
-                            : '';
-                        return `<span class="order-id-highlight">${o.orderId}</span> ${mergeStatus}`;
-                    }},
-                    { key: 'clientName', label: this.t('client') },
-                    { key: 'venue', label: this.t('venue') },
-                    { key: 'date', label: this.t('date'), render: o => {
-                        if (o.isMultiDay) {
-                            return `${Utils.formatDate(o.startDate)} ${this.t('to')} ${Utils.formatDate(o.endDate)}`;
-                        }
-                        return Utils.formatDate(o.date);
-                    }},
-                    { key: 'status', label: this.t('status'), render: o => `<span class="status-badge status-${o.status.toLowerCase()}">${this.t(o.status.toLowerCase())}</span>` }
-                ], visibleOrders, (row) => {
-                    const isMergedOrder = row.mergedFrom && row.mergedFrom.length > 0;
-                    const unmergeBtn = isMergedOrder ? `<button class="btn btn-info btn-small" onclick="OMS.unmergeOrder('${row.docId || row.orderId}')">🔓 Unmerge</button>` : '';
-                    const paymentExpenseButtons = canManageFinancials ? `
-                        <button class="btn btn-primary btn-small" onclick="OMS.addPaymentForOrder('${row.docId || row.orderId}')">💵 Payment</button>
-                        <button class="btn btn-warning btn-small" onclick="OMS.addExpenseForOrder('${row.docId || row.orderId}')">💸 Expense</button>
-                    ` : '';
-                    return `
-                        <button class="btn btn-secondary btn-small" data-action="edit" data-type="order" data-id="${row.docId || row.orderId}">${this.t('edit')}</button>
-                        <button class="btn btn-success btn-small" data-action="print" data-id="${row.docId || row.orderId}">${this.t('print')}</button>
-                        ${paymentExpenseButtons}
-                        ${unmergeBtn}
-                        <button class="btn btn-danger btn-small" data-action="delete" data-type="order" data-id="${row.docId || row.orderId}">${this.t('delete')}</button>
-                    `;
-                });
-            },
-
-            setupHistorySearch() {
-                const searchInput = document.getElementById('historySearch');
-                const searchResults = document.getElementById('historySearchResults');
-
-                if (!searchInput || !searchResults) return;
-
-                let searchTimeout;
-
-                searchInput.addEventListener('input', (e) => {
-                    clearTimeout(searchTimeout);
-                    const query = e.target.value.trim().toLowerCase();
-
-                    if (query.length < 2) {
-                        searchResults.style.display = 'none';
-                        searchResults.innerHTML = '';
-                        return;
-                    }
-
-                    searchTimeout = setTimeout(() => {
-                        // Search through all orders
-                        const results = this.data.orders.filter(order => {
-                            const clientName = (order.clientName || '').toLowerCase();
-                            const orderId = (order.orderId || '').toLowerCase();
-                            const venue = (order.venue || '').toLowerCase();
-                            const date = order.isMultiDay
-                                ? `${Utils.formatDate(order.startDate)} ${Utils.formatDate(order.endDate)}`.toLowerCase()
-                                : Utils.formatDate(order.date).toLowerCase();
-
-                            return clientName.includes(query) ||
-                                   orderId.includes(query) ||
-                                   venue.includes(query) ||
-                                   date.includes(query);
-                        }); // Show all matching results (no limit)
-
-                        if (results.length === 0) {
-                            searchResults.innerHTML = '<div class="search-dropdown-item">No orders found</div>';
-                            searchResults.style.display = 'block';
-                        } else {
-                            searchResults.innerHTML = results.map(order => {
-                                const dateDisplay = order.isMultiDay
-                                    ? `${Utils.formatDate(order.startDate)} - ${Utils.formatDate(order.endDate)}`
-                                    : Utils.formatDate(order.date);
-                                const statusClass = `status-${order.status.toLowerCase()}`;
-
-                                return `
-                                    <div class="search-dropdown-item" data-order-id="${order.docId || order.orderId}" style="cursor: pointer; padding: 10px; border-bottom: 1px solid var(--border-color);">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <div>
-                                                <strong>${order.orderId || '[No ID]'}</strong> - ${order.clientName}
-                                                <br>
-                                                <small style="color: var(--text-gray);">
-                                                    📅 ${dateDisplay} | 📍 ${order.venue || 'N/A'}
-                                                </small>
-                                            </div>
-                                            <span class="status-badge ${statusClass}">${order.status}</span>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('');
-                            searchResults.style.display = 'block';
-
-                            // Add click handlers to search results
-                            searchResults.querySelectorAll('.search-dropdown-item').forEach(item => {
-                                const orderId = item.getAttribute('data-order-id');
-                                if (orderId && orderId !== 'null') {
-                                    item.addEventListener('click', () => {
-                                        // Find the order
-                                        const order = this.data.orders.find(o =>
-                                            o.docId === orderId || o.orderId === orderId
-                                        );
-
-                                        if (order) {
-                                            // Switch to orders tab
-                                            this.switchTab('orders');
-                                            // Load order into form for editing
-                                            Orders.loadOrderToForm(this, order);
-                                            // Clear search
-                                            searchInput.value = '';
-                                            searchResults.style.display = 'none';
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    }, 300); // Debounce 300ms
-                });
-
-                // Close dropdown when clicking outside
-                document.addEventListener('click', (e) => {
-                    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-                        searchResults.style.display = 'none';
-                    }
-                });
-            },
-
-            // ============ MERGE/UNMERGE ORDERS ============
-            toggleOrderSelection(orderId) {
-                const checkbox = document.querySelector(`.order-select-checkbox[data-order-id="${orderId}"]`);
-                if (!checkbox) return;
-
-                if (checkbox.checked) {
-                    if (!this.selectedOrdersForMerge.includes(orderId)) {
-                        this.selectedOrdersForMerge.push(orderId);
-                    }
-                } else {
-                    this.selectedOrdersForMerge = this.selectedOrdersForMerge.filter(id => id !== orderId);
-                }
-
-                // Show/hide merge button based on selection count
-                const mergeBtn = document.getElementById('mergeSelectedBtn');
-                const mergeCount = document.getElementById('mergeCount');
-                if (mergeBtn) {
-                    mergeBtn.style.display = this.selectedOrdersForMerge.length >= 2 ? 'block' : 'none';
-                    if (mergeCount) {
-                        mergeCount.textContent = this.selectedOrdersForMerge.length;
-                    }
-                }
-            },
-
-            showMergeModal() {
-                if (this.selectedOrdersForMerge.length < 2) {
-                    alert('Please select at least 2 orders to merge');
-                    return;
-                }
-
-                // Get selected orders
-                const selectedOrders = this.selectedOrdersForMerge.map(id =>
-                    this.data.orders.find(o => (o.docId || o.orderId) === id)
-                ).filter(o => o);
-
-                if (selectedOrders.length < 2) {
-                    alert('Error: Could not find selected orders');
-                    return;
-                }
-
-                // Create modal HTML
-                const modalHTML = `
-                    <div class="modal show" id="mergeModalOverlay" onclick="if(event.target === this) document.getElementById('mergeModalOverlay').remove();">
-                        <div class="modal-content" style="max-width: 600px;">
-                            <div class="modal-header">
-                                <h2>🔗 Merge Orders</h2>
-                            </div>
-                            <div class="modal-body">
-                                <p style="margin-bottom: 1rem; color: #666;">Select which order to keep as the base. All other orders' content will be merged into it.</p>
-
-                                <div class="form-group">
-                                    <label class="form-label">Select Base Order:</label>
-                                    <select id="mergeBaseOrder" class="form-select" onchange="OMS.updateMergeOrderId()">
-                                        ${selectedOrders.map(order => `
-                                            <option value="${order.docId || order.orderId}">
-                                                ${order.orderId} - ${order.clientName} (${order.isMultiDay ? `${Utils.formatDate(order.startDate)} to ${Utils.formatDate(order.endDate)}` : Utils.formatDate(order.date)})
-                                            </option>
-                                        `).join('')}
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">Merged Order ID (editable):</label>
-                                    <input type="text" id="mergedOrderId" class="form-input" value="${selectedOrders[0].orderId}">
-                                    <small style="color: #666;">You can change the Order ID for the merged order</small>
-                                </div>
-
-                                <div style="background: #f0f0f0; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                                    <h4 style="margin: 0 0 0.5rem 0;">Orders to be merged:</h4>
-                                    <ul style="margin: 0; padding-left: 1.5rem;">
-                                        ${selectedOrders.map(order => `
-                                            <li>${order.orderId} - ${order.clientName}</li>
-                                        `).join('')}
-                                    </ul>
-                                    <p style="margin-top: 0.5rem; font-size: 0.9em; color: #666;">
-                                        Original orders will be marked as "merged" and can be unmerged later.
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button class="btn btn-secondary" onclick="document.getElementById('mergeModalOverlay').remove()">Cancel</button>
-                                <button class="btn btn-primary" onclick="OMS.performMerge()">🔗 Merge Orders</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                document.body.insertAdjacentHTML('beforeend', modalHTML);
-            },
-
-            updateMergeOrderId() {
-                const baseOrderSelect = document.getElementById('mergeBaseOrder');
-                const orderIdInput = document.getElementById('mergedOrderId');
-                if (!baseOrderSelect || !orderIdInput) return;
-
-                const baseOrderId = baseOrderSelect.value;
-                const baseOrder = this.data.orders.find(o => (o.docId || o.orderId) === baseOrderId);
-                if (baseOrder) {
-                    orderIdInput.value = baseOrder.orderId;
-                }
-            },
-
-            async performMerge() {
-                const baseOrderSelect = document.getElementById('mergeBaseOrder');
-                const orderIdInput = document.getElementById('mergedOrderId');
-
-                if (!baseOrderSelect || !orderIdInput) return;
-
-                const baseOrderId = baseOrderSelect.value;
-                const newOrderId = orderIdInput.value.trim();
-
-                if (!newOrderId) {
-                    alert('Please enter an Order ID for the merged order');
-                    return;
-                }
-
-                try {
-                    // Get all selected orders
-                    const ordersToMerge = this.selectedOrdersForMerge.map(id =>
-                        this.data.orders.find(o => (o.docId || o.orderId) === id)
-                    ).filter(o => o);
-
-                    // Get base order
-                    const baseOrder = ordersToMerge.find(o => (o.docId || o.orderId) === baseOrderId);
-                    const otherOrders = ordersToMerge.filter(o => (o.docId || o.orderId) !== baseOrderId);
-
-                    if (!baseOrder) {
-                        alert('Error: Base order not found');
-                        return;
-                    }
-
-                    // Store original orders data for unmerge
-                    const mergedFromData = ordersToMerge.map(order => ({
-                        docId: order.docId,
-                        orderId: order.orderId,
-                        orderData: JSON.parse(JSON.stringify(order)) // Deep copy
-                    }));
-
-                    // Create merged order by combining content
-                    const mergedOrder = JSON.parse(JSON.stringify(baseOrder)); // Deep copy
-                    mergedOrder.orderId = newOrderId;
-                    mergedOrder.mergedFrom = mergedFromData;
-                    mergedOrder.mergedAt = new Date().toISOString();
-
-                    // Merge items from other orders (for single-day orders)
-                    if (!mergedOrder.isMultiDay) {
-                        otherOrders.forEach(order => {
-                            if (!order.isMultiDay && order.items && order.items.length > 0) {
-                                mergedOrder.items = [...(mergedOrder.items || []), ...order.items];
-                            }
-                        });
-                    }
-
-                    // Merge day-wise data for multi-day orders
-                    if (mergedOrder.isMultiDay) {
-                        otherOrders.forEach(order => {
-                            if (order.isMultiDay && order.dayWiseData) {
-                                // Merge dayWiseData intelligently
-                                order.dayWiseData.forEach(dayData => {
-                                    const existingDayIndex = mergedOrder.dayWiseData.findIndex(d => d.date === dayData.date);
-                                    if (existingDayIndex >= 0) {
-                                        // Merge functions for same date
-                                        mergedOrder.dayWiseData[existingDayIndex].functions = [
-                                            ...(mergedOrder.dayWiseData[existingDayIndex].functions || []),
-                                            ...(dayData.functions || [])
-                                        ];
-                                    } else {
-                                        // Add new date
-                                        mergedOrder.dayWiseData.push(dayData);
-                                    }
-                                });
-                            }
-                        });
-                    }
-
-                    // Merge notes
-                    const allNotes = ordersToMerge.map(o => o.notes).filter(n => n && n.trim()).join('\n---\n');
-                    if (allNotes) {
-                        mergedOrder.notes = allNotes;
-                    }
-
-                    // Update merged order in Firebase
-                    await this.updateOrderInFirebase(mergedOrder, baseOrder.docId);
-
-                    // Mark other orders as merged
-                    for (const order of otherOrders) {
-                        const updatedOrder = { ...order, isMerged: true, mergedInto: newOrderId };
-                        await this.updateOrderInFirebase(updatedOrder, order.docId);
-                    }
-
-                    // Reload data
-                    await this.loadOrdersFromFirestore();
-
-                    // Close modal
-                    document.getElementById('mergeModalOverlay')?.remove();
-
-                    // Clear selection
-                    this.selectedOrdersForMerge = [];
-
-                    // Refresh history view
-                    this.renderHistory();
-
-                    alert(`✅ Successfully merged ${ordersToMerge.length} orders into ${newOrderId}`);
-
-                } catch (error) {
-                    console.error('Error merging orders:', error);
-                    alert('Error merging orders: ' + error.message);
-                }
-            },
-
-            async unmergeOrder(orderId) {
-                if (!confirm('Are you sure you want to unmerge this order? This will restore all original separate orders.')) {
-                    return;
-                }
-
-                try {
-                    // Find the merged order
-                    const mergedOrder = this.data.orders.find(o => (o.docId || o.orderId) === orderId);
-
-                    if (!mergedOrder || !mergedOrder.mergedFrom) {
-                        alert('Error: This is not a merged order');
-                        return;
-                    }
-
-                    console.log(`🔓 Unmerging order ${orderId}. Will restore ${mergedOrder.mergedFrom.length} original orders:`,
-                        mergedOrder.mergedFrom.map(o => `${o.orderId} (docId: ${o.docId})`));
-
-                    // Restore all original orders
-                    for (const originalData of mergedOrder.mergedFrom) {
-                        const restoredOrder = originalData.orderData;
-
-                        // Explicitly remove merge-related fields from Firestore
-                        restoredOrder.isMerged = firebase.firestore.FieldValue.delete();
-                        restoredOrder.mergedInto = firebase.firestore.FieldValue.delete();
-                        restoredOrder.mergedFrom = firebase.firestore.FieldValue.delete();
-                        restoredOrder.mergedAt = firebase.firestore.FieldValue.delete();
-
-                        console.log(`📝 Restoring order ${originalData.orderId} to docId ${originalData.docId}`);
-                        await this.updateOrderInFirebase(restoredOrder, originalData.docId);
-                    }
-
-                    // NOTE: We DON'T delete the merged order document because:
-                    // - The merged order's docId is the same as the base order's docId
-                    // - Restoring the base order already overwrites the merged order data
-                    // - Deleting it would delete the restored base order!
-
-                    // Reload data
-                    await this.loadOrdersFromFirestore();
-
-                    // Refresh history view
-                    this.renderHistory();
-
-                    alert(`✅ Successfully unmerged order. ${mergedOrder.mergedFrom.length} original orders restored.`);
-
-                } catch (error) {
-                    console.error('Error unmerging order:', error);
-                    alert('Error unmerging order: ' + error.message);
-                }
-            },
-
-            async updateOrderInFirebase(orderData, docId) {
-                if (!docId) {
-                    throw new Error('Document ID is required for update');
-                }
-
-                const orderRef = firebase.firestore().collection('orders').doc(docId);
-                await orderRef.update(orderData);
-
-                console.log(`Order ${docId} updated in Firebase`);
-            },
 
             // ============ ANALYTICS MODULE ============
             // Loaded lazily from /admin/js/features/analytics.js
@@ -18055,6 +17502,130 @@ if (diffDays > 30) {
                 console.error('Error details:', error.message, error.stack);
             }
         });
+
+        // ============================================
+        // PWA SERVICE WORKER REGISTRATION
+        // ============================================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/admin/service-worker.js', {
+                        scope: '/admin/'
+                    });
+
+                    console.log('✅ Service Worker registered successfully');
+                    console.log('📱 PWA features enabled:');
+                    console.log('  - Offline support');
+                    console.log('  - Background sync');
+                    console.log('  - Push notifications ready');
+                    console.log('  - Install prompt available');
+
+                    // PWA Install Prompt Handler
+                    let deferredPrompt;
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        e.preventDefault();
+                        deferredPrompt = e;
+                        console.log('💾 PWA install prompt ready');
+
+                        // Show custom install banner after 3 seconds
+                        setTimeout(() => {
+                            // Create install banner if it doesn't exist
+                            if (!document.getElementById('pwaInstallBanner')) {
+                                const banner = document.createElement('div');
+                                banner.id = 'pwaInstallBanner';
+                                banner.innerHTML = `
+                                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                        <div style="flex: 1; min-width: 200px;">
+                                            <strong style="display: block; margin-bottom: 0.25rem;">📱 Install OMS App</strong>
+                                            <small style="opacity: 0.9;">Install for offline access & faster performance</small>
+                                        </div>
+                                        <button id="pwaInstallButton" style="background: white; color: #667eea; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: transform 0.2s;">
+                                            Install Now
+                                        </button>
+                                        <button id="pwaDismissInstall" style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.5); padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer;">
+                                            Not Now
+                                        </button>
+                                    </div>
+                                `;
+                                banner.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); z-index: 10000; max-width: 90%; animation: slideUp 0.3s ease;';
+                                document.body.appendChild(banner);
+
+                                // Add animation
+                                const style = document.createElement('style');
+                                style.textContent = '@keyframes slideUp { from { transform: translateX(-50%) translateY(100px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }';
+                                document.head.appendChild(style);
+
+                                // Install button click
+                                document.getElementById('pwaInstallButton').addEventListener('click', async () => {
+                                    banner.remove();
+                                    if (deferredPrompt) {
+                                        deferredPrompt.prompt();
+                                        const { outcome } = await deferredPrompt.userChoice;
+                                        console.log(`User response: ${outcome}`);
+                                        deferredPrompt = null;
+                                    }
+                                });
+
+                                // Dismiss button click
+                                document.getElementById('pwaDismissInstall').addEventListener('click', () => {
+                                    banner.remove();
+                                });
+                            }
+                        }, 3000);
+                    });
+
+                    // Track app installation
+                    window.addEventListener('appinstalled', () => {
+                        console.log('🎉 PWA installed successfully!');
+                        deferredPrompt = null;
+                        if (window.OMS && typeof window.OMS.showToast === 'function') {
+                            window.OMS.showToast('✅ App installed! You can now use it offline.');
+                        }
+                    });
+
+                    // Check for updates periodically
+                    setInterval(() => {
+                        registration.update();
+                    }, 60000); // Check every minute
+
+                    // Handle service worker updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('🔄 New version available! Reload to update.');
+                                // Show update notification to user
+                                if (window.OMS && typeof window.OMS.showToast === 'function') {
+                                    window.OMS.showToast('New version available! Please reload the app.', 'info');
+                                }
+                            }
+                        });
+                    });
+
+                    // Listen for messages from service worker
+                    navigator.serviceWorker.addEventListener('message', (event) => {
+                        console.log('📨 Message from Service Worker:', event.data);
+                        if (event.data.type === 'SYNC_ORDERS') {
+                            // Trigger order sync
+                            if (window.OMS) {
+                                console.log('🔄 Syncing orders after background sync...');
+                            }
+                        } else if (event.data.type === 'NOTIFICATION_CLICK') {
+                            // Handle notification click
+                            const data = event.data.data || {};
+                            if (data.tab && window.OMS) {
+                                window.OMS.switchTab(data.tab);
+                            }
+                        }
+                    });
+
+                } catch (error) {
+                    console.error('❌ Service Worker registration failed:', error);
+                }
+            });
+        } else {
+            console.warn('⚠️ Service Workers not supported in this browser');
+        }
     </script>
 
 </body>
