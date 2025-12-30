@@ -15079,7 +15079,7 @@ setupAllRealtimeListeners() {
                     console.log('👷 Team member updated:', teamMember.name);
                 }
                 // Update UI in real-time - always render when data changes
-                Team.renderTeamTable(this);
+                this.renderTeamTable();
                 // Also update dropdowns in order form
                 this.updateTeamDropdowns();
             } else if (change.type === 'removed') {
@@ -15088,7 +15088,7 @@ setupAllRealtimeListeners() {
                     this.data.team.splice(index, 1);
                     console.log('👷 Team member removed:', teamMember.name);
                     // Update UI in real-time
-                    Team.renderTeamTable(this);
+                    this.renderTeamTable();
                     this.updateTeamDropdowns();
                 }
             }

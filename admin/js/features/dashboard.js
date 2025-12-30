@@ -24,6 +24,14 @@ export const Dashboard = {
         this.renderStats(oms);
         this.renderRecentOrders(oms);
         this.renderTopCustomer(oms);
+
+        // Render analytics charts (revenue, status, monthly, top items)
+        if (typeof oms.renderAnalyticsCharts === 'function') {
+            oms.renderAnalyticsCharts();
+        }
+
+        // Render top 10 customers list
+        this.renderTop10Customers(oms);
     },
 
     /**
@@ -103,6 +111,39 @@ export const Dashboard = {
             topCustomerContainer.innerHTML = `
                 <div style="background: var(--light); padding: 1rem; border-radius: var(--radius); text-align: center; color: #999;">
                     ${oms.t('noCustomersYet') || 'No customers yet'}
+                </div>
+            `;
+        }
+    },
+
+    /**
+     * Render top 10 customers list (moved from old renderDashboard)
+     * @param {Object} oms - Reference to OMS
+     */
+    renderTop10Customers(oms) {
+        const container = document.getElementById('topCustomerInfo');
+        if (!container) return;
+
+        if (oms.data.customers.length > 0) {
+            // Sort customers by total orders (descending) and take top 10
+            const topCustomers = [...oms.data.customers]
+                .sort((a, b) => b.totalOrders - a.totalOrders)
+                .slice(0, 10);
+
+            container.innerHTML = `
+                <div style="background: var(--light); padding: 1rem; border-radius: var(--radius);">
+                    ${topCustomers.map((customer, index) => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; ${index < topCustomers.length - 1 ? 'border-bottom: 1px solid #e0e0e0;' : ''}">
+                            <div style="flex: 1;">
+                                <strong>${index + 1}. ${customer.name}</strong><br>
+                                <span style="font-size: 0.875rem; color: var(--text-gray);">${customer.contact}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <strong style="color: var(--primary); font-size: 1.125rem;">${customer.totalOrders}</strong>
+                                <span style="font-size: 0.875rem; color: var(--text-gray); display: block;">${oms.t('ordersText')}</span>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
             `;
         }
