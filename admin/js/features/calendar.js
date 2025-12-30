@@ -1,29 +1,30 @@
-/* ============================================
-   CALENDAR - Calendar view with orders, tasks, and festivals
-   ============================================ */
-
 /**
- * Calendar Feature Module
+ * Calendar Module
  *
- * Provides:
- * - Month view with order/task indicators
- * - Festival display
- * - Day detail view
- * - Task management
+ * Extracted from monolithic OMS class for better code organization.
+ * Handles:
+ * - Calendar grid rendering with orders and tasks
+ * - Month navigation
+ * - Day details modal
+ * - Task management (add, edit, delete)
+ * - Order integration with calendar
  *
- * @exports Calendar
+ * All functions accept `oms` as first parameter following the modular pattern.
  */
 
 import { Utils } from '../utils/helpers.js';
 
 export const Calendar = {
+
+    // ==================== PHASE 11A: CALENDAR RENDERING ====================
+
     /**
-     * Render calendar HTML for a given month
-     * @param {Date} date - Date to render (month/year)
-     * @param {Object} oms - Reference to OMS for data access
-     * @returns {string} HTML for calendar
+     * Render calendar grid with orders and tasks
+     * @param {Object} oms - Reference to OMS
+     * @param {Date} date - Date to display (defaults to today)
+     * @returns {string} HTML string for calendar
      */
-    render(date = new Date(), oms) {
+    renderCalendar(oms, date = new Date()) {
         const year = date.getFullYear();
         const month = date.getMonth();
 
@@ -37,11 +38,11 @@ export const Calendar = {
             <div class="calendar-container">
                 <div class="calendar-header">
                     <div class="calendar-nav">
-                        <button class="btn btn-primary btn-small" onclick="OMS.changeMonth(-1)">${oms.t('previousMonth')}</button>
+                        <button class="btn btn-primary btn-small" onclick="Calendar.changeMonth(window.OMS, -1)">${oms.t('previousMonth')}</button>
                         <h3>${monthNames[month]} ${year}</h3>
-                        <button class="btn btn-primary btn-small" onclick="OMS.changeMonth(1)">${oms.t('nextMonth')}</button>
+                        <button class="btn btn-primary btn-small" onclick="Calendar.changeMonth(window.OMS, 1)">${oms.t('nextMonth')}</button>
                     </div>
-                    <button class="btn btn-secondary btn-small" onclick="OMS.showToday()">${oms.t('today')}</button>
+                    <button class="btn btn-secondary btn-small" onclick="Calendar.showToday(window.OMS)">${oms.t('today')}</button>
                 </div>
                 <div class="calendar-grid">
                     ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day =>
@@ -57,16 +58,12 @@ export const Calendar = {
                         const orders = oms.data.orders.filter(o => {
                             if (o.isMultiDay) {
                                 // Use fuzzy date matcher for multi-day range check
-                                if (o.startDate && o.endDate && typeof fuzzyDateMatcher !== 'undefined') {
+                                if (o.startDate && o.endDate) {
                                     return fuzzyDateMatcher.isInRange(dateStr, o.startDate, o.endDate);
                                 }
                             }
                             // Use fuzzy date matcher for single-day check
-                            if (typeof fuzzyDateMatcher !== 'undefined') {
-                                return o.date && fuzzyDateMatcher.matches(o.date, dateStr);
-                            }
-                            // Fallback to exact match
-                            return o.date === dateStr;
+                            return o.date && fuzzyDateMatcher.matches(o.date, dateStr);
                         });
                         const tasks = oms.data.tasks.filter(t => t.date === dateStr);
                         const festival = oms.festivals[dateStr];
@@ -84,7 +81,7 @@ export const Calendar = {
                         }).join('');
 
                         return `
-                            <div class="${classes}" onclick="OMS.showDayDetails('${dateStr}')">
+                            <div class="${classes}" onclick="Calendar.showDayDetails(window.OMS, '${dateStr}')">
                                 <div class="calendar-day-number">${day}</div>
                                 ${festival ? `<div class="festival-text">${festival[1]}</div>` : ''}
                                 ${orders.length ? `<div class="order-count" title="${orders.length} ${oms.t('ordersText')}">${orderColorDots}${orders.length > 3 ? '+' : ''}</div>` : ''}
@@ -105,7 +102,7 @@ export const Calendar = {
                         <input type="text" id="taskDescription" class="form-input" placeholder="${oms.t('enterNotes')}">
                     </div>
                     <div class="form-group">
-                        <button class="btn btn-primary" onclick="OMS.addTask()">${oms.t('add')}</button>
+                        <button class="btn btn-primary" onclick="Calendar.addTask(window.OMS)">${oms.t('add')}</button>
                     </div>
                 </div>
             </div>
@@ -115,81 +112,96 @@ export const Calendar = {
     },
 
     /**
-     * Generate day details HTML (orders, tasks, festivals for a specific day)
-     * @param {string} dateStr - Date string (YYYY-MM-DD)
+     * Render calendar tab (wrapper for renderCalendar)
      * @param {Object} oms - Reference to OMS
-     * @returns {Object} Object with title and content HTML
      */
-    getDayDetailsHTML(dateStr, oms) {
+    renderCalendarTab(oms) {
+        document.getElementById('calendar').innerHTML = this.renderCalendar(oms, oms.currentCalendarDate || new Date());
+    },
+
+    // ==================== PHASE 11B: DATE NAVIGATION ====================
+
+    /**
+     * Change calendar month
+     * @param {Object} oms - Reference to OMS
+     * @param {number} delta - Number of months to change (+1 or -1)
+     */
+    changeMonth(oms, delta) {
+        oms.currentCalendarDate = oms.currentCalendarDate || new Date();
+        oms.currentCalendarDate.setMonth(oms.currentCalendarDate.getMonth() + delta);
+        oms.switchTab('calendar');
+    },
+
+    /**
+     * Show today's date in calendar
+     * @param {Object} oms - Reference to OMS
+     */
+    showToday(oms) {
+        oms.currentCalendarDate = new Date();
+        oms.switchTab('calendar');
+    },
+
+    // ==================== PHASE 11C: DAY DETAILS & TASKS ====================
+
+    /**
+     * Show details for a specific day (orders and tasks)
+     * @param {Object} oms - Reference to OMS
+     * @param {string} dateStr - Date string in YYYY-MM-DD format
+     */
+    showDayDetails(oms, dateStr) {
         const date = Utils.getLocalDate(dateStr);
 
         // ============ ENHANCED FILTERING WITH LOGGING ============
-        let orders = [];
-        let normalizedDate = dateStr;
+        const startTime = performance.now();
+        const normalizedDate = fuzzyDateMatcher.normalize(dateStr);
 
-        if (typeof fuzzyDateMatcher !== 'undefined') {
-            const startTime = performance.now();
-            normalizedDate = fuzzyDateMatcher.normalize(dateStr);
+        filterLogger.log('showDayDetails_started', {
+            operation: 'showDayDetails',
+            filterDate: dateStr,
+            normalizedDate,
+            totalOrdersAvailable: oms.data.orders.length
+        });
 
-            if (typeof filterLogger !== 'undefined') {
-                filterLogger.log('showDayDetails_started', {
-                    operation: 'showDayDetails',
-                    filterDate: dateStr,
-                    normalizedDate,
-                    totalOrdersAvailable: oms.data.orders.length
-                });
-            }
-
-            const matchedOrders = [];
-            orders = oms.data.orders.filter(o => {
-                if (o.isMultiDay) {
-                    // Use fuzzy date matcher for multi-day range check
-                    if (o.startDate && o.endDate && fuzzyDateMatcher.isInRange(dateStr, o.startDate, o.endDate)) {
-                        matchedOrders.push(o);
-                        return true;
-                    }
-                }
-                // Use fuzzy date matcher for single-day check
-                if (o.date && fuzzyDateMatcher.matches(o.date, dateStr)) {
+        const matchedOrders = [];
+        const orders = oms.data.orders.filter(o => {
+            if (o.isMultiDay) {
+                // Use fuzzy date matcher for multi-day range check
+                if (o.startDate && o.endDate && fuzzyDateMatcher.isInRange(dateStr, o.startDate, o.endDate)) {
                     matchedOrders.push(o);
                     return true;
                 }
-                return false;
-            });
-
-            const filterTime = (performance.now() - startTime).toFixed(2);
-
-            // Log and learn from this filter
-            if (typeof filterLogger !== 'undefined') {
-                filterLogger.log('showDayDetails_completed', {
-                    operation: 'showDayDetails',
-                    filterDate: dateStr,
-                    matchedCount: orders.length,
-                    filterTimeMs: filterTime
-                });
             }
-
-            if (typeof patternLearner !== 'undefined') {
-                patternLearner.recordFilterResult(normalizedDate, orders.length, oms.data.orders.length, 'showDayDetails');
+            // Use fuzzy date matcher for single-day check
+            if (o.date && fuzzyDateMatcher.matches(o.date, dateStr)) {
+                matchedOrders.push(o);
+                return true;
             }
+            return false;
+        });
 
-            // Validate and alert if needed
-            if (typeof orderValidator !== 'undefined') {
-                const validationResult = orderValidator.validate({
-                    date: normalizedDate,
-                    orderCount: orders.length,
-                    totalAvailable: oms.data.orders.length,
-                    matchedOrders,
-                    allOrders: oms.data.orders
-                });
+        const filterTime = (performance.now() - startTime).toFixed(2);
 
-                if (validationResult.some(a => a.level === 'error' || a.level === 'warning')) {
-                    orderValidator.showAlerts(validationResult, dateStr);
-                }
-            }
-        } else {
-            // Fallback to exact match if fuzzyDateMatcher not available
-            orders = oms.data.orders.filter(o => o.date === dateStr);
+        // Log and learn from this filter
+        filterLogger.log('showDayDetails_completed', {
+            operation: 'showDayDetails',
+            filterDate: dateStr,
+            matchedCount: orders.length,
+            filterTimeMs: filterTime
+        });
+
+        patternLearner.recordFilterResult(normalizedDate, orders.length, oms.data.orders.length, 'showDayDetails');
+
+        // Validate and alert if needed
+        const validationResult = orderValidator.validate({
+            date: normalizedDate,
+            orderCount: orders.length,
+            totalAvailable: oms.data.orders.length,
+            matchedOrders,
+            allOrders: oms.data.orders
+        });
+
+        if (validationResult.some(a => a.level === 'error' || a.level === 'warning')) {
+            orderValidator.showAlerts(validationResult, dateStr);
         }
         // ============ END ENHANCED FILTERING ============
 
@@ -236,19 +248,105 @@ export const Calendar = {
 
         content += `
             <div class="btn-group">
-                <button class="btn btn-primary" onclick="OMS.addTaskForDate('${dateStr}')">${oms.t('add')}</button>
-                <button class="btn btn-secondary" onclick="OMS.createOrderForDate('${dateStr}')">${oms.t('orders')}</button>
+                <button class="btn btn-primary" onclick="Calendar.addTaskForDate(window.OMS, '${dateStr}')">${oms.t('add')}</button>
+                <button class="btn btn-secondary" onclick="Calendar.createOrderForDate(window.OMS, '${dateStr}')">${oms.t('orders')}</button>
             </div>
         `;
 
-        return {
-            title: oms.t('details'),
-            content: content
-        };
-    }
-};
+        oms.showModal(oms.t('details'), content);
+    },
 
-// Make globally available
-if (typeof window !== 'undefined') {
-    window.Calendar = Calendar;
-}
+    /**
+     * Add a new task
+     * @param {Object} oms - Reference to OMS
+     */
+    addTask(oms) {
+        const date = Utils.get('taskDate');
+        const description = Utils.get('taskDescription');
+        
+        if (!date || !description) {
+            oms.showToast('Enter date and description', 'error');
+            return;
+        }
+        
+        const task = {
+            id: Utils.generateId(),
+            date: date,
+            description: description,
+            completed: false,
+            createdAt: new Date().toISOString()
+        };
+        
+        oms.createItem('task', task);
+        oms.saveToStorage();
+        oms.switchTab('calendar');
+        Utils.set('taskDescription', '');
+        oms.showToast('Task added!');
+    },
+
+    /**
+     * Add task for specific date
+     * @param {Object} oms - Reference to OMS
+     * @param {string} date - Date string
+     */
+    addTaskForDate(oms, date) {
+        oms.switchTab('calendar');
+        setTimeout(() => {
+            Utils.set('taskDate', date);
+            document.getElementById('taskDescription').focus();
+        }, 100);
+    },
+
+    /**
+     * Create order for specific date
+     * @param {Object} oms - Reference to OMS
+     * @param {string} date - Date string
+     */
+    createOrderForDate(oms, date) {
+        oms.switchTab('orders');
+        Utils.set('orderDate', date);
+    },
+
+    /**
+     * Show task edit modal
+     * @param {Object} oms - Reference to OMS
+     * @param {Object} task - Task object
+     */
+    showTaskEditModal(oms, task) {
+        const content = `
+            <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" id="editTaskDate" class="form-input" value="${task.date}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <input type="text" id="editTaskDescription" class="form-input" value="${task.description}">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="Calendar.saveTaskEdit(window.OMS, '${task.id}')">Save</button>
+                <button class="btn btn-secondary" onclick="OMS.closeModal()">Cancel</button>
+            </div>
+        `;
+        oms.showModal('Edit Task', content);
+    },
+
+    /**
+     * Save task edit
+     * @param {Object} oms - Reference to OMS
+     * @param {string} taskId - Task ID
+     */
+    saveTaskEdit(oms, taskId) {
+        const newData = {
+            date: Utils.get('editTaskDate'),
+            description: Utils.get('editTaskDescription')
+        };
+        
+        if (oms.updateItem('task', taskId, newData)) {
+            oms.saveToStorage();
+            oms.switchTab('calendar');
+            oms.closeModal();
+            oms.showToast('Task updated!');
+        }
+    }
+
+};
