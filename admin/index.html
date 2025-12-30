@@ -17987,6 +17987,7 @@ if (diffDays > 30) {
                 const { Print } = await import(`./js/features/print.js?v=${BUILD_TIMESTAMP}`);
                 const { Videos } = await import(`./js/features/videos.js?v=${BUILD_TIMESTAMP}`);
                 const { Advertisements } = await import(`./js/features/advertisements.js?v=${BUILD_TIMESTAMP}`);
+                const { GlobalSearch } = await import(`./js/features/search.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
@@ -18004,8 +18005,9 @@ if (diffDays > 30) {
                 window.Print = Print;
                 window.Videos = Videos;
                 window.Advertisements = Advertisements;
+                window.GlobalSearch = GlobalSearch;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar, Financials, Settings, Print, Videos, Advertisements)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar, Financials, Settings, Print, Videos, Advertisements, GlobalSearch)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
