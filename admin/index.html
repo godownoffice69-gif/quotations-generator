@@ -12784,6 +12784,16 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             async renderHistory() {
+                // Wrapper function - delegates to History module if loaded
+                if (window.History && typeof window.History.renderHistory === 'function') {
+                    await window.History.renderHistory(this);
+                } else {
+                    // Module not loaded yet - skip
+                    console.log('History module not loaded yet');
+                }
+            },
+
+            async _oldRenderHistory_REMOVE() {
                 const container = document.getElementById('history');
                 container.innerHTML = `
                     <div class="card">
@@ -12792,8 +12802,13 @@ convertToQuotationDateFormat(dateStr) {
                         </div>
                         <div class="btn-group">
                             <button class="btn btn-success" data-action="exportData">${this.t('export')}</button>
-                            <button class="btn btn-primary" id="mergeSelectedBtn" style="display: none;" onclick="OMS.showMergeModal()">🔗 Merge Selected Orders</button>
                         </div>
+                        <!-- Floating Merge Button -->
+                        <button class="btn btn-primary" id="mergeSelectedBtn"
+                            style="display: none; position: fixed; bottom: 30px; right: 30px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); padding: 15px 25px; font-size: 16px;"
+                            onclick="OMS.showMergeModal()">
+                            🔗 Merge Selected Orders (<span id="mergeCount">0</span>)
+                        </button>
                         <div class="form-group" style="margin: 20px 0; position: relative;">
                             <label class="form-label">🔍 Search Orders</label>
                             <input type="text" id="historySearch" class="form-input" placeholder="Search by client name, order ID, date, or venue...">
@@ -12964,9 +12979,12 @@ convertToQuotationDateFormat(dateStr) {
 
                 // Show/hide merge button based on selection count
                 const mergeBtn = document.getElementById('mergeSelectedBtn');
+                const mergeCount = document.getElementById('mergeCount');
                 if (mergeBtn) {
-                    mergeBtn.style.display = this.selectedOrdersForMerge.length >= 2 ? 'inline-block' : 'none';
-                    mergeBtn.textContent = `🔗 Merge Selected Orders (${this.selectedOrdersForMerge.length})`;
+                    mergeBtn.style.display = this.selectedOrdersForMerge.length >= 2 ? 'block' : 'none';
+                    if (mergeCount) {
+                        mergeCount.textContent = this.selectedOrdersForMerge.length;
+                    }
                 }
             },
 
@@ -15500,8 +15518,15 @@ if (change.type === 'modified') {
 }
             
             if (change.type === 'removed') {
-                console.log('🗑️ Order removed from Firestore:', orderData.orderId || change.doc.id);
-                const index = this.data.orders.findIndex(o => o.orderId === (orderData.orderId || change.doc.id));
+                const docId = change.doc.id;
+                const orderId = orderData.orderId || '';
+                console.log('🗑️ Order removed from Firestore:', orderId || `[docId: ${docId}]`);
+
+                // FIXED: Find by docId OR orderId (same pattern as 'added' and 'modified')
+                const index = this.data.orders.findIndex(o =>
+                    o.docId === docId || (orderId && o.orderId === orderId)
+                );
+
                 if (index !== -1) {
                     const deleted = this.data.orders.splice(index, 1)[0];
                     this.updateAllDisplays();
@@ -15511,7 +15536,9 @@ if (change.type === 'modified') {
                         this.renderDashboard();
                     }
 
-                    this.showToast(`🗑️ Order deleted: ${deleted.orderId}`, 'success');
+                    this.showToast(`🗑️ Order deleted: ${deleted.orderId || deleted.docId}`, 'success');
+                } else {
+                    console.warn('⚠️ Could not find order to remove:', orderId || docId);
                 }
             }
         });
@@ -17901,6 +17928,7 @@ if (diffDays > 30) {
                 const { Team } = await import(`./js/features/team.js?v=${BUILD_TIMESTAMP}`);
                 const { Analytics } = await import(`./js/features/analytics.js?v=${BUILD_TIMESTAMP}`);
                 const { Dashboard } = await import(`./js/features/dashboard.js?v=${BUILD_TIMESTAMP}`);
+                const { History } = await import(`./js/features/history.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
@@ -17911,8 +17939,9 @@ if (diffDays > 30) {
                 window.Team = Team;
                 window.Analytics = Analytics;
                 window.Dashboard = Dashboard;
+                window.History = History;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
