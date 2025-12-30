@@ -12809,6 +12809,43 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            renderSettings() {
+                // Wrapper function - delegates to Settings module if loaded
+                if (window.Settings && typeof window.Settings.renderSettings === 'function') {
+                    window.Settings.renderSettings(this);
+                } else {
+                    // Module not loaded yet - skip
+                    console.log('Settings module not loaded yet');
+                }
+            },
+
+            async saveSettings() {
+                // Wrapper function - delegates to Settings module if loaded
+                if (window.Settings && typeof window.Settings.saveSettings === 'function') {
+                    await window.Settings.saveSettings(this);
+                } else {
+                    console.log('Settings module not loaded yet');
+                }
+            },
+
+            resetSettings() {
+                // Wrapper function - delegates to Settings module if loaded
+                if (window.Settings && typeof window.Settings.resetSettings === 'function') {
+                    window.Settings.resetSettings(this);
+                } else {
+                    console.log('Settings module not loaded yet');
+                }
+            },
+
+            resetAllData() {
+                // Wrapper function - delegates to Settings module if loaded
+                if (window.Settings && typeof window.Settings.resetAllData === 'function') {
+                    window.Settings.resetAllData(this);
+                } else {
+                    console.log('Settings module not loaded yet');
+                }
+            },
+
             async _oldRenderHistory_REMOVE() {
                 const container = document.getElementById('history');
                 container.innerHTML = `
@@ -17947,6 +17984,7 @@ if (diffDays > 30) {
                 const { History } = await import(`./js/features/history.js?v=${BUILD_TIMESTAMP}`);
                 const { Calendar } = await import(`./js/features/calendar.js?v=${BUILD_TIMESTAMP}`);
                 const { Financials } = await import(`./js/features/financials.js?v=${BUILD_TIMESTAMP}`);
+                const { Settings } = await import(`./js/features/settings.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
@@ -17960,8 +17998,9 @@ if (diffDays > 30) {
                 window.History = History;
                 window.Calendar = Calendar;
                 window.Financials = Financials;
+                window.Settings = Settings;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar, Financials)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar, Financials, Settings)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
