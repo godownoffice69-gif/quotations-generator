@@ -12780,7 +12780,13 @@ convertToQuotationDateFormat(dateStr) {
             },
 
             renderCalendarTab() {
-                document.getElementById('calendar').innerHTML = this.renderCalendar(this.currentCalendarDate || new Date());
+                // Wrapper function - delegates to Calendar module if loaded
+                if (window.Calendar && typeof window.Calendar.renderCalendarTab === 'function') {
+                    window.Calendar.renderCalendarTab(this);
+                } else {
+                    // Module not loaded yet - skip
+                    console.log('Calendar module not loaded yet');
+                }
             },
 
             async renderHistory() {
@@ -17929,6 +17935,7 @@ if (diffDays > 30) {
                 const { Analytics } = await import(`./js/features/analytics.js?v=${BUILD_TIMESTAMP}`);
                 const { Dashboard } = await import(`./js/features/dashboard.js?v=${BUILD_TIMESTAMP}`);
                 const { History } = await import(`./js/features/history.js?v=${BUILD_TIMESTAMP}`);
+                const { Calendar } = await import(`./js/features/calendar.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
@@ -17940,8 +17947,9 @@ if (diffDays > 30) {
                 window.Analytics = Analytics;
                 window.Dashboard = Dashboard;
                 window.History = History;
+                window.Calendar = Calendar;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
