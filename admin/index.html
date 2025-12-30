@@ -12799,6 +12799,16 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            async renderFinancials() {
+                // Wrapper function - delegates to Financials module if loaded
+                if (window.Financials && typeof window.Financials.renderFinancials === 'function') {
+                    await window.Financials.renderFinancials(this);
+                } else {
+                    // Module not loaded yet - skip
+                    console.log('Financials module not loaded yet');
+                }
+            },
+
             async _oldRenderHistory_REMOVE() {
                 const container = document.getElementById('history');
                 container.innerHTML = `
@@ -17936,6 +17946,7 @@ if (diffDays > 30) {
                 const { Dashboard } = await import(`./js/features/dashboard.js?v=${BUILD_TIMESTAMP}`);
                 const { History } = await import(`./js/features/history.js?v=${BUILD_TIMESTAMP}`);
                 const { Calendar } = await import(`./js/features/calendar.js?v=${BUILD_TIMESTAMP}`);
+                const { Financials } = await import(`./js/features/financials.js?v=${BUILD_TIMESTAMP}`);
 
                 // Expose modules globally for onclick handlers
                 window.Orders = Orders;
@@ -17948,8 +17959,9 @@ if (diffDays > 30) {
                 window.Dashboard = Dashboard;
                 window.History = History;
                 window.Calendar = Calendar;
+                window.Financials = Financials;
 
-                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar)');
+                console.log('✅ All modules imported successfully (Package, Leads, Conversion, Orders, Quotations, Inventory, Preparation, Customers, Team, Analytics, Dashboard, History, Calendar, Financials)');
 
                 // Initialize Package Manager
                 const packageManager = new PackageManager();
