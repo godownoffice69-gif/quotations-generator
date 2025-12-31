@@ -5264,6 +5264,23 @@ order: async () => {
         };
         this.data.deletedOrders.push(deletedRecord);
 
+        // CROSS-SYSTEM SYNC: Add to Firestore deletedOrders collection (exclude demo orders)
+        const isDemoOrder = deleted.orderId && (deleted.orderId.toLowerCase().includes('demo') || deleted.orderId.toLowerCase().includes('test'));
+        if (!isDemoOrder && deleted.docId) {
+            try {
+                await db.collection('deletedOrders').doc(deleted.docId).set({
+                    orderId: deleted.orderId,
+                    docId: deleted.docId,
+                    clientName: deleted.clientName || '',
+                    deletedAt: deletedRecord.deletedAt,
+                    deleteReason: deletedRecord.deleteReason
+                });
+                console.log(`🔄 Synced deletion to Firestore deletedOrders: ${deleted.orderId}`);
+            } catch (error) {
+                console.error('❌ Failed to sync deletion to Firestore:', error);
+            }
+        }
+
         // CRITICAL: Save to localStorage immediately
         this.saveToStorage();
         console.log(`📝 Saved deletedOrders list (${this.data.deletedOrders.length} total)`);
@@ -5382,7 +5399,7 @@ async editItem(type, id) {
                 if (this.data.undoStack.length > 10) this.data.undoStack.shift();
             },
 
-            undo() {
+            async undo() {
                 const lastAction = this.data.undoStack.pop();
                 if (!lastAction) {
                     this.showToast('Nothing to undo', 'error');
@@ -5390,10 +5407,21 @@ async editItem(type, id) {
                 }
 
                 const { action, type, data } = lastAction;
-                
+
                 if (action === 'delete' && type === 'order') {
                     this.data.orders.push(data);
                     this.data.deletedOrders = this.data.deletedOrders.filter(o => o.orderId !== data.orderId);
+
+                    // CROSS-SYSTEM SYNC: Remove from Firestore deletedOrders collection (exclude demo orders)
+                    const isDemoOrder = data.orderId && (data.orderId.toLowerCase().includes('demo') || data.orderId.toLowerCase().includes('test'));
+                    if (!isDemoOrder && data.docId) {
+                        try {
+                            await db.collection('deletedOrders').doc(data.docId).delete();
+                            console.log(`🔄 Synced recovery to Firestore deletedOrders: ${data.orderId}`);
+                        } catch (error) {
+                            console.error('❌ Failed to sync recovery to Firestore:', error);
+                        }
+                    }
                 } else if (action === 'create' && type === 'order') {
                     this.data.orders = this.data.orders.filter(o => o.orderId !== data.orderId);
                 } else if (action === 'update' && type === 'order') {
@@ -14612,6 +14640,71 @@ setupAllRealtimeListeners() {
 
         // Update localStorage backup
         this.saveToStorage();
+    });
+
+    // CROSS-SYSTEM SYNC: deletedOrders real-time listener
+    this.deletedOrdersUnsubscribe = db.collection('deletedOrders').onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const deletedOrderData = { id: change.doc.id, ...change.doc.data() };
+
+            if (change.type === 'added') {
+                // Another system deleted an order - delete it locally too
+                const docId = deletedOrderData.docId || deletedOrderData.id;
+                const orderId = deletedOrderData.orderId;
+
+                // Skip demo orders
+                const isDemoOrder = orderId && (orderId.toLowerCase().includes('demo') || orderId.toLowerCase().includes('test'));
+                if (isDemoOrder) {
+                    console.log('⏭️ Skipping demo order deletion sync:', orderId);
+                    return;
+                }
+
+                // Check if order exists in local data
+                const index = this.data.orders.findIndex(o => o.docId === docId || o.orderId === orderId);
+                if (index !== -1) {
+                    const deleted = this.data.orders.splice(index, 1)[0];
+                    this.data.deletedOrders.push({
+                        ...deleted,
+                        deletedAt: deletedOrderData.deletedAt,
+                        deleteReason: 'Synced from other system'
+                    });
+                    this.saveToStorage();
+                    this.updateAllDisplays();
+                    console.log(`🔄 SYNCED DELETION from other system: ${orderId}`);
+                }
+            } else if (change.type === 'removed') {
+                // Another system recovered an order - recover it locally too
+                const docId = deletedOrderData.docId || deletedOrderData.id;
+                const orderId = deletedOrderData.orderId;
+
+                // Skip demo orders
+                const isDemoOrder = orderId && (orderId.toLowerCase().includes('demo') || orderId.toLowerCase().includes('test'));
+                if (isDemoOrder) {
+                    console.log('⏭️ Skipping demo order recovery sync:', orderId);
+                    return;
+                }
+
+                // Check if order is in deletedOrders list
+                const deletedIndex = this.data.deletedOrders.findIndex(o => o.docId === docId || o.orderId === orderId);
+                if (deletedIndex !== -1) {
+                    const recovered = this.data.deletedOrders[deletedIndex];
+
+                    // Only recover if the order doesn't already exist in active orders
+                    const alreadyExists = this.data.orders.findIndex(o => o.docId === docId || o.orderId === orderId);
+                    if (alreadyExists === -1) {
+                        // Remove recovery metadata before adding back
+                        delete recovered.deletedAt;
+                        delete recovered.deleteReason;
+
+                        this.data.orders.push(recovered);
+                        this.data.deletedOrders.splice(deletedIndex, 1);
+                        this.saveToStorage();
+                        this.updateAllDisplays();
+                        console.log(`🔄 SYNCED RECOVERY from other system: ${orderId}`);
+                    }
+                }
+            }
+        });
     });
 
     // Inventory real-time listeners

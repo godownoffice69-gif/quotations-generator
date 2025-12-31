@@ -1604,36 +1604,36 @@ export const Orders = {
                 // Render the actual summary to measure its real height
                 const summaryHtml = `
                     <div style="background: white; color: black; padding: 8px; margin-bottom: 10px; border: 3px solid #000; border-radius: 6px;">
-                        <h3 style="margin: 0 0 8px 0; font-size: 18px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                        <h3 style="margin: 0 0 8px 0; font-size: 40px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                        <div style="display: flex; justify-content: space-around; align-items: center; gap: 10px; flex-wrap: wrap;">
                             ${grandTotalDryIce > 0 ? `
-                            <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
-                                <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
+                            <div style="background: white; padding: 8px; text-align: center;">
+                                <div style="font-size: 40px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
                                 <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                    <div style="font-size: 32px;">❄️</div>
-                                    <div style="font-size: 32px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                    <div style="font-size: 40px;">❄️</div>
+                                    <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                 </div>
-                                <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                             </div>
                             ` : ''}
                             ${grandTotalFlowers > 0 ? `
-                            <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
-                                <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
+                            <div style="background: white; padding: 8px; text-align: center;">
+                                <div style="font-size: 40px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
                                 <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                    <div style="font-size: 32px;">🌸</div>
-                                    <div style="font-size: 32px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                    <div style="font-size: 40px;">🌸</div>
+                                    <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                 </div>
-                                <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                             </div>
                             ` : ''}
                             ${grandTotalElectricity > 0 ? `
-                            <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
-                                <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
+                            <div style="background: white; padding: 8px; text-align: center;">
+                                <div style="font-size: 40px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
                                 <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                    <div style="font-size: 32px;">⚡</div>
-                                    <div style="font-size: 32px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                    <div style="font-size: 40px;">⚡</div>
+                                    <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                 </div>
-                                <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">Total power needed</div>
+                                <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">Total power needed</div>
                             </div>
                             ` : ''}
                         </div>
@@ -1894,36 +1894,36 @@ export const Orders = {
                     console.log(`✅ Adding grand total summary to first page`);
                     html += `
                         <div style="background: white; color: black; padding: 8px; margin-bottom: 10px; border: 3px solid #000; border-radius: 6px;">
-                            <h3 style="margin: 0 0 8px 0; font-size: 18px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                            <h3 style="margin: 0 0 8px 0; font-size: 40px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                            <div style="display: flex; justify-content: space-around; align-items: center; gap: 10px; flex-wrap: wrap;">
                                 ${grandTotalDryIce > 0 ? `
-                                <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
-                                    <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
+                                <div style="background: white; padding: 8px; text-align: center;">
+                                    <div style="font-size: 40px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
                                     <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                        <div style="font-size: 32px;">❄️</div>
-                                        <div style="font-size: 32px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                        <div style="font-size: 40px;">❄️</div>
+                                        <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                     </div>
-                                    <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                    <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                 </div>
                                 ` : ''}
                                 ${grandTotalFlowers > 0 ? `
-                                <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
-                                    <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
+                                <div style="background: white; padding: 8px; text-align: center;">
+                                    <div style="font-size: 40px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
                                     <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                        <div style="font-size: 32px;">🌸</div>
-                                        <div style="font-size: 32px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                        <div style="font-size: 40px;">🌸</div>
+                                        <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                     </div>
-                                    <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                    <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                 </div>
                                 ` : ''}
                                 ${grandTotalElectricity > 0 ? `
-                                <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
-                                    <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
+                                <div style="background: white; padding: 8px; text-align: center;">
+                                    <div style="font-size: 40px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
                                     <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                        <div style="font-size: 32px;">⚡</div>
-                                        <div style="font-size: 32px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                        <div style="font-size: 40px;">⚡</div>
+                                        <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                     </div>
-                                    <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">Total power needed</div>
+                                    <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">Total power needed</div>
                                 </div>
                                 ` : ''}
                             </div>
@@ -1984,8 +1984,9 @@ export const Orders = {
                 } catch (canvasError) {
                     console.error('Canvas generation failed, retrying with lower quality:', canvasError);
 
-                    // Retry with lower quality scale
-                    const retryScale = isMobile ? 0.75 : 1;
+                    // AGGRESSIVE MEMORY FIX: Retry with even lower quality scale
+                    // Reduced from 1 to 0.8 for desktop to prevent memory crashes
+                    const retryScale = isMobile ? 0.6 : 0.8;
                     console.log(`⚠️ Retrying page ${pageNum + 1} with scale ${retryScale}...`);
 
                     canvas = await html2canvas(template, {
@@ -2006,14 +2007,16 @@ export const Orders = {
                 // PNG creates massive uncompressed data URLs that fill memory quickly
                 let imgData;
                 try {
-                    // Use JPEG with good quality - much smaller than PNG
-                    imgData = canvas.toDataURL('image/jpeg', 0.90);
-                    console.log(`📄 Page ${pageNum + 1}: JPEG size = ${(imgData.length / 1024 / 1024).toFixed(2)} MB`);
+                    // AGGRESSIVE MEMORY FIX: Reduced quality from 0.90 to 0.85 to save even more memory
+                    // Especially important for systems with memory constraints (owner's PC)
+                    const jpegQuality = orders.length > 5 ? 0.80 : 0.85;
+                    imgData = canvas.toDataURL('image/jpeg', jpegQuality);
+                    console.log(`📄 Page ${pageNum + 1}: JPEG size = ${(imgData.length / 1024 / 1024).toFixed(2)} MB (quality: ${jpegQuality})`);
                 } catch (jpegError) {
                     console.error('JPEG conversion failed, retrying with PNG:', jpegError);
                     // Fallback to PNG only if JPEG fails
                     try {
-                        imgData = canvas.toDataURL('image/png', 0.85);
+                        imgData = canvas.toDataURL('image/png', 0.75);
                     } catch (pngError) {
                         console.error('PNG conversion also failed:', pngError);
                         if (isMobile) {
@@ -2059,13 +2062,25 @@ export const Orders = {
 
                 // CRITICAL FIX: Explicit memory cleanup after each page to prevent crashes
                 // Force garbage collection by nullifying large objects
+
+                // AGGRESSIVE MEMORY FIX: Clear canvas context before nullifying
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+
+                canvas.width = 0;
+                canvas.height = 0;
                 canvas = null;
                 imgData = null;
 
-                // Give browser time to garbage collect before next page
-                // This prevents memory accumulation that causes white screen crashes
+                // AGGRESSIVE MEMORY FIX: Increased GC delay from 100ms to 300ms
+                // Gives browser more time to free memory before next page
+                // Critical for preventing crashes on memory-constrained systems
                 if (pageNum < totalPages - 1) {
-                    await new Promise(r => setTimeout(r, 100)); // 100ms delay for GC
+                    const gcDelay = orders.length > 5 ? 400 : 300; // Even longer delay for many orders
+                    await new Promise(r => setTimeout(r, gcDelay));
+                    console.log(`🧹 Memory cleanup pause: ${gcDelay}ms`);
                 }
             }
 
