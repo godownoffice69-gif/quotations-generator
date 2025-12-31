@@ -21,7 +21,37 @@ export const NotificationService = {
     }
 
     try {
-      this.messaging = firebase.messaging();
+      // CRITICAL: Register the Firebase Messaging Service Worker first
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.register('/admin/firebase-messaging-sw.js', {
+            scope: '/admin/'
+          });
+          console.log('✅ Firebase Messaging Service Worker registered:', registration.scope);
+
+          // Wait for service worker to be active
+          if (registration.installing) {
+            await new Promise((resolve) => {
+              registration.installing.addEventListener('statechange', (e) => {
+                if (e.target.state === 'activated') {
+                  resolve();
+                }
+              });
+            });
+          }
+
+          // Initialize Firebase Messaging with the registered service worker
+          this.messaging = firebase.messaging();
+          this.messaging.useServiceWorker(registration);
+        } catch (swError) {
+          console.error('❌ Service Worker registration failed:', swError);
+          // Try without explicit registration (Firebase will auto-register)
+          this.messaging = firebase.messaging();
+        }
+      } else {
+        this.messaging = firebase.messaging();
+      }
+
       this.isInitialized = true;
       console.log('✅ Notification service initialized');
       return true;
@@ -52,14 +82,14 @@ export const NotificationService = {
   /**
    * Get FCM token for this device
    *
-   * ⚠️ IMPORTANT: YOU NEED TO ADD YOUR VAPID KEY ON LINE 60!
+   * ⚠️ IMPORTANT: YOU NEED TO ADD YOUR VAPID KEY ON LINE 100!
    *
    * Get your VAPID key from Firebase Console:
    * 1. Go to Project Settings → Cloud Messaging
    * 2. Scroll down to "Web Push certificates"
    * 3. Click "Generate key pair" if you don't have one
-   * 4. Copy the key (starts with "BK...")
-   * 5. Paste it on line 60 below (replace 'YOUR_VAPID_KEY_HERE')
+   * 4. Copy the key (starts with "BK..." or "B...")
+   * 5. Paste it on line 100 below (replace 'YOUR_VAPID_KEY_HERE')
    */
   async getToken() {
     if (!this.messaging) {
@@ -67,7 +97,20 @@ export const NotificationService = {
     }
 
     try {
+      const vapidKey = 'YOUR_VAPID_KEY_HERE';  // ← LINE 100: PASTE YOUR VAPID KEY HERE!
+      // Example: 'BKxyz...abc123' (long string from Firebase Console)
+
+      // Check if user actually added the VAPID key
+      if (vapidKey === 'YOUR_VAPID_KEY_HERE') {
+        console.error('❌ VAPID KEY NOT ADDED!');
+        console.error('📝 You must add your VAPID key on line 100 of notifications.js');
+        console.error('🔑 Get it from: Firebase Console → Project Settings → Cloud Messaging → Web Push certificates');
+        alert('❌ VAPID KEY MISSING!\n\nYou need to add your Firebase VAPID key in notifications.js (line 100).\n\nGet it from:\nFirebase Console → Project Settings → Cloud Messaging → Web Push certificates');
+        return null;
+      }
+
       const token = await this.messaging.getToken({
+        vapidKey: vapidKey
         vapidKey: 'BMtK4wqyGQYptXJDmbSC1kWdzDWE1ptE27tB36qYyxaSple8HmqkcXHaXKCVXRZeCEIGXagjjiRpSMBE0wjStJw'  // ← LINE 60: PASTE YOUR VAPID KEY HERE!
         // Example: 'BKxyz...abc123' (long string from Firebase Console)
       });
@@ -81,7 +124,11 @@ export const NotificationService = {
       }
     } catch (error) {
       console.error('❌ Error getting FCM token:', error);
-      console.error('Make sure you added your VAPID key on line 60!');
+      console.error('💡 Common fixes:');
+      console.error('   1. Add your VAPID key on line 100');
+      console.error('   2. Make sure service worker is registered');
+      console.error('   3. Check internet connection');
+      console.error('   4. Try refreshing the page');
       return null;
     }
   },
