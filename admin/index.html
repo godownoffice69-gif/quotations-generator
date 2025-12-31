@@ -16819,6 +16819,42 @@ if (diffDays > 30) {
                 const { auth, db } = initializeFirebase();
                 console.log('✅ Firebase module loaded and initialized');
 
+                // ============================================
+                // INITIALIZE PUSH NOTIFICATIONS (After Firebase is ready)
+                // ============================================
+                (async function initNotifications() {
+                    try {
+                        // Import NotificationService module
+                        const { NotificationService } = await import('./js/services/notifications.js');
+
+                        // Make globally available
+                        window.NotificationService = NotificationService;
+
+                        // Initialize notification service
+                        const initialized = await NotificationService.init();
+                        if (initialized) {
+                            console.log('🔔 Push notification service ready');
+
+                            // Setup foreground message listener
+                            // Wait for OMS to be ready
+                            const waitForOMS = setInterval(() => {
+                                if (window.OMS) {
+                                    clearInterval(waitForOMS);
+                                    NotificationService.setupForegroundListener(window.OMS);
+                                    console.log('✅ Foreground notification listener active');
+
+                                    // Check notification status
+                                    NotificationService.checkStatus();
+                                }
+                            }, 100);
+                        } else {
+                            console.warn('⚠️ Push notifications not available');
+                        }
+                    } catch (error) {
+                        console.error('❌ Failed to initialize push notifications:', error);
+                    }
+                })();
+
                 // Check if user is logged in (set up auth listener after Firebase is ready)
                 window.auth.onAuthStateChanged((user) => {
                     if (user) {
@@ -17667,42 +17703,6 @@ if (diffDays > 30) {
         } else {
             console.warn('⚠️ Service Workers not supported in this browser');
         }
-
-        // ============================================
-        // PUSH NOTIFICATIONS INITIALIZATION
-        // ============================================
-        (async function initNotifications() {
-            try {
-                // Import NotificationService module
-                const { NotificationService } = await import('./js/services/notifications.js');
-
-                // Make globally available
-                window.NotificationService = NotificationService;
-
-                // Initialize notification service
-                const initialized = await NotificationService.init();
-                if (initialized) {
-                    console.log('🔔 Push notification service ready');
-
-                    // Setup foreground message listener
-                    // Wait for OMS to be ready
-                    const waitForOMS = setInterval(() => {
-                        if (window.OMS) {
-                            clearInterval(waitForOMS);
-                            NotificationService.setupForegroundListener(window.OMS);
-                            console.log('✅ Foreground notification listener active');
-
-                            // Check notification status
-                            NotificationService.checkStatus();
-                        }
-                    }, 100);
-                } else {
-                    console.warn('⚠️ Push notifications not available (Firebase Messaging not loaded)');
-                }
-            } catch (error) {
-                console.error('❌ Failed to initialize push notifications:', error);
-            }
-        })();
     </script>
 
 </body>
