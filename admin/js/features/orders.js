@@ -1603,37 +1603,37 @@ export const Orders = {
             if (hasGrandTotalSummary) {
                 // Render the actual summary to measure its real height
                 const summaryHtml = `
-                    <div style="background: white; color: black; padding: 5px; margin-bottom: 8px; border: 2px solid #000; border-radius: 4px;">
-                        <h3 style="margin: 0 0 4px 0; font-size: 13px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
+                    <div style="background: white; color: black; padding: 8px; margin-bottom: 10px; border: 3px solid #000; border-radius: 6px;">
+                        <h3 style="margin: 0 0 8px 0; font-size: 18px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                             ${grandTotalDryIce > 0 ? `
-                            <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
-                                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                    <div style="font-size: 20px;">❄️</div>
-                                    <div style="font-size: 20px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                            <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                    <div style="font-size: 32px;">❄️</div>
+                                    <div style="font-size: 32px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                 </div>
-                                <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                             </div>
                             ` : ''}
                             ${grandTotalFlowers > 0 ? `
-                            <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
-                                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                    <div style="font-size: 20px;">🌸</div>
-                                    <div style="font-size: 20px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                            <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                    <div style="font-size: 32px;">🌸</div>
+                                    <div style="font-size: 32px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                 </div>
-                                <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                             </div>
                             ` : ''}
                             ${grandTotalElectricity > 0 ? `
-                            <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
-                                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                    <div style="font-size: 20px;">⚡</div>
-                                    <div style="font-size: 20px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                            <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                    <div style="font-size: 32px;">⚡</div>
+                                    <div style="font-size: 32px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                 </div>
-                                <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">Total power needed</div>
+                                <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">Total power needed</div>
                             </div>
                             ` : ''}
                         </div>
@@ -1893,37 +1893,37 @@ export const Orders = {
                 if (pageNum === 0 && (grandTotalDryIce > 0 || grandTotalFlowers > 0 || grandTotalElectricity > 0)) {
                     console.log(`✅ Adding grand total summary to first page`);
                     html += `
-                        <div style="background: white; color: black; padding: 5px; margin-bottom: 8px; border: 2px solid #000; border-radius: 4px;">
-                            <h3 style="margin: 0 0 4px 0; font-size: 13px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
+                        <div style="background: white; color: black; padding: 8px; margin-bottom: 10px; border: 3px solid #000; border-radius: 6px;">
+                            <h3 style="margin: 0 0 8px 0; font-size: 18px; text-align: center; font-weight: bold;">📊 Grand Total Requirements for ${Utils.formatDate(date)}</h3>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                                 ${grandTotalDryIce > 0 ? `
-                                <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
-                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                        <div style="font-size: 20px;">❄️</div>
-                                        <div style="font-size: 20px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Dry Ice Needed</div>
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                        <div style="font-size: 32px;">❄️</div>
+                                        <div style="font-size: 32px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                     </div>
-                                    <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                    <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                 </div>
                                 ` : ''}
                                 ${grandTotalFlowers > 0 ? `
-                                <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
-                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                        <div style="font-size: 20px;">🌸</div>
-                                        <div style="font-size: 20px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Flowers Needed</div>
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                        <div style="font-size: 32px;">🌸</div>
+                                        <div style="font-size: 32px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                     </div>
-                                    <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
+                                    <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                 </div>
                                 ` : ''}
                                 ${grandTotalElectricity > 0 ? `
-                                <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
-                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                        <div style="font-size: 20px;">⚡</div>
-                                        <div style="font-size: 20px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                <div style="background: white; padding: 8px; border: 2px solid #333; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 22px; font-weight: bold; margin-bottom: 4px;">Electricity Required</div>
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                        <div style="font-size: 32px;">⚡</div>
+                                        <div style="font-size: 32px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                     </div>
-                                    <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">Total power needed</div>
+                                    <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">Total power needed</div>
                                 </div>
                                 ` : ''}
                             </div>
@@ -1950,8 +1950,14 @@ export const Orders = {
                 template.style.position = 'static';
                 template.style.height = 'auto';
 
-                // Increased wait time for mobile devices
-                await new Promise(r => setTimeout(r, isMobile ? 500 : 200));
+                // CRITICAL: First page needs extra time to render properly (especially with grand totals)
+                // This prevents blank first page issue
+                const waitTime = pageNum === 0 ? (isMobile ? 800 : 400) : (isMobile ? 500 : 200);
+                await new Promise(r => setTimeout(r, waitTime));
+
+                if (pageNum === 0) {
+                    console.log(`⏱️ First page: Extra rendering time (${waitTime}ms) to prevent blank page`);
+                }
 
                 // Validate canvas dimensions before creation
                 const expectedWidth = Math.round(paperDimensions.width * qualityScale);

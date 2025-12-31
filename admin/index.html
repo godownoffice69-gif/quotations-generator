@@ -16784,12 +16784,58 @@ if (diffDays > 30) {
                         console.log('✅ User logged in:', user.email);
                         document.getElementById('loginScreen').style.display = 'none';
                         document.querySelector('.app-container').style.display = 'flex';
-                        OMS.init().then(() => {
-                            OMS.updateAllDisplays();
 
-                            // Dispatch OMSReady event for Package and Leads managers
-                            console.log('📢 Dispatching OMSReady event...');
-                            window.dispatchEvent(new CustomEvent('OMSReady'));
+                        // AUTO-REFRESH: Check for updates and reload if cache version changed
+                        const checkForUpdates = async () => {
+                            try {
+                                const currentVersion = 'oms-v1.2.0'; // Must match service-worker.js CACHE_VERSION
+                                const lastKnownVersion = localStorage.getItem('oms_cache_version');
+
+                                if (!lastKnownVersion) {
+                                    // First time load
+                                    localStorage.setItem('oms_cache_version', currentVersion);
+                                    console.log('🔄 First load: Version set to', currentVersion);
+                                } else if (lastKnownVersion !== currentVersion) {
+                                    // Version changed - clear cache and reload
+                                    console.log(`🔄 UPDATE DETECTED: ${lastKnownVersion} → ${currentVersion}`);
+                                    console.log('🔄 Clearing cache and reloading...');
+
+                                    // Clear service worker caches
+                                    if ('caches' in window) {
+                                        const cacheNames = await caches.keys();
+                                        await Promise.all(
+                                            cacheNames.map(name => caches.delete(name))
+                                        );
+                                        console.log('✅ Service worker caches cleared');
+                                    }
+
+                                    // Update version
+                                    localStorage.setItem('oms_cache_version', currentVersion);
+
+                                    // Reload page to get fresh content
+                                    console.log('🔄 Reloading page to apply updates...');
+                                    setTimeout(() => {
+                                        window.location.reload(true); // Hard reload
+                                    }, 1000);
+                                    return; // Don't initialize OMS yet
+                                } else {
+                                    console.log('✅ System is up-to-date:', currentVersion);
+                                }
+                            } catch (error) {
+                                console.error('❌ Error checking for updates:', error);
+                            }
+                        };
+
+                        // Check for updates before initializing
+                        checkForUpdates().then(() => {
+                            // Initialize OMS only if no reload needed
+                            OMS.init().then(() => {
+                                OMS.updateAllDisplays();
+
+                                // Dispatch OMSReady event for Package and Leads managers
+                                console.log('📢 Dispatching OMSReady event...');
+                                window.dispatchEvent(new CustomEvent('OMSReady'));
+                            });
                         });
                     } else {
                         // User is logged out
