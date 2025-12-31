@@ -16539,10 +16539,471 @@ updateAllDisplays() {
                     return true;
                 }
                 return false;
+            },
+
+            // ========================================
+            // 🤖 INTELLIGENT SYNC RECONCILIATION SYSTEM
+            // ========================================
+            // Smart robot that compares systems and asks what to do
+
+            /**
+             * Check sync health between this system and Firestore
+             * This is your "smart robot" that finds all differences
+             */
+            async checkSyncHealth() {
+                console.log('🤖 SYNC HEALTH CHECK STARTED...');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                const report = {
+                    timestamp: new Date().toISOString(),
+                    localOrders: OMS.data.orders.length,
+                    firestoreOrders: 0,
+                    localDeletedOrders: OMS.data.deletedOrders.length,
+                    firestoreDeletedOrders: 0,
+                    differences: []
+                };
+
+                try {
+                    // 1. Get all Firestore orders
+                    const ordersSnapshot = await db.collection('orders').get();
+                    const firestoreOrders = [];
+                    ordersSnapshot.forEach(doc => {
+                        firestoreOrders.push({ docId: doc.id, ...doc.data() });
+                    });
+                    report.firestoreOrders = firestoreOrders.length;
+
+                    // 2. Get all Firestore deletedOrders
+                    const deletedSnapshot = await db.collection('deletedOrders').get();
+                    const firestoreDeletedOrders = [];
+                    deletedSnapshot.forEach(doc => {
+                        firestoreDeletedOrders.push({ docId: doc.id, ...doc.data() });
+                    });
+                    report.firestoreDeletedOrders = firestoreDeletedOrders.length;
+
+                    console.log('\n📊 SYSTEM COUNTS:');
+                    console.log(`  Local orders: ${report.localOrders}`);
+                    console.log(`  Firestore orders: ${report.firestoreOrders}`);
+                    console.log(`  Local deleted list: ${report.localDeletedOrders}`);
+                    console.log(`  Firestore deleted list: ${report.firestoreDeletedOrders}`);
+
+                    // 3. Find orders in Firestore but NOT in local (blocked by deletedOrders)
+                    const blockedOrders = [];
+                    for (const fsOrder of firestoreOrders) {
+                        const isBlocked = OMS.data.deletedOrders.some(d =>
+                            d.docId === fsOrder.docId || d.orderId === fsOrder.orderId
+                        );
+                        const existsLocally = OMS.data.orders.some(o =>
+                            o.docId === fsOrder.docId || o.orderId === fsOrder.orderId
+                        );
+
+                        if (isBlocked && !existsLocally) {
+                            blockedOrders.push(fsOrder);
+                        }
+                    }
+
+                    // 4. Find orders in local but NOT in Firestore (ghost orders)
+                    const ghostOrders = [];
+                    for (const localOrder of OMS.data.orders) {
+                        const existsInFirestore = firestoreOrders.some(f =>
+                            f.docId === localOrder.docId || f.orderId === localOrder.orderId
+                        );
+
+                        if (!existsInFirestore) {
+                            ghostOrders.push(localOrder);
+                        }
+                    }
+
+                    // 5. Find orders deleted in Firestore but not locally
+                    const shouldBeDeletedLocally = [];
+                    for (const fsDeleted of firestoreDeletedOrders) {
+                        const existsLocally = OMS.data.orders.some(o =>
+                            o.docId === fsDeleted.docId || o.orderId === fsDeleted.orderId
+                        );
+
+                        if (existsLocally) {
+                            shouldBeDeletedLocally.push(fsDeleted);
+                        }
+                    }
+
+                    // 6. Find orders deleted locally but not in Firestore
+                    const shouldBeDeletedInFirestore = [];
+                    for (const localDeleted of OMS.data.deletedOrders) {
+                        const existsInFsDeleted = firestoreDeletedOrders.some(f =>
+                            f.docId === localDeleted.docId || f.orderId === localDeleted.orderId
+                        );
+
+                        if (!existsInFsDeleted) {
+                            shouldBeDeletedInFirestore.push(localDeleted);
+                        }
+                    }
+
+                    // Build report
+                    if (blockedOrders.length > 0) {
+                        report.differences.push({
+                            type: 'BLOCKED_ORDERS',
+                            count: blockedOrders.length,
+                            description: 'Orders exist in Firestore but blocked in local system',
+                            orders: blockedOrders
+                        });
+                    }
+
+                    if (ghostOrders.length > 0) {
+                        report.differences.push({
+                            type: 'GHOST_ORDERS',
+                            count: ghostOrders.length,
+                            description: 'Orders exist locally but NOT in Firestore',
+                            orders: ghostOrders
+                        });
+                    }
+
+                    if (shouldBeDeletedLocally.length > 0) {
+                        report.differences.push({
+                            type: 'SHOULD_DELETE_LOCALLY',
+                            count: shouldBeDeletedLocally.length,
+                            description: 'Orders deleted in Firestore but still active locally',
+                            orders: shouldBeDeletedLocally
+                        });
+                    }
+
+                    if (shouldBeDeletedInFirestore.length > 0) {
+                        report.differences.push({
+                            type: 'SHOULD_DELETE_IN_FIRESTORE',
+                            count: shouldBeDeletedInFirestore.length,
+                            description: 'Orders deleted locally but not synced to Firestore',
+                            orders: shouldBeDeletedInFirestore
+                        });
+                    }
+
+                    // Print report
+                    console.log('\n🔍 DIFFERENCES FOUND:');
+                    if (report.differences.length === 0) {
+                        console.log('✅ No differences found! Systems are perfectly synced! 🎉');
+                    } else {
+                        report.differences.forEach((diff, i) => {
+                            console.log(`\n${i + 1}. ${diff.description}`);
+                            console.log(`   Type: ${diff.type}`);
+                            console.log(`   Count: ${diff.count}`);
+                            console.table(diff.orders.map(o => ({
+                                OrderID: o.orderId,
+                                DocID: o.docId,
+                                Client: o.clientName || 'N/A'
+                            })));
+                        });
+                    }
+
+                    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log('🤖 SYNC HEALTH CHECK COMPLETE');
+
+                    if (report.differences.length > 0) {
+                        console.log('\n💡 TO FIX THESE ISSUES:');
+                        console.log('   Run: await AdminUtils.syncReconciliation()');
+                        console.log('   This will show you each difference and ask what to do.');
+                    }
+
+                    return report;
+
+                } catch (error) {
+                    console.error('❌ Error checking sync health:', error);
+                    return null;
+                }
+            },
+
+            /**
+             * Interactive sync reconciliation - asks user what to do for each difference
+             * This is the "smart robot" that helps you fix sync issues
+             */
+            async syncReconciliation() {
+                console.log('🤖 STARTING INTERACTIVE SYNC RECONCILIATION...');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                // First, get the health report
+                const report = await this.checkSyncHealth();
+
+                if (!report || report.differences.length === 0) {
+                    console.log('✅ No sync issues to fix! Systems are identical.');
+                    return;
+                }
+
+                console.log(`\n🤖 Found ${report.differences.length} sync issue(s). Let me help you fix them.\n`);
+
+                let fixedCount = 0;
+                let skippedCount = 0;
+
+                // Process each difference type
+                for (const diff of report.differences) {
+                    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+                    console.log(`🔍 ${diff.description}`);
+                    console.log(`   Found: ${diff.count} order(s)`);
+                    console.table(diff.orders.map(o => ({
+                        OrderID: o.orderId,
+                        Client: o.clientName || 'N/A'
+                    })));
+
+                    let action = '';
+
+                    if (diff.type === 'BLOCKED_ORDERS') {
+                        action = prompt(
+                            `These ${diff.count} order(s) exist in Firestore but are blocked locally.\n` +
+                            `This usually happens when an order was deleted on THIS system but recovered on ANOTHER system.\n\n` +
+                            `What would you like to do?\n` +
+                            `[R] Recover all (show them in this system)\n` +
+                            `[D] Delete from Firestore (make them disappear everywhere)\n` +
+                            `[S] Skip (do nothing)\n\n` +
+                            `Enter R, D, or S:`
+                        );
+
+                        if (action && action.toLowerCase() === 'r') {
+                            // Recover: Remove from local deletedOrders list
+                            for (const order of diff.orders) {
+                                OMS.data.deletedOrders = OMS.data.deletedOrders.filter(d =>
+                                    d.docId !== order.docId && d.orderId !== order.orderId
+                                );
+                                // Also remove from Firestore deletedOrders
+                                try {
+                                    await db.collection('deletedOrders').doc(order.docId).delete();
+                                } catch (e) {
+                                    console.warn(`Could not delete from Firestore deletedOrders: ${order.orderId}`);
+                                }
+                            }
+                            OMS.saveToStorage();
+                            await OMS.loadOrdersFromFirestore();
+                            OMS.updateAllDisplays();
+                            console.log(`✅ Recovered ${diff.count} order(s)`);
+                            fixedCount += diff.count;
+                        } else if (action && action.toLowerCase() === 'd') {
+                            // Delete from Firestore
+                            for (const order of diff.orders) {
+                                try {
+                                    await db.collection('orders').doc(order.docId).delete();
+                                    await db.collection('deletedOrders').doc(order.docId).set({
+                                        orderId: order.orderId,
+                                        docId: order.docId,
+                                        clientName: order.clientName || '',
+                                        deletedAt: new Date().toISOString(),
+                                        deleteReason: 'Sync reconciliation - user confirmed deletion'
+                                    });
+                                } catch (e) {
+                                    console.error(`Error deleting ${order.orderId}:`, e);
+                                }
+                            }
+                            console.log(`✅ Deleted ${diff.count} order(s) from Firestore`);
+                            fixedCount += diff.count;
+                        } else {
+                            console.log(`⏭️ Skipped ${diff.count} order(s)`);
+                            skippedCount += diff.count;
+                        }
+                    }
+                    else if (diff.type === 'GHOST_ORDERS') {
+                        action = prompt(
+                            `These ${diff.count} order(s) exist locally but NOT in Firestore.\n` +
+                            `They may have been deleted on another system.\n\n` +
+                            `What would you like to do?\n` +
+                            `[U] Upload to Firestore (make them appear everywhere)\n` +
+                            `[D] Delete locally (remove from this system)\n` +
+                            `[S] Skip (do nothing)\n\n` +
+                            `Enter U, D, or S:`
+                        );
+
+                        if (action && action.toLowerCase() === 'u') {
+                            // Upload to Firestore
+                            for (const order of diff.orders) {
+                                try {
+                                    await db.collection('orders').doc(order.docId).set(order);
+                                    // Remove from deletedOrders if present
+                                    await db.collection('deletedOrders').doc(order.docId).delete();
+                                } catch (e) {
+                                    console.error(`Error uploading ${order.orderId}:`, e);
+                                }
+                            }
+                            console.log(`✅ Uploaded ${diff.count} order(s) to Firestore`);
+                            fixedCount += diff.count;
+                        } else if (action && action.toLowerCase() === 'd') {
+                            // Delete locally
+                            for (const order of diff.orders) {
+                                OMS.data.orders = OMS.data.orders.filter(o =>
+                                    o.docId !== order.docId && o.orderId !== order.orderId
+                                );
+                            }
+                            OMS.saveToStorage();
+                            OMS.updateAllDisplays();
+                            console.log(`✅ Deleted ${diff.count} order(s) locally`);
+                            fixedCount += diff.count;
+                        } else {
+                            console.log(`⏭️ Skipped ${diff.count} order(s)`);
+                            skippedCount += diff.count;
+                        }
+                    }
+                    else if (diff.type === 'SHOULD_DELETE_LOCALLY') {
+                        action = prompt(
+                            `These ${diff.count} order(s) were deleted on another system but are still active here.\n\n` +
+                            `What would you like to do?\n` +
+                            `[D] Delete locally (sync with other system)\n` +
+                            `[R] Recover everywhere (un-delete on all systems)\n` +
+                            `[S] Skip (do nothing)\n\n` +
+                            `Enter D, R, or S:`
+                        );
+
+                        if (action && action.toLowerCase() === 'd') {
+                            // Delete locally
+                            for (const fsDeleted of diff.orders) {
+                                const localOrder = OMS.data.orders.find(o =>
+                                    o.docId === fsDeleted.docId || o.orderId === fsDeleted.orderId
+                                );
+                                if (localOrder) {
+                                    OMS.data.orders = OMS.data.orders.filter(o =>
+                                        o.docId !== localOrder.docId && o.orderId !== localOrder.orderId
+                                    );
+                                    OMS.data.deletedOrders.push({
+                                        ...localOrder,
+                                        deletedAt: fsDeleted.deletedAt,
+                                        deleteReason: 'Synced from other system'
+                                    });
+                                }
+                            }
+                            OMS.saveToStorage();
+                            OMS.updateAllDisplays();
+                            console.log(`✅ Deleted ${diff.count} order(s) locally to match other system`);
+                            fixedCount += diff.count;
+                        } else if (action && action.toLowerCase() === 'r') {
+                            // Recover everywhere
+                            for (const fsDeleted of diff.orders) {
+                                try {
+                                    await db.collection('deletedOrders').doc(fsDeleted.docId).delete();
+                                } catch (e) {
+                                    console.error(`Error removing from deletedOrders: ${fsDeleted.orderId}`, e);
+                                }
+                            }
+                            console.log(`✅ Recovered ${diff.count} order(s) everywhere`);
+                            fixedCount += diff.count;
+                        } else {
+                            console.log(`⏭️ Skipped ${diff.count} order(s)`);
+                            skippedCount += diff.count;
+                        }
+                    }
+                    else if (diff.type === 'SHOULD_DELETE_IN_FIRESTORE') {
+                        action = prompt(
+                            `These ${diff.count} order(s) are in your local deleted list but not synced to Firestore.\n\n` +
+                            `What would you like to do?\n` +
+                            `[S] Sync to Firestore (delete everywhere)\n` +
+                            `[R] Recover locally (un-delete)\n` +
+                            `[C] Clear from local list only\n\n` +
+                            `Enter S, R, or C:`
+                        );
+
+                        if (action && action.toLowerCase() === 's') {
+                            // Sync deletion to Firestore
+                            for (const localDeleted of diff.orders) {
+                                try {
+                                    // Delete from Firestore orders if exists
+                                    await db.collection('orders').doc(localDeleted.docId).delete();
+                                    // Add to Firestore deletedOrders
+                                    await db.collection('deletedOrders').doc(localDeleted.docId).set({
+                                        orderId: localDeleted.orderId,
+                                        docId: localDeleted.docId,
+                                        clientName: localDeleted.clientName || '',
+                                        deletedAt: localDeleted.deletedAt || new Date().toISOString(),
+                                        deleteReason: localDeleted.deleteReason || 'Synced from local system'
+                                    });
+                                } catch (e) {
+                                    console.error(`Error syncing deletion for ${localDeleted.orderId}:`, e);
+                                }
+                            }
+                            console.log(`✅ Synced ${diff.count} deletion(s) to Firestore`);
+                            fixedCount += diff.count;
+                        } else if (action && action.toLowerCase() === 'r') {
+                            // Recover locally
+                            for (const localDeleted of diff.orders) {
+                                OMS.data.deletedOrders = OMS.data.deletedOrders.filter(d =>
+                                    d.docId !== localDeleted.docId && d.orderId !== localDeleted.orderId
+                                );
+                            }
+                            OMS.saveToStorage();
+                            await OMS.loadOrdersFromFirestore();
+                            OMS.updateAllDisplays();
+                            console.log(`✅ Recovered ${diff.count} order(s) locally`);
+                            fixedCount += diff.count;
+                        } else if (action && action.toLowerCase() === 'c') {
+                            // Clear from local list
+                            for (const localDeleted of diff.orders) {
+                                OMS.data.deletedOrders = OMS.data.deletedOrders.filter(d =>
+                                    d.docId !== localDeleted.docId && d.orderId !== localDeleted.orderId
+                                );
+                            }
+                            OMS.saveToStorage();
+                            console.log(`✅ Cleared ${diff.count} order(s) from local deleted list`);
+                            fixedCount += diff.count;
+                        } else {
+                            console.log(`⏭️ Skipped ${diff.count} order(s)`);
+                            skippedCount += diff.count;
+                        }
+                    }
+                }
+
+                // Final verification
+                console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+                console.log(`🤖 RECONCILIATION COMPLETE`);
+                console.log(`   Fixed: ${fixedCount} issue(s)`);
+                console.log(`   Skipped: ${skippedCount} issue(s)`);
+
+                console.log(`\n🔍 Running final verification...`);
+                const finalReport = await this.checkSyncHealth();
+
+                if (finalReport && finalReport.differences.length === 0) {
+                    console.log('\n✅✅✅ SUCCESS! Both systems are now perfectly synced! 🎉');
+                } else if (finalReport) {
+                    console.log(`\n⚠️ Still have ${finalReport.differences.length} difference(s).`);
+                    console.log(`   Run: await AdminUtils.syncReconciliation() again to fix them.`);
+                }
+            },
+
+            /**
+             * Quick command: Recover specific order from deletedOrders (cross-system)
+             */
+            async quickRecoverOrder(orderId) {
+                console.log(`🔄 Quick recovering order: ${orderId}`);
+
+                // Remove from local deletedOrders
+                const beforeCount = OMS.data.deletedOrders.length;
+                OMS.data.deletedOrders = OMS.data.deletedOrders.filter(d =>
+                    d.docId !== orderId && d.orderId !== orderId
+                );
+                const removed = beforeCount - OMS.data.deletedOrders.length;
+
+                if (removed > 0) {
+                    console.log(`✅ Removed from local deletedOrders list`);
+                }
+
+                // Remove from Firestore deletedOrders
+                try {
+                    await db.collection('deletedOrders').doc(orderId).delete();
+                    console.log(`✅ Removed from Firestore deletedOrders`);
+                } catch (e) {
+                    console.warn(`⚠️ Could not remove from Firestore deletedOrders (may not exist)`);
+                }
+
+                // Save and reload
+                OMS.saveToStorage();
+                await OMS.loadOrdersFromFirestore();
+                OMS.updateAllDisplays();
+
+                // Verify
+                const recovered = OMS.data.orders.find(o => o.docId === orderId || o.orderId === orderId);
+                if (recovered) {
+                    console.log(`✅✅ SUCCESS! Order ${orderId} is now visible!`);
+                    console.log(`   Client: ${recovered.clientName}`);
+                    return true;
+                } else {
+                    console.warn(`⚠️ Order unblocked but not found. May not exist in Firestore.`);
+                    return false;
+                }
             }
         };
 
         console.log('🛠️ Admin utilities loaded. Available commands:');
+        console.log('\n🤖 INTELLIGENT SYNC SYSTEM (Your Smart Robot!):');
+        console.log('  - await AdminUtils.checkSyncHealth() - ⭐ CHECK differences between systems');
+        console.log('  - await AdminUtils.syncReconciliation() - ⭐ FIX sync issues interactively');
+        console.log('  - await AdminUtils.quickRecoverOrder("ORDER_ID") - Quick recover specific order');
         console.log('\n📋 ORDER COMMANDS:');
         console.log('  - await AdminUtils.listAllOrdersWithDetails() - List all orders with DocIDs');
         console.log('  - await AdminUtils.deleteOrderByDocId("DOC_ID") - Delete by document ID');
