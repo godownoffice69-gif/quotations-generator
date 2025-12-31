@@ -5892,6 +5892,16 @@ if (localIndex !== -1) {
             }
         }
 
+        // PUSH NOTIFICATION: Order status changed
+        if (oldData.status !== firestoreData.status && window.NotificationService) {
+            console.log('📢 Order status changed, triggering notification');
+            await NotificationService.notifyOrderStatusChange(
+                orderData,
+                oldData.status,
+                firestoreData.status
+            );
+        }
+
         this.showToast('Order updated! ✏️');
 
         // Auto-clear form after update
@@ -5982,6 +5992,12 @@ if (!localExists) {
                 });
 
                 this.showToast(`Order ${displayId} saved to Firestore! 🆕`);
+
+                // PUSH NOTIFICATION: New order created
+                if (window.NotificationService) {
+                    console.log('📢 New order created, triggering notification');
+                    await NotificationService.notifyNewOrder(orderData);
+                }
 
                 // Auto-clear form after save
                 Orders.clearForm(this, true);
@@ -12733,6 +12749,30 @@ convertToQuotationDateFormat(dateStr) {
                 }
             },
 
+            // ============ NOTIFICATION PREFERENCES ============
+
+            async saveNotificationPreferences() {
+                if (!window.NotificationService) {
+                    this.showToast('Notification service not available', 'error');
+                    return;
+                }
+
+                const preferences = {
+                    orderChanges: document.getElementById('notifyOrderChanges')?.checked || true,
+                    lowStock: document.getElementById('notifyLowStock')?.checked || true,
+                    newOrders: document.getElementById('notifyNewOrders')?.checked || true,
+                    payments: document.getElementById('notifyPayments')?.checked || true,
+                    teamUpdates: document.getElementById('notifyTeamUpdates')?.checked || true
+                };
+
+                const saved = await NotificationService.updatePreferences(preferences, this);
+                if (saved) {
+                    this.showToast('✅ Notification preferences saved!');
+                } else {
+                    this.showToast('❌ Failed to save preferences', 'error');
+                }
+            },
+
 
             // ============ ANALYTICS MODULE ============
             // Loaded lazily from /admin/js/features/analytics.js
@@ -17626,6 +17666,42 @@ if (diffDays > 30) {
         } else {
             console.warn('⚠️ Service Workers not supported in this browser');
         }
+
+        // ============================================
+        // PUSH NOTIFICATIONS INITIALIZATION
+        // ============================================
+        (async function initNotifications() {
+            try {
+                // Import NotificationService module
+                const { NotificationService } = await import('./js/services/notifications.js');
+
+                // Make globally available
+                window.NotificationService = NotificationService;
+
+                // Initialize notification service
+                const initialized = await NotificationService.init();
+                if (initialized) {
+                    console.log('🔔 Push notification service ready');
+
+                    // Setup foreground message listener
+                    // Wait for OMS to be ready
+                    const waitForOMS = setInterval(() => {
+                        if (window.OMS) {
+                            clearInterval(waitForOMS);
+                            NotificationService.setupForegroundListener(window.OMS);
+                            console.log('✅ Foreground notification listener active');
+
+                            // Check notification status
+                            NotificationService.checkStatus();
+                        }
+                    }, 100);
+                } else {
+                    console.warn('⚠️ Push notifications not available (Firebase Messaging not loaded)');
+                }
+            } catch (error) {
+                console.error('❌ Failed to initialize push notifications:', error);
+            }
+        })();
     </script>
 
 </body>
