@@ -3,18 +3,24 @@
  * Handles offline caching, background sync, and push notifications
  */
 
-const CACHE_VERSION = 'oms-v1.0.0';
+const CACHE_VERSION = 'oms-v1.1.0';
 const CACHE_NAME = `oms-cache-${CACHE_VERSION}`;
 
 // Assets to cache immediately on install
 const STATIC_ASSETS = [
   '/admin/index.html',
   '/admin/manifest.json',
-  '/admin/logo.png',
+  '/admin/firepowersfx.png',
   '/admin/js/utils/helpers.js',
   '/admin/js/utils/firebase-config.js',
   '/admin/icons/icon-192x192.png',
-  '/admin/icons/icon-512x512.png'
+  '/admin/icons/icon-512x512.png',
+  '/admin/icons/icon-144x144.png',
+  '/admin/icons/icon-72x72.png',
+  '/admin/icons/icon-96x96.png',
+  '/admin/icons/icon-128x128.png',
+  '/admin/icons/icon-152x152.png',
+  '/admin/icons/icon-384x384.png'
 ];
 
 // Dynamic cache for feature modules (loaded on demand)
