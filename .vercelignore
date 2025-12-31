@@ -1,0 +1,11 @@
+# Vercel ignore file
+# Don't ignore admin directory - we need it deployed!
+!admin/
+!admin/**
+
+# Ignore these
+node_modules/
+.git/
+*.log
+.env
+serviceAccountKey.json
