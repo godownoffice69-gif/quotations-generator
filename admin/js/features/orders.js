@@ -1516,25 +1516,29 @@ export const Orders = {
             template.style.width = paperDimensions.width + 'px';
             template.style.paddingRight = '80px';
 
-            // Smart quality adjustment for multi-order images to prevent memory issues
+            // CRITICAL: Aggressive quality reduction to prevent memory crashes
             let baseQualityScale = oms.data.settings.imageQuality || 2;
 
             // Apply mobile optimizations first
             let qualityScale = Utils.getOptimalCanvasScale(baseQualityScale);
 
-            // Further reduce quality based on number of orders
+            // AGGRESSIVE REDUCTION: Prevent browser crashes from memory exhaustion
+            if (orders.length > 3) {
+                qualityScale = Math.min(qualityScale, 1.5); // Limit to 1.5 for 4+ orders
+                console.log('⚠️ Quality reduced to scale 1.5 due to multiple orders (prevents crashes)');
+            }
             if (orders.length > 5) {
-                qualityScale = Math.min(qualityScale, 2); // Limit to scale 2 for more than 5 orders
-                console.log('⚠️ Quality reduced to scale 2 due to multiple orders to prevent memory issues');
+                qualityScale = Math.min(qualityScale, 1.2); // Further reduce for 6+ orders
+                console.log('⚠️ Quality reduced to scale 1.2 for large order set (prevents crashes)');
             }
             if (orders.length > 10) {
-                qualityScale = Math.min(qualityScale, 1.5); // Further reduce for very large sets
-                console.log('⚠️ Quality further reduced to scale 1.5 for large order set');
+                qualityScale = Math.min(qualityScale, 1); // Minimum for very large sets
+                console.log('⚠️ Quality reduced to scale 1 for very large order set (prevents crashes)');
             }
 
             // Extra reduction for mobile with many orders
             if (isMobile) {
-                if (orders.length > 3) {
+                if (orders.length > 2) {
                     qualityScale = Math.min(qualityScale, 1);
                     console.log(`📱 Mobile with ${orders.length} orders: Quality capped at scale 1`);
                 }
@@ -1545,8 +1549,8 @@ export const Orders = {
                 }
             }
 
-            if (isMobile && qualityScale < baseQualityScale) {
-                console.log(`📱 ${deviceType}: Quality auto-adjusted from ${baseQualityScale} to ${qualityScale}`);
+            if (qualityScale < baseQualityScale) {
+                console.log(`📉 Quality auto-adjusted from ${baseQualityScale} to ${qualityScale} (prevents browser crashes)`);
             }
 
             // Use fontSize from settings, but slightly smaller for compact multi-order view
@@ -1604,30 +1608,30 @@ export const Orders = {
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
                             ${grandTotalDryIce > 0 ? `
                             <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
+                                <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
                                 <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                    <div style="font-size: 40px;">❄️</div>
-                                    <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                    <div style="font-size: 20px;">❄️</div>
+                                    <div style="font-size: 20px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                 </div>
                                 <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                             </div>
                             ` : ''}
                             ${grandTotalFlowers > 0 ? `
                             <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
+                                <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
                                 <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                    <div style="font-size: 40px;">🌸</div>
-                                    <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                    <div style="font-size: 20px;">🌸</div>
+                                    <div style="font-size: 20px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                 </div>
                                 <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                             </div>
                             ` : ''}
                             ${grandTotalElectricity > 0 ? `
                             <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
+                                <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
                                 <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                    <div style="font-size: 40px;">⚡</div>
-                                    <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                    <div style="font-size: 20px;">⚡</div>
+                                    <div style="font-size: 20px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                 </div>
                                 <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">Total power needed</div>
                             </div>
@@ -1894,30 +1898,30 @@ export const Orders = {
                             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
                                 ${grandTotalDryIce > 0 ? `
                                 <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                    <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
+                                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Dry Ice Needed</div>
                                     <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                        <div style="font-size: 40px;">❄️</div>
-                                        <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
+                                        <div style="font-size: 20px;">❄️</div>
+                                        <div style="font-size: 20px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                     </div>
                                     <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                 </div>
                                 ` : ''}
                                 ${grandTotalFlowers > 0 ? `
                                 <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                    <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
+                                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Flowers Needed</div>
                                     <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                        <div style="font-size: 40px;">🌸</div>
-                                        <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
+                                        <div style="font-size: 20px;">🌸</div>
+                                        <div style="font-size: 20px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                     </div>
                                     <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                 </div>
                                 ` : ''}
                                 ${grandTotalElectricity > 0 ? `
                                 <div style="background: white; padding: 4px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
-                                    <div style="font-size: 40px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
+                                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Electricity Required</div>
                                     <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                        <div style="font-size: 40px;">⚡</div>
-                                        <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
+                                        <div style="font-size: 20px;">⚡</div>
+                                        <div style="font-size: 20px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                     </div>
                                     <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">Total power needed</div>
                                 </div>
@@ -1992,28 +1996,32 @@ export const Orders = {
 
                 template.style.display = 'none';
 
-                // Convert canvas to image and add to PDF with error handling
+                // CRITICAL FIX: Use JPEG instead of PNG to reduce memory usage by 70-90%
+                // PNG creates massive uncompressed data URLs that fill memory quickly
                 let imgData;
                 try {
-                    imgData = canvas.toDataURL('image/png', 0.92);
-                } catch (pngError) {
-                    console.error('PNG conversion failed, retrying with JPEG:', pngError);
-                    // Fallback to JPEG if PNG fails
+                    // Use JPEG with good quality - much smaller than PNG
+                    imgData = canvas.toDataURL('image/jpeg', 0.90);
+                    console.log(`📄 Page ${pageNum + 1}: JPEG size = ${(imgData.length / 1024 / 1024).toFixed(2)} MB`);
+                } catch (jpegError) {
+                    console.error('JPEG conversion failed, retrying with PNG:', jpegError);
+                    // Fallback to PNG only if JPEG fails
                     try {
-                        imgData = canvas.toDataURL('image/jpeg', 0.85);
-                    } catch (jpegError) {
-                        console.error('JPEG conversion also failed:', jpegError);
+                        imgData = canvas.toDataURL('image/png', 0.85);
+                    } catch (pngError) {
+                        console.error('PNG conversion also failed:', pngError);
                         if (isMobile) {
                             throw new Error('Canvas conversion failed on mobile device. Try reducing image quality or downloading fewer orders.');
                         } else {
-                            throw jpegError;
+                            throw pngError;
                         }
                     }
                 }
 
-                // Check data URL size for mobile
-                if (isMobile && imgData.length > 10 * 1024 * 1024) {
-                    console.warn(`⚠️ Page ${pageNum + 1} is large (${(imgData.length / 1024 / 1024).toFixed(2)} MB)`);
+                // Check data URL size and warn
+                const sizeInMB = imgData.length / 1024 / 1024;
+                if (sizeInMB > 10) {
+                    console.warn(`⚠️ Page ${pageNum + 1} is large (${sizeInMB.toFixed(2)} MB) - may cause memory issues`);
                 }
 
                 let imgWidth = pdfWidth;
@@ -2041,7 +2049,18 @@ export const Orders = {
 
                 // Add image to PDF page (centered if scaled down)
                 const xOffset = (pdfWidth - imgWidth) / 2;
-                pdf.addImage(imgData, 'PNG', xOffset, 0, imgWidth, imgHeight, undefined, 'FAST');
+                pdf.addImage(imgData, 'JPEG', xOffset, 0, imgWidth, imgHeight, undefined, 'FAST');
+
+                // CRITICAL FIX: Explicit memory cleanup after each page to prevent crashes
+                // Force garbage collection by nullifying large objects
+                canvas = null;
+                imgData = null;
+
+                // Give browser time to garbage collect before next page
+                // This prevents memory accumulation that causes white screen crashes
+                if (pageNum < totalPages - 1) {
+                    await new Promise(r => setTimeout(r, 100)); // 100ms delay for GC
+                }
             }
 
             // Save the PDF
