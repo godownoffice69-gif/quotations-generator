@@ -61,6 +61,12 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // Deleted Orders collection - cross-system sync for order deletions/recoveries
+    // Authenticated users can read/write to sync deleted orders across all systems
+    match /deletedOrders/{orderId} {
+      allow read, write: if isAuthenticated();
+    }
+
     // Team collection - authenticated users can read/write
     match /team/{teamId} {
       allow read, write: if isAuthenticated();
