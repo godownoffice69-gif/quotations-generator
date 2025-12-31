@@ -111,6 +111,8 @@ export const NotificationService = {
 
       const token = await this.messaging.getToken({
         vapidKey: vapidKey
+        vapidKey: 'BMtK4wqyGQYptXJDmbSC1kWdzDWE1ptE27tB36qYyxaSple8HmqkcXHaXKCVXRZeCEIGXagjjiRpSMBE0wjStJw'  // ← LINE 60: PASTE YOUR VAPID KEY HERE!
+        // Example: 'BKxyz...abc123' (long string from Firebase Console)
       });
 
       if (token) {
