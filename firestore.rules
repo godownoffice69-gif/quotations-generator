@@ -109,8 +109,20 @@ service cloud.firestore {
     }
 
     // User profiles - users can read/write their own profile
+    // Also stores FCM tokens for push notifications
     match /users/{userId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ========================================
+    // PUSH NOTIFICATIONS COLLECTION
+    // ========================================
+    // Notification triggers - creates notification events that Cloud Functions process
+    // Authenticated users can create triggers, all authenticated users can read
+    match /notification_triggers/{triggerId} {
+      allow create: if isAuthenticated();  // Any authenticated user can create notification triggers
+      allow read: if isAuthenticated();    // Any authenticated user can read triggers
+      allow delete: if isAuthenticated();  // Allow cleanup of old triggers
     }
 
     // ========================================
