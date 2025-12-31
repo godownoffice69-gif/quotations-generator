@@ -16996,14 +16996,146 @@ updateAllDisplays() {
                     console.warn(`⚠️ Order unblocked but not found. May not exist in Firestore.`);
                     return false;
                 }
+            },
+
+            /**
+             * AUTO-FIX: Automatically recover all blocked orders
+             * Use this on owner's system to recover orders that exist in Firestore
+             */
+            async autoRecoverAllBlockedOrders() {
+                console.log('🤖 AUTO-RECOVERY: Finding and recovering ALL blocked orders...');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                try {
+                    // Get all Firestore orders
+                    const ordersSnapshot = await db.collection('orders').get();
+                    const firestoreOrders = [];
+                    ordersSnapshot.forEach(doc => {
+                        firestoreOrders.push({ docId: doc.id, ...doc.data() });
+                    });
+
+                    console.log(`\n📊 Found ${firestoreOrders.length} orders in Firestore`);
+                    console.log(`📊 Current local orders: ${OMS.data.orders.length}`);
+                    console.log(`📊 Current deletedOrders list: ${OMS.data.deletedOrders.length}`);
+
+                    // Find blocked orders
+                    const blockedOrders = [];
+                    for (const fsOrder of firestoreOrders) {
+                        const isBlocked = OMS.data.deletedOrders.some(d =>
+                            d.docId === fsOrder.docId || d.orderId === fsOrder.orderId
+                        );
+                        const existsLocally = OMS.data.orders.some(o =>
+                            o.docId === fsOrder.docId || o.orderId === fsOrder.orderId
+                        );
+
+                        if (isBlocked && !existsLocally) {
+                            blockedOrders.push(fsOrder);
+                        }
+                    }
+
+                    if (blockedOrders.length === 0) {
+                        console.log('\n✅ No blocked orders found! All Firestore orders are already visible.');
+                        return { recovered: 0, total: firestoreOrders.length };
+                    }
+
+                    console.log(`\n🔍 Found ${blockedOrders.length} BLOCKED order(s):`);
+                    console.table(blockedOrders.map(o => ({
+                        OrderID: o.orderId,
+                        Client: o.clientName || 'N/A',
+                        Date: o.date || 'N/A'
+                    })));
+
+                    console.log(`\n🔄 Auto-recovering all ${blockedOrders.length} blocked order(s)...`);
+
+                    // Recover all blocked orders
+                    let recoveredCount = 0;
+                    for (const order of blockedOrders) {
+                        // Remove from local deletedOrders
+                        OMS.data.deletedOrders = OMS.data.deletedOrders.filter(d =>
+                            d.docId !== order.docId && d.orderId !== order.orderId
+                        );
+
+                        // Remove from Firestore deletedOrders
+                        try {
+                            await db.collection('deletedOrders').doc(order.docId).delete();
+                        } catch (e) {
+                            // Ignore if doesn't exist
+                        }
+
+                        console.log(`  ✅ Recovered: ${order.orderId} - ${order.clientName || 'N/A'}`);
+                        recoveredCount++;
+                    }
+
+                    // Save and reload
+                    OMS.saveToStorage();
+                    await OMS.loadOrdersFromFirestore();
+                    OMS.updateAllDisplays();
+
+                    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+                    console.log(`✅✅✅ SUCCESS! Recovered ${recoveredCount} order(s)!`);
+                    console.log(`\n📊 NEW STATUS:`);
+                    console.log(`   Local orders: ${OMS.data.orders.length} (was ${OMS.data.orders.length - recoveredCount})`);
+                    console.log(`   Firestore orders: ${firestoreOrders.length}`);
+                    console.log(`   DeletedOrders list: ${OMS.data.deletedOrders.length}`);
+
+                    if (OMS.data.orders.length === firestoreOrders.length) {
+                        console.log('\n🎉 PERFECT SYNC! Local system now matches Firestore!');
+                    } else {
+                        const diff = firestoreOrders.length - OMS.data.orders.length;
+                        console.log(`\n⚠️ Still ${diff} order(s) missing. Run again or use:`);
+                        console.log(`   await AdminUtils.checkSyncHealth()`);
+                    }
+
+                    return { recovered: recoveredCount, total: firestoreOrders.length };
+
+                } catch (error) {
+                    console.error('❌ Error during auto-recovery:', error);
+                    return null;
+                }
+            },
+
+            /**
+             * Clear all deletedOrders - NUCLEAR OPTION
+             * Use when you want to see ALL Firestore orders
+             */
+            async clearAllBlockedOrders() {
+                const count = OMS.data.deletedOrders.length;
+
+                if (count === 0) {
+                    console.log('✅ No blocked orders to clear!');
+                    return;
+                }
+
+                console.log(`⚠️ About to clear ${count} entries from deletedOrders list`);
+                console.log('This will make ALL Firestore orders visible in this system.');
+
+                const confirmed = confirm(`Clear ${count} deletedOrders entries? This cannot be undone.`);
+
+                if (!confirmed) {
+                    console.log('❌ Cancelled');
+                    return;
+                }
+
+                // Clear local list
+                OMS.data.deletedOrders = [];
+                OMS.saveToStorage();
+
+                // Reload from Firestore
+                await OMS.loadOrdersFromFirestore();
+                OMS.updateAllDisplays();
+
+                console.log(`✅ Cleared ${count} entries and reloaded from Firestore`);
+                console.log(`📊 Now showing ${OMS.data.orders.length} orders`);
             }
         };
 
         console.log('🛠️ Admin utilities loaded. Available commands:');
         console.log('\n🤖 INTELLIGENT SYNC SYSTEM (Your Smart Robot!):');
+        console.log('  - await AdminUtils.autoRecoverAllBlockedOrders() - ⭐⭐⭐ AUTO-FIX: Recover ALL blocked orders (EASIEST!)');
         console.log('  - await AdminUtils.checkSyncHealth() - ⭐ CHECK differences between systems');
         console.log('  - await AdminUtils.syncReconciliation() - ⭐ FIX sync issues interactively');
         console.log('  - await AdminUtils.quickRecoverOrder("ORDER_ID") - Quick recover specific order');
+        console.log('  - await AdminUtils.clearAllBlockedOrders() - NUCLEAR: Clear entire deletedOrders list');
         console.log('\n📋 ORDER COMMANDS:');
         console.log('  - await AdminUtils.listAllOrdersWithDetails() - List all orders with DocIDs');
         console.log('  - await AdminUtils.deleteOrderByDocId("DOC_ID") - Delete by document ID');
