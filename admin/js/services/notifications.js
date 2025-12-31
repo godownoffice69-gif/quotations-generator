@@ -97,8 +97,7 @@ export const NotificationService = {
     }
 
     try {
-      const vapidKey = 'YOUR_VAPID_KEY_HERE';  // ← LINE 100: PASTE YOUR VAPID KEY HERE!
-      // Example: 'BKxyz...abc123' (long string from Firebase Console)
+      const vapidKey = 'BMtK4wqyGQYptXJDmbSC1kWdzDWE1ptE27tB36qYyxaSple8HmqkcXHaXKCVXRZeCEIGXagjjiRpSMBE0wjStJw';  // ✅ YOUR VAPID KEY ADDED!
 
       // Check if user actually added the VAPID key
       if (vapidKey === 'YOUR_VAPID_KEY_HERE') {
@@ -111,8 +110,6 @@ export const NotificationService = {
 
       const token = await this.messaging.getToken({
         vapidKey: vapidKey
-        vapidKey: 'BMtK4wqyGQYptXJDmbSC1kWdzDWE1ptE27tB36qYyxaSple8HmqkcXHaXKCVXRZeCEIGXagjjiRpSMBE0wjStJw'  // ← LINE 60: PASTE YOUR VAPID KEY HERE!
-        // Example: 'BKxyz...abc123' (long string from Firebase Console)
       });
 
       if (token) {
