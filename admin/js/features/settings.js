@@ -218,52 +218,6 @@ export const Settings = {
                     </div>
                 </div>
 
-                <div class="card">
-                    <h3>🔔 Push Notifications</h3>
-
-                    <div style="padding: 1rem; background: #f0f4f8; border-radius: 8px; margin-bottom: 1.5rem;">
-                        <strong>Status:</strong> <span id="notifStatusText" style="font-weight: bold;">Checking...</span>
-                    </div>
-
-                    <div class="btn-group" style="margin-bottom: 1.5rem;">
-                        <button id="enableNotificationsBtn" class="btn btn-primary" onclick="if(window.NotificationService) NotificationService.subscribe(window.OMS)">
-                            🔔 Enable Push Notifications
-                        </button>
-                        <button id="disableNotificationsBtn" class="btn btn-secondary" style="display: none;" onclick="if(window.NotificationService) NotificationService.unsubscribe(window.OMS)">
-                            🔕 Disable Notifications
-                        </button>
-                    </div>
-
-                    <div>
-                        <h4 style="margin-bottom: 1rem; color: var(--text-dark);">Notification Types:</h4>
-                        <div style="display: grid; gap: 0.75rem;">
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="notifyOrderChanges" class="notification-preference" checked style="margin-right: 0.5rem;">
-                                <span>📦 Order Status Changes</span>
-                            </label>
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="notifyLowStock" class="notification-preference" checked style="margin-right: 0.5rem;">
-                                <span>📉 Low Stock Alerts</span>
-                            </label>
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="notifyNewOrders" class="notification-preference" checked style="margin-right: 0.5rem;">
-                                <span>🆕 New Orders</span>
-                            </label>
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="notifyPayments" class="notification-preference" checked style="margin-right: 0.5rem;">
-                                <span>💰 Payment Received</span>
-                            </label>
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="notifyTeamUpdates" class="notification-preference" checked style="margin-right: 0.5rem;">
-                                <span>👥 Team Updates</span>
-                            </label>
-                        </div>
-                        <button class="btn btn-info" style="margin-top: 1rem;" onclick="OMS.saveNotificationPreferences()">
-                            💾 Save Notification Preferences
-                        </button>
-                    </div>
-                </div>
-
                 <div class="btn-group">
                     <button class="btn btn-primary" onclick="OMS.saveSettings()">${oms.t('saveAllSettings')}</button>
                     <button class="btn btn-secondary" onclick="OMS.resetSettings()">${oms.t('resetToDefaults')}</button>
