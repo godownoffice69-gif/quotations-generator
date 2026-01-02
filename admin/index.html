@@ -5447,6 +5447,143 @@ async editItem(type, id) {
                 document.getElementById('undoBar').classList.remove('show');
             },
 
+            // ============ BIN/TRASH MANAGEMENT ============
+
+            async restoreDeletedOrder(orderId) {
+                if (!confirm(`Restore order ${orderId}?\n\nThis will bring it back to your active orders.`)) {
+                    return;
+                }
+
+                console.log(`🔄 Restoring order: ${orderId}`);
+
+                // Find the order in deletedOrders list
+                const deletedOrder = this.data.deletedOrders.find(o => o.orderId === orderId || o.docId === orderId);
+
+                if (!deletedOrder) {
+                    this.showToast(`❌ Order ${orderId} not found in bin`, 'error');
+                    return;
+                }
+
+                // Remove deletion metadata
+                delete deletedOrder.deletedAt;
+                delete deletedOrder.deleteReason;
+
+                // Check if order already exists in active orders (prevent duplicates)
+                const existsInActive = this.data.orders.find(o => o.orderId === orderId || o.docId === orderId);
+                if (existsInActive) {
+                    this.showToast(`⚠️ Order ${orderId} already exists in active orders`, 'warning');
+                    // Still remove from deletedOrders to clean up
+                    this.data.deletedOrders = this.data.deletedOrders.filter(o =>
+                        o.orderId !== orderId && o.docId !== orderId
+                    );
+                    this.saveToStorage();
+                    this.renderSettings();
+                    return;
+                }
+
+                // Add back to active orders
+                this.data.orders.push(deletedOrder);
+
+                // Remove from deletedOrders
+                this.data.deletedOrders = this.data.deletedOrders.filter(o =>
+                    o.orderId !== orderId && o.docId !== orderId
+                );
+
+                // CROSS-SYSTEM SYNC: Remove from Firestore deletedOrders collection
+                const isDemoOrder = orderId && (orderId.toLowerCase().includes('demo') || orderId.toLowerCase().includes('test'));
+                if (!isDemoOrder && deletedOrder.docId) {
+                    try {
+                        await db.collection('deletedOrders').doc(deletedOrder.docId).delete();
+                        console.log(`🔄 Removed from Firestore deletedOrders: ${orderId}`);
+                    } catch (error) {
+                        console.error('❌ Failed to sync restore to Firestore:', error);
+                    }
+                }
+
+                this.saveToStorage();
+                this.updateAllDisplays();
+                this.renderSettings(); // Refresh bin view
+                this.showToast(`✅ Order ${orderId} restored successfully`, 'success');
+            },
+
+            async permanentlyDeleteOrder(orderId) {
+                if (!confirm(`⚠️ PERMANENTLY DELETE order ${orderId}?\n\nThis CANNOT be undone!\n\nThe order will be removed from the bin forever.`)) {
+                    return;
+                }
+
+                console.log(`🗑️ Permanently deleting order: ${orderId}`);
+
+                // Find the order in deletedOrders
+                const deletedOrder = this.data.deletedOrders.find(o => o.orderId === orderId || o.docId === orderId);
+
+                if (!deletedOrder) {
+                    this.showToast(`❌ Order ${orderId} not found in bin`, 'error');
+                    return;
+                }
+
+                // Remove from deletedOrders permanently
+                this.data.deletedOrders = this.data.deletedOrders.filter(o =>
+                    o.orderId !== orderId && o.docId !== orderId
+                );
+
+                // CROSS-SYSTEM SYNC: Remove from Firestore deletedOrders collection
+                const isDemoOrder = orderId && (orderId.toLowerCase().includes('demo') || orderId.toLowerCase().includes('test'));
+                if (!isDemoOrder && deletedOrder.docId) {
+                    try {
+                        await db.collection('deletedOrders').doc(deletedOrder.docId).delete();
+                        console.log(`🔄 Permanently removed from Firestore deletedOrders: ${orderId}`);
+                    } catch (error) {
+                        console.error('❌ Failed to sync permanent deletion to Firestore:', error);
+                    }
+                }
+
+                this.saveToStorage();
+                this.renderSettings(); // Refresh bin view
+                this.showToast(`🗑️ Order ${orderId} permanently deleted`, 'success');
+            },
+
+            refreshBin() {
+                console.log('🔄 Refreshing bin...');
+                this.renderSettings(); // Re-render settings tab which includes bin
+                this.showToast(`🔄 Bin refreshed - ${this.data.deletedOrders.length} deleted orders`, 'success');
+            },
+
+            async emptyBin() {
+                const count = this.data.deletedOrders.length;
+
+                if (count === 0) {
+                    this.showToast('Bin is already empty', 'info');
+                    return;
+                }
+
+                if (!confirm(`⚠️ EMPTY BIN?\n\nThis will PERMANENTLY DELETE all ${count} orders in the bin.\n\nThis CANNOT be undone!`)) {
+                    return;
+                }
+
+                console.log(`🗑️ Emptying bin (${count} orders)...`);
+
+                // Delete all from Firestore deletedOrders collection
+                const deletePromises = [];
+                for (const order of this.data.deletedOrders) {
+                    const isDemoOrder = order.orderId && (order.orderId.toLowerCase().includes('demo') || order.orderId.toLowerCase().includes('test'));
+                    if (!isDemoOrder && order.docId) {
+                        deletePromises.push(
+                            db.collection('deletedOrders').doc(order.docId).delete()
+                                .catch(e => console.error(`Failed to delete ${order.orderId}:`, e))
+                        );
+                    }
+                }
+
+                await Promise.all(deletePromises);
+                console.log(`🔄 Removed ${deletePromises.length} orders from Firestore deletedOrders`);
+
+                // Clear local deletedOrders
+                this.data.deletedOrders = [];
+                this.saveToStorage();
+                this.renderSettings(); // Refresh bin view
+                this.showToast(`🗑️ Bin emptied - ${count} orders permanently deleted`, 'success');
+            },
+
             // ============ ORDER FORM ============
             populateTimeDropdown() {
                 const select = document.getElementById('readyTime');
@@ -14675,15 +14812,49 @@ setupAllRealtimeListeners() {
                 // Check if order exists in local data
                 const index = this.data.orders.findIndex(o => o.docId === docId || o.orderId === orderId);
                 if (index !== -1) {
+                    const orderToDelete = this.data.orders[index];
+
+                    // SAFETY CHECK #1: Check if order is in deletedOrders already (prevent duplicates)
+                    const alreadyInBin = this.data.deletedOrders.find(o => o.docId === docId || o.orderId === orderId);
+                    if (alreadyInBin) {
+                        console.log(`⏭️ Order ${orderId} already in bin - skipping sync`);
+                        return;
+                    }
+
+                    // SAFETY CHECK #2: Check deletion timestamp - ignore stale data (> 7 days old)
+                    const deletionDate = deletedOrderData.deletedAt ? new Date(deletedOrderData.deletedAt) : null;
+                    if (deletionDate) {
+                        const daysSinceDeletion = (Date.now() - deletionDate.getTime()) / (1000 * 60 * 60 * 24);
+                        if (daysSinceDeletion > 7) {
+                            console.warn(`⚠️ BLOCKED AUTO-DELETE: Order ${orderId} deletion is ${Math.round(daysSinceDeletion)} days old (stale data)`);
+                            console.warn(`   This order will NOT be auto-deleted. If you want to delete it, do so manually.`);
+                            return;
+                        }
+                    }
+
+                    // SAFETY CHECK #3: Warn if deleting a "Confirmed" order
+                    if (orderToDelete.status === 'Confirmed') {
+                        console.warn(`⚠️⚠️ AUTO-DELETE WARNING: Deleting CONFIRMED order: ${orderId}`);
+                        console.warn(`   Client: ${orderToDelete.clientName || 'N/A'}`);
+                        console.warn(`   Date: ${orderToDelete.date || orderToDelete.startDate || 'N/A'}`);
+                        console.warn(`   Status: ${orderToDelete.status}`);
+                        console.warn(`   This order was deleted on another system and is being synced.`);
+                        console.warn(`   If this is a mistake, you can restore it from the Bin in Settings.`);
+                    }
+
+                    // Proceed with deletion
                     const deleted = this.data.orders.splice(index, 1)[0];
                     this.data.deletedOrders.push({
                         ...deleted,
                         deletedAt: deletedOrderData.deletedAt,
-                        deleteReason: 'Synced from other system'
+                        deleteReason: deletedOrderData.deleteReason || 'Synced from other system'
                     });
                     this.saveToStorage();
                     this.updateAllDisplays();
-                    console.log(`🔄 SYNCED DELETION from other system: ${orderId}`);
+                    console.log(`🔄 SYNCED DELETION from other system: ${orderId} (Client: ${deleted.clientName || 'N/A'}, Status: ${deleted.status || 'N/A'})`);
+
+                    // Show toast notification to user
+                    this.showToast(`⚠️ Order ${orderId} was deleted on another system and synced locally. Check Bin in Settings to restore.`, 'warning');
                 }
             } else if (change.type === 'removed') {
                 // Another system recovered an order - recover it locally too
