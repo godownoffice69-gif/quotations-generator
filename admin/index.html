@@ -16,11 +16,11 @@
     <meta http-equiv="Expires" content="0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Order Management System [v9-PACKAGES-WORKING]</title>
-    <link rel="icon" type="image/png" href="logo.png">
-    <link rel="shortcut icon" type="image/png" href="logo.png">
+    <link rel="icon" type="image/png" href="/admin/logo.png">
+    <link rel="shortcut icon" type="image/png" href="/admin/logo.png">
 
     <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/admin/manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -6240,17 +6240,30 @@ async getCurrentUser() {
         let email = authUser.email;
         let name = authUser.displayName || authUser.email;
 
+        console.log('🔍 DEBUG: Checking user_roles document for UID:', authUser.uid);
+        console.log('🔍 DEBUG: Document exists:', userRoleDoc.exists);
+
         if (userRoleDoc.exists) {
             const roleData = userRoleDoc.data();
+            console.log('🔍 DEBUG: Full role document data:', roleData);
             role = roleData.role || 'staff';
             name = roleData.name || name;
             console.log('✅ User role loaded from Firestore:', role, 'for', email);
+
+            // Extra validation
+            if (role !== 'admin' && role !== 'owner' && role !== 'manager' && role !== 'staff') {
+                console.warn('⚠️ Invalid role value:', role, '- Expected: admin, owner, manager, or staff');
+            }
         } else {
             // If no role exists, user defaults to 'staff' with limited access
             // Only admin/owner can create roles in Firestore via admin panel
             console.warn('⚠️ No role document found for:', email);
             console.warn('⚠️ User defaulted to "staff" role with limited access.');
             console.warn('⚠️ Admin must create role in Firestore: user_roles/' + authUser.uid);
+            console.warn('📋 CREATE THIS DOCUMENT IN FIRESTORE:');
+            console.warn('   Collection: user_roles');
+            console.warn('   Document ID:', authUser.uid);
+            console.warn('   Fields: { role: "admin", email: "' + email + '", name: "Your Name" }');
         }
 
         this.data.currentUser = {

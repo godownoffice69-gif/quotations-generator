@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Diagnostic - FirepowersFX</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        h1 { color: #00ff00; text-align: center; }
+        .test-box {
+            background: #000;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .status {
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin: 5px 0;
+            display: inline-block;
+        }
+        .pass { background: #00ff00; color: #000; font-weight: bold; }
+        .fail { background: #ff0000; color: #fff; font-weight: bold; }
+        .pending { background: #ffaa00; color: #000; font-weight: bold; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #00cc00; }
+        pre {
+            background: #000;
+            padding: 15px;
+            border-left: 4px solid #00ff00;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        .warning { color: #ffaa00; }
+    </style>
+</head>
+<body>
+    <h1>🔧 LOGIN DIAGNOSTIC TOOL</h1>
+    <p style="text-align: center; color: #ffaa00;">This tool will check why login is not working</p>
+
+    <div class="test-box">
+        <h3>📋 Test Results:</h3>
+        <div id="results"></div>
+    </div>
+
+    <div style="text-align: center;">
+        <button onclick="runDiagnostics()">🚀 RUN FULL DIAGNOSTIC</button>
+        <button onclick="testLogin()">🔐 TEST LOGIN</button>
+    </div>
+
+    <div class="test-box">
+        <h3>📝 Test Login (if diagnostic passes):</h3>
+        <p>Email: <input type="email" id="testEmail" value="admin@firepowersfx.com" style="padding: 8px; width: 250px;"></p>
+        <p>Password: <input type="password" id="testPassword" value="" style="padding: 8px; width: 250px;"></p>
+        <div id="loginResult"></div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const results = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const p = document.createElement('p');
+            p.className = type;
+            p.innerHTML = message;
+            results.appendChild(p);
+        }
+
+        function testStatus(name, passed) {
+            const status = passed ?
+                `<span class="status pass">✅ PASS</span>` :
+                `<span class="status fail">❌ FAIL</span>`;
+            log(`${name}: ${status}`);
+        }
+
+        async function runDiagnostics() {
+            results.innerHTML = '';
+            log('<h3>🔍 Starting Diagnostics...</h3>');
+
+            // Test 1: Check if Firebase SDK loaded
+            log('<br><strong>TEST 1: Firebase SDK Loading</strong>');
+            if (typeof firebase !== 'undefined') {
+                testStatus('Firebase SDK', true);
+                log(`Version: ${firebase.SDK_VERSION}`, 'success');
+            } else {
+                testStatus('Firebase SDK', false);
+                log('Firebase SDK not loaded! Check internet connection or CDN.', 'error');
+                return;
+            }
+
+            // Test 2: Check Firebase config
+            log('<br><strong>TEST 2: Firebase Configuration</strong>');
+            try {
+                const config = {
+                    apiKey: "AIzaSyC5c2BmVHnbWlBwwHtFwll97nq_xOdqxCc",
+                    authDomain: "firepowersfx-2558.firebaseapp.com",
+                    projectId: "firepowersfx-2558",
+                    storageBucket: "firepowersfx-2558.firebasestorage.app",
+                    messagingSenderId: "723483292867",
+                    appId: "1:723483292867:web:d6d83a79ba87cd2dee5e76"
+                };
+                log('Firebase Config:', 'success');
+                log(`<pre>${JSON.stringify(config, null, 2)}</pre>`);
+
+                // Initialize Firebase
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(config);
+                    testStatus('Firebase Initialize', true);
+                } else {
+                    testStatus('Firebase Already Initialized', true);
+                }
+
+                window.auth = firebase.auth();
+                window.db = firebase.firestore();
+
+            } catch (error) {
+                testStatus('Firebase Configuration', false);
+                log(`Error: ${error.message}`, 'error');
+                return;
+            }
+
+            // Test 3: Check Auth connection
+            log('<br><strong>TEST 3: Firebase Auth Connection</strong>');
+            try {
+                const currentUser = firebase.auth().currentUser;
+                if (currentUser) {
+                    testStatus('Auth Connection', true);
+                    log(`Currently logged in as: ${currentUser.email}`, 'success');
+                } else {
+                    testStatus('Auth Connection', true);
+                    log('No user logged in (this is normal)', 'warning');
+                }
+            } catch (error) {
+                testStatus('Auth Connection', false);
+                log(`Error: ${error.message}`, 'error');
+            }
+
+            // Test 4: Check Firestore connection
+            log('<br><strong>TEST 4: Firestore Connection</strong>');
+            try {
+                const testRef = firebase.firestore().collection('_test_connection');
+                await testRef.limit(1).get();
+                testStatus('Firestore Connection', true);
+            } catch (error) {
+                testStatus('Firestore Connection', false);
+                log(`Error: ${error.message}`, 'error');
+                log('Note: This might fail due to security rules, but Firebase is connected.', 'warning');
+            }
+
+            // Test 5: Check if admin/js/core/firebase.js is accessible
+            log('<br><strong>TEST 5: Module Loading (firebase.js)</strong>');
+            try {
+                const response = await fetch('./js/core/firebase.js');
+                if (response.ok) {
+                    testStatus('firebase.js accessible', true);
+                    const content = await response.text();
+                    log(`File size: ${content.length} bytes`, 'success');
+                } else {
+                    testStatus('firebase.js accessible', false);
+                    log(`HTTP ${response.status}: ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                testStatus('firebase.js accessible', false);
+                log(`Error: ${error.message}`, 'error');
+            }
+
+            log('<br><h3>✅ Diagnostic Complete!</h3>');
+            log('<strong>If all tests passed, try the test login below.</strong>', 'success');
+        }
+
+        async function testLogin() {
+            const loginResult = document.getElementById('loginResult');
+            loginResult.innerHTML = '';
+
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+
+            if (!email || !password) {
+                loginResult.innerHTML = '<p class="error">❌ Please enter both email and password</p>';
+                return;
+            }
+
+            loginResult.innerHTML = '<p class="warning">⏳ Attempting login...</p>';
+
+            try {
+                const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                loginResult.innerHTML = `
+                    <p class="success">✅ LOGIN SUCCESSFUL!</p>
+                    <p class="success">Email: ${user.email}</p>
+                    <p class="success">UID: ${user.uid}</p>
+                    <p class="success">You can now login to the main admin panel!</p>
+                `;
+
+                // Check user role
+                try {
+                    const roleDoc = await firebase.firestore().collection('user_roles').doc(user.uid).get();
+                    if (roleDoc.exists) {
+                        const roleData = roleDoc.data();
+                        loginResult.innerHTML += `<p class="success">Role: ${roleData.role}</p>`;
+                    } else {
+                        loginResult.innerHTML += `<p class="error">⚠️ WARNING: No role found in Firestore!</p>
+                            <p class="error">You need to add this user to the user_roles collection:</p>
+                            <pre>Collection: user_roles
+Document ID: ${user.uid}
+Fields:
+  email: "${user.email}"
+  role: "admin"
+  name: "Your Name"</pre>`;
+                    }
+                } catch (roleError) {
+                    loginResult.innerHTML += `<p class="error">Error checking role: ${roleError.message}</p>`;
+                }
+
+            } catch (error) {
+                loginResult.innerHTML = `
+                    <p class="error">❌ LOGIN FAILED!</p>
+                    <p class="error">Error Code: ${error.code}</p>
+                    <p class="error">Error Message: ${error.message}</p>
+                    <br>
+                    <p class="warning"><strong>Common Causes:</strong></p>
+                    <p class="warning">• User doesn't exist in Firebase Authentication</p>
+                    <p class="warning">• Wrong password</p>
+                    <p class="warning">• Email not verified (if required)</p>
+                    <p class="warning">• Firebase project mismatch</p>
+                    <br>
+                    <p class="success"><strong>To Fix:</strong></p>
+                    <p class="success">1. Go to Firebase Console → Authentication → Users</p>
+                    <p class="success">2. Make sure user "${email}" exists</p>
+                    <p class="success">3. Reset password if needed</p>
+                    <p class="success">4. Try again</p>
+                `;
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            log('<p class="warning">Click "RUN FULL DIAGNOSTIC" to start testing</p>');
+        });
+    </script>
+</body>
+</html>
