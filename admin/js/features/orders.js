@@ -1613,7 +1613,6 @@ export const Orders = {
                                     <div style="font-size: 40px;">❄️</div>
                                     <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                 </div>
-                                <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                             </div>
                             ` : ''}
                             ${grandTotalFlowers > 0 ? `
@@ -1623,7 +1622,6 @@ export const Orders = {
                                     <div style="font-size: 40px;">🌸</div>
                                     <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                 </div>
-                                <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                             </div>
                             ` : ''}
                             ${grandTotalElectricity > 0 ? `
@@ -1633,7 +1631,6 @@ export const Orders = {
                                     <div style="font-size: 40px;">⚡</div>
                                     <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                 </div>
-                                <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">Total power needed</div>
                             </div>
                             ` : ''}
                         </div>
@@ -1903,7 +1900,6 @@ export const Orders = {
                                         <div style="font-size: 40px;">❄️</div>
                                         <div style="font-size: 40px; font-weight: 700;">${grandTotalDryIce} kg</div>
                                     </div>
-                                    <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">${grandTotalDryMachines} machine${grandTotalDryMachines !== 1 ? 's' : ''} × 20 kg</div>
                                 </div>
                                 ` : ''}
                                 ${grandTotalFlowers > 0 ? `
@@ -1913,7 +1909,6 @@ export const Orders = {
                                         <div style="font-size: 40px;">🌸</div>
                                         <div style="font-size: 40px; font-weight: 700;">${grandTotalFlowers} kg</div>
                                     </div>
-                                    <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">${grandTotalFlowerMachines} machine${grandTotalFlowerMachines !== 1 ? 's' : ''} × 20 kg</div>
                                 </div>
                                 ` : ''}
                                 ${grandTotalElectricity > 0 ? `
@@ -1923,7 +1918,6 @@ export const Orders = {
                                         <div style="font-size: 40px;">⚡</div>
                                         <div style="font-size: 40px; font-weight: 700;">${grandTotalElectricity} KV</div>
                                     </div>
-                                    <div style="font-size: 40px; font-weight: bold; margin-top: 4px;">Total power needed</div>
                                 </div>
                                 ` : ''}
                             </div>
