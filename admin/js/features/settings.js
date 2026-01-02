@@ -224,6 +224,65 @@ export const Settings = {
                 </div>
 
                 <div class="card">
+                    <h3>🗑️ Deleted Orders Bin (Trash)</h3>
+                    <p style="color: var(--text-gray); margin-bottom: 1rem;">
+                        All deleted orders are stored here. You can restore them at any time.
+                        <strong>Synced with Firestore across all systems.</strong>
+                    </p>
+
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Total Deleted Orders: <span id="deletedOrdersCount">${oms.data.deletedOrders ? oms.data.deletedOrders.length : 0}</span></strong>
+                    </div>
+
+                    <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem;">
+                        ${oms.data.deletedOrders && oms.data.deletedOrders.length > 0 ? `
+                            <table class="table">
+                                <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 1;">
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Client Name</th>
+                                        <th>Date</th>
+                                        <th>Deleted At</th>
+                                        <th>Reason</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${oms.data.deletedOrders.filter(o => o && o.orderId).map(order => `
+                                        <tr>
+                                            <td><strong>${order.orderId || 'N/A'}</strong></td>
+                                            <td>${order.clientName || 'N/A'}</td>
+                                            <td>${order.date ? Utils.formatDate(order.date) : (order.startDate ? Utils.formatDate(order.startDate) : 'N/A')}</td>
+                                            <td>${order.deletedAt ? new Date(order.deletedAt).toLocaleString() : 'N/A'}</td>
+                                            <td style="font-size: 0.85rem; color: var(--text-gray);">${order.deleteReason || 'Manual deletion'}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-success" onclick="OMS.restoreDeletedOrder('${order.orderId}')" style="margin-right: 0.5rem;">
+                                                    ↩️ Restore
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" onclick="OMS.permanentlyDeleteOrder('${order.orderId}')">
+                                                    🗑️ Delete Forever
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        ` : `
+                            <div style="padding: 2rem; text-align: center; color: var(--text-gray);">
+                                <p>✨ Bin is empty - no deleted orders</p>
+                            </div>
+                        `}
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-warning" onclick="OMS.refreshBin()">🔄 Refresh Bin</button>
+                        <button class="btn btn-danger" onclick="OMS.emptyBin()" ${!oms.data.deletedOrders || oms.data.deletedOrders.length === 0 ? 'disabled' : ''}>
+                            🗑️ Empty Bin (Clear All)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
                     <h3>${oms.t('dataManagement')}</h3>
                     <div class="btn-group">
                         <button class="btn btn-info" data-action="exportData">${oms.t('exportJSON')}</button>
