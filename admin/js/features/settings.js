@@ -232,6 +232,11 @@ export const Settings = {
 
                     <div style="margin-bottom: 1rem;">
                         <strong>Total Deleted Orders: <span id="deletedOrdersCount">${oms.data.deletedOrders ? oms.data.deletedOrders.length : 0}</span></strong>
+                        ${oms.data.deletedOrders && oms.data.deletedOrders.length > 0 ? `
+                            <button class="btn btn-sm btn-info" onclick="console.log('Deleted Orders:', OMS.data.deletedOrders)" style="margin-left: 1rem;">
+                                🐛 Debug in Console
+                            </button>
+                        ` : ''}
                     </div>
 
                     <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem;">
@@ -248,23 +253,26 @@ export const Settings = {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${oms.data.deletedOrders.filter(o => o && o.orderId).map(order => `
+                                    ${oms.data.deletedOrders.filter(o => o && (o.orderId || o.docId)).map(order => {
+                                        const identifier = order.orderId || order.docId || 'unknown';
+                                        return `
                                         <tr>
-                                            <td><strong>${order.orderId || 'N/A'}</strong></td>
+                                            <td><strong>${order.orderId || order.docId || 'N/A'}</strong></td>
                                             <td>${order.clientName || 'N/A'}</td>
                                             <td>${order.date ? Utils.formatDate(order.date) : (order.startDate ? Utils.formatDate(order.startDate) : 'N/A')}</td>
                                             <td>${order.deletedAt ? new Date(order.deletedAt).toLocaleString() : 'N/A'}</td>
                                             <td style="font-size: 0.85rem; color: var(--text-gray);">${order.deleteReason || 'Manual deletion'}</td>
                                             <td>
-                                                <button class="btn btn-sm btn-success" onclick="OMS.restoreDeletedOrder('${order.orderId}')" style="margin-right: 0.5rem;">
+                                                <button class="btn btn-sm btn-success" onclick="OMS.restoreDeletedOrder('${identifier}')" style="margin-right: 0.5rem;">
                                                     ↩️ Restore
                                                 </button>
-                                                <button class="btn btn-sm btn-danger" onclick="OMS.permanentlyDeleteOrder('${order.orderId}')">
+                                                <button class="btn btn-sm btn-danger" onclick="OMS.permanentlyDeleteOrder('${identifier}')">
                                                     🗑️ Delete Forever
                                                 </button>
                                             </td>
                                         </tr>
-                                    `).join('')}
+                                        `;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         ` : `
