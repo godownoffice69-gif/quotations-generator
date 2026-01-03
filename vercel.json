@@ -1,13 +1,10 @@
 {
-  "framework": null,
-  "rewrites": [
+  "version": 2,
+  "redirects": [
     {
       "source": "/admin",
-      "destination": "/admin/index.html"
-    },
-    {
-      "source": "/admin/",
-      "destination": "/admin/index.html"
+      "destination": "/admin/",
+      "permanent": false
     }
   ],
   "headers": [
