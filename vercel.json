@@ -1,7 +1,13 @@
 {
   "version": 2,
-  "public": true,
-  "github": {
-    "silent": true
-  }
+  "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/admin/index.html"
+    }
+  ]
 }
