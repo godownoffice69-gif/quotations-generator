@@ -1,45 +1,13 @@
 {
   "version": 2,
-  "buildCommand": null,
-  "outputDirectory": ".",
-  "routes": [
+  "rewrites": [
     {
-      "src": "/admin/manifest.json",
-      "dest": "/admin/manifest.json",
-      "headers": {
-        "Content-Type": "application/manifest+json"
-      }
+      "source": "/admin",
+      "destination": "/admin/index.html"
     },
     {
-      "src": "/admin/service-worker.js",
-      "dest": "/admin/service-worker.js",
-      "headers": {
-        "Content-Type": "application/javascript",
-        "Service-Worker-Allowed": "/admin/"
-      }
-    },
-    {
-      "src": "/admin/logo.png",
-      "dest": "/admin/logo.png",
-      "headers": {
-        "Content-Type": "image/png"
-      }
-    },
-    {
-      "src": "/admin$",
-      "dest": "/admin/index.html"
-    },
-    {
-      "src": "/admin/$",
-      "dest": "/admin/index.html"
-    },
-    {
-      "src": "/admin/(.*)",
-      "dest": "/admin/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/admin/",
+      "destination": "/admin/index.html"
     }
   ]
 }
