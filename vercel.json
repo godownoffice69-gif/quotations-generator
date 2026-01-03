@@ -2,6 +2,9 @@
   "version": 2,
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/admin/service-worker.js",
       "headers": {
         "Content-Type": "application/javascript; charset=utf-8",
