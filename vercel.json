@@ -1,13 +1,28 @@
 {
   "framework": null,
-  "routes": [
+  "rewrites": [
     {
-      "src": "/admin/service-worker.js",
-      "dest": "/admin/service-worker.js",
-      "headers": {
-        "Service-Worker-Allowed": "/admin/",
-        "Content-Type": "application/javascript"
-      }
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/admin/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/admin/service-worker.js",
+      "headers": [
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/admin/"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
     }
   ]
 }

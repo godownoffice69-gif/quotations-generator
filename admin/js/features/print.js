@@ -126,7 +126,7 @@ export const Print = {
             template.style.width = paperDimensions.width + 'px';
             template.style.paddingRight = '80px';
 
-            template.innerHTML = oms.buildOrderHTML(order, fontSize, colors, false, bgColor, textColor);
+            template.innerHTML = oms.orders.buildOrderHTML(oms, order, fontSize, colors, false, bgColor, textColor);
             template.style.display = 'block';
 
             // Wait for DOM to settle
