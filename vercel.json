@@ -5,97 +5,12 @@
       "handle": "filesystem"
     },
     {
-      "src": "/admin/service-worker.js",
-      "headers": {
-        "Content-Type": "application/javascript; charset=utf-8",
-        "Service-Worker-Allowed": "/admin/",
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-      },
-      "dest": "/admin/service-worker.js"
-    },
-    {
-      "src": "/admin/manifest.json",
-      "headers": {
-        "Content-Type": "application/manifest+json",
-        "Cache-Control": "public, max-age=3600"
-      },
-      "dest": "/admin/manifest.json"
-    },
-    {
-      "src": "/admin/icons/(.*\\.png)",
-      "headers": {
-        "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=31536000, immutable"
-      },
-      "dest": "/admin/icons/$1"
-    },
-    {
-      "src": "/admin/(.*\\.png)",
-      "headers": {
-        "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=31536000"
-      },
-      "dest": "/admin/$1"
-    },
-    {
-      "src": "/admin/js/(.*)",
-      "headers": {
-        "Content-Type": "application/javascript; charset=utf-8",
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-      },
-      "dest": "/admin/js/$1"
-    },
-    {
-      "src": "/admin/(.*\\.js)",
-      "headers": {
-        "Content-Type": "application/javascript; charset=utf-8",
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-      },
-      "dest": "/admin/$1"
-    },
-    {
-      "src": "/admin/css/(.*)",
-      "headers": {
-        "Content-Type": "text/css; charset=utf-8",
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-      },
-      "dest": "/admin/css/$1"
-    },
-    {
-      "src": "/admin/(.*\\.css)",
-      "headers": {
-        "Content-Type": "text/css; charset=utf-8",
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-      },
-      "dest": "/admin/$1"
-    },
-    {
-      "src": "/admin/(.*\\.html)",
-      "headers": {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-      },
-      "dest": "/admin/$1"
-    },
-    {
       "src": "/admin$",
       "dest": "/admin/index.html"
     },
     {
       "src": "/admin/$",
       "dest": "/admin/index.html"
-    },
-    {
-      "src": "/admin/(.*)",
-      "dest": "/admin/$1"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
     }
   ]
 }
