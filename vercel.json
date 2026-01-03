@@ -1,8 +1,29 @@
 {
   "version": 2,
+  "buildCommand": null,
+  "outputDirectory": ".",
   "routes": [
     {
-      "handle": "filesystem"
+      "src": "/admin/manifest.json",
+      "dest": "/admin/manifest.json",
+      "headers": {
+        "Content-Type": "application/manifest+json"
+      }
+    },
+    {
+      "src": "/admin/service-worker.js",
+      "dest": "/admin/service-worker.js",
+      "headers": {
+        "Content-Type": "application/javascript",
+        "Service-Worker-Allowed": "/admin/"
+      }
+    },
+    {
+      "src": "/admin/logo.png",
+      "dest": "/admin/logo.png",
+      "headers": {
+        "Content-Type": "image/png"
+      }
     },
     {
       "src": "/admin$",
@@ -11,6 +32,14 @@
     {
       "src": "/admin/$",
       "dest": "/admin/index.html"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "/admin/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
