@@ -1,5 +1,15 @@
 {
   "framework": null,
+  "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/admin/index.html"
+    }
+  ],
   "routes": [
     {
       "src": "/admin/service-worker.js",
