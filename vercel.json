@@ -10,14 +10,19 @@
       "destination": "/admin/index.html"
     }
   ],
-  "routes": [
+  "headers": [
     {
-      "src": "/admin/service-worker.js",
-      "dest": "/admin/service-worker.js",
-      "headers": {
-        "Service-Worker-Allowed": "/admin/",
-        "Content-Type": "application/javascript"
-      }
+      "source": "/admin/service-worker.js",
+      "headers": [
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/admin/"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
     }
   ]
 }
