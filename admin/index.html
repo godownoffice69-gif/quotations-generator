@@ -19,12 +19,12 @@
     <link rel="icon" type="image/png" href="/admin/logo.png">
     <link rel="shortcut icon" type="image/png" href="/admin/logo.png">
 
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/admin/manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="OMS">
+    <!-- PWA Manifest - DISABLED to prevent 404 console spam -->
+    <!-- <link rel="manifest" href="/admin/manifest.json"> -->
+    <!-- <meta name="mobile-web-app-capable" content="yes"> -->
+    <!-- <meta name="apple-mobile-web-app-capable" content="yes"> -->
+    <!-- <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> -->
+    <!-- <meta name="apple-mobile-web-app-title" content="OMS"> -->
     <meta name="theme-color" content="#667eea">
     <meta name="msapplication-TileColor" content="#667eea">
     <meta name="msapplication-TileImage" content="/admin/icons/icon-144x144.png">
@@ -18507,8 +18507,13 @@ if (diffDays > 30) {
         });
 
         // ============================================
-        // PWA SERVICE WORKER REGISTRATION
+        // PWA SERVICE WORKER REGISTRATION - DISABLED
         // ============================================
+        // DISABLED: Service worker and PWA features commented out to prevent 404 console spam.
+        // The manifest.json and service-worker.js files exist but Vercel routing has issues.
+        // Uncomment this section if you fix the Vercel routing or want to enable PWA features.
+
+        /*
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
                 try {
@@ -18629,6 +18634,9 @@ if (diffDays > 30) {
         } else {
             console.warn('⚠️ Service Workers not supported in this browser');
         }
+        */
+
+        console.log('ℹ️ PWA features disabled - Service worker and manifest not loaded');
     </script>
 
 </body>
