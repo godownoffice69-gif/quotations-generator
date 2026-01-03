@@ -1,7 +1,1 @@
-# Vercel ignore - keep it minimal
-node_modules/
-.git/
-*.log
-.env
-serviceAccountKey.json
 scripts/
