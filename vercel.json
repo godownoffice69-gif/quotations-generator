@@ -1,23 +1,5 @@
 {
   "version": 2,
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/admin/",
-      "permanent": false,
-      "has": [
-        {
-          "type": "host",
-          "value": "fp-order-management-system.vercel.app"
-        }
-      ]
-    },
-    {
-      "source": "/admin",
-      "destination": "/admin/",
-      "permanent": false
-    }
-  ],
   "headers": [
     {
       "source": "/admin/service-worker.js",
