@@ -1,3 +1,13 @@
 {
-  "framework": null
+  "framework": null,
+  "routes": [
+    {
+      "src": "/admin/service-worker.js",
+      "dest": "/admin/service-worker.js",
+      "headers": {
+        "Service-Worker-Allowed": "/admin/",
+        "Content-Type": "application/javascript"
+      }
+    }
+  ]
 }
